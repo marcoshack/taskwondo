@@ -7,4 +7,7 @@ var (
 	ErrInvalidCredentials = errors.New("invalid credentials")
 	ErrAccountDisabled    = errors.New("account is disabled")
 	ErrUnauthorized       = errors.New("unauthorized")
+	ErrForbidden          = errors.New("forbidden")
+	ErrConflict           = errors.New("conflict")
+	ErrAlreadyExists      = errors.New("already exists")
 )
