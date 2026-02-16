@@ -13,16 +13,6 @@ services:
       - DATABASE_URL=postgres://${POSTGRES_USER:-trackforge}:${POSTGRES_PASSWORD:-trackforge}@postgres:5432/${POSTGRES_DB:-trackforge}?sslmode=disable
     restart: unless-stopped
 
-  web:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.web
-    ports:
-      - "${WEB_PORT:-3000}:80"
-    depends_on:
-      - api
-    restart: unless-stopped
-
   postgres:
     image: postgres:16-alpine
     volumes:

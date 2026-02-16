@@ -17,6 +17,8 @@ import (
 	"github.com/marcoshack/trackforge/internal/database"
 	"github.com/marcoshack/trackforge/internal/handler"
 	"github.com/marcoshack/trackforge/internal/middleware"
+	"github.com/marcoshack/trackforge/internal/repository"
+	"github.com/marcoshack/trackforge/internal/service"
 )
 
 func main() {
@@ -55,6 +57,24 @@ func main() {
 		return
 	}
 
+	// Initialize repositories
+	userRepo := repository.NewUserRepository(db)
+	apiKeyRepo := repository.NewAPIKeyRepository(db)
+
+	// Initialize services
+	authService := service.NewAuthService(userRepo, apiKeyRepo, cfg.JWTSecret, cfg.JWTExpiry)
+
+	// Seed admin user if configured
+	if cfg.AdminEmail != "" && cfg.AdminPassword != "" {
+		if err := authService.SeedAdminUser(ctx, cfg.AdminEmail, cfg.AdminPassword); err != nil {
+			log.Fatal().Err(err).Msg("failed to seed admin user")
+		}
+	}
+
+	// Initialize handlers
+	health := handler.NewHealthHandler(db)
+	auth := handler.NewAuthHandler(authService)
+
 	// Set up router
 	r := chi.NewRouter()
 
@@ -64,10 +84,29 @@ func main() {
 	r.Use(middleware.Recovery)
 	r.Use(middleware.CORS(cfg.BaseURL))
 
-	// Health checks
-	health := handler.NewHealthHandler(db)
+	// Health checks (unauthenticated)
 	r.Get("/healthz", health.Healthz)
 	r.Get("/readyz", health.Readyz)
+
+	// API v1 routes
+	r.Route("/api/v1", func(r chi.Router) {
+		// Public auth routes
+		r.Post("/auth/login", auth.Login)
+
+		// Authenticated routes
+		r.Group(func(r chi.Router) {
+			r.Use(middleware.Auth(authService))
+
+			r.Post("/auth/refresh", auth.Refresh)
+			r.Post("/auth/logout", auth.Logout)
+			r.Get("/auth/me", auth.Me)
+
+			// API key management
+			r.Get("/user/api-keys", auth.ListAPIKeys)
+			r.Post("/user/api-keys", auth.CreateAPIKey)
+			r.Delete("/user/api-keys/{keyId}", auth.DeleteAPIKey)
+		})
+	})
 
 	// Start HTTP server
 	srv := &http.Server{
