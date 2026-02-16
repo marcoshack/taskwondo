@@ -1,0 +1,24 @@
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+
+# Go
+api/tmp/
+
+# Node
+web/node_modules/
+web/dist/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker/data/

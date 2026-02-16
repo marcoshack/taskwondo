@@ -100,26 +100,23 @@ docker compose up -d
 
 ```
 trackforge/
-├── cmd/
-│   └── server/              # Application entrypoint
-│       └── main.go
-├── internal/
-│   ├── config/              # Configuration loading
-│   ├── database/            # Database connection, migrations
-│   │   └── migrations/      # SQL migration files
-│   ├── handler/             # HTTP handlers (grouped by domain)
-│   │   ├── workitem.go
-│   │   ├── project.go
-│   │   ├── comment.go
-│   │   ├── webhook.go
-│   │   ├── portal.go        # Public portal endpoints
-│   │   └── auth.go
-│   ├── middleware/           # Auth, logging, CORS, rate limiting
-│   ├── model/               # Domain types and interfaces
-│   ├── repository/          # Database access layer
-│   ├── service/             # Business logic layer
-│   ├── automation/          # Rule engine, webhook processing
-│   └── otel/                # OpenTelemetry setup
+├── api/                     # Go API server
+│   ├── cmd/
+│   │   └── server/          # Application entrypoint
+│   │       └── main.go
+│   ├── internal/
+│   │   ├── config/          # Configuration loading
+│   │   ├── database/        # Database connection, migrations
+│   │   │   └── migrations/  # SQL migration files
+│   │   ├── handler/         # HTTP handlers (grouped by domain)
+│   │   ├── middleware/      # Auth, logging, CORS, rate limiting
+│   │   ├── model/           # Domain types and interfaces
+│   │   ├── repository/      # Database access layer
+│   │   ├── service/         # Business logic layer
+│   │   ├── automation/      # Rule engine, webhook processing
+│   │   └── otel/            # OpenTelemetry setup
+│   ├── go.mod
+│   └── go.sum
 ├── web/                     # React frontend
 │   ├── src/
 │   │   ├── components/
@@ -130,15 +127,13 @@ trackforge/
 │   │   └── portal/          # Public portal pages
 │   ├── package.json
 │   └── vite.config.ts
-├── docs/                    # Design documents (this folder)
+├── docs/                    # Design documents
 ├── docker/
 │   ├── Dockerfile.api
 │   ├── Dockerfile.web
 │   └── nginx.conf
 ├── docker-compose.yml
 ├── .env.example
-├── go.mod
-├── go.sum
 ├── Makefile
 └── AGENTS.md                # AI agent implementation guide
 ```
