@@ -1,25 +1,22 @@
-.PHONY: help dev dev-db dev-api dev-web build up down logs migrate sqlc test test-go test-web lint
+.PHONY: build help dev dev-db dev-api up down logs logs-api migrate migrate-new test
+
+build: ## Build all Docker images
+	docker compose build
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 # --- Development ---
 
-dev: dev-db dev-api dev-web ## Start all services for development
+dev: dev-db dev-api ## Start all services for development
 
 dev-db: ## Start PostgreSQL only
 	docker compose up postgres -d
 
-dev-api: ## Start API server with hot reload (requires air: go install github.com/air-verse/air@latest)
-	cd api && air
-
-dev-web: ## Start frontend dev server
-	cd web && npm run dev
+dev-api: dev-db ## Start API server with hot reload (requires air: go install github.com/air-verse/air@latest)
+	set -a && . ./.env.development && set +a && cd api && air
 
 # --- Docker ---
-
-build: ## Build all Docker images
-	docker compose build
 
 up: ## Start all services
 	docker compose up -d
@@ -36,7 +33,7 @@ logs-api: ## Tail API logs
 # --- Database ---
 
 migrate: ## Run database migrations
-	cd api && go run ./cmd/server -migrate-only
+	set -a && . ./.env.development && set +a && cd api && go run ./cmd/server -migrate-only
 
 migrate-new: ## Create a new migration (usage: make migrate-new name=create_users)
 	@if [ -z "$(name)" ]; then echo "Usage: make migrate-new name=create_users"; exit 1; fi
@@ -45,27 +42,7 @@ migrate-new: ## Create a new migration (usage: make migrate-new name=create_user
 	touch "api/internal/database/migrations/$${num}_$(name).down.sql"; \
 	echo "Created migrations: $${num}_$(name).{up,down}.sql"
 
-# --- Code Generation ---
-
-sqlc: ## Generate Go code from SQL queries
-	cd api && sqlc generate
-
 # --- Testing ---
 
-test: test-go test-web ## Run all tests
-
-test-go: ## Run Go tests
+test: ## Run all tests
 	cd api && go test ./... -v -race
-
-test-web: ## Run frontend tests
-	cd web && npm test
-
-# --- Linting ---
-
-lint: lint-go lint-web ## Run all linters
-
-lint-go: ## Run Go linter
-	cd api && golangci-lint run ./...
-
-lint-web: ## Run frontend linter
-	cd web && npm run lint
