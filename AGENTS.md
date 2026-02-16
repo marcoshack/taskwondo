@@ -17,7 +17,7 @@ TrackForge is a self-hosted task and ticket management system built with Go (bac
 
 | Component | Technology | Version |
 |-----------|-----------|---------|
-| Language | Go | 1.23+ |
+| Language | Go | 1.25+ |
 | Database | PostgreSQL | 16+ |
 | HTTP Router | chi (go-chi/chi/v5) | v5 |
 | SQL | sqlc | latest |
@@ -36,8 +36,8 @@ TrackForge is a self-hosted task and ticket management system built with Go (bac
 
 - **Package naming:** lowercase, single-word when possible (`handler`, `service`, `repository`, `model`)
 - **Error handling:** Always wrap errors with context: `fmt.Errorf("creating work item: %w", err)`
-- **Logging:** Use `slog` (stdlib). Always include structured fields: `slog.Error("failed to create item", "error", err, "project_id", projectID)`
-- **Context:** Pass `context.Context` as first parameter to all service and repository methods
+- **Logging:** Use `zerolog` (github.com/rs/zerolog). Pass context everywhere; use `log.Ctx(ctx)` for contextual logging. Always include structured fields: `log.Ctx(ctx).Error().Err(err).Str("project_id", projectID).Msg("failed to create item")`
+- **Context:** Pass `context.Context` as first parameter to all functions and methods (use `_ context.Context` if unused). This enables contextual logging via `log.Ctx(ctx)` and future tracing.
 - **Interfaces:** Define interfaces in the consumer package, not the provider. The `service` package defines repository interfaces; the `repository` package implements them.
 - **Configuration:** All config via environment variables, loaded once at startup into a `Config` struct
 - **No global state:** Dependencies are injected via constructors. No `init()` functions except for the `main` package.
@@ -48,7 +48,7 @@ TrackForge is a self-hosted task and ticket management system built with Go (bac
 
 - **Migrations:** Sequential numbered SQL files: `000001_create_users.up.sql`, `000001_create_users.down.sql`
 - **Naming:** Snake_case for tables and columns. Plural table names (`users`, `work_items`, `comments`).
-- **sqlc:** Write SQL queries in `.sql` files under `internal/database/queries/`. Run `sqlc generate` to produce Go code.
+- **sqlc:** Write SQL queries in `.sql` files under `api/internal/database/queries/`. Run `sqlc generate` to produce Go code.
 - **Transactions:** Use a transaction helper that accepts a function: `repo.WithTx(ctx, func(tx *sql.Tx) error { ... })`
 - **Soft deletes:** Filter `WHERE deleted_at IS NULL` in all list/get queries. Provide separate methods for including deleted items when needed.
 
@@ -71,28 +71,28 @@ Build the system in this order. Each phase produces a working, testable incremen
 
 **Goal:** API server boots, connects to database, runs migrations, serves health checks.
 
-1. Initialize Go module (`go mod init github.com/youruser/trackforge`)
-2. Create `cmd/server/main.go` — config loading, DB connection, HTTP server with graceful shutdown
-3. Create `internal/config/config.go` — environment variable loading with defaults
-4. Create `internal/database/database.go` — PostgreSQL connection pool setup
+1. Initialize Go module (`go mod init github.com/marcoshack/trackforge`) in `api/`
+2. Create `api/cmd/server/main.go` — config loading, DB connection, HTTP server with graceful shutdown
+3. Create `api/internal/config/config.go` — environment variable loading with defaults
+4. Create `api/internal/database/database.go` — PostgreSQL connection pool setup
 5. Create initial migration: `users` table
-6. Create `internal/middleware/` — logging, recovery, CORS, request ID
+6. Create `api/internal/middleware/` — logging, recovery, CORS, request ID
 7. Wire up chi router with `/healthz` and `/readyz` endpoints
 8. Create `Dockerfile.api` and `docker-compose.yml`
 9. Verify: `docker compose up` starts API + Postgres, health checks return 200
 
 **Key files:**
 ```
-cmd/server/main.go
-internal/config/config.go
-internal/database/database.go
-internal/database/migrations/000001_create_users.up.sql
-internal/database/migrations/000001_create_users.down.sql
-internal/middleware/logging.go
-internal/middleware/recovery.go
-internal/middleware/cors.go
-internal/middleware/requestid.go
-internal/handler/health.go
+api/cmd/server/main.go
+api/internal/config/config.go
+api/internal/database/database.go
+api/internal/database/migrations/000001_create_users.up.sql
+api/internal/database/migrations/000001_create_users.down.sql
+api/internal/middleware/logging.go
+api/internal/middleware/recovery.go
+api/internal/middleware/cors.go
+api/internal/middleware/requestid.go
+api/internal/handler/health.go
 docker/Dockerfile.api
 docker-compose.yml
 .env.example
@@ -103,11 +103,11 @@ docker-compose.yml
 **Goal:** Users can register, login, and receive JWT tokens. API key authentication works.
 
 1. Create migration: `api_keys` table
-2. Implement `internal/model/user.go` — User struct, role constants
-3. Implement `internal/repository/user.go` — CRUD operations via sqlc
-4. Implement `internal/service/auth.go` — password hashing (bcrypt), JWT generation/validation, API key validation
-5. Implement `internal/handler/auth.go` — login, refresh, me, logout endpoints
-6. Implement `internal/middleware/auth.go` — JWT extraction and validation middleware
+2. Implement `api/internal/model/user.go` — User struct, role constants
+3. Implement `api/internal/repository/user.go` — CRUD operations via sqlc
+4. Implement `api/internal/service/auth.go` — password hashing (bcrypt), JWT generation/validation, API key validation
+5. Implement `api/internal/handler/auth.go` — login, refresh, me, logout endpoints
+6. Implement `api/internal/middleware/auth.go` — JWT extraction and validation middleware
 7. Create initial admin user via environment variable or CLI flag
 8. Test: Login returns JWT, authenticated requests work, unauthenticated requests return 401
 
@@ -262,8 +262,8 @@ docker-compose.yml
 - **Unit tests** for service layer business logic (mock repository interfaces)
 - **Integration tests** for repository layer (use a test PostgreSQL database via testcontainers or docker)
 - **Handler tests** for HTTP request/response validation (use `httptest`)
-- Test files live alongside the code: `service/workitem.go` → `service/workitem_test.go`
-- Run: `go test ./...`
+- Test files live alongside the code: `api/internal/service/workitem.go` → `api/internal/service/workitem_test.go`
+- Run: `cd api && go test ./...`
 
 ### Frontend Tests
 
@@ -320,12 +320,12 @@ BASE_URL=http://localhost:3000
 ### Adding a New Entity
 
 1. Write the migration SQL (up and down)
-2. Define the model struct in `internal/model/`
-3. Write SQL queries in `internal/database/queries/`
+2. Define the model struct in `api/internal/model/`
+3. Write SQL queries in `api/internal/database/queries/`
 4. Run `sqlc generate`
-5. Create the repository in `internal/repository/` implementing the interface defined in the service package
-6. Create the service in `internal/service/` with business logic
-7. Create the handler in `internal/handler/` with HTTP endpoints
+5. Create the repository in `api/internal/repository/` implementing the interface defined in the service package
+6. Create the service in `api/internal/service/` with business logic
+7. Create the handler in `api/internal/handler/` with HTTP endpoints
 8. Register routes in the router setup
 9. Add frontend API client hook
 10. Build the UI components

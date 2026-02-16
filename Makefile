@@ -11,7 +11,7 @@ dev-db: ## Start PostgreSQL only
 	docker compose up postgres -d
 
 dev-api: ## Start API server with hot reload (requires air: go install github.com/air-verse/air@latest)
-	air
+	cd api && air
 
 dev-web: ## Start frontend dev server
 	cd web && npm run dev
@@ -36,26 +36,26 @@ logs-api: ## Tail API logs
 # --- Database ---
 
 migrate: ## Run database migrations
-	go run ./cmd/server -migrate-only
+	cd api && go run ./cmd/server -migrate-only
 
 migrate-new: ## Create a new migration (usage: make migrate-new name=create_users)
 	@if [ -z "$(name)" ]; then echo "Usage: make migrate-new name=create_users"; exit 1; fi
-	@num=$$(printf "%06d" $$(($$(ls internal/database/migrations/*.up.sql 2>/dev/null | wc -l) + 1))); \
-	touch "internal/database/migrations/$${num}_$(name).up.sql"; \
-	touch "internal/database/migrations/$${num}_$(name).down.sql"; \
+	@num=$$(printf "%06d" $$(($$(ls api/internal/database/migrations/*.up.sql 2>/dev/null | wc -l) + 1))); \
+	touch "api/internal/database/migrations/$${num}_$(name).up.sql"; \
+	touch "api/internal/database/migrations/$${num}_$(name).down.sql"; \
 	echo "Created migrations: $${num}_$(name).{up,down}.sql"
 
 # --- Code Generation ---
 
 sqlc: ## Generate Go code from SQL queries
-	sqlc generate
+	cd api && sqlc generate
 
 # --- Testing ---
 
 test: test-go test-web ## Run all tests
 
 test-go: ## Run Go tests
-	go test ./... -v -race
+	cd api && go test ./... -v -race
 
 test-web: ## Run frontend tests
 	cd web && npm test
@@ -65,7 +65,7 @@ test-web: ## Run frontend tests
 lint: lint-go lint-web ## Run all linters
 
 lint-go: ## Run Go linter
-	golangci-lint run ./...
+	cd api && golangci-lint run ./...
 
 lint-web: ## Run frontend linter
 	cd web && npm run lint

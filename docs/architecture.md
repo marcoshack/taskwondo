@@ -19,7 +19,7 @@ The architecture prioritizes simplicity: one API server, one database, one front
 ### API Server (Go)
 
 ```
-cmd/server/main.go
+api/cmd/server/main.go
     │
     ├── Config loading (.env, environment variables)
     ├── Database connection + migration runner
@@ -37,10 +37,10 @@ cmd/server/main.go
 
 | Layer | Responsibility | Package |
 |-------|---------------|---------|
-| Handler | HTTP request/response, validation, serialization | `internal/handler/` |
-| Service | Business logic, authorization, orchestration | `internal/service/` |
-| Repository | Database queries, transactions | `internal/repository/` |
-| Model | Domain types, interfaces, constants | `internal/model/` |
+| Handler | HTTP request/response, validation, serialization | `api/internal/handler/` |
+| Service | Business logic, authorization, orchestration | `api/internal/service/` |
+| Repository | Database queries, transactions | `api/internal/repository/` |
+| Model | Domain types, interfaces, constants | `api/internal/model/` |
 
 **Key design decisions:**
 
