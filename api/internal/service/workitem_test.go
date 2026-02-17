@@ -159,15 +159,158 @@ func (m *mockWorkItemEventRepo) ListByWorkItem(_ context.Context, workItemID uui
 	return m.events[workItemID], nil
 }
 
+func (m *mockWorkItemEventRepo) ListByWorkItemFiltered(_ context.Context, workItemID uuid.UUID, visibility string) ([]model.WorkItemEventWithActor, error) {
+	events := m.events[workItemID]
+	var result []model.WorkItemEventWithActor
+	for _, e := range events {
+		if visibility != "" && e.Visibility != visibility {
+			continue
+		}
+		result = append(result, model.WorkItemEventWithActor{WorkItemEvent: e})
+	}
+	return result, nil
+}
+
+// --- Mock comment repository ---
+
+type mockCommentRepo struct {
+	comments map[uuid.UUID]*model.Comment
+}
+
+func newMockCommentRepo() *mockCommentRepo {
+	return &mockCommentRepo{comments: make(map[uuid.UUID]*model.Comment)}
+}
+
+func (m *mockCommentRepo) Create(_ context.Context, comment *model.Comment) error {
+	now := time.Now()
+	comment.CreatedAt = now
+	comment.UpdatedAt = now
+	m.comments[comment.ID] = comment
+	return nil
+}
+
+func (m *mockCommentRepo) GetByID(_ context.Context, id uuid.UUID) (*model.Comment, error) {
+	c, ok := m.comments[id]
+	if !ok {
+		return nil, model.ErrNotFound
+	}
+	return c, nil
+}
+
+func (m *mockCommentRepo) ListByWorkItem(_ context.Context, workItemID uuid.UUID, visibility string) ([]model.Comment, error) {
+	var result []model.Comment
+	for _, c := range m.comments {
+		if c.WorkItemID != workItemID {
+			continue
+		}
+		if visibility != "" && c.Visibility != visibility {
+			continue
+		}
+		result = append(result, *c)
+	}
+	return result, nil
+}
+
+func (m *mockCommentRepo) Update(_ context.Context, comment *model.Comment) error {
+	existing, ok := m.comments[comment.ID]
+	if !ok {
+		return model.ErrNotFound
+	}
+	existing.Body = comment.Body
+	existing.UpdatedAt = time.Now()
+	return nil
+}
+
+func (m *mockCommentRepo) Delete(_ context.Context, id uuid.UUID) error {
+	if _, ok := m.comments[id]; !ok {
+		return model.ErrNotFound
+	}
+	delete(m.comments, id)
+	return nil
+}
+
+// --- Mock relation repository ---
+
+type mockRelationRepo struct {
+	relations map[uuid.UUID]*model.WorkItemRelation
+}
+
+func newMockRelationRepo() *mockRelationRepo {
+	return &mockRelationRepo{relations: make(map[uuid.UUID]*model.WorkItemRelation)}
+}
+
+func (m *mockRelationRepo) Create(_ context.Context, rel *model.WorkItemRelation) error {
+	rel.CreatedAt = time.Now()
+	// Check unique constraint
+	for _, existing := range m.relations {
+		if existing.SourceID == rel.SourceID && existing.TargetID == rel.TargetID && existing.RelationType == rel.RelationType {
+			return fmt.Errorf("duplicate relation: %w", model.ErrConflict)
+		}
+	}
+	m.relations[rel.ID] = rel
+	return nil
+}
+
+func (m *mockRelationRepo) GetByID(_ context.Context, id uuid.UUID) (*model.WorkItemRelation, error) {
+	rel, ok := m.relations[id]
+	if !ok {
+		return nil, model.ErrNotFound
+	}
+	return rel, nil
+}
+
+func (m *mockRelationRepo) ListByWorkItem(_ context.Context, workItemID uuid.UUID) ([]model.WorkItemRelation, error) {
+	var result []model.WorkItemRelation
+	for _, rel := range m.relations {
+		if rel.SourceID == workItemID || rel.TargetID == workItemID {
+			result = append(result, *rel)
+		}
+	}
+	return result, nil
+}
+
+func (m *mockRelationRepo) Delete(_ context.Context, id uuid.UUID) error {
+	if _, ok := m.relations[id]; !ok {
+		return model.ErrNotFound
+	}
+	delete(m.relations, id)
+	return nil
+}
+
 // --- Test helpers ---
 
+type testWorkItemSetup struct {
+	svc        *WorkItemService
+	itemRepo   *mockWorkItemRepo
+	eventRepo  *mockWorkItemEventRepo
+	commentRepo *mockCommentRepo
+	relationRepo *mockRelationRepo
+	projectRepo *mockProjectRepo
+	memberRepo *mockProjectMemberRepo
+}
+
 func newTestWorkItemService() (*WorkItemService, *mockWorkItemRepo, *mockWorkItemEventRepo, *mockProjectRepo, *mockProjectMemberRepo) {
+	s := newTestWorkItemSetup()
+	return s.svc, s.itemRepo, s.eventRepo, s.projectRepo, s.memberRepo
+}
+
+func newTestWorkItemSetup() *testWorkItemSetup {
 	itemRepo := newMockWorkItemRepo()
 	eventRepo := newMockWorkItemEventRepo()
+	commentRepo := newMockCommentRepo()
+	relationRepo := newMockRelationRepo()
 	projectRepo := newMockProjectRepo()
 	memberRepo := newMockProjectMemberRepo()
-	svc := NewWorkItemService(itemRepo, eventRepo, projectRepo, memberRepo)
-	return svc, itemRepo, eventRepo, projectRepo, memberRepo
+	svc := NewWorkItemService(itemRepo, eventRepo, commentRepo, relationRepo, projectRepo, memberRepo)
+	return &testWorkItemSetup{
+		svc:          svc,
+		itemRepo:     itemRepo,
+		eventRepo:    eventRepo,
+		commentRepo:  commentRepo,
+		relationRepo: relationRepo,
+		projectRepo:  projectRepo,
+		memberRepo:   memberRepo,
+	}
 }
 
 func setupProjectWithMember(t *testing.T, projectRepo *mockProjectRepo, memberRepo *mockProjectMemberRepo, info *model.AuthInfo, role string) *model.Project {
@@ -700,5 +843,437 @@ func TestDeleteWorkItem_ViewerDenied(t *testing.T) {
 	err = svc.Delete(context.Background(), viewer, "TEST", created.ItemNumber)
 	if err != model.ErrForbidden {
 		t.Fatalf("expected ErrForbidden for viewer, got %v", err)
+	}
+}
+
+// --- Comment Tests ---
+
+func TestCreateComment_Success(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleMember)
+
+	item, err := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	comment, err := s.svc.CreateComment(context.Background(), info, "TEST", item.ItemNumber, CreateCommentInput{
+		Body:       "This is a comment",
+		Visibility: model.VisibilityInternal,
+	})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if comment.Body != "This is a comment" {
+		t.Fatalf("expected body 'This is a comment', got %s", comment.Body)
+	}
+	if comment.AuthorID == nil || *comment.AuthorID != info.UserID {
+		t.Fatal("expected author_id to match user")
+	}
+}
+
+func TestCreateComment_EmptyBody(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleMember)
+
+	item, err := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = s.svc.CreateComment(context.Background(), info, "TEST", item.ItemNumber, CreateCommentInput{
+		Body: "",
+	})
+	if err == nil {
+		t.Fatal("expected error for empty body")
+	}
+}
+
+func TestCreateComment_InvalidVisibility(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleMember)
+
+	item, err := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = s.svc.CreateComment(context.Background(), info, "TEST", item.ItemNumber, CreateCommentInput{
+		Body:       "test",
+		Visibility: "secret",
+	})
+	if err == nil {
+		t.Fatal("expected error for invalid visibility")
+	}
+}
+
+func TestCreateComment_CreatesEvent(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleMember)
+
+	item, err := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = s.svc.CreateComment(context.Background(), info, "TEST", item.ItemNumber, CreateCommentInput{
+		Body: "Hello",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	events := s.eventRepo.events[item.ID]
+	// 1 "created" + 1 "comment_added"
+	found := false
+	for _, e := range events {
+		if e.EventType == "comment_added" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("expected comment_added event")
+	}
+}
+
+func TestListComments_Success(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleMember)
+
+	item, err := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for i := 0; i < 3; i++ {
+		_, err = s.svc.CreateComment(context.Background(), info, "TEST", item.ItemNumber, CreateCommentInput{
+			Body: fmt.Sprintf("Comment %d", i),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	comments, err := s.svc.ListComments(context.Background(), info, "TEST", item.ItemNumber, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(comments) != 3 {
+		t.Fatalf("expected 3 comments, got %d", len(comments))
+	}
+}
+
+func TestUpdateComment_AuthorCanEdit(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleMember)
+
+	item, err := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	comment, err := s.svc.CreateComment(context.Background(), info, "TEST", item.ItemNumber, CreateCommentInput{
+		Body: "Original",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	updated, err := s.svc.UpdateComment(context.Background(), info, "TEST", item.ItemNumber, comment.ID, "Updated body")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if updated.Body != "Updated body" {
+		t.Fatalf("expected body 'Updated body', got %s", updated.Body)
+	}
+}
+
+func TestUpdateComment_NonAuthorMemberDenied(t *testing.T) {
+	s := newTestWorkItemSetup()
+	author := userAuthInfo()
+	other := userAuthInfo()
+	project := setupProjectWithMember(t, s.projectRepo, s.memberRepo, author, model.ProjectRoleMember)
+	s.memberRepo.Add(context.Background(), &model.ProjectMember{
+		ID: uuid.New(), ProjectID: project.ID, UserID: other.UserID, Role: model.ProjectRoleMember,
+	})
+
+	item, err := s.svc.Create(context.Background(), author, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	comment, err := s.svc.CreateComment(context.Background(), author, "TEST", item.ItemNumber, CreateCommentInput{
+		Body: "Original",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = s.svc.UpdateComment(context.Background(), other, "TEST", item.ItemNumber, comment.ID, "Hacked")
+	if err != model.ErrForbidden {
+		t.Fatalf("expected ErrForbidden, got %v", err)
+	}
+}
+
+func TestUpdateComment_AdminCanEdit(t *testing.T) {
+	s := newTestWorkItemSetup()
+	author := userAuthInfo()
+	admin := userAuthInfo()
+	project := setupProjectWithMember(t, s.projectRepo, s.memberRepo, author, model.ProjectRoleMember)
+	s.memberRepo.Add(context.Background(), &model.ProjectMember{
+		ID: uuid.New(), ProjectID: project.ID, UserID: admin.UserID, Role: model.ProjectRoleAdmin,
+	})
+
+	item, err := s.svc.Create(context.Background(), author, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	comment, err := s.svc.CreateComment(context.Background(), author, "TEST", item.ItemNumber, CreateCommentInput{
+		Body: "Original",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	updated, err := s.svc.UpdateComment(context.Background(), admin, "TEST", item.ItemNumber, comment.ID, "Admin edit")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if updated.Body != "Admin edit" {
+		t.Fatalf("expected body 'Admin edit', got %s", updated.Body)
+	}
+}
+
+func TestDeleteComment_Success(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleMember)
+
+	item, err := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	comment, err := s.svc.CreateComment(context.Background(), info, "TEST", item.ItemNumber, CreateCommentInput{
+		Body: "To delete",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = s.svc.DeleteComment(context.Background(), info, "TEST", item.ItemNumber, comment.ID)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+}
+
+// --- Relation Tests ---
+
+func TestCreateRelation_Success(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleMember)
+
+	item1, err := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+	item2, err := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rel, err := s.svc.CreateRelation(context.Background(), info, "TEST", item1.ItemNumber, CreateRelationInput{
+		TargetDisplayID: fmt.Sprintf("TEST-%d", item2.ItemNumber),
+		RelationType:    model.RelationBlocks,
+	})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if rel.RelationType != model.RelationBlocks {
+		t.Fatalf("expected relation type 'blocks', got %s", rel.RelationType)
+	}
+	if rel.SourceDisplayID != fmt.Sprintf("TEST-%d", item1.ItemNumber) {
+		t.Fatalf("expected source display ID TEST-%d, got %s", item1.ItemNumber, rel.SourceDisplayID)
+	}
+}
+
+func TestCreateRelation_InvalidType(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleMember)
+
+	item1, err := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+	item2, err := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = s.svc.CreateRelation(context.Background(), info, "TEST", item1.ItemNumber, CreateRelationInput{
+		TargetDisplayID: fmt.Sprintf("TEST-%d", item2.ItemNumber),
+		RelationType:    "depends_on",
+	})
+	if err == nil {
+		t.Fatal("expected error for invalid relation type")
+	}
+}
+
+func TestCreateRelation_SelfRelation(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleMember)
+
+	item, err := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = s.svc.CreateRelation(context.Background(), info, "TEST", item.ItemNumber, CreateRelationInput{
+		TargetDisplayID: fmt.Sprintf("TEST-%d", item.ItemNumber),
+		RelationType:    model.RelationRelatesTo,
+	})
+	if err == nil {
+		t.Fatal("expected error for self-relation")
+	}
+}
+
+func TestCreateRelation_InvalidDisplayID(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleMember)
+
+	item, err := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = s.svc.CreateRelation(context.Background(), info, "TEST", item.ItemNumber, CreateRelationInput{
+		TargetDisplayID: "invalid",
+		RelationType:    model.RelationBlocks,
+	})
+	if err == nil {
+		t.Fatal("expected error for invalid display ID")
+	}
+}
+
+func TestListRelations_Success(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleMember)
+
+	item1, err := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+	item2, err := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = s.svc.CreateRelation(context.Background(), info, "TEST", item1.ItemNumber, CreateRelationInput{
+		TargetDisplayID: fmt.Sprintf("TEST-%d", item2.ItemNumber),
+		RelationType:    model.RelationBlocks,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	relations, err := s.svc.ListRelations(context.Background(), info, "TEST", item1.ItemNumber)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(relations) != 1 {
+		t.Fatalf("expected 1 relation, got %d", len(relations))
+	}
+}
+
+func TestDeleteRelation_Success(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleMember)
+
+	item1, err := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+	item2, err := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rel, err := s.svc.CreateRelation(context.Background(), info, "TEST", item1.ItemNumber, CreateRelationInput{
+		TargetDisplayID: fmt.Sprintf("TEST-%d", item2.ItemNumber),
+		RelationType:    model.RelationBlocks,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = s.svc.DeleteRelation(context.Background(), info, "TEST", item1.ItemNumber, rel.ID)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+}
+
+// --- Event Tests ---
+
+func TestListEvents_Success(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleMember)
+
+	item, err := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	events, err := s.svc.ListEvents(context.Background(), info, "TEST", item.ItemNumber, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// At least 1 "created" event
+	if len(events) < 1 {
+		t.Fatal("expected at least 1 event")
+	}
+}
+
+func TestListEvents_VisibilityFilter(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleMember)
+
+	item, err := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Add a public comment (creates a public event)
+	_, err = s.svc.CreateComment(context.Background(), info, "TEST", item.ItemNumber, CreateCommentInput{
+		Body:       "Public comment",
+		Visibility: model.VisibilityPublic,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Filter for public events only
+	events, err := s.svc.ListEvents(context.Background(), info, "TEST", item.ItemNumber, model.VisibilityPublic)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range events {
+		if e.Visibility != model.VisibilityPublic {
+			t.Fatalf("expected only public events, got visibility %s", e.Visibility)
+		}
 	}
 }

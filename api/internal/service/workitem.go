@@ -25,6 +25,24 @@ type WorkItemRepository interface {
 type WorkItemEventRepository interface {
 	Create(ctx context.Context, event *model.WorkItemEvent) error
 	ListByWorkItem(ctx context.Context, workItemID uuid.UUID) ([]model.WorkItemEvent, error)
+	ListByWorkItemFiltered(ctx context.Context, workItemID uuid.UUID, visibility string) ([]model.WorkItemEventWithActor, error)
+}
+
+// CommentRepository defines persistence operations for comments.
+type CommentRepository interface {
+	Create(ctx context.Context, comment *model.Comment) error
+	GetByID(ctx context.Context, id uuid.UUID) (*model.Comment, error)
+	ListByWorkItem(ctx context.Context, workItemID uuid.UUID, visibility string) ([]model.Comment, error)
+	Update(ctx context.Context, comment *model.Comment) error
+	Delete(ctx context.Context, id uuid.UUID) error
+}
+
+// WorkItemRelationRepository defines persistence operations for work item relations.
+type WorkItemRelationRepository interface {
+	Create(ctx context.Context, relation *model.WorkItemRelation) error
+	GetByID(ctx context.Context, id uuid.UUID) (*model.WorkItemRelation, error)
+	ListByWorkItem(ctx context.Context, workItemID uuid.UUID) ([]model.WorkItemRelation, error)
+	Delete(ctx context.Context, id uuid.UUID) error
 }
 
 // CreateWorkItemInput holds the input for creating a work item.
@@ -63,26 +81,51 @@ type UpdateWorkItemInput struct {
 	CustomFields  map[string]interface{}
 }
 
+// CreateCommentInput holds the input for creating a comment.
+type CreateCommentInput struct {
+	Body       string
+	Visibility string
+}
+
+// CreateRelationInput holds the input for creating a relation.
+type CreateRelationInput struct {
+	TargetDisplayID string
+	RelationType    string
+}
+
+// RelationWithDisplay is a relation enriched with display IDs.
+type RelationWithDisplay struct {
+	model.WorkItemRelation
+	SourceDisplayID string
+	TargetDisplayID string
+}
+
 // WorkItemService handles work item business logic and authorization.
 type WorkItemService struct {
-	items    WorkItemRepository
-	events   WorkItemEventRepository
-	projects ProjectRepository
-	members  ProjectMemberRepository
+	items     WorkItemRepository
+	events    WorkItemEventRepository
+	comments  CommentRepository
+	relations WorkItemRelationRepository
+	projects  ProjectRepository
+	members   ProjectMemberRepository
 }
 
 // NewWorkItemService creates a new WorkItemService.
 func NewWorkItemService(
 	items WorkItemRepository,
 	events WorkItemEventRepository,
+	comments CommentRepository,
+	relations WorkItemRelationRepository,
 	projects ProjectRepository,
 	members ProjectMemberRepository,
 ) *WorkItemService {
 	return &WorkItemService{
-		items:    items,
-		events:   events,
-		projects: projects,
-		members:  members,
+		items:     items,
+		events:    events,
+		comments:  comments,
+		relations: relations,
+		projects:  projects,
+		members:   members,
 	}
 }
 
@@ -402,6 +445,338 @@ func (s *WorkItemService) Delete(ctx context.Context, info *model.AuthInfo, proj
 	return nil
 }
 
+// --- Comment methods ---
+
+// CreateComment creates a new comment on a work item.
+func (s *WorkItemService) CreateComment(ctx context.Context, info *model.AuthInfo, projectKey string, itemNumber int, input CreateCommentInput) (*model.Comment, error) {
+	project, err := s.projects.GetByKey(ctx, projectKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.requireRole(ctx, info, project.ID,
+		model.ProjectRoleOwner, model.ProjectRoleAdmin, model.ProjectRoleMember); err != nil {
+		return nil, err
+	}
+
+	item, err := s.items.GetByProjectAndNumber(ctx, project.ID, itemNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	if strings.TrimSpace(input.Body) == "" {
+		return nil, fmt.Errorf("body is required: %w", model.ErrValidation)
+	}
+
+	if input.Visibility == "" {
+		input.Visibility = model.VisibilityInternal
+	}
+	if input.Visibility != model.VisibilityInternal && input.Visibility != model.VisibilityPublic {
+		return nil, fmt.Errorf("invalid comment visibility %q: %w", input.Visibility, model.ErrValidation)
+	}
+
+	comment := &model.Comment{
+		ID:         uuid.Must(uuid.NewV7()),
+		WorkItemID: item.ID,
+		AuthorID:   &info.UserID,
+		Body:       input.Body,
+		Visibility: input.Visibility,
+	}
+
+	if err := s.comments.Create(ctx, comment); err != nil {
+		return nil, fmt.Errorf("creating comment: %w", err)
+	}
+
+	// Record "comment_added" event
+	preview := input.Body
+	if len(preview) > 100 {
+		preview = preview[:100] + "..."
+	}
+	s.recordEventWithMetadata(ctx, item.ID, &info.UserID, "comment_added", input.Visibility, map[string]interface{}{
+		"comment_id": comment.ID.String(),
+		"preview":    preview,
+	})
+
+	// Re-fetch to get DB-assigned timestamps
+	return s.comments.GetByID(ctx, comment.ID)
+}
+
+// ListComments returns comments for a work item.
+func (s *WorkItemService) ListComments(ctx context.Context, info *model.AuthInfo, projectKey string, itemNumber int, visibility string) ([]model.Comment, error) {
+	project, err := s.projects.GetByKey(ctx, projectKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.requireMembership(ctx, info, project.ID); err != nil {
+		return nil, err
+	}
+
+	item, err := s.items.GetByProjectAndNumber(ctx, project.ID, itemNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.comments.ListByWorkItem(ctx, item.ID, visibility)
+}
+
+// UpdateComment updates a comment's body. Only the author or project owner/admin can edit.
+func (s *WorkItemService) UpdateComment(ctx context.Context, info *model.AuthInfo, projectKey string, itemNumber int, commentID uuid.UUID, body string) (*model.Comment, error) {
+	project, err := s.projects.GetByKey(ctx, projectKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.requireMembership(ctx, info, project.ID); err != nil {
+		return nil, err
+	}
+
+	_, err = s.items.GetByProjectAndNumber(ctx, project.ID, itemNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	comment, err := s.comments.GetByID(ctx, commentID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check author or admin/owner role
+	isAuthor := comment.AuthorID != nil && *comment.AuthorID == info.UserID
+	if !isAuthor {
+		if err := s.requireRole(ctx, info, project.ID,
+			model.ProjectRoleOwner, model.ProjectRoleAdmin); err != nil {
+			return nil, model.ErrForbidden
+		}
+	}
+
+	if strings.TrimSpace(body) == "" {
+		return nil, fmt.Errorf("body is required: %w", model.ErrValidation)
+	}
+
+	comment.Body = body
+	if err := s.comments.Update(ctx, comment); err != nil {
+		return nil, fmt.Errorf("updating comment: %w", err)
+	}
+
+	return s.comments.GetByID(ctx, commentID)
+}
+
+// DeleteComment soft-deletes a comment. Only the author or project owner/admin can delete.
+func (s *WorkItemService) DeleteComment(ctx context.Context, info *model.AuthInfo, projectKey string, itemNumber int, commentID uuid.UUID) error {
+	project, err := s.projects.GetByKey(ctx, projectKey)
+	if err != nil {
+		return err
+	}
+
+	if err := s.requireMembership(ctx, info, project.ID); err != nil {
+		return err
+	}
+
+	item, err := s.items.GetByProjectAndNumber(ctx, project.ID, itemNumber)
+	if err != nil {
+		return err
+	}
+
+	comment, err := s.comments.GetByID(ctx, commentID)
+	if err != nil {
+		return err
+	}
+
+	isAuthor := comment.AuthorID != nil && *comment.AuthorID == info.UserID
+	if !isAuthor {
+		if err := s.requireRole(ctx, info, project.ID,
+			model.ProjectRoleOwner, model.ProjectRoleAdmin); err != nil {
+			return model.ErrForbidden
+		}
+	}
+
+	if err := s.comments.Delete(ctx, commentID); err != nil {
+		return fmt.Errorf("deleting comment: %w", err)
+	}
+
+	s.recordEventWithMetadata(ctx, item.ID, &info.UserID, "comment_deleted", model.VisibilityInternal, map[string]interface{}{
+		"comment_id": commentID.String(),
+	})
+
+	return nil
+}
+
+// --- Relation methods ---
+
+// CreateRelation creates a relationship between two work items.
+func (s *WorkItemService) CreateRelation(ctx context.Context, info *model.AuthInfo, projectKey string, itemNumber int, input CreateRelationInput) (*RelationWithDisplay, error) {
+	project, err := s.projects.GetByKey(ctx, projectKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.requireRole(ctx, info, project.ID,
+		model.ProjectRoleOwner, model.ProjectRoleAdmin, model.ProjectRoleMember); err != nil {
+		return nil, err
+	}
+
+	sourceItem, err := s.items.GetByProjectAndNumber(ctx, project.ID, itemNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	// Validate relation type
+	if !isValidRelationType(input.RelationType) {
+		return nil, fmt.Errorf("invalid relation type %q: %w", input.RelationType, model.ErrValidation)
+	}
+
+	// Parse target display ID (e.g. "INFRA-38")
+	targetKey, targetNumber, err := parseDisplayID(input.TargetDisplayID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid target_display_id %q: %w", input.TargetDisplayID, model.ErrValidation)
+	}
+
+	targetProject, err := s.projects.GetByKey(ctx, targetKey)
+	if err != nil {
+		return nil, fmt.Errorf("target project not found: %w", model.ErrValidation)
+	}
+
+	targetItem, err := s.items.GetByProjectAndNumber(ctx, targetProject.ID, targetNumber)
+	if err != nil {
+		return nil, fmt.Errorf("target work item not found: %w", model.ErrValidation)
+	}
+
+	// Prevent self-relation
+	if sourceItem.ID == targetItem.ID {
+		return nil, fmt.Errorf("cannot create relation to self: %w", model.ErrValidation)
+	}
+
+	relation := &model.WorkItemRelation{
+		ID:           uuid.Must(uuid.NewV7()),
+		SourceID:     sourceItem.ID,
+		TargetID:     targetItem.ID,
+		RelationType: input.RelationType,
+		CreatedBy:    info.UserID,
+	}
+
+	if err := s.relations.Create(ctx, relation); err != nil {
+		return nil, fmt.Errorf("creating relation: %w", err)
+	}
+
+	sourceDisplayID := fmt.Sprintf("%s-%d", projectKey, itemNumber)
+	targetDisplayID := fmt.Sprintf("%s-%d", targetKey, targetItem.ItemNumber)
+
+	s.recordEventWithMetadata(ctx, sourceItem.ID, &info.UserID, "relation_added", model.VisibilityInternal, map[string]interface{}{
+		"relation_id":   relation.ID.String(),
+		"relation_type": input.RelationType,
+		"target":        targetDisplayID,
+	})
+
+	// Re-fetch to get DB-assigned created_at
+	fetched, err := s.relations.GetByID(ctx, relation.ID)
+	if err != nil {
+		return nil, fmt.Errorf("fetching created relation: %w", err)
+	}
+
+	return &RelationWithDisplay{
+		WorkItemRelation: *fetched,
+		SourceDisplayID:  sourceDisplayID,
+		TargetDisplayID:  targetDisplayID,
+	}, nil
+}
+
+// ListRelations returns all relations for a work item, enriched with display IDs.
+func (s *WorkItemService) ListRelations(ctx context.Context, info *model.AuthInfo, projectKey string, itemNumber int) ([]RelationWithDisplay, error) {
+	project, err := s.projects.GetByKey(ctx, projectKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.requireMembership(ctx, info, project.ID); err != nil {
+		return nil, err
+	}
+
+	item, err := s.items.GetByProjectAndNumber(ctx, project.ID, itemNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	relations, err := s.relations.ListByWorkItem(ctx, item.ID)
+	if err != nil {
+		return nil, fmt.Errorf("listing relations: %w", err)
+	}
+
+	result := make([]RelationWithDisplay, len(relations))
+	for i, rel := range relations {
+		result[i] = RelationWithDisplay{WorkItemRelation: rel}
+		// We know the source is on this project if source matches item.ID
+		if rel.SourceID == item.ID {
+			result[i].SourceDisplayID = fmt.Sprintf("%s-%d", projectKey, itemNumber)
+		}
+		if rel.TargetID == item.ID {
+			result[i].TargetDisplayID = fmt.Sprintf("%s-%d", projectKey, itemNumber)
+		}
+	}
+
+	return result, nil
+}
+
+// DeleteRelation removes a work item relation.
+func (s *WorkItemService) DeleteRelation(ctx context.Context, info *model.AuthInfo, projectKey string, itemNumber int, relationID uuid.UUID) error {
+	project, err := s.projects.GetByKey(ctx, projectKey)
+	if err != nil {
+		return err
+	}
+
+	if err := s.requireRole(ctx, info, project.ID,
+		model.ProjectRoleOwner, model.ProjectRoleAdmin, model.ProjectRoleMember); err != nil {
+		return err
+	}
+
+	item, err := s.items.GetByProjectAndNumber(ctx, project.ID, itemNumber)
+	if err != nil {
+		return err
+	}
+
+	relation, err := s.relations.GetByID(ctx, relationID)
+	if err != nil {
+		return err
+	}
+
+	// Verify relation belongs to this work item
+	if relation.SourceID != item.ID && relation.TargetID != item.ID {
+		return model.ErrNotFound
+	}
+
+	if err := s.relations.Delete(ctx, relationID); err != nil {
+		return fmt.Errorf("deleting relation: %w", err)
+	}
+
+	s.recordEventWithMetadata(ctx, item.ID, &info.UserID, "relation_removed", model.VisibilityInternal, map[string]interface{}{
+		"relation_id":   relationID.String(),
+		"relation_type": relation.RelationType,
+	})
+
+	return nil
+}
+
+// --- Event methods ---
+
+// ListEvents returns events for a work item with optional visibility filter and actor info.
+func (s *WorkItemService) ListEvents(ctx context.Context, info *model.AuthInfo, projectKey string, itemNumber int, visibility string) ([]model.WorkItemEventWithActor, error) {
+	project, err := s.projects.GetByKey(ctx, projectKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.requireMembership(ctx, info, project.ID); err != nil {
+		return nil, err
+	}
+
+	item, err := s.items.GetByProjectAndNumber(ctx, project.ID, itemNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.events.ListByWorkItemFiltered(ctx, item.ID, visibility)
+}
+
 // --- Authorization helpers ---
 
 func (s *WorkItemService) requireMembership(ctx context.Context, info *model.AuthInfo, projectID uuid.UUID) error {
@@ -459,6 +834,23 @@ func (s *WorkItemService) recordEvent(ctx context.Context, workItemID uuid.UUID,
 	}
 }
 
+func (s *WorkItemService) recordEventWithMetadata(ctx context.Context, workItemID uuid.UUID, actorID *uuid.UUID, eventType, visibility string, metadata map[string]interface{}) {
+	event := &model.WorkItemEvent{
+		ID:         uuid.Must(uuid.NewV7()),
+		WorkItemID: workItemID,
+		ActorID:    actorID,
+		EventType:  eventType,
+		Metadata:   metadata,
+		Visibility: visibility,
+	}
+	if err := s.events.Create(ctx, event); err != nil {
+		log.Ctx(ctx).Error().Err(err).
+			Str("event_type", eventType).
+			Str("work_item_id", workItemID.String()).
+			Msg("failed to record work item event")
+	}
+}
+
 func (s *WorkItemService) recordFieldChange(ctx context.Context, workItemID uuid.UUID, actorID *uuid.UUID, fieldName, oldValue, newValue string) {
 	eventType := fieldName + "_updated"
 	switch fieldName {
@@ -503,6 +895,31 @@ func isValidSortField(s string) bool {
 		return true
 	}
 	return false
+}
+
+func isValidRelationType(t string) bool {
+	switch t {
+	case model.RelationBlocks, model.RelationBlockedBy, model.RelationRelatesTo,
+		model.RelationDuplicates, model.RelationCausedBy, model.RelationParentOf, model.RelationChildOf:
+		return true
+	}
+	return false
+}
+
+// parseDisplayID parses a display ID like "INFRA-38" into project key and item number.
+func parseDisplayID(displayID string) (string, int, error) {
+	idx := strings.LastIndex(displayID, "-")
+	if idx < 1 || idx >= len(displayID)-1 {
+		return "", 0, fmt.Errorf("invalid display ID format")
+	}
+	key := displayID[:idx]
+	numStr := displayID[idx+1:]
+	var num int
+	_, err := fmt.Sscanf(numStr, "%d", &num)
+	if err != nil || num <= 0 {
+		return "", 0, fmt.Errorf("invalid item number in display ID")
+	}
+	return key, num, nil
 }
 
 func strPtr(s string) *string {
