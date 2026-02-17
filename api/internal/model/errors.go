@@ -10,4 +10,5 @@ var (
 	ErrForbidden          = errors.New("forbidden")
 	ErrConflict           = errors.New("conflict")
 	ErrAlreadyExists      = errors.New("already exists")
+	ErrValidation         = errors.New("validation error")
 )

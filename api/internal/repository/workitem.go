@@ -1,0 +1,407 @@
+package repository
+
+import (
+	"context"
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"strings"
+
+	"github.com/google/uuid"
+	"github.com/lib/pq"
+
+	"github.com/marcoshack/trackforge/internal/model"
+)
+
+// WorkItemRepository handles work item persistence.
+type WorkItemRepository struct {
+	db *sql.DB
+}
+
+// NewWorkItemRepository creates a new WorkItemRepository.
+func NewWorkItemRepository(db *sql.DB) *WorkItemRepository {
+	return &WorkItemRepository{db: db}
+}
+
+// Create inserts a new work item, assigning the next sequential item_number
+// within a transaction.
+func (r *WorkItemRepository) Create(ctx context.Context, item *model.WorkItem) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("beginning transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Atomically increment the project's item counter.
+	var itemNumber int
+	err = tx.QueryRowContext(ctx,
+		`UPDATE projects SET item_counter = item_counter + 1 WHERE id = $1 RETURNING item_counter`,
+		item.ProjectID).Scan(&itemNumber)
+	if err != nil {
+		return fmt.Errorf("incrementing item counter: %w", err)
+	}
+	item.ItemNumber = itemNumber
+
+	customFieldsJSON, err := json.Marshal(item.CustomFields)
+	if err != nil {
+		return fmt.Errorf("marshaling custom fields: %w", err)
+	}
+
+	_, err = tx.ExecContext(ctx,
+		`INSERT INTO work_items (
+			id, project_id, queue_id, parent_id, item_number, type, title, description,
+			status, priority, assignee_id, reporter_id, portal_contact_id, visibility,
+			labels, custom_fields, due_date, sla_deadline
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
+		item.ID, item.ProjectID, item.QueueID, item.ParentID, item.ItemNumber,
+		item.Type, item.Title, item.Description, item.Status, item.Priority,
+		item.AssigneeID, item.ReporterID, item.PortalContactID, item.Visibility,
+		pq.Array(item.Labels), customFieldsJSON, item.DueDate, item.SLADeadline)
+	if err != nil {
+		return fmt.Errorf("inserting work item: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("committing transaction: %w", err)
+	}
+
+	return nil
+}
+
+// GetByProjectAndNumber returns a work item by project ID and item number.
+func (r *WorkItemRepository) GetByProjectAndNumber(ctx context.Context, projectID uuid.UUID, itemNumber int) (*model.WorkItem, error) {
+	row := r.db.QueryRowContext(ctx,
+		`SELECT id, project_id, queue_id, parent_id, item_number, type, title, description,
+		        status, priority, assignee_id, reporter_id, portal_contact_id, visibility,
+		        labels, custom_fields, due_date, sla_deadline, resolved_at,
+		        created_at, updated_at
+		 FROM work_items
+		 WHERE project_id = $1 AND item_number = $2 AND deleted_at IS NULL`,
+		projectID, itemNumber)
+	return scanWorkItem(row)
+}
+
+// List returns work items matching the given filter with cursor-based pagination.
+func (r *WorkItemRepository) List(ctx context.Context, projectID uuid.UUID, filter *model.WorkItemFilter) (*model.WorkItemList, error) {
+	qb := &queryBuilder{argIndex: 0}
+
+	// Base condition
+	qb.add("project_id = ?", projectID)
+	qb.add("deleted_at IS NULL")
+
+	// Type filter
+	if len(filter.Types) > 0 {
+		qb.add("type = ANY(?)", pq.Array(filter.Types))
+	}
+
+	// Status filter
+	if len(filter.Statuses) > 0 {
+		qb.add("status = ANY(?)", pq.Array(filter.Statuses))
+	}
+
+	// Priority filter
+	if len(filter.Priorities) > 0 {
+		qb.add("priority = ANY(?)", pq.Array(filter.Priorities))
+	}
+
+	// Assignee filter
+	if filter.Unassigned {
+		qb.addRaw("assignee_id IS NULL")
+	} else if filter.AssigneeID != nil {
+		qb.add("assignee_id = ?", *filter.AssigneeID)
+	}
+
+	// Labels filter (items must contain ALL specified labels)
+	if len(filter.Labels) > 0 {
+		qb.add("labels @> ?", pq.Array(filter.Labels))
+	}
+
+	// Parent filter
+	if filter.ParentNone {
+		qb.addRaw("parent_id IS NULL")
+	} else if filter.ParentID != nil {
+		qb.add("parent_id = ?", *filter.ParentID)
+	}
+
+	// Full-text search
+	if filter.Search != "" {
+		qb.add("search_vector @@ plainto_tsquery('english', ?)", filter.Search)
+	}
+
+	whereClause := "WHERE " + strings.Join(qb.conditions, " AND ")
+
+	// Count total (without cursor/limit)
+	countQuery := "SELECT COUNT(*) FROM work_items " + whereClause
+	var total int
+	if err := r.db.QueryRowContext(ctx, countQuery, qb.args...).Scan(&total); err != nil {
+		return nil, fmt.Errorf("counting work items: %w", err)
+	}
+
+	// Determine sort column and order
+	sortCol := "created_at"
+	switch filter.Sort {
+	case "updated_at", "priority", "due_date", "item_number":
+		sortCol = filter.Sort
+	}
+	sortOrder := "DESC"
+	if filter.Order == "asc" {
+		sortOrder = "ASC"
+	}
+
+	// Cursor pagination: fetch the cursor item to get its sort value
+	if filter.Cursor != nil {
+		var cursorCreatedAt sql.NullTime
+		err := r.db.QueryRowContext(ctx,
+			`SELECT created_at FROM work_items WHERE id = $1`, *filter.Cursor).Scan(&cursorCreatedAt)
+		if err == nil && cursorCreatedAt.Valid {
+			if sortOrder == "DESC" {
+				qb.add("("+sortCol+", id) < (?, ?)", cursorCreatedAt.Time, *filter.Cursor)
+			} else {
+				qb.add("("+sortCol+", id) > (?, ?)", cursorCreatedAt.Time, *filter.Cursor)
+			}
+			// Rebuild WHERE clause with cursor condition
+			whereClause = "WHERE " + strings.Join(qb.conditions, " AND ")
+		}
+	}
+
+	limit := filter.Limit
+	if limit <= 0 {
+		limit = 50
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	selectQuery := fmt.Sprintf(
+		`SELECT id, project_id, queue_id, parent_id, item_number, type, title, description,
+		        status, priority, assignee_id, reporter_id, portal_contact_id, visibility,
+		        labels, custom_fields, due_date, sla_deadline, resolved_at,
+		        created_at, updated_at
+		 FROM work_items %s
+		 ORDER BY %s %s, id %s
+		 LIMIT %d`,
+		whereClause, sortCol, sortOrder, sortOrder, limit+1)
+
+	rows, err := r.db.QueryContext(ctx, selectQuery, qb.args...)
+	if err != nil {
+		return nil, fmt.Errorf("querying work items: %w", err)
+	}
+	defer rows.Close()
+
+	items, err := scanWorkItems(rows)
+	if err != nil {
+		return nil, err
+	}
+
+	hasMore := len(items) > limit
+	if hasMore {
+		items = items[:limit]
+	}
+
+	var cursor string
+	if len(items) > 0 {
+		cursor = items[len(items)-1].ID.String()
+	}
+
+	return &model.WorkItemList{
+		Items:   items,
+		Cursor:  cursor,
+		HasMore: hasMore,
+		Total:   total,
+	}, nil
+}
+
+// Update modifies a work item's mutable fields.
+func (r *WorkItemRepository) Update(ctx context.Context, item *model.WorkItem) error {
+	customFieldsJSON, err := json.Marshal(item.CustomFields)
+	if err != nil {
+		return fmt.Errorf("marshaling custom fields: %w", err)
+	}
+
+	result, err := r.db.ExecContext(ctx,
+		`UPDATE work_items SET
+			title = $1, description = $2, status = $3, priority = $4,
+			assignee_id = $5, visibility = $6, labels = $7, custom_fields = $8,
+			due_date = $9, sla_deadline = $10, type = $11, parent_id = $12,
+			queue_id = $13, portal_contact_id = $14, resolved_at = $15,
+			updated_at = now()
+		 WHERE id = $16 AND deleted_at IS NULL`,
+		item.Title, item.Description, item.Status, item.Priority,
+		item.AssigneeID, item.Visibility, pq.Array(item.Labels), customFieldsJSON,
+		item.DueDate, item.SLADeadline, item.Type, item.ParentID,
+		item.QueueID, item.PortalContactID, item.ResolvedAt,
+		item.ID)
+	if err != nil {
+		return fmt.Errorf("updating work item: %w", err)
+	}
+
+	n, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("checking rows affected: %w", err)
+	}
+	if n == 0 {
+		return model.ErrNotFound
+	}
+
+	return nil
+}
+
+// Delete soft-deletes a work item.
+func (r *WorkItemRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	result, err := r.db.ExecContext(ctx,
+		`UPDATE work_items SET deleted_at = now(), updated_at = now()
+		 WHERE id = $1 AND deleted_at IS NULL`, id)
+	if err != nil {
+		return fmt.Errorf("deleting work item: %w", err)
+	}
+
+	n, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("checking rows affected: %w", err)
+	}
+	if n == 0 {
+		return model.ErrNotFound
+	}
+
+	return nil
+}
+
+// --- Query builder ---
+
+type queryBuilder struct {
+	conditions []string
+	args       []interface{}
+	argIndex   int
+}
+
+// add appends a condition with parameters. Each ? is replaced with $N.
+func (qb *queryBuilder) add(condition string, args ...interface{}) {
+	for _, arg := range args {
+		qb.argIndex++
+		condition = strings.Replace(condition, "?", fmt.Sprintf("$%d", qb.argIndex), 1)
+		qb.args = append(qb.args, arg)
+	}
+	qb.conditions = append(qb.conditions, condition)
+}
+
+// addRaw appends a condition with no parameters.
+func (qb *queryBuilder) addRaw(condition string) {
+	qb.conditions = append(qb.conditions, condition)
+}
+
+// --- Scan helpers ---
+
+func scanWorkItem(row *sql.Row) (*model.WorkItem, error) {
+	var item model.WorkItem
+	var (
+		description     sql.NullString
+		queueID         uuid.NullUUID
+		parentID        uuid.NullUUID
+		assigneeID      uuid.NullUUID
+		portalContactID uuid.NullUUID
+		dueDate         sql.NullTime
+		slaDeadline     sql.NullTime
+		resolvedAt      sql.NullTime
+		labels          pq.StringArray
+		customFieldsRaw []byte
+	)
+
+	err := row.Scan(
+		&item.ID, &item.ProjectID, &queueID, &parentID, &item.ItemNumber,
+		&item.Type, &item.Title, &description, &item.Status, &item.Priority,
+		&assigneeID, &item.ReporterID, &portalContactID, &item.Visibility,
+		&labels, &customFieldsRaw, &dueDate, &slaDeadline, &resolvedAt,
+		&item.CreatedAt, &item.UpdatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, model.ErrNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("scanning work item: %w", err)
+	}
+
+	populateWorkItem(&item, description, queueID, parentID, assigneeID,
+		portalContactID, dueDate, slaDeadline, resolvedAt, labels, customFieldsRaw)
+
+	return &item, nil
+}
+
+func scanWorkItems(rows *sql.Rows) ([]model.WorkItem, error) {
+	var items []model.WorkItem
+	for rows.Next() {
+		var item model.WorkItem
+		var (
+			description     sql.NullString
+			queueID         uuid.NullUUID
+			parentID        uuid.NullUUID
+			assigneeID      uuid.NullUUID
+			portalContactID uuid.NullUUID
+			dueDate         sql.NullTime
+			slaDeadline     sql.NullTime
+			resolvedAt      sql.NullTime
+			labels          pq.StringArray
+			customFieldsRaw []byte
+		)
+
+		if err := rows.Scan(
+			&item.ID, &item.ProjectID, &queueID, &parentID, &item.ItemNumber,
+			&item.Type, &item.Title, &description, &item.Status, &item.Priority,
+			&assigneeID, &item.ReporterID, &portalContactID, &item.Visibility,
+			&labels, &customFieldsRaw, &dueDate, &slaDeadline, &resolvedAt,
+			&item.CreatedAt, &item.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scanning work item row: %w", err)
+		}
+
+		populateWorkItem(&item, description, queueID, parentID, assigneeID,
+			portalContactID, dueDate, slaDeadline, resolvedAt, labels, customFieldsRaw)
+
+		items = append(items, item)
+	}
+
+	return items, rows.Err()
+}
+
+func populateWorkItem(
+	item *model.WorkItem,
+	description sql.NullString,
+	queueID, parentID, assigneeID, portalContactID uuid.NullUUID,
+	dueDate, slaDeadline, resolvedAt sql.NullTime,
+	labels pq.StringArray,
+	customFieldsRaw []byte,
+) {
+	if description.Valid {
+		item.Description = &description.String
+	}
+	if queueID.Valid {
+		item.QueueID = &queueID.UUID
+	}
+	if parentID.Valid {
+		item.ParentID = &parentID.UUID
+	}
+	if assigneeID.Valid {
+		item.AssigneeID = &assigneeID.UUID
+	}
+	if portalContactID.Valid {
+		item.PortalContactID = &portalContactID.UUID
+	}
+	if dueDate.Valid {
+		item.DueDate = &dueDate.Time
+	}
+	if slaDeadline.Valid {
+		item.SLADeadline = &slaDeadline.Time
+	}
+	if resolvedAt.Valid {
+		item.ResolvedAt = &resolvedAt.Time
+	}
+
+	item.Labels = []string(labels)
+	if item.Labels == nil {
+		item.Labels = []string{}
+	}
+
+	item.CustomFields = make(map[string]interface{})
+	if len(customFieldsRaw) > 0 {
+		json.Unmarshal(customFieldsRaw, &item.CustomFields)
+	}
+}

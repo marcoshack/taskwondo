@@ -62,10 +62,13 @@ func main() {
 	apiKeyRepo := repository.NewAPIKeyRepository(db)
 	projectRepo := repository.NewProjectRepository(db)
 	projectMemberRepo := repository.NewProjectMemberRepository(db)
+	workItemRepo := repository.NewWorkItemRepository(db)
+	workItemEventRepo := repository.NewWorkItemEventRepository(db)
 
 	// Initialize services
 	authService := service.NewAuthService(userRepo, apiKeyRepo, cfg.JWTSecret, cfg.JWTExpiry)
 	projectService := service.NewProjectService(projectRepo, projectMemberRepo, userRepo)
+	workItemService := service.NewWorkItemService(workItemRepo, workItemEventRepo, projectRepo, projectMemberRepo)
 
 	// Seed admin user if configured
 	if cfg.AdminEmail != "" && cfg.AdminPassword != "" {
@@ -78,6 +81,7 @@ func main() {
 	health := handler.NewHealthHandler(db)
 	auth := handler.NewAuthHandler(authService)
 	projects := handler.NewProjectHandler(projectService)
+	items := handler.NewWorkItemHandler(workItemService)
 
 	// Set up router
 	r := chi.NewRouter()
@@ -123,6 +127,15 @@ func main() {
 						r.Post("/", projects.AddMember)
 						r.Patch("/{userId}", projects.UpdateMemberRole)
 						r.Delete("/{userId}", projects.RemoveMember)
+					})
+					r.Route("/items", func(r chi.Router) {
+						r.Get("/", items.List)
+						r.Post("/", items.Create)
+						r.Route("/{itemNumber}", func(r chi.Router) {
+							r.Get("/", items.Get)
+							r.Patch("/", items.Update)
+							r.Delete("/", items.Delete)
+						})
 					})
 				})
 			})
