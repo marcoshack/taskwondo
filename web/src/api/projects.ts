@@ -53,3 +53,17 @@ export async function listMembers(projectKey: string) {
   const res = await api.get<{ data: ProjectMember[] }>(`/projects/${projectKey}/members`)
   return res.data.data
 }
+
+export interface UpdateProjectInput {
+  name?: string
+  description?: string | null
+}
+
+export async function updateProject(projectKey: string, input: UpdateProjectInput) {
+  const res = await api.patch<ProjectResponse>(`/projects/${projectKey}`, input)
+  return res.data.data
+}
+
+export async function deleteProject(projectKey: string) {
+  await api.delete(`/projects/${projectKey}`)
+}
