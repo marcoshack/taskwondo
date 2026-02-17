@@ -1,4 +1,5 @@
 const sizeClasses = {
+  xs: 'h-4.5 w-4.5 text-[0.6rem]',
   sm: 'h-6 w-6 text-xs',
   md: 'h-8 w-8 text-sm',
   lg: 'h-10 w-10 text-base',
