@@ -108,6 +108,7 @@ type WorkItemService struct {
 	relations WorkItemRelationRepository
 	projects  ProjectRepository
 	members   ProjectMemberRepository
+	workflows WorkflowRepository
 }
 
 // NewWorkItemService creates a new WorkItemService.
@@ -118,6 +119,7 @@ func NewWorkItemService(
 	relations WorkItemRelationRepository,
 	projects ProjectRepository,
 	members ProjectMemberRepository,
+	workflows WorkflowRepository,
 ) *WorkItemService {
 	return &WorkItemService{
 		items:     items,
@@ -126,6 +128,7 @@ func NewWorkItemService(
 		relations: relations,
 		projects:  projects,
 		members:   members,
+		workflows: workflows,
 	}
 }
 
@@ -184,6 +187,15 @@ func (s *WorkItemService) Create(ctx context.Context, info *model.AuthInfo, proj
 		customFields = map[string]interface{}{}
 	}
 
+	// Determine initial status from project's workflow
+	initialStatus := "open"
+	if project.DefaultWorkflowID != nil {
+		status, err := s.workflows.GetInitialStatus(ctx, *project.DefaultWorkflowID)
+		if err == nil {
+			initialStatus = status.Name
+		}
+	}
+
 	item := &model.WorkItem{
 		ID:           uuid.Must(uuid.NewV7()),
 		ProjectID:    project.ID,
@@ -192,7 +204,7 @@ func (s *WorkItemService) Create(ctx context.Context, info *model.AuthInfo, proj
 		Type:         input.Type,
 		Title:        input.Title,
 		Description:  input.Description,
-		Status:       "open",
+		Status:       initialStatus,
 		Priority:     input.Priority,
 		AssigneeID:   input.AssigneeID,
 		ReporterID:   info.UserID,
@@ -315,6 +327,31 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 	}
 
 	if input.Status != nil && *input.Status != item.Status {
+		// Validate transition if project has a workflow
+		if project.DefaultWorkflowID != nil {
+			valid, err := s.workflows.ValidateTransition(ctx, *project.DefaultWorkflowID, item.Status, *input.Status)
+			if err != nil {
+				return nil, fmt.Errorf("validating transition: %w", err)
+			}
+			if !valid {
+				return nil, fmt.Errorf("transition from %q to %q is not allowed in this workflow: %w",
+					item.Status, *input.Status, model.ErrInvalidTransition)
+			}
+
+			// Manage resolved_at based on status category
+			newCategory, _ := s.workflows.GetStatusCategory(ctx, *project.DefaultWorkflowID, *input.Status)
+			oldCategory, _ := s.workflows.GetStatusCategory(ctx, *project.DefaultWorkflowID, item.Status)
+
+			if (newCategory == model.CategoryDone || newCategory == model.CategoryCancelled) &&
+				oldCategory != model.CategoryDone && oldCategory != model.CategoryCancelled {
+				now := time.Now()
+				item.ResolvedAt = &now
+			} else if (newCategory == model.CategoryTodo || newCategory == model.CategoryInProgress) &&
+				(oldCategory == model.CategoryDone || oldCategory == model.CategoryCancelled) {
+				item.ResolvedAt = nil
+			}
+		}
+
 		s.recordFieldChange(ctx, item.ID, &info.UserID, "status", item.Status, *input.Status)
 		item.Status = *input.Status
 	}

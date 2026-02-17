@@ -51,7 +51,7 @@ func NewProjectService(projects ProjectRepository, members ProjectMemberReposito
 }
 
 // Create creates a new project and adds the creator as owner.
-func (s *ProjectService) Create(ctx context.Context, info *model.AuthInfo, name, key string, description *string) (*model.Project, error) {
+func (s *ProjectService) Create(ctx context.Context, info *model.AuthInfo, name, key string, description *string, defaultWorkflowID *uuid.UUID) (*model.Project, error) {
 	if !projectKeyRegexp.MatchString(key) {
 		return nil, fmt.Errorf("project key must be 2-10 uppercase alphanumeric characters starting with a letter: %w", model.ErrConflict)
 	}
@@ -66,10 +66,11 @@ func (s *ProjectService) Create(ctx context.Context, info *model.AuthInfo, name,
 	}
 
 	project := &model.Project{
-		ID:          uuid.New(),
-		Name:        name,
-		Key:         key,
-		Description: description,
+		ID:                uuid.New(),
+		Name:              name,
+		Key:               key,
+		Description:       description,
+		DefaultWorkflowID: defaultWorkflowID,
 	}
 
 	if err := s.projects.Create(ctx, project); err != nil {
@@ -125,7 +126,7 @@ func (s *ProjectService) List(ctx context.Context, info *model.AuthInfo) ([]mode
 }
 
 // Update modifies a project. Requires owner or admin role.
-func (s *ProjectService) Update(ctx context.Context, info *model.AuthInfo, projectKey string, name, key *string, description *string, clearDescription bool) (*model.Project, error) {
+func (s *ProjectService) Update(ctx context.Context, info *model.AuthInfo, projectKey string, name, key *string, description *string, clearDescription bool, defaultWorkflowID *uuid.UUID) (*model.Project, error) {
 	project, err := s.projects.GetByKey(ctx, projectKey)
 	if err != nil {
 		return nil, err
@@ -159,6 +160,9 @@ func (s *ProjectService) Update(ctx context.Context, info *model.AuthInfo, proje
 	}
 	if clearDescription {
 		project.Description = nil
+	}
+	if defaultWorkflowID != nil {
+		project.DefaultWorkflowID = defaultWorkflowID
 	}
 
 	if err := s.projects.Update(ctx, project); err != nil {

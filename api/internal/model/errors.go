@@ -11,4 +11,5 @@ var (
 	ErrConflict           = errors.New("conflict")
 	ErrAlreadyExists      = errors.New("already exists")
 	ErrValidation         = errors.New("validation error")
+	ErrInvalidTransition  = errors.New("invalid transition")
 )

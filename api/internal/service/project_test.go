@@ -206,7 +206,7 @@ func TestCreateProject_Success(t *testing.T) {
 	info := userAuthInfo()
 
 	desc := "Test project"
-	project, err := svc.Create(context.Background(), info, "Test Project", "TEST", &desc)
+	project, err := svc.Create(context.Background(), info, "Test Project", "TEST", &desc, nil)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -236,7 +236,7 @@ func TestCreateProject_InvalidKey(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := svc.Create(context.Background(), info, "Test", tt.key, nil)
+			_, err := svc.Create(context.Background(), info, "Test", tt.key, nil, nil)
 			if err == nil {
 				t.Fatalf("expected error for key %q, got nil", tt.key)
 			}
@@ -248,12 +248,12 @@ func TestCreateProject_DuplicateKey(t *testing.T) {
 	svc, _, _, _ := newTestProjectService()
 	info := userAuthInfo()
 
-	_, err := svc.Create(context.Background(), info, "First", "DUPE", nil)
+	_, err := svc.Create(context.Background(), info, "First", "DUPE", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = svc.Create(context.Background(), info, "Second", "DUPE", nil)
+	_, err = svc.Create(context.Background(), info, "Second", "DUPE", nil, nil)
 	if err == nil {
 		t.Fatal("expected error for duplicate key")
 	}
@@ -263,7 +263,7 @@ func TestCreateProject_CreatorBecomesOwner(t *testing.T) {
 	svc, _, memberRepo, _ := newTestProjectService()
 	info := userAuthInfo()
 
-	project, err := svc.Create(context.Background(), info, "Test", "TT", nil)
+	project, err := svc.Create(context.Background(), info, "Test", "TT", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -281,7 +281,7 @@ func TestGetProject_MemberCanAccess(t *testing.T) {
 	svc, _, _, _ := newTestProjectService()
 	info := userAuthInfo()
 
-	_, err := svc.Create(context.Background(), info, "Test", "TT", nil)
+	_, err := svc.Create(context.Background(), info, "Test", "TT", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -300,7 +300,7 @@ func TestGetProject_NonMemberGetNotFound(t *testing.T) {
 	owner := userAuthInfo()
 	other := userAuthInfo()
 
-	_, err := svc.Create(context.Background(), owner, "Test", "TT", nil)
+	_, err := svc.Create(context.Background(), owner, "Test", "TT", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -316,7 +316,7 @@ func TestGetProject_AdminCanAccess(t *testing.T) {
 	owner := userAuthInfo()
 	admin := adminAuthInfo()
 
-	_, err := svc.Create(context.Background(), owner, "Test", "TT", nil)
+	_, err := svc.Create(context.Background(), owner, "Test", "TT", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -334,13 +334,13 @@ func TestUpdateProject_OwnerCanUpdate(t *testing.T) {
 	svc, _, _, _ := newTestProjectService()
 	info := userAuthInfo()
 
-	_, err := svc.Create(context.Background(), info, "Test", "TT", nil)
+	_, err := svc.Create(context.Background(), info, "Test", "TT", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	newName := "Updated Name"
-	project, err := svc.Update(context.Background(), info, "TT", &newName, nil, nil, false)
+	project, err := svc.Update(context.Background(), info, "TT", &newName, nil, nil, false, nil)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -353,7 +353,7 @@ func TestUpdateProject_MemberCannotUpdate(t *testing.T) {
 	svc, _, memberRepo, _ := newTestProjectService()
 	owner := userAuthInfo()
 
-	project, err := svc.Create(context.Background(), owner, "Test", "TT", nil)
+	project, err := svc.Create(context.Background(), owner, "Test", "TT", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -368,7 +368,7 @@ func TestUpdateProject_MemberCannotUpdate(t *testing.T) {
 	})
 
 	newName := "Hacked"
-	_, err = svc.Update(context.Background(), memberInfo, "TT", &newName, nil, nil, false)
+	_, err = svc.Update(context.Background(), memberInfo, "TT", &newName, nil, nil, false, nil)
 	if err != model.ErrForbidden {
 		t.Fatalf("expected ErrForbidden, got %v", err)
 	}
@@ -378,7 +378,7 @@ func TestDeleteProject_OwnerCanDelete(t *testing.T) {
 	svc, _, _, _ := newTestProjectService()
 	info := userAuthInfo()
 
-	_, err := svc.Create(context.Background(), info, "Test", "TT", nil)
+	_, err := svc.Create(context.Background(), info, "Test", "TT", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -399,7 +399,7 @@ func TestDeleteProject_AdminRoleCannotDelete(t *testing.T) {
 	svc, _, memberRepo, _ := newTestProjectService()
 	owner := userAuthInfo()
 
-	project, err := svc.Create(context.Background(), owner, "Test", "TT", nil)
+	project, err := svc.Create(context.Background(), owner, "Test", "TT", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -423,7 +423,7 @@ func TestAddMember_Success(t *testing.T) {
 	svc, _, _, userRepo := newTestProjectService()
 	owner := userAuthInfo()
 
-	_, err := svc.Create(context.Background(), owner, "Test", "TT", nil)
+	_, err := svc.Create(context.Background(), owner, "Test", "TT", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -449,7 +449,7 @@ func TestAddMember_DuplicateFails(t *testing.T) {
 	svc, _, _, userRepo := newTestProjectService()
 	owner := userAuthInfo()
 
-	_, err := svc.Create(context.Background(), owner, "Test", "TT", nil)
+	_, err := svc.Create(context.Background(), owner, "Test", "TT", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -476,7 +476,7 @@ func TestAddMember_MemberCannotAdd(t *testing.T) {
 	svc, _, memberRepo, userRepo := newTestProjectService()
 	owner := userAuthInfo()
 
-	project, err := svc.Create(context.Background(), owner, "Test", "TT", nil)
+	project, err := svc.Create(context.Background(), owner, "Test", "TT", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -507,7 +507,7 @@ func TestUpdateMemberRole_Success(t *testing.T) {
 	svc, _, memberRepo, userRepo := newTestProjectService()
 	owner := userAuthInfo()
 
-	project, err := svc.Create(context.Background(), owner, "Test", "TT", nil)
+	project, err := svc.Create(context.Background(), owner, "Test", "TT", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -541,7 +541,7 @@ func TestUpdateMemberRole_CannotDemoteLastOwner(t *testing.T) {
 	svc, _, _, _ := newTestProjectService()
 	owner := userAuthInfo()
 
-	_, err := svc.Create(context.Background(), owner, "Test", "TT", nil)
+	_, err := svc.Create(context.Background(), owner, "Test", "TT", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -557,7 +557,7 @@ func TestRemoveMember_Success(t *testing.T) {
 	svc, _, memberRepo, userRepo := newTestProjectService()
 	owner := userAuthInfo()
 
-	project, err := svc.Create(context.Background(), owner, "Test", "TT", nil)
+	project, err := svc.Create(context.Background(), owner, "Test", "TT", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -591,7 +591,7 @@ func TestRemoveMember_CannotRemoveLastOwner(t *testing.T) {
 	svc, _, _, _ := newTestProjectService()
 	owner := userAuthInfo()
 
-	_, err := svc.Create(context.Background(), owner, "Test", "TT", nil)
+	_, err := svc.Create(context.Background(), owner, "Test", "TT", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -606,11 +606,11 @@ func TestListProjects_UserSeesOwnProjects(t *testing.T) {
 	svc, _, _, _ := newTestProjectService()
 	info := userAuthInfo()
 
-	_, err := svc.Create(context.Background(), info, "Project 1", "P1", nil)
+	_, err := svc.Create(context.Background(), info, "Project 1", "P1", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = svc.Create(context.Background(), info, "Project 2", "P2", nil)
+	_, err = svc.Create(context.Background(), info, "Project 2", "P2", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -628,7 +628,7 @@ func TestListMembers(t *testing.T) {
 	svc, _, _, _ := newTestProjectService()
 	owner := userAuthInfo()
 
-	_, err := svc.Create(context.Background(), owner, "Test", "TT", nil)
+	_, err := svc.Create(context.Background(), owner, "Test", "TT", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -646,7 +646,7 @@ func TestAddMember_InvalidRole(t *testing.T) {
 	svc, _, _, userRepo := newTestProjectService()
 	owner := userAuthInfo()
 
-	_, err := svc.Create(context.Background(), owner, "Test", "TT", nil)
+	_, err := svc.Create(context.Background(), owner, "Test", "TT", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -669,7 +669,7 @@ func TestGlobalAdminCanDeleteAnyProject(t *testing.T) {
 	owner := userAuthInfo()
 	admin := adminAuthInfo()
 
-	_, err := svc.Create(context.Background(), owner, "Test", "TT", nil)
+	_, err := svc.Create(context.Background(), owner, "Test", "TT", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

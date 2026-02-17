@@ -17,6 +17,109 @@ import (
 	"github.com/marcoshack/trackforge/internal/service"
 )
 
+// --- Mock workflow repository ---
+
+type mockWorkflowRepo struct {
+	workflows map[uuid.UUID]*model.Workflow
+}
+
+func newMockWorkflowRepo() *mockWorkflowRepo {
+	return &mockWorkflowRepo{workflows: make(map[uuid.UUID]*model.Workflow)}
+}
+
+func (m *mockWorkflowRepo) Create(_ context.Context, wf *model.Workflow) error {
+	m.workflows[wf.ID] = wf
+	return nil
+}
+
+func (m *mockWorkflowRepo) GetByID(_ context.Context, id uuid.UUID) (*model.Workflow, error) {
+	wf, ok := m.workflows[id]
+	if !ok {
+		return nil, model.ErrNotFound
+	}
+	return wf, nil
+}
+
+func (m *mockWorkflowRepo) List(_ context.Context) ([]model.Workflow, error) {
+	var result []model.Workflow
+	for _, wf := range m.workflows {
+		result = append(result, *wf)
+	}
+	return result, nil
+}
+
+func (m *mockWorkflowRepo) Update(_ context.Context, wf *model.Workflow) error {
+	if _, ok := m.workflows[wf.ID]; !ok {
+		return model.ErrNotFound
+	}
+	m.workflows[wf.ID] = wf
+	return nil
+}
+
+func (m *mockWorkflowRepo) GetDefaultByName(_ context.Context, name string) (*model.Workflow, error) {
+	for _, wf := range m.workflows {
+		if wf.Name == name && wf.IsDefault {
+			return wf, nil
+		}
+	}
+	return nil, model.ErrNotFound
+}
+
+func (m *mockWorkflowRepo) ValidateTransition(_ context.Context, workflowID uuid.UUID, fromStatus, toStatus string) (bool, error) {
+	wf, ok := m.workflows[workflowID]
+	if !ok {
+		return false, model.ErrNotFound
+	}
+	for _, t := range wf.Transitions {
+		if t.FromStatus == fromStatus && t.ToStatus == toStatus {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (m *mockWorkflowRepo) GetInitialStatus(_ context.Context, workflowID uuid.UUID) (*model.WorkflowStatus, error) {
+	wf, ok := m.workflows[workflowID]
+	if !ok {
+		return nil, model.ErrNotFound
+	}
+	for i := range wf.Statuses {
+		if wf.Statuses[i].Position == 0 {
+			return &wf.Statuses[i], nil
+		}
+	}
+	return nil, model.ErrNotFound
+}
+
+func (m *mockWorkflowRepo) GetStatusCategory(_ context.Context, workflowID uuid.UUID, statusName string) (string, error) {
+	wf, ok := m.workflows[workflowID]
+	if !ok {
+		return "", model.ErrNotFound
+	}
+	for _, s := range wf.Statuses {
+		if s.Name == statusName {
+			return s.Category, nil
+		}
+	}
+	return "", model.ErrNotFound
+}
+
+func (m *mockWorkflowRepo) ListTransitions(_ context.Context, workflowID uuid.UUID) ([]model.WorkflowTransition, error) {
+	wf, ok := m.workflows[workflowID]
+	if !ok {
+		return nil, model.ErrNotFound
+	}
+	return wf.Transitions, nil
+}
+
+func (m *mockWorkflowRepo) ListStatuses(_ context.Context, workflowID uuid.UUID) ([]model.WorkflowStatus, error) {
+	wf, ok := m.workflows[workflowID]
+	if !ok {
+		return nil, model.ErrNotFound
+	}
+	return wf.Statuses, nil
+}
+
 // --- Mock work item repository ---
 
 type mockWorkItemRepo struct {
@@ -276,7 +379,8 @@ func workItemTestSetup(t *testing.T) (*WorkItemHandler, *model.AuthInfo, string)
 	commentRepo := newMockCommentRepo()
 	relationRepo := newMockRelationRepo()
 
-	svc := service.NewWorkItemService(itemRepo, eventRepo, commentRepo, relationRepo, projectRepo, memberRepo)
+	workflowRepo := newMockWorkflowRepo()
+	svc := service.NewWorkItemService(itemRepo, eventRepo, commentRepo, relationRepo, projectRepo, memberRepo, workflowRepo)
 	h := NewWorkItemHandler(svc)
 
 	info := &model.AuthInfo{
