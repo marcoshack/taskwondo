@@ -27,6 +27,7 @@ export function WorkItemDetailPage() {
   const deleteMutation = useDeleteWorkItem(projectKey ?? '')
 
   const [activeTab, setActiveTab] = useState<Tab>('comments')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleDraft, setTitleDraft] = useState('')
   const [editingDesc, setEditingDesc] = useState(false)
@@ -134,7 +135,7 @@ export function WorkItemDetailPage() {
 
           {/* Tabs */}
           <div>
-            <div className="border-b border-gray-200 mb-4">
+            <div className="border-b border-gray-200 mb-4 flex items-center justify-between">
               <nav className="flex gap-6">
                 {tabs.map((tab) => (
                   <button
@@ -150,10 +151,20 @@ export function WorkItemDetailPage() {
                   </button>
                 ))}
               </nav>
+              {(activeTab === 'comments' || activeTab === 'activity') && (
+                <button
+                  className="text-xs text-gray-400 hover:text-gray-600 pb-2 flex items-center gap-1"
+                  onClick={() => setSortOrder((s) => (s === 'desc' ? 'asc' : 'desc'))}
+                  title={sortOrder === 'desc' ? 'Showing newest first' : 'Showing oldest first'}
+                >
+                  <span>{sortOrder === 'desc' ? '\u2193' : '\u2191'}</span>
+                  {sortOrder === 'desc' ? 'Newest first' : 'Oldest first'}
+                </button>
+              )}
             </div>
 
-            {activeTab === 'comments' && <CommentList projectKey={projectKey ?? ''} itemNumber={itemNumber} />}
-            {activeTab === 'activity' && <ActivityTimeline projectKey={projectKey ?? ''} itemNumber={itemNumber} />}
+            {activeTab === 'comments' && <CommentList projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} />}
+            {activeTab === 'activity' && <ActivityTimeline projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} />}
             {activeTab === 'relations' && <RelationList projectKey={projectKey ?? ''} itemNumber={itemNumber} />}
           </div>
         </div>
