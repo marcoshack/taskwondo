@@ -12,6 +12,8 @@ import { ActivityTimeline } from '@/components/workitems/ActivityTimeline'
 import { RelationList } from '@/components/workitems/RelationList'
 import { TypeBadge } from '@/components/workitems/TypeBadge'
 import { StatusBadge } from '@/components/workitems/StatusBadge'
+import Markdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 type Tab = 'comments' | 'activity' | 'relations'
 
@@ -125,10 +127,16 @@ export function WorkItemDetailPage() {
               </div>
             ) : (
               <div
-                className="text-sm text-gray-700 whitespace-pre-wrap cursor-pointer hover:bg-gray-50 rounded p-2 -m-2 min-h-[2rem]"
+                className="cursor-pointer hover:bg-gray-50 rounded p-2 -m-2 min-h-[2rem]"
                 onClick={() => { setDescDraft(item.description ?? ''); setEditingDesc(true) }}
               >
-                {item.description || <span className="text-gray-400 italic">No description. Click to add.</span>}
+                {item.description ? (
+                  <div className="prose prose-sm max-w-none text-gray-700">
+                    <Markdown remarkPlugins={[remarkGfm]}>{item.description}</Markdown>
+                  </div>
+                ) : (
+                  <span className="text-sm text-gray-400 italic">No description. Click to add.</span>
+                )}
               </div>
             )}
           </div>

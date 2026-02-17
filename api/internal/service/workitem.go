@@ -622,7 +622,7 @@ func (s *WorkItemService) UpdateComment(ctx context.Context, info *model.AuthInf
 		return nil, err
 	}
 
-	_, err = s.items.GetByProjectAndNumber(ctx, project.ID, itemNumber)
+	item, err := s.items.GetByProjectAndNumber(ctx, project.ID, itemNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -645,10 +645,26 @@ func (s *WorkItemService) UpdateComment(ctx context.Context, info *model.AuthInf
 		return nil, fmt.Errorf("body is required: %w", model.ErrValidation)
 	}
 
+	oldBody := comment.Body
 	comment.Body = body
 	if err := s.comments.Update(ctx, comment); err != nil {
 		return nil, fmt.Errorf("updating comment: %w", err)
 	}
+
+	// Record "comment_updated" event
+	oldPreview := oldBody
+	if len(oldPreview) > 100 {
+		oldPreview = oldPreview[:100] + "..."
+	}
+	newPreview := body
+	if len(newPreview) > 100 {
+		newPreview = newPreview[:100] + "..."
+	}
+	s.recordEventWithMetadata(ctx, item.ID, &info.UserID, "comment_updated", comment.Visibility, map[string]interface{}{
+		"comment_id":  commentID.String(),
+		"old_preview": oldPreview,
+		"preview":     newPreview,
+	})
 
 	return s.comments.GetByID(ctx, commentID)
 }

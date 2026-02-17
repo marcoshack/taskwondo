@@ -1,8 +1,12 @@
 import { useState } from 'react'
 import { useComments, useCreateComment, useUpdateComment, useDeleteComment } from '@/hooks/useWorkItems'
 import { useAuth } from '@/contexts/AuthContext'
+import { useMembers } from '@/hooks/useProjects'
 import { Button } from '@/components/ui/Button'
+import { Avatar } from '@/components/ui/Avatar'
 import { Spinner } from '@/components/ui/Spinner'
+import Markdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 interface CommentListProps {
   projectKey: string
@@ -13,6 +17,7 @@ interface CommentListProps {
 export function CommentList({ projectKey, itemNumber, sortOrder = 'desc' }: CommentListProps) {
   const { user } = useAuth()
   const { data: comments, isLoading } = useComments(projectKey, itemNumber)
+  const { data: members } = useMembers(projectKey)
   const createMutation = useCreateComment(projectKey, itemNumber)
   const updateMutation = useUpdateComment(projectKey, itemNumber)
   const deleteMutation = useDeleteComment(projectKey, itemNumber)
@@ -20,6 +25,12 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc' }: Comm
   const [newBody, setNewBody] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editBody, setEditBody] = useState('')
+
+  function authorName(authorId: string | null): string {
+    if (!authorId) return 'Unknown'
+    const member = members?.find((m) => m.user_id === authorId)
+    return member?.display_name ?? 'Unknown'
+  }
 
   if (isLoading) return <Spinner size="sm" />
 
@@ -52,9 +63,15 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc' }: Comm
             </div>
           ) : (
             <>
-              <p className="text-sm text-gray-900 whitespace-pre-wrap">{c.body}</p>
-              <div className="flex items-center gap-3 mt-1">
+              <div className="flex items-center gap-2 mb-1">
+                <Avatar name={authorName(c.author_id)} size="xs" />
+                <span className="text-sm font-medium text-gray-700">{authorName(c.author_id)}</span>
                 <span className="text-xs text-gray-400">{new Date(c.created_at).toLocaleString()}</span>
+              </div>
+              <div className="prose prose-sm max-w-none text-gray-900 pl-8">
+                <Markdown remarkPlugins={[remarkGfm]}>{c.body}</Markdown>
+              </div>
+              <div className="flex items-center gap-3 mt-1 pl-8">
                 {c.visibility !== 'internal' && (
                   <span className="text-xs text-indigo-500">{c.visibility}</span>
                 )}
