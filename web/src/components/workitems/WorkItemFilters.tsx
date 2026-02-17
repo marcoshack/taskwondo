@@ -1,5 +1,5 @@
 import { Input } from '@/components/ui/Input'
-import { Select } from '@/components/ui/Select'
+import { MultiSelect, type MultiSelectOption } from '@/components/ui/MultiSelect'
 import type { WorkItemFilter } from '@/api/workitems'
 import type { WorkflowStatus } from '@/api/workflows'
 
@@ -11,10 +11,42 @@ interface WorkItemFiltersProps {
   onSearchChange: (value: string) => void
 }
 
+const typeOptions: MultiSelectOption[] = [
+  { value: 'task', label: 'Task' },
+  { value: 'ticket', label: 'Ticket' },
+  { value: 'bug', label: 'Bug' },
+  { value: 'feedback', label: 'Feedback' },
+  { value: 'epic', label: 'Epic' },
+]
+
+const priorityOptions: MultiSelectOption[] = [
+  { value: 'critical', label: 'Critical' },
+  { value: 'high', label: 'High' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'low', label: 'Low' },
+]
+
+const assigneeOptions: MultiSelectOption[] = [
+  { value: 'me', label: 'Assigned to me' },
+  { value: 'unassigned', label: 'Unassigned' },
+]
+
+const closedCategories = new Set(['done', 'cancelled'])
+
+function buildStatusOptions(statuses: WorkflowStatus[]): MultiSelectOption[] {
+  return statuses.map((s) => ({
+    value: s.name,
+    label: s.display_name,
+    group: closedCategories.has(s.category) ? 'Closed' : 'Open',
+  }))
+}
+
 export function WorkItemFilters({ filter, onFilterChange, statuses, search, onSearchChange }: WorkItemFiltersProps) {
-  function set(key: keyof WorkItemFilter, value: string) {
-    onFilterChange({ ...filter, [key]: value || undefined, cursor: undefined })
+  function setArray(key: 'type' | 'status' | 'priority' | 'assignee', values: string[]) {
+    onFilterChange({ ...filter, [key]: values.length > 0 ? values : undefined, cursor: undefined })
   }
+
+  const statusOptions = buildStatusOptions(statuses)
 
   return (
     <div className="flex flex-wrap items-end gap-3">
@@ -25,39 +57,37 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, search, onSe
           onChange={(e) => onSearchChange(e.target.value)}
         />
       </div>
-      <div className="w-32">
-        <Select value={filter.type ?? ''} onChange={(e) => set('type', e.target.value)}>
-          <option value="">All types</option>
-          <option value="task">Task</option>
-          <option value="ticket">Ticket</option>
-          <option value="bug">Bug</option>
-          <option value="feedback">Feedback</option>
-          <option value="epic">Epic</option>
-        </Select>
+      <div className="w-36">
+        <MultiSelect
+          options={typeOptions}
+          selected={filter.type ?? []}
+          onChange={(v) => setArray('type', v)}
+          placeholder="All types"
+        />
       </div>
       <div className="w-36">
-        <Select value={filter.priority ?? ''} onChange={(e) => set('priority', e.target.value)}>
-          <option value="">All priorities</option>
-          <option value="critical">Critical</option>
-          <option value="high">High</option>
-          <option value="medium">Medium</option>
-          <option value="low">Low</option>
-        </Select>
+        <MultiSelect
+          options={priorityOptions}
+          selected={filter.priority ?? []}
+          onChange={(v) => setArray('priority', v)}
+          placeholder="All priorities"
+        />
       </div>
-      <div className="w-36">
-        <Select value={filter.status ?? ''} onChange={(e) => set('status', e.target.value)}>
-          <option value="">All statuses</option>
-          {statuses.map((s) => (
-            <option key={s.name} value={s.name}>{s.display_name}</option>
-          ))}
-        </Select>
+      <div className="w-40">
+        <MultiSelect
+          options={statusOptions}
+          selected={filter.status ?? []}
+          onChange={(v) => setArray('status', v)}
+          placeholder="All statuses"
+        />
       </div>
-      <div className="w-36">
-        <Select value={filter.assignee ?? ''} onChange={(e) => set('assignee', e.target.value)}>
-          <option value="">All assignees</option>
-          <option value="me">Assigned to me</option>
-          <option value="unassigned">Unassigned</option>
-        </Select>
+      <div className="w-40">
+        <MultiSelect
+          options={assigneeOptions}
+          selected={filter.assignee ?? []}
+          onChange={(v) => setArray('assignee', v)}
+          placeholder="All assignees"
+        />
       </div>
     </div>
   )
