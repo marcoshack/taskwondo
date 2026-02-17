@@ -1,3 +1,4 @@
+import { useRef, useEffect } from 'react'
 import { Input } from '@/components/ui/Input'
 import { MultiSelect, type MultiSelectOption } from '@/components/ui/MultiSelect'
 import type { WorkItemFilter } from '@/api/workitems'
@@ -42,6 +43,21 @@ function buildStatusOptions(statuses: WorkflowStatus[]): MultiSelectOption[] {
 }
 
 export function WorkItemFilters({ filter, onFilterChange, statuses, search, onSearchChange }: WorkItemFiltersProps) {
+  const searchRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key !== '/') return
+      const tag = (e.target as HTMLElement).tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+      if ((e.target as HTMLElement).isContentEditable) return
+      e.preventDefault()
+      searchRef.current?.focus()
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
   function setArray(key: 'type' | 'status' | 'priority' | 'assignee', values: string[]) {
     onFilterChange({ ...filter, [key]: values.length > 0 ? values : undefined, cursor: undefined })
   }
@@ -52,7 +68,8 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, search, onSe
     <div className="flex flex-wrap items-end gap-3">
       <div className="flex-1 min-w-[200px]">
         <Input
-          placeholder="Search items..."
+          ref={searchRef}
+          placeholder="Search items... ( / )"
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
         />
