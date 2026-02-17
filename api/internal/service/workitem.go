@@ -55,6 +55,7 @@ type CreateWorkItemInput struct {
 	Labels       []string
 	ParentID     *uuid.UUID
 	QueueID      *uuid.UUID
+	MilestoneID  *uuid.UUID
 	Visibility   string
 	DueDate      *time.Time
 	CustomFields map[string]interface{}
@@ -76,9 +77,11 @@ type UpdateWorkItemInput struct {
 	ClearDueDate  bool
 	ParentID      *uuid.UUID
 	ClearParent   bool
-	QueueID       *uuid.UUID
-	ClearQueue    bool
-	CustomFields  map[string]interface{}
+	QueueID        *uuid.UUID
+	ClearQueue     bool
+	MilestoneID    *uuid.UUID
+	ClearMilestone bool
+	CustomFields   map[string]interface{}
 }
 
 // CreateCommentInput holds the input for creating a comment.
@@ -102,13 +105,15 @@ type RelationWithDisplay struct {
 
 // WorkItemService handles work item business logic and authorization.
 type WorkItemService struct {
-	items     WorkItemRepository
-	events    WorkItemEventRepository
-	comments  CommentRepository
-	relations WorkItemRelationRepository
-	projects  ProjectRepository
-	members   ProjectMemberRepository
-	workflows WorkflowRepository
+	items      WorkItemRepository
+	events     WorkItemEventRepository
+	comments   CommentRepository
+	relations  WorkItemRelationRepository
+	projects   ProjectRepository
+	members    ProjectMemberRepository
+	workflows  WorkflowRepository
+	queues     QueueRepository
+	milestones MilestoneRepository
 }
 
 // NewWorkItemService creates a new WorkItemService.
@@ -120,15 +125,19 @@ func NewWorkItemService(
 	projects ProjectRepository,
 	members ProjectMemberRepository,
 	workflows WorkflowRepository,
+	queues QueueRepository,
+	milestones MilestoneRepository,
 ) *WorkItemService {
 	return &WorkItemService{
-		items:     items,
-		events:    events,
-		comments:  comments,
-		relations: relations,
-		projects:  projects,
-		members:   members,
-		workflows: workflows,
+		items:      items,
+		events:     events,
+		comments:   comments,
+		relations:  relations,
+		projects:   projects,
+		members:    members,
+		workflows:  workflows,
+		queues:     queues,
+		milestones: milestones,
 	}
 }
 
@@ -178,6 +187,28 @@ func (s *WorkItemService) Create(ctx context.Context, info *model.AuthInfo, proj
 		}
 	}
 
+	// Validate queue belongs to this project
+	if input.QueueID != nil {
+		q, err := s.queues.GetByID(ctx, *input.QueueID)
+		if err != nil {
+			return nil, fmt.Errorf("queue not found: %w", model.ErrValidation)
+		}
+		if q.ProjectID != project.ID {
+			return nil, fmt.Errorf("queue does not belong to this project: %w", model.ErrValidation)
+		}
+	}
+
+	// Validate milestone belongs to this project
+	if input.MilestoneID != nil {
+		m, err := s.milestones.GetByID(ctx, *input.MilestoneID)
+		if err != nil {
+			return nil, fmt.Errorf("milestone not found: %w", model.ErrValidation)
+		}
+		if m.ProjectID != project.ID {
+			return nil, fmt.Errorf("milestone does not belong to this project: %w", model.ErrValidation)
+		}
+	}
+
 	labels := input.Labels
 	if labels == nil {
 		labels = []string{}
@@ -200,6 +231,7 @@ func (s *WorkItemService) Create(ctx context.Context, info *model.AuthInfo, proj
 		ID:           uuid.Must(uuid.NewV7()),
 		ProjectID:    project.ID,
 		QueueID:      input.QueueID,
+		MilestoneID:  input.MilestoneID,
 		ParentID:     input.ParentID,
 		Type:         input.Type,
 		Title:        input.Title,
@@ -437,7 +469,29 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 	if input.ClearQueue {
 		item.QueueID = nil
 	} else if input.QueueID != nil {
+		// Validate queue belongs to this project
+		q, err := s.queues.GetByID(ctx, *input.QueueID)
+		if err != nil {
+			return nil, fmt.Errorf("queue not found: %w", model.ErrValidation)
+		}
+		if q.ProjectID != project.ID {
+			return nil, fmt.Errorf("queue does not belong to this project: %w", model.ErrValidation)
+		}
 		item.QueueID = input.QueueID
+	}
+
+	if input.ClearMilestone {
+		item.MilestoneID = nil
+	} else if input.MilestoneID != nil {
+		// Validate milestone belongs to this project
+		m, err := s.milestones.GetByID(ctx, *input.MilestoneID)
+		if err != nil {
+			return nil, fmt.Errorf("milestone not found: %w", model.ErrValidation)
+		}
+		if m.ProjectID != project.ID {
+			return nil, fmt.Errorf("milestone does not belong to this project: %w", model.ErrValidation)
+		}
+		item.MilestoneID = input.MilestoneID
 	}
 
 	if input.CustomFields != nil {

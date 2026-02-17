@@ -367,6 +367,130 @@ func (m *mockRelationRepo) Delete(_ context.Context, id uuid.UUID) error {
 	return nil
 }
 
+// --- Mock queue repository ---
+
+type mockQueueRepo struct {
+	queues map[uuid.UUID]*model.Queue
+}
+
+func newMockQueueRepo() *mockQueueRepo {
+	return &mockQueueRepo{queues: make(map[uuid.UUID]*model.Queue)}
+}
+
+func (m *mockQueueRepo) Create(_ context.Context, q *model.Queue) error {
+	now := time.Now()
+	q.CreatedAt = now
+	q.UpdatedAt = now
+	m.queues[q.ID] = q
+	return nil
+}
+
+func (m *mockQueueRepo) GetByID(_ context.Context, id uuid.UUID) (*model.Queue, error) {
+	q, ok := m.queues[id]
+	if !ok {
+		return nil, model.ErrNotFound
+	}
+	return q, nil
+}
+
+func (m *mockQueueRepo) List(_ context.Context, projectID uuid.UUID) ([]model.Queue, error) {
+	var result []model.Queue
+	for _, q := range m.queues {
+		if q.ProjectID == projectID {
+			result = append(result, *q)
+		}
+	}
+	return result, nil
+}
+
+func (m *mockQueueRepo) Update(_ context.Context, q *model.Queue) error {
+	if _, ok := m.queues[q.ID]; !ok {
+		return model.ErrNotFound
+	}
+	q.UpdatedAt = time.Now()
+	m.queues[q.ID] = q
+	return nil
+}
+
+func (m *mockQueueRepo) Delete(_ context.Context, id uuid.UUID) error {
+	if _, ok := m.queues[id]; !ok {
+		return model.ErrNotFound
+	}
+	delete(m.queues, id)
+	return nil
+}
+
+// --- Mock milestone repository ---
+
+type mockMilestoneRepo struct {
+	milestones map[uuid.UUID]*model.Milestone
+}
+
+func newMockMilestoneRepo() *mockMilestoneRepo {
+	return &mockMilestoneRepo{milestones: make(map[uuid.UUID]*model.Milestone)}
+}
+
+func (m *mockMilestoneRepo) Create(_ context.Context, ms *model.Milestone) error {
+	now := time.Now()
+	ms.CreatedAt = now
+	ms.UpdatedAt = now
+	m.milestones[ms.ID] = ms
+	return nil
+}
+
+func (m *mockMilestoneRepo) GetByID(_ context.Context, id uuid.UUID) (*model.Milestone, error) {
+	ms, ok := m.milestones[id]
+	if !ok {
+		return nil, model.ErrNotFound
+	}
+	return ms, nil
+}
+
+func (m *mockMilestoneRepo) GetByIDWithProgress(_ context.Context, id uuid.UUID) (*model.MilestoneWithProgress, error) {
+	ms, ok := m.milestones[id]
+	if !ok {
+		return nil, model.ErrNotFound
+	}
+	return &model.MilestoneWithProgress{Milestone: *ms}, nil
+}
+
+func (m *mockMilestoneRepo) List(_ context.Context, projectID uuid.UUID) ([]model.Milestone, error) {
+	var result []model.Milestone
+	for _, ms := range m.milestones {
+		if ms.ProjectID == projectID {
+			result = append(result, *ms)
+		}
+	}
+	return result, nil
+}
+
+func (m *mockMilestoneRepo) ListWithProgress(_ context.Context, projectID uuid.UUID) ([]model.MilestoneWithProgress, error) {
+	var result []model.MilestoneWithProgress
+	for _, ms := range m.milestones {
+		if ms.ProjectID == projectID {
+			result = append(result, model.MilestoneWithProgress{Milestone: *ms})
+		}
+	}
+	return result, nil
+}
+
+func (m *mockMilestoneRepo) Update(_ context.Context, ms *model.Milestone) error {
+	if _, ok := m.milestones[ms.ID]; !ok {
+		return model.ErrNotFound
+	}
+	ms.UpdatedAt = time.Now()
+	m.milestones[ms.ID] = ms
+	return nil
+}
+
+func (m *mockMilestoneRepo) Delete(_ context.Context, id uuid.UUID) error {
+	if _, ok := m.milestones[id]; !ok {
+		return model.ErrNotFound
+	}
+	delete(m.milestones, id)
+	return nil
+}
+
 // --- Test setup ---
 
 func workItemTestSetup(t *testing.T) (*WorkItemHandler, *model.AuthInfo, string) {
@@ -380,7 +504,9 @@ func workItemTestSetup(t *testing.T) (*WorkItemHandler, *model.AuthInfo, string)
 	relationRepo := newMockRelationRepo()
 
 	workflowRepo := newMockWorkflowRepo()
-	svc := service.NewWorkItemService(itemRepo, eventRepo, commentRepo, relationRepo, projectRepo, memberRepo, workflowRepo)
+	queueRepo := newMockQueueRepo()
+	milestoneRepo := newMockMilestoneRepo()
+	svc := service.NewWorkItemService(itemRepo, eventRepo, commentRepo, relationRepo, projectRepo, memberRepo, workflowRepo, queueRepo, milestoneRepo)
 	h := NewWorkItemHandler(svc)
 
 	info := &model.AuthInfo{

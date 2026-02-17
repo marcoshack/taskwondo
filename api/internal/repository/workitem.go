@@ -49,11 +49,11 @@ func (r *WorkItemRepository) Create(ctx context.Context, item *model.WorkItem) e
 
 	_, err = tx.ExecContext(ctx,
 		`INSERT INTO work_items (
-			id, project_id, queue_id, parent_id, item_number, type, title, description,
+			id, project_id, queue_id, milestone_id, parent_id, item_number, type, title, description,
 			status, priority, assignee_id, reporter_id, portal_contact_id, visibility,
 			labels, custom_fields, due_date, sla_deadline
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
-		item.ID, item.ProjectID, item.QueueID, item.ParentID, item.ItemNumber,
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
+		item.ID, item.ProjectID, item.QueueID, item.MilestoneID, item.ParentID, item.ItemNumber,
 		item.Type, item.Title, item.Description, item.Status, item.Priority,
 		item.AssigneeID, item.ReporterID, item.PortalContactID, item.Visibility,
 		pq.Array(item.Labels), customFieldsJSON, item.DueDate, item.SLADeadline)
@@ -71,7 +71,7 @@ func (r *WorkItemRepository) Create(ctx context.Context, item *model.WorkItem) e
 // GetByProjectAndNumber returns a work item by project ID and item number.
 func (r *WorkItemRepository) GetByProjectAndNumber(ctx context.Context, projectID uuid.UUID, itemNumber int) (*model.WorkItem, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, project_id, queue_id, parent_id, item_number, type, title, description,
+		`SELECT id, project_id, queue_id, milestone_id, parent_id, item_number, type, title, description,
 		        status, priority, assignee_id, reporter_id, portal_contact_id, visibility,
 		        labels, custom_fields, due_date, sla_deadline, resolved_at,
 		        created_at, updated_at
@@ -109,6 +109,16 @@ func (r *WorkItemRepository) List(ctx context.Context, projectID uuid.UUID, filt
 		qb.addRaw("assignee_id IS NULL")
 	} else if filter.AssigneeID != nil {
 		qb.add("assignee_id = ?", *filter.AssigneeID)
+	}
+
+	// Queue filter
+	if filter.QueueID != nil {
+		qb.add("queue_id = ?", *filter.QueueID)
+	}
+
+	// Milestone filter
+	if filter.MilestoneID != nil {
+		qb.add("milestone_id = ?", *filter.MilestoneID)
 	}
 
 	// Labels filter (items must contain ALL specified labels)
@@ -173,7 +183,7 @@ func (r *WorkItemRepository) List(ctx context.Context, projectID uuid.UUID, filt
 	}
 
 	selectQuery := fmt.Sprintf(
-		`SELECT id, project_id, queue_id, parent_id, item_number, type, title, description,
+		`SELECT id, project_id, queue_id, milestone_id, parent_id, item_number, type, title, description,
 		        status, priority, assignee_id, reporter_id, portal_contact_id, visibility,
 		        labels, custom_fields, due_date, sla_deadline, resolved_at,
 		        created_at, updated_at
@@ -223,13 +233,13 @@ func (r *WorkItemRepository) Update(ctx context.Context, item *model.WorkItem) e
 			title = $1, description = $2, status = $3, priority = $4,
 			assignee_id = $5, visibility = $6, labels = $7, custom_fields = $8,
 			due_date = $9, sla_deadline = $10, type = $11, parent_id = $12,
-			queue_id = $13, portal_contact_id = $14, resolved_at = $15,
+			queue_id = $13, milestone_id = $14, portal_contact_id = $15, resolved_at = $16,
 			updated_at = now()
-		 WHERE id = $16 AND deleted_at IS NULL`,
+		 WHERE id = $17 AND deleted_at IS NULL`,
 		item.Title, item.Description, item.Status, item.Priority,
 		item.AssigneeID, item.Visibility, pq.Array(item.Labels), customFieldsJSON,
 		item.DueDate, item.SLADeadline, item.Type, item.ParentID,
-		item.QueueID, item.PortalContactID, item.ResolvedAt,
+		item.QueueID, item.MilestoneID, item.PortalContactID, item.ResolvedAt,
 		item.ID)
 	if err != nil {
 		return fmt.Errorf("updating work item: %w", err)
@@ -296,6 +306,7 @@ func scanWorkItem(row *sql.Row) (*model.WorkItem, error) {
 	var (
 		description     sql.NullString
 		queueID         uuid.NullUUID
+		milestoneID     uuid.NullUUID
 		parentID        uuid.NullUUID
 		assigneeID      uuid.NullUUID
 		portalContactID uuid.NullUUID
@@ -307,7 +318,7 @@ func scanWorkItem(row *sql.Row) (*model.WorkItem, error) {
 	)
 
 	err := row.Scan(
-		&item.ID, &item.ProjectID, &queueID, &parentID, &item.ItemNumber,
+		&item.ID, &item.ProjectID, &queueID, &milestoneID, &parentID, &item.ItemNumber,
 		&item.Type, &item.Title, &description, &item.Status, &item.Priority,
 		&assigneeID, &item.ReporterID, &portalContactID, &item.Visibility,
 		&labels, &customFieldsRaw, &dueDate, &slaDeadline, &resolvedAt,
@@ -320,7 +331,7 @@ func scanWorkItem(row *sql.Row) (*model.WorkItem, error) {
 		return nil, fmt.Errorf("scanning work item: %w", err)
 	}
 
-	populateWorkItem(&item, description, queueID, parentID, assigneeID,
+	populateWorkItem(&item, description, queueID, milestoneID, parentID, assigneeID,
 		portalContactID, dueDate, slaDeadline, resolvedAt, labels, customFieldsRaw)
 
 	return &item, nil
@@ -333,6 +344,7 @@ func scanWorkItems(rows *sql.Rows) ([]model.WorkItem, error) {
 		var (
 			description     sql.NullString
 			queueID         uuid.NullUUID
+			milestoneID     uuid.NullUUID
 			parentID        uuid.NullUUID
 			assigneeID      uuid.NullUUID
 			portalContactID uuid.NullUUID
@@ -344,7 +356,7 @@ func scanWorkItems(rows *sql.Rows) ([]model.WorkItem, error) {
 		)
 
 		if err := rows.Scan(
-			&item.ID, &item.ProjectID, &queueID, &parentID, &item.ItemNumber,
+			&item.ID, &item.ProjectID, &queueID, &milestoneID, &parentID, &item.ItemNumber,
 			&item.Type, &item.Title, &description, &item.Status, &item.Priority,
 			&assigneeID, &item.ReporterID, &portalContactID, &item.Visibility,
 			&labels, &customFieldsRaw, &dueDate, &slaDeadline, &resolvedAt,
@@ -353,7 +365,7 @@ func scanWorkItems(rows *sql.Rows) ([]model.WorkItem, error) {
 			return nil, fmt.Errorf("scanning work item row: %w", err)
 		}
 
-		populateWorkItem(&item, description, queueID, parentID, assigneeID,
+		populateWorkItem(&item, description, queueID, milestoneID, parentID, assigneeID,
 			portalContactID, dueDate, slaDeadline, resolvedAt, labels, customFieldsRaw)
 
 		items = append(items, item)
@@ -365,7 +377,7 @@ func scanWorkItems(rows *sql.Rows) ([]model.WorkItem, error) {
 func populateWorkItem(
 	item *model.WorkItem,
 	description sql.NullString,
-	queueID, parentID, assigneeID, portalContactID uuid.NullUUID,
+	queueID, milestoneID, parentID, assigneeID, portalContactID uuid.NullUUID,
 	dueDate, slaDeadline, resolvedAt sql.NullTime,
 	labels pq.StringArray,
 	customFieldsRaw []byte,
@@ -375,6 +387,9 @@ func populateWorkItem(
 	}
 	if queueID.Valid {
 		item.QueueID = &queueID.UUID
+	}
+	if milestoneID.Valid {
+		item.MilestoneID = &milestoneID.UUID
 	}
 	if parentID.Valid {
 		item.ParentID = &parentID.UUID

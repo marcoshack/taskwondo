@@ -35,6 +35,7 @@ type WorkItem struct {
 	ID              uuid.UUID              `json:"id"`
 	ProjectID       uuid.UUID              `json:"project_id"`
 	QueueID         *uuid.UUID             `json:"queue_id,omitempty"`
+	MilestoneID     *uuid.UUID             `json:"milestone_id,omitempty"`
 	ParentID        *uuid.UUID             `json:"parent_id,omitempty"`
 	ItemNumber      int                    `json:"item_number"`
 	Type            string                 `json:"type"`
@@ -78,6 +79,8 @@ type WorkItemFilter struct {
 	AssigneeID *uuid.UUID // specific assignee
 	Unassigned bool       // true = WHERE assignee_id IS NULL
 	AssigneeMe bool       // true = use the caller's user ID
+	QueueID    *uuid.UUID // filter by queue
+	MilestoneID *uuid.UUID // filter by milestone
 	Labels     []string   // filter items that contain ALL these labels
 	ParentID   *uuid.UUID // children of a specific parent
 	ParentNone bool       // true = top-level items only (parent_id IS NULL)

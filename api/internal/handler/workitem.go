@@ -38,6 +38,7 @@ type createWorkItemRequest struct {
 	Labels       []string               `json:"labels,omitempty"`
 	ParentID     *string                `json:"parent_id,omitempty"`
 	QueueID      *string                `json:"queue_id,omitempty"`
+	MilestoneID  *string                `json:"milestone_id,omitempty"`
 	Visibility   string                 `json:"visibility,omitempty"`
 	DueDate      *string                `json:"due_date,omitempty"`
 	CustomFields map[string]interface{} `json:"custom_fields,omitempty"`
@@ -57,6 +58,8 @@ type workItemResponse struct {
 	Priority     string                 `json:"priority"`
 	AssigneeID   *uuid.UUID             `json:"assignee_id,omitempty"`
 	ReporterID   uuid.UUID              `json:"reporter_id"`
+	QueueID      *uuid.UUID             `json:"queue_id,omitempty"`
+	MilestoneID  *uuid.UUID             `json:"milestone_id,omitempty"`
 	Visibility   string                 `json:"visibility"`
 	Labels       []string               `json:"labels"`
 	CustomFields map[string]interface{} `json:"custom_fields"`
@@ -80,6 +83,8 @@ func toWorkItemResponse(item *model.WorkItem, projectKey string) workItemRespons
 		Priority:     item.Priority,
 		AssigneeID:   item.AssigneeID,
 		ReporterID:   item.ReporterID,
+		QueueID:      item.QueueID,
+		MilestoneID:  item.MilestoneID,
 		Visibility:   item.Visibility,
 		Labels:       item.Labels,
 		CustomFields: item.CustomFields,
@@ -165,6 +170,15 @@ func (h *WorkItemHandler) Create(w http.ResponseWriter, r *http.Request) {
 		input.QueueID = &id
 	}
 
+	if req.MilestoneID != nil {
+		id, err := uuid.Parse(*req.MilestoneID)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid milestone_id format")
+			return
+		}
+		input.MilestoneID = &id
+	}
+
 	if req.DueDate != nil {
 		t, err := time.Parse("2006-01-02", *req.DueDate)
 		if err != nil {
@@ -226,6 +240,26 @@ func (h *WorkItemHandler) List(w http.ResponseWriter, r *http.Request) {
 			}
 			filter.AssigneeID = &id
 		}
+	}
+
+	// Parse queue
+	if v := q.Get("queue"); v != "" {
+		id, err := uuid.Parse(v)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid queue parameter")
+			return
+		}
+		filter.QueueID = &id
+	}
+
+	// Parse milestone
+	if v := q.Get("milestone"); v != "" {
+		id, err := uuid.Parse(v)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid milestone parameter")
+			return
+		}
+		filter.MilestoneID = &id
 	}
 
 	// Parse label
@@ -450,6 +484,22 @@ func (h *WorkItemHandler) Update(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				input.QueueID = &id
+			}
+		}
+	}
+
+	if v, ok := raw["milestone_id"]; ok {
+		if string(v) == "null" {
+			input.ClearMilestone = true
+		} else {
+			var idStr string
+			if err := json.Unmarshal(v, &idStr); err == nil {
+				id, err := uuid.Parse(idStr)
+				if err != nil {
+					writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid milestone_id format")
+					return
+				}
+				input.MilestoneID = &id
 			}
 		}
 	}
