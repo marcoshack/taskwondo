@@ -67,12 +67,16 @@ func main() {
 	commentRepo := repository.NewCommentRepository(db)
 	relationRepo := repository.NewWorkItemRelationRepository(db)
 	workflowRepo := repository.NewWorkflowRepository(db)
+	queueRepo := repository.NewQueueRepository(db)
+	milestoneRepo := repository.NewMilestoneRepository(db)
 
 	// Initialize services
 	authService := service.NewAuthService(userRepo, apiKeyRepo, cfg.JWTSecret, cfg.JWTExpiry)
 	projectService := service.NewProjectService(projectRepo, projectMemberRepo, userRepo)
 	workflowService := service.NewWorkflowService(workflowRepo)
-	workItemService := service.NewWorkItemService(workItemRepo, workItemEventRepo, commentRepo, relationRepo, projectRepo, projectMemberRepo, workflowRepo)
+	queueService := service.NewQueueService(queueRepo, projectRepo, projectMemberRepo)
+	milestoneService := service.NewMilestoneService(milestoneRepo, projectRepo, projectMemberRepo)
+	workItemService := service.NewWorkItemService(workItemRepo, workItemEventRepo, commentRepo, relationRepo, projectRepo, projectMemberRepo, workflowRepo, queueRepo, milestoneRepo)
 
 	// Seed admin user if configured
 	if cfg.AdminEmail != "" && cfg.AdminPassword != "" {
@@ -91,6 +95,8 @@ func main() {
 	auth := handler.NewAuthHandler(authService)
 	projects := handler.NewProjectHandler(projectService)
 	workflows := handler.NewWorkflowHandler(workflowService)
+	queues := handler.NewQueueHandler(queueService)
+	milestones := handler.NewMilestoneHandler(milestoneService)
 	items := handler.NewWorkItemHandler(workItemService)
 
 	// Set up router
@@ -148,6 +154,24 @@ func main() {
 						r.Post("/", projects.AddMember)
 						r.Patch("/{userId}", projects.UpdateMemberRole)
 						r.Delete("/{userId}", projects.RemoveMember)
+					})
+					r.Route("/queues", func(r chi.Router) {
+						r.Get("/", queues.List)
+						r.Post("/", queues.Create)
+						r.Route("/{queueId}", func(r chi.Router) {
+							r.Get("/", queues.Get)
+							r.Patch("/", queues.Update)
+							r.Delete("/", queues.Delete)
+						})
+					})
+					r.Route("/milestones", func(r chi.Router) {
+						r.Get("/", milestones.List)
+						r.Post("/", milestones.Create)
+						r.Route("/{milestoneId}", func(r chi.Router) {
+							r.Get("/", milestones.Get)
+							r.Patch("/", milestones.Update)
+							r.Delete("/", milestones.Delete)
+						})
 					})
 					r.Route("/items", func(r chi.Router) {
 						r.Get("/", items.List)
