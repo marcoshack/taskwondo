@@ -179,7 +179,8 @@ func newTestProjectService() (*ProjectService, *mockProjectRepo, *mockProjectMem
 	projectRepo := newMockProjectRepo()
 	memberRepo := newMockProjectMemberRepo()
 	userRepo := newMockUserRepo()
-	svc := NewProjectService(projectRepo, memberRepo, userRepo)
+	workflowRepo := newMockWorkflowRepo()
+	svc := NewProjectService(projectRepo, memberRepo, userRepo, workflowRepo)
 	return svc, projectRepo, memberRepo, userRepo
 }
 

@@ -184,7 +184,8 @@ func projectTestSetup(t *testing.T) (*ProjectHandler, *model.AuthInfo) {
 	projectRepo := newMockProjectRepo()
 	memberRepo := newMockProjectMemberRepo()
 	userRepo := newMockUserRepo()
-	projectSvc := service.NewProjectService(projectRepo, memberRepo, userRepo)
+	workflowRepo := newMockWorkflowRepo()
+	projectSvc := service.NewProjectService(projectRepo, memberRepo, userRepo, workflowRepo)
 	h := NewProjectHandler(projectSvc)
 
 	info := &model.AuthInfo{

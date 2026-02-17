@@ -72,7 +72,7 @@ func main() {
 
 	// Initialize services
 	authService := service.NewAuthService(userRepo, apiKeyRepo, cfg.JWTSecret, cfg.JWTExpiry)
-	projectService := service.NewProjectService(projectRepo, projectMemberRepo, userRepo)
+	projectService := service.NewProjectService(projectRepo, projectMemberRepo, userRepo, workflowRepo)
 	workflowService := service.NewWorkflowService(workflowRepo)
 	queueService := service.NewQueueService(queueRepo, projectRepo, projectMemberRepo)
 	milestoneService := service.NewMilestoneService(milestoneRepo, projectRepo, projectMemberRepo)
