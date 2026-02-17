@@ -92,19 +92,16 @@ type workflowTransitionResponse struct {
 }
 
 func toWorkflowResponse(wf *model.Workflow) workflowResponse {
-	statuses := make([]workflowStatusResponse, len(wf.Statuses))
-	for i, s := range wf.Statuses {
-		statuses[i] = workflowStatusResponse{
+	statuses := make([]workflowStatusResponse, 0, len(wf.Statuses))
+	for _, s := range wf.Statuses {
+		statuses = append(statuses, workflowStatusResponse{
 			ID:          s.ID,
 			Name:        s.Name,
 			DisplayName: s.DisplayName,
 			Category:    s.Category,
 			Position:    s.Position,
 			Color:       s.Color,
-		}
-	}
-	if statuses == nil {
-		statuses = []workflowStatusResponse{}
+		})
 	}
 	return workflowResponse{
 		ID:          wf.ID,
@@ -118,31 +115,25 @@ func toWorkflowResponse(wf *model.Workflow) workflowResponse {
 }
 
 func toWorkflowDetailResponse(wf *model.Workflow) workflowDetailResponse {
-	statuses := make([]workflowStatusResponse, len(wf.Statuses))
-	for i, s := range wf.Statuses {
-		statuses[i] = workflowStatusResponse{
+	statuses := make([]workflowStatusResponse, 0, len(wf.Statuses))
+	for _, s := range wf.Statuses {
+		statuses = append(statuses, workflowStatusResponse{
 			ID:          s.ID,
 			Name:        s.Name,
 			DisplayName: s.DisplayName,
 			Category:    s.Category,
 			Position:    s.Position,
 			Color:       s.Color,
-		}
+		})
 	}
-	transitions := make([]workflowTransitionResponse, len(wf.Transitions))
-	for i, t := range wf.Transitions {
-		transitions[i] = workflowTransitionResponse{
+	transitions := make([]workflowTransitionResponse, 0, len(wf.Transitions))
+	for _, t := range wf.Transitions {
+		transitions = append(transitions, workflowTransitionResponse{
 			ID:         t.ID,
 			FromStatus: t.FromStatus,
 			ToStatus:   t.ToStatus,
 			Name:       t.Name,
-		}
-	}
-	if statuses == nil {
-		statuses = []workflowStatusResponse{}
-	}
-	if transitions == nil {
-		transitions = []workflowTransitionResponse{}
+		})
 	}
 	return workflowDetailResponse{
 		ID:          wf.ID,
