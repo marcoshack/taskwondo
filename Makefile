@@ -1,4 +1,4 @@
-.PHONY: build help dev dev-db dev-api up down logs logs-api migrate migrate-new test
+.PHONY: build help dev dev-db dev-api dev-web up down logs logs-api migrate migrate-new test
 
 build: ## Build all Docker images
 	docker compose build
@@ -8,13 +8,20 @@ help: ## Show this help
 
 # --- Development ---
 
-dev: dev-db dev-api ## Start all services for development
+dev: dev-db ## Start all services for development (API + Web)
+	trap 'kill 0' EXIT; \
+	(set -a && . ./.env.development && set +a && cd api && air) & \
+	(cd web && npm run dev) & \
+	wait
 
 dev-db: ## Start PostgreSQL only
 	docker compose up postgres -d
 
 dev-api: dev-db ## Start API server with hot reload (requires air: go install github.com/air-verse/air@latest)
 	set -a && . ./.env.development && set +a && cd api && air
+
+dev-web: ## Start frontend dev server (Vite on :5173, proxies /api to :8080)
+	cd web && npm run dev
 
 # --- Docker ---
 
