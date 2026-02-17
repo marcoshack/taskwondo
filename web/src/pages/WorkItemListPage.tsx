@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useWorkItems, useCreateWorkItem, useBulkUpdateWorkItems } from '@/hooks/useWorkItems'
 import { useMembers } from '@/hooks/useProjects'
 import { useProjectWorkflow } from '@/hooks/useWorkflows'
@@ -23,21 +23,50 @@ type ViewMode = 'list' | 'board'
 const SETTINGS_KEY = 'workitem_filters'
 const closedCategories = new Set(['done', 'cancelled'])
 
-/** Pick only the persisted filter keys (not search/cursor/limit/sort). */
-type SavedFilter = Pick<WorkItemFilter, 'type' | 'status' | 'priority' | 'assignee'>
+/** Filter keys synced to URL and persisted. */
+const FILTER_PARAMS = ['type', 'status', 'priority', 'assignee'] as const
+type FilterParam = typeof FILTER_PARAMS[number]
+
+type SavedFilter = Pick<WorkItemFilter, FilterParam>
 
 function pickSavedFilter(f: WorkItemFilter): SavedFilter {
-  return {
-    type: f.type,
-    status: f.status,
-    priority: f.priority,
-    assignee: f.assignee,
+  return { type: f.type, status: f.status, priority: f.priority, assignee: f.assignee }
+}
+
+/** Check if URL has any filter/search/view params. */
+function urlHasFilterParams(sp: URLSearchParams): boolean {
+  for (const key of FILTER_PARAMS) {
+    if (sp.has(key)) return true
   }
+  return sp.has('q') || sp.has('view')
+}
+
+/** Parse filter state from URL search params. */
+function parseUrlFilter(sp: URLSearchParams): SavedFilter {
+  const filter: SavedFilter = {}
+  for (const key of FILTER_PARAMS) {
+    const val = sp.get(key)
+    if (val) filter[key] = val.split(',')
+  }
+  return filter
+}
+
+/** Build URL search params from filter, search, and view. */
+function buildUrlParams(filter: WorkItemFilter, search: string, view: ViewMode): URLSearchParams {
+  const sp = new URLSearchParams()
+  for (const key of FILTER_PARAMS) {
+    const val = filter[key]
+    if (val?.length) sp.set(key, val.join(','))
+  }
+  if (search) sp.set('q', search)
+  if (view !== 'list') sp.set('view', view)
+  return sp
 }
 
 export function WorkItemListPage() {
   const { projectKey } = useParams<{ projectKey: string }>()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const { statuses, transitionsMap } = useProjectWorkflow(projectKey ?? '')
   const { data: members } = useMembers(projectKey ?? '')
@@ -52,13 +81,32 @@ export function WorkItemListPage() {
     return statuses.filter((s) => !closedCategories.has(s.category)).map((s) => s.name)
   }, [statuses])
 
-  // Initialize filter from saved settings or defaults
-  const [filter, setFilter] = useState<WorkItemFilter>({})
-  const [filterInitialized, setFilterInitialized] = useState(false)
+  // Capture initial URL state once (before any effects run)
+  const initialUrlRef = useRef<{ hasParams: boolean; filter: SavedFilter; search: string; view: ViewMode } | null>(null)
+  if (initialUrlRef.current === null) {
+    const hasParams = urlHasFilterParams(searchParams)
+    initialUrlRef.current = {
+      hasParams,
+      filter: parseUrlFilter(searchParams),
+      search: searchParams.get('q') ?? '',
+      view: (searchParams.get('view') === 'board' ? 'board' : 'list') as ViewMode,
+    }
+  }
 
+  // Track whether the initial load was from a shared URL (don't save on init)
+  const loadedFromUrlRef = useRef(initialUrlRef.current.hasParams)
+
+  const [filter, setFilter] = useState<WorkItemFilter>(
+    initialUrlRef.current.hasParams ? initialUrlRef.current.filter : {}
+  )
+  const [filterInitialized, setFilterInitialized] = useState(initialUrlRef.current.hasParams)
+  const [search, setSearch] = useState(initialUrlRef.current.search)
+  const [viewMode, setViewMode] = useState<ViewMode>(initialUrlRef.current.view)
+
+  // If no URL params, initialize from saved settings or defaults once data loads
   useEffect(() => {
     if (filterInitialized || settingsLoading) return
-    if (!statuses.length) return // wait for statuses to load
+    if (!statuses.length) return
 
     if (savedFilter) {
       setFilter(savedFilter)
@@ -68,7 +116,15 @@ export function WorkItemListPage() {
     setFilterInitialized(true)
   }, [savedFilter, settingsLoading, defaultOpenStatuses, statuses, filterInitialized])
 
-  // Save filter preferences (debounced)
+  // Sync URL when filter initializes from settings/defaults (non-URL case)
+  const urlSyncedRef = useRef(initialUrlRef.current.hasParams)
+  useEffect(() => {
+    if (!filterInitialized || urlSyncedRef.current) return
+    setSearchParams(buildUrlParams(filter, search, viewMode), { replace: true })
+    urlSyncedRef.current = true
+  }, [filterInitialized, filter, search, viewMode, setSearchParams])
+
+  // Save filter preferences (debounced) — only on manual user changes
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>()
   const saveMutationRef = useRef(saveMutation)
   saveMutationRef.current = saveMutation
@@ -81,13 +137,28 @@ export function WorkItemListPage() {
     }, 500)
   }, [projectKey, filterInitialized])
 
+  function syncUrl(f: WorkItemFilter, q: string, v: ViewMode) {
+    setSearchParams(buildUrlParams(f, q, v), { replace: true })
+  }
+
   function handleFilterChange(f: WorkItemFilter) {
     setFilter(f)
+    syncUrl(f, search, viewMode)
+    // User manually changed filters — save preferences
+    loadedFromUrlRef.current = false
     saveFilter(f)
   }
 
-  const [search, setSearch] = useState('')
-  const [viewMode, setViewMode] = useState<ViewMode>('list')
+  function handleSearchChange(q: string) {
+    setSearch(q)
+    syncUrl(filter, q, viewMode)
+  }
+
+  function handleViewChange(v: ViewMode) {
+    setViewMode(v)
+    syncUrl(filter, search, v)
+  }
+
   const [showCreate, setShowCreate] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
 
@@ -136,13 +207,11 @@ export function WorkItemListPage() {
 
   const [loadedPages, setLoadedPages] = useState<WorkItem[][]>([])
 
-  // Combine first-page data with loaded extra pages
   const allItems = useMemo(() => {
     if (loadedPages.length === 0) return items
     return [...items, ...loadedPages.flat()]
   }, [items, loadedPages])
 
-  // Reset extra pages when filter changes
   const filterKey = JSON.stringify(activeFilter)
   const [prevFilterKey, setPrevFilterKey] = useState(filterKey)
   if (filterKey !== prevFilterKey) {
@@ -212,7 +281,7 @@ export function WorkItemListPage() {
               className={`px-3 py-1.5 text-sm font-medium rounded-l-md border ${
                 viewMode === 'list' ? 'bg-indigo-50 text-indigo-700 border-indigo-300' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
               }`}
-              onClick={() => setViewMode('list')}
+              onClick={() => handleViewChange('list')}
             >
               List
             </button>
@@ -220,7 +289,7 @@ export function WorkItemListPage() {
               className={`px-3 py-1.5 text-sm font-medium rounded-r-md border-t border-r border-b ${
                 viewMode === 'board' ? 'bg-indigo-50 text-indigo-700 border-indigo-300' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
               }`}
-              onClick={() => setViewMode('board')}
+              onClick={() => handleViewChange('board')}
             >
               Board
             </button>
@@ -234,7 +303,7 @@ export function WorkItemListPage() {
         onFilterChange={handleFilterChange}
         statuses={statuses}
         search={search}
-        onSearchChange={setSearch}
+        onSearchChange={handleSearchChange}
       />
 
       {/* Bulk action toolbar */}
@@ -270,7 +339,6 @@ export function WorkItemListPage() {
       ) : viewMode === 'list' ? (
         <>
           <div className="border rounded-lg overflow-hidden">
-            {/* Select-all checkbox in header */}
             <div className="bg-gray-50 px-6 py-2 border-b">
               <label className="flex items-center gap-2 text-xs text-gray-500">
                 <input
@@ -314,7 +382,6 @@ export function WorkItemListPage() {
         />
       )}
 
-      {/* Create modal */}
       <Modal open={showCreate} onClose={() => setShowCreate(false)} title="New Work Item">
         <WorkItemForm
           mode="create"
