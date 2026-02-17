@@ -9,6 +9,7 @@ const navItems = [
   { to: 'items', label: 'Items', end: false },
   { to: 'queues', label: 'Queues', end: false },
   { to: 'milestones', label: 'Milestones', end: false },
+  { to: 'settings', label: 'Settings', end: false },
 ]
 
 export function Sidebar({ projectKey }: SidebarProps) {

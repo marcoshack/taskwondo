@@ -5,6 +5,7 @@ import { Spinner } from '@/components/ui/Spinner'
 import { Badge } from '@/components/ui/Badge'
 import { WorkItemListPage } from './WorkItemListPage'
 import { WorkItemDetailPage } from './WorkItemDetailPage'
+import { ProjectSettingsPage } from './ProjectSettingsPage'
 
 function ProjectOverview() {
   return <p className="text-gray-500">Select a section from the sidebar.</p>
@@ -54,6 +55,7 @@ export function ProjectDetailPage() {
             <Route path="items/:itemNumber" element={<WorkItemDetailPage />} />
             <Route path="queues" element={<PlaceholderPage title="Queues" />} />
             <Route path="milestones" element={<PlaceholderPage title="Milestones" />} />
+            <Route path="settings" element={<ProjectSettingsPage />} />
           </Routes>
         </div>
       </div>
