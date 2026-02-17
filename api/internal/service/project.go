@@ -36,17 +36,19 @@ type ProjectMemberRepository interface {
 
 // ProjectService handles project business logic and authorization.
 type ProjectService struct {
-	projects ProjectRepository
-	members  ProjectMemberRepository
-	users    UserRepository
+	projects  ProjectRepository
+	members   ProjectMemberRepository
+	users     UserRepository
+	workflows WorkflowRepository
 }
 
 // NewProjectService creates a new ProjectService.
-func NewProjectService(projects ProjectRepository, members ProjectMemberRepository, users UserRepository) *ProjectService {
+func NewProjectService(projects ProjectRepository, members ProjectMemberRepository, users UserRepository, workflows WorkflowRepository) *ProjectService {
 	return &ProjectService{
-		projects: projects,
-		members:  members,
-		users:    users,
+		projects:  projects,
+		members:   members,
+		users:     users,
+		workflows: workflows,
 	}
 }
 
@@ -63,6 +65,20 @@ func (s *ProjectService) Create(ctx context.Context, info *model.AuthInfo, name,
 	}
 	if err != nil && err != model.ErrNotFound {
 		return nil, fmt.Errorf("checking project key: %w", err)
+	}
+
+	// Auto-assign the first default workflow if none specified
+	if defaultWorkflowID == nil {
+		workflows, err := s.workflows.List(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("listing workflows for default: %w", err)
+		}
+		for i := range workflows {
+			if workflows[i].IsDefault {
+				defaultWorkflowID = &workflows[i].ID
+				break
+			}
+		}
 	}
 
 	project := &model.Project{

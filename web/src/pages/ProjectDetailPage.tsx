@@ -3,13 +3,15 @@ import { useProject } from '@/hooks/useProjects'
 import { Sidebar } from '@/components/Sidebar'
 import { Spinner } from '@/components/ui/Spinner'
 import { Badge } from '@/components/ui/Badge'
+import { WorkItemListPage } from './WorkItemListPage'
+import { WorkItemDetailPage } from './WorkItemDetailPage'
 
 function ProjectOverview() {
   return <p className="text-gray-500">Select a section from the sidebar.</p>
 }
 
 function PlaceholderPage({ title }: { title: string }) {
-  return <p className="text-gray-500">{title} view coming in Phase 9.</p>
+  return <p className="text-gray-500">{title} view coming soon.</p>
 }
 
 export function ProjectDetailPage() {
@@ -48,7 +50,8 @@ export function ProjectDetailPage() {
         <div className="flex-1 min-w-0">
           <Routes>
             <Route index element={<ProjectOverview />} />
-            <Route path="items" element={<PlaceholderPage title="Items" />} />
+            <Route path="items" element={<WorkItemListPage />} />
+            <Route path="items/:itemNumber" element={<WorkItemDetailPage />} />
             <Route path="queues" element={<PlaceholderPage title="Queues" />} />
             <Route path="milestones" element={<PlaceholderPage title="Milestones" />} />
           </Routes>

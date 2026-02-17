@@ -1,8 +1,12 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useProjects } from '@/hooks/useProjects'
+import { useProjects, useCreateProject } from '@/hooks/useProjects'
 import { DataTable } from '@/components/ui/DataTable'
 import { Badge } from '@/components/ui/Badge'
 import { Spinner } from '@/components/ui/Spinner'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
+import { Modal } from '@/components/ui/Modal'
 import type { Column } from '@/components/ui/DataTable'
 import type { Project } from '@/api/projects'
 
@@ -34,6 +38,39 @@ const columns: Column<Project>[] = [
 export function ProjectListPage() {
   const { data: projects, isLoading, error } = useProjects()
   const navigate = useNavigate()
+  const createMutation = useCreateProject()
+
+  const [showCreate, setShowCreate] = useState(false)
+  const [name, setName] = useState('')
+  const [key, setKey] = useState('')
+  const [description, setDescription] = useState('')
+  const [formError, setFormError] = useState('')
+
+  function handleCreate(e: React.FormEvent) {
+    e.preventDefault()
+    setFormError('')
+    if (!name.trim() || !key.trim()) return
+    createMutation.mutate(
+      { name: name.trim(), key: key.trim().toUpperCase(), description: description.trim() || undefined },
+      {
+        onSuccess: (project) => {
+          setShowCreate(false)
+          setName('')
+          setKey('')
+          setDescription('')
+          navigate(`/projects/${project.key}`)
+        },
+        onError: (err) => {
+          if (err && typeof err === 'object' && 'response' in err) {
+            const axiosErr = err as { response?: { data?: { error?: { message?: string } } } }
+            setFormError(axiosErr.response?.data?.error?.message ?? 'Failed to create project')
+          } else {
+            setFormError('Failed to create project')
+          }
+        },
+      },
+    )
+  }
 
   if (isLoading) {
     return (
@@ -55,15 +92,50 @@ export function ProjectListPage() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-semibold text-gray-900">Projects</h1>
+        <Button onClick={() => setShowCreate(true)}>New Project</Button>
       </div>
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <DataTable
           columns={columns}
           data={projects ?? []}
           onRowClick={(p) => navigate(`/projects/${p.key}`)}
-          emptyMessage="No projects yet"
+          emptyMessage="No projects yet. Create one to get started."
         />
       </div>
+
+      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="New Project">
+        <form onSubmit={handleCreate} className="space-y-4">
+          <Input
+            label="Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="My Project"
+            required
+          />
+          <Input
+            label="Key"
+            value={key}
+            onChange={(e) => setKey(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+            placeholder="PROJ"
+            maxLength={10}
+            required
+          />
+          <p className="text-xs text-gray-400 -mt-3">1-10 uppercase letters/digits, must start with a letter</p>
+          <Input
+            label="Description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Optional description"
+          />
+          {formError && <p className="text-sm text-red-600">{formError}</p>}
+          <div className="flex justify-end gap-3 pt-2">
+            <Button type="button" variant="secondary" onClick={() => setShowCreate(false)}>Cancel</Button>
+            <Button type="submit" disabled={createMutation.isPending || !name.trim() || !key.trim()}>
+              {createMutation.isPending ? 'Creating...' : 'Create'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   )
 }
