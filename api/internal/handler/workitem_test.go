@@ -152,6 +152,118 @@ func (m *mockWorkItemEventRepo) ListByWorkItem(_ context.Context, workItemID uui
 	return m.events[workItemID], nil
 }
 
+func (m *mockWorkItemEventRepo) ListByWorkItemFiltered(_ context.Context, workItemID uuid.UUID, visibility string) ([]model.WorkItemEventWithActor, error) {
+	events := m.events[workItemID]
+	var result []model.WorkItemEventWithActor
+	for _, e := range events {
+		if visibility != "" && e.Visibility != visibility {
+			continue
+		}
+		result = append(result, model.WorkItemEventWithActor{WorkItemEvent: e})
+	}
+	return result, nil
+}
+
+// --- Mock comment repository ---
+
+type mockCommentRepo struct {
+	comments map[uuid.UUID]*model.Comment
+}
+
+func newMockCommentRepo() *mockCommentRepo {
+	return &mockCommentRepo{comments: make(map[uuid.UUID]*model.Comment)}
+}
+
+func (m *mockCommentRepo) Create(_ context.Context, comment *model.Comment) error {
+	now := time.Now()
+	comment.CreatedAt = now
+	comment.UpdatedAt = now
+	m.comments[comment.ID] = comment
+	return nil
+}
+
+func (m *mockCommentRepo) GetByID(_ context.Context, id uuid.UUID) (*model.Comment, error) {
+	c, ok := m.comments[id]
+	if !ok {
+		return nil, model.ErrNotFound
+	}
+	return c, nil
+}
+
+func (m *mockCommentRepo) ListByWorkItem(_ context.Context, workItemID uuid.UUID, visibility string) ([]model.Comment, error) {
+	var result []model.Comment
+	for _, c := range m.comments {
+		if c.WorkItemID != workItemID {
+			continue
+		}
+		if visibility != "" && c.Visibility != visibility {
+			continue
+		}
+		result = append(result, *c)
+	}
+	return result, nil
+}
+
+func (m *mockCommentRepo) Update(_ context.Context, comment *model.Comment) error {
+	existing, ok := m.comments[comment.ID]
+	if !ok {
+		return model.ErrNotFound
+	}
+	existing.Body = comment.Body
+	existing.UpdatedAt = time.Now()
+	return nil
+}
+
+func (m *mockCommentRepo) Delete(_ context.Context, id uuid.UUID) error {
+	if _, ok := m.comments[id]; !ok {
+		return model.ErrNotFound
+	}
+	delete(m.comments, id)
+	return nil
+}
+
+// --- Mock relation repository ---
+
+type mockRelationRepo struct {
+	relations map[uuid.UUID]*model.WorkItemRelation
+}
+
+func newMockRelationRepo() *mockRelationRepo {
+	return &mockRelationRepo{relations: make(map[uuid.UUID]*model.WorkItemRelation)}
+}
+
+func (m *mockRelationRepo) Create(_ context.Context, rel *model.WorkItemRelation) error {
+	rel.CreatedAt = time.Now()
+	m.relations[rel.ID] = rel
+	return nil
+}
+
+func (m *mockRelationRepo) GetByID(_ context.Context, id uuid.UUID) (*model.WorkItemRelation, error) {
+	rel, ok := m.relations[id]
+	if !ok {
+		return nil, model.ErrNotFound
+	}
+	return rel, nil
+}
+
+func (m *mockRelationRepo) ListByWorkItem(_ context.Context, workItemID uuid.UUID) ([]model.WorkItemRelation, error) {
+	var result []model.WorkItemRelation
+	for _, rel := range m.relations {
+		if rel.SourceID == workItemID || rel.TargetID == workItemID {
+			result = append(result, *rel)
+		}
+	}
+	return result, nil
+}
+
+func (m *mockRelationRepo) Delete(_ context.Context, id uuid.UUID) error {
+	if _, ok := m.relations[id]; !ok {
+		return model.ErrNotFound
+	}
+	delete(m.relations, id)
+	return nil
+}
+
 // --- Test setup ---
 
 func workItemTestSetup(t *testing.T) (*WorkItemHandler, *model.AuthInfo, string) {
@@ -161,8 +273,10 @@ func workItemTestSetup(t *testing.T) (*WorkItemHandler, *model.AuthInfo, string)
 	memberRepo := newMockProjectMemberRepo()
 	itemRepo := newMockWorkItemRepo()
 	eventRepo := newMockWorkItemEventRepo()
+	commentRepo := newMockCommentRepo()
+	relationRepo := newMockRelationRepo()
 
-	svc := service.NewWorkItemService(itemRepo, eventRepo, projectRepo, memberRepo)
+	svc := service.NewWorkItemService(itemRepo, eventRepo, commentRepo, relationRepo, projectRepo, memberRepo)
 	h := NewWorkItemHandler(svc)
 
 	info := &model.AuthInfo{
@@ -521,5 +635,365 @@ func TestDeleteWorkItem_Handler_NotFound(t *testing.T) {
 
 	if w.Code != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d", w.Code)
+	}
+}
+
+// --- Comment Handler Tests ---
+
+func TestCreateComment_Handler_Success(t *testing.T) {
+	h, info, projectKey := workItemTestSetup(t)
+	createTestWorkItem(t, h, info, projectKey)
+
+	body := `{"body":"This is a comment","visibility":"internal"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/items/1/comments", bytes.NewBufferString(body))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", projectKey)
+	rctx.URLParams.Add("itemNumber", "1")
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	h.CreateComment(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data := resp["data"].(map[string]interface{})
+	if data["body"] != "This is a comment" {
+		t.Fatalf("expected body 'This is a comment', got %v", data["body"])
+	}
+}
+
+func TestCreateComment_Handler_EmptyBody(t *testing.T) {
+	h, info, projectKey := workItemTestSetup(t)
+	createTestWorkItem(t, h, info, projectKey)
+
+	body := `{"body":""}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/items/1/comments", bytes.NewBufferString(body))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", projectKey)
+	rctx.URLParams.Add("itemNumber", "1")
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	h.CreateComment(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestListComments_Handler_Success(t *testing.T) {
+	h, info, projectKey := workItemTestSetup(t)
+	createTestWorkItem(t, h, info, projectKey)
+
+	// Create 2 comments
+	for i := 0; i < 2; i++ {
+		body := fmt.Sprintf(`{"body":"Comment %d"}`, i)
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/items/1/comments", bytes.NewBufferString(body))
+		rctx := chi.NewRouteContext()
+		rctx.URLParams.Add("projectKey", projectKey)
+		rctx.URLParams.Add("itemNumber", "1")
+		ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+		ctx = model.ContextWithAuthInfo(ctx, info)
+		req = req.WithContext(ctx)
+		w := httptest.NewRecorder()
+		h.CreateComment(w, req)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/projects/TEST/items/1/comments", nil)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", projectKey)
+	rctx.URLParams.Add("itemNumber", "1")
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	h.ListComments(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data := resp["data"].([]interface{})
+	if len(data) != 2 {
+		t.Fatalf("expected 2 comments, got %d", len(data))
+	}
+}
+
+func TestUpdateComment_Handler_Success(t *testing.T) {
+	h, info, projectKey := workItemTestSetup(t)
+	createTestWorkItem(t, h, info, projectKey)
+
+	// Create a comment
+	createBody := `{"body":"Original"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/items/1/comments", bytes.NewBufferString(createBody))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", projectKey)
+	rctx.URLParams.Add("itemNumber", "1")
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+	h.CreateComment(w, req)
+
+	var createResp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &createResp)
+	commentID := createResp["data"].(map[string]interface{})["id"].(string)
+
+	// Update the comment
+	updateBody := `{"body":"Updated"}`
+	req = httptest.NewRequest(http.MethodPatch, "/api/v1/projects/TEST/items/1/comments/"+commentID, bytes.NewBufferString(updateBody))
+	rctx = chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", projectKey)
+	rctx.URLParams.Add("itemNumber", "1")
+	rctx.URLParams.Add("commentId", commentID)
+	ctx = context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w = httptest.NewRecorder()
+
+	h.UpdateComment(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var updateResp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &updateResp)
+	data := updateResp["data"].(map[string]interface{})
+	if data["body"] != "Updated" {
+		t.Fatalf("expected body 'Updated', got %v", data["body"])
+	}
+}
+
+func TestDeleteComment_Handler_Success(t *testing.T) {
+	h, info, projectKey := workItemTestSetup(t)
+	createTestWorkItem(t, h, info, projectKey)
+
+	// Create a comment
+	createBody := `{"body":"To delete"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/items/1/comments", bytes.NewBufferString(createBody))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", projectKey)
+	rctx.URLParams.Add("itemNumber", "1")
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+	h.CreateComment(w, req)
+
+	var createResp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &createResp)
+	commentID := createResp["data"].(map[string]interface{})["id"].(string)
+
+	// Delete it
+	req = httptest.NewRequest(http.MethodDelete, "/api/v1/projects/TEST/items/1/comments/"+commentID, nil)
+	rctx = chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", projectKey)
+	rctx.URLParams.Add("itemNumber", "1")
+	rctx.URLParams.Add("commentId", commentID)
+	ctx = context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w = httptest.NewRecorder()
+
+	h.DeleteComment(w, req)
+
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("expected 204, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+// --- Relation Handler Tests ---
+
+func TestCreateRelation_Handler_Success(t *testing.T) {
+	h, info, projectKey := workItemTestSetup(t)
+	createTestWorkItem(t, h, info, projectKey) // item 1
+	createTestWorkItem(t, h, info, projectKey) // item 2
+
+	body := `{"target_display_id":"TEST-2","relation_type":"blocks"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/items/1/relations", bytes.NewBufferString(body))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", projectKey)
+	rctx.URLParams.Add("itemNumber", "1")
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	h.CreateRelation(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data := resp["data"].(map[string]interface{})
+	if data["relation_type"] != "blocks" {
+		t.Fatalf("expected relation_type 'blocks', got %v", data["relation_type"])
+	}
+	if data["source_display_id"] != "TEST-1" {
+		t.Fatalf("expected source_display_id 'TEST-1', got %v", data["source_display_id"])
+	}
+	if data["target_display_id"] != "TEST-2" {
+		t.Fatalf("expected target_display_id 'TEST-2', got %v", data["target_display_id"])
+	}
+}
+
+func TestCreateRelation_Handler_MissingFields(t *testing.T) {
+	h, info, projectKey := workItemTestSetup(t)
+	createTestWorkItem(t, h, info, projectKey)
+
+	body := `{"relation_type":"blocks"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/items/1/relations", bytes.NewBufferString(body))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", projectKey)
+	rctx.URLParams.Add("itemNumber", "1")
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	h.CreateRelation(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestListRelations_Handler_Success(t *testing.T) {
+	h, info, projectKey := workItemTestSetup(t)
+	createTestWorkItem(t, h, info, projectKey) // item 1
+	createTestWorkItem(t, h, info, projectKey) // item 2
+
+	// Create a relation
+	body := `{"target_display_id":"TEST-2","relation_type":"blocks"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/items/1/relations", bytes.NewBufferString(body))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", projectKey)
+	rctx.URLParams.Add("itemNumber", "1")
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+	h.CreateRelation(w, req)
+
+	// List relations
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/projects/TEST/items/1/relations", nil)
+	rctx = chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", projectKey)
+	rctx.URLParams.Add("itemNumber", "1")
+	ctx = context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w = httptest.NewRecorder()
+
+	h.ListRelations(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data := resp["data"].([]interface{})
+	if len(data) != 1 {
+		t.Fatalf("expected 1 relation, got %d", len(data))
+	}
+}
+
+func TestDeleteRelation_Handler_Success(t *testing.T) {
+	h, info, projectKey := workItemTestSetup(t)
+	createTestWorkItem(t, h, info, projectKey) // item 1
+	createTestWorkItem(t, h, info, projectKey) // item 2
+
+	// Create a relation
+	body := `{"target_display_id":"TEST-2","relation_type":"blocks"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/items/1/relations", bytes.NewBufferString(body))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", projectKey)
+	rctx.URLParams.Add("itemNumber", "1")
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+	h.CreateRelation(w, req)
+
+	var createResp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &createResp)
+	relationID := createResp["data"].(map[string]interface{})["id"].(string)
+
+	// Delete
+	req = httptest.NewRequest(http.MethodDelete, "/api/v1/projects/TEST/items/1/relations/"+relationID, nil)
+	rctx = chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", projectKey)
+	rctx.URLParams.Add("itemNumber", "1")
+	rctx.URLParams.Add("relationId", relationID)
+	ctx = context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w = httptest.NewRecorder()
+
+	h.DeleteRelation(w, req)
+
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("expected 204, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+// --- Event Handler Tests ---
+
+func TestListEvents_Handler_Success(t *testing.T) {
+	h, info, projectKey := workItemTestSetup(t)
+	createTestWorkItem(t, h, info, projectKey) // creates a "created" event
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/projects/TEST/items/1/events", nil)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", projectKey)
+	rctx.URLParams.Add("itemNumber", "1")
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	h.ListEvents(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data := resp["data"].([]interface{})
+	if len(data) < 1 {
+		t.Fatal("expected at least 1 event")
+	}
+}
+
+func TestListEvents_Handler_Unauthenticated(t *testing.T) {
+	h, _, _ := workItemTestSetup(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/projects/TEST/items/1/events", nil)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", "TEST")
+	rctx.URLParams.Add("itemNumber", "1")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+	w := httptest.NewRecorder()
+
+	h.ListEvents(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", w.Code)
 	}
 }

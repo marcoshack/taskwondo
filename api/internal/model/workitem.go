@@ -95,3 +95,9 @@ type WorkItemList struct {
 	HasMore bool       `json:"has_more"`
 	Total   int        `json:"total"`
 }
+
+// WorkItemEventWithActor is a WorkItemEvent enriched with actor display info.
+type WorkItemEventWithActor struct {
+	WorkItemEvent
+	ActorDisplayName *string `json:"actor_display_name,omitempty"`
+}

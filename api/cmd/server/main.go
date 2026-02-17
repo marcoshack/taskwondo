@@ -64,11 +64,13 @@ func main() {
 	projectMemberRepo := repository.NewProjectMemberRepository(db)
 	workItemRepo := repository.NewWorkItemRepository(db)
 	workItemEventRepo := repository.NewWorkItemEventRepository(db)
+	commentRepo := repository.NewCommentRepository(db)
+	relationRepo := repository.NewWorkItemRelationRepository(db)
 
 	// Initialize services
 	authService := service.NewAuthService(userRepo, apiKeyRepo, cfg.JWTSecret, cfg.JWTExpiry)
 	projectService := service.NewProjectService(projectRepo, projectMemberRepo, userRepo)
-	workItemService := service.NewWorkItemService(workItemRepo, workItemEventRepo, projectRepo, projectMemberRepo)
+	workItemService := service.NewWorkItemService(workItemRepo, workItemEventRepo, commentRepo, relationRepo, projectRepo, projectMemberRepo)
 
 	// Seed admin user if configured
 	if cfg.AdminEmail != "" && cfg.AdminPassword != "" {
@@ -135,6 +137,18 @@ func main() {
 							r.Get("/", items.Get)
 							r.Patch("/", items.Update)
 							r.Delete("/", items.Delete)
+							r.Route("/comments", func(r chi.Router) {
+								r.Get("/", items.ListComments)
+								r.Post("/", items.CreateComment)
+								r.Patch("/{commentId}", items.UpdateComment)
+								r.Delete("/{commentId}", items.DeleteComment)
+							})
+							r.Route("/relations", func(r chi.Router) {
+								r.Get("/", items.ListRelations)
+								r.Post("/", items.CreateRelation)
+								r.Delete("/{relationId}", items.DeleteRelation)
+							})
+							r.Get("/events", items.ListEvents)
 						})
 					})
 				})

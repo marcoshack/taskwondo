@@ -1,0 +1,96 @@
+package repository
+
+import (
+	"context"
+	"database/sql"
+	"fmt"
+
+	"github.com/google/uuid"
+
+	"github.com/marcoshack/trackforge/internal/model"
+)
+
+// WorkItemRelationRepository handles work item relation persistence.
+type WorkItemRelationRepository struct {
+	db *sql.DB
+}
+
+// NewWorkItemRelationRepository creates a new WorkItemRelationRepository.
+func NewWorkItemRelationRepository(db *sql.DB) *WorkItemRelationRepository {
+	return &WorkItemRelationRepository{db: db}
+}
+
+// Create inserts a new work item relation.
+func (r *WorkItemRelationRepository) Create(ctx context.Context, relation *model.WorkItemRelation) error {
+	_, err := r.db.ExecContext(ctx,
+		`INSERT INTO work_item_relations (id, source_id, target_id, relation_type, created_by)
+		 VALUES ($1, $2, $3, $4, $5)`,
+		relation.ID, relation.SourceID, relation.TargetID, relation.RelationType, relation.CreatedBy)
+	if err != nil {
+		return fmt.Errorf("inserting work item relation: %w", err)
+	}
+	return nil
+}
+
+// GetByID returns a relation by its ID.
+func (r *WorkItemRelationRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.WorkItemRelation, error) {
+	var rel model.WorkItemRelation
+	err := r.db.QueryRowContext(ctx,
+		`SELECT id, source_id, target_id, relation_type, created_by, created_at
+		 FROM work_item_relations WHERE id = $1`, id).Scan(
+		&rel.ID, &rel.SourceID, &rel.TargetID, &rel.RelationType,
+		&rel.CreatedBy, &rel.CreatedAt)
+	if err == sql.ErrNoRows {
+		return nil, model.ErrNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("querying relation: %w", err)
+	}
+	return &rel, nil
+}
+
+// ListByWorkItem returns all relations where the given work item is source or target.
+func (r *WorkItemRelationRepository) ListByWorkItem(ctx context.Context, workItemID uuid.UUID) ([]model.WorkItemRelation, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT id, source_id, target_id, relation_type, created_by, created_at
+		 FROM work_item_relations
+		 WHERE source_id = $1 OR target_id = $1
+		 ORDER BY created_at ASC`, workItemID)
+	if err != nil {
+		return nil, fmt.Errorf("querying relations: %w", err)
+	}
+	defer rows.Close()
+
+	var relations []model.WorkItemRelation
+	for rows.Next() {
+		var rel model.WorkItemRelation
+		if err := rows.Scan(
+			&rel.ID, &rel.SourceID, &rel.TargetID, &rel.RelationType,
+			&rel.CreatedBy, &rel.CreatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scanning relation: %w", err)
+		}
+		relations = append(relations, rel)
+	}
+
+	return relations, rows.Err()
+}
+
+// Delete hard-deletes a relation.
+func (r *WorkItemRelationRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	result, err := r.db.ExecContext(ctx,
+		`DELETE FROM work_item_relations WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("deleting relation: %w", err)
+	}
+
+	n, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("checking rows affected: %w", err)
+	}
+	if n == 0 {
+		return model.ErrNotFound
+	}
+
+	return nil
+}

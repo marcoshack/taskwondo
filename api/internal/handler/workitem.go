@@ -493,6 +493,383 @@ func (h *WorkItemHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// --- Comment DTOs ---
+
+type createCommentRequest struct {
+	Body       string `json:"body"`
+	Visibility string `json:"visibility,omitempty"`
+}
+
+type updateCommentRequest struct {
+	Body string `json:"body"`
+}
+
+type commentResponse struct {
+	ID         uuid.UUID  `json:"id"`
+	AuthorID   *uuid.UUID `json:"author_id,omitempty"`
+	Body       string     `json:"body"`
+	Visibility string     `json:"visibility"`
+	CreatedAt  time.Time  `json:"created_at"`
+	UpdatedAt  time.Time  `json:"updated_at"`
+}
+
+func toCommentResponse(c *model.Comment) commentResponse {
+	return commentResponse{
+		ID:         c.ID,
+		AuthorID:   c.AuthorID,
+		Body:       c.Body,
+		Visibility: c.Visibility,
+		CreatedAt:  c.CreatedAt,
+		UpdatedAt:  c.UpdatedAt,
+	}
+}
+
+// --- Relation DTOs ---
+
+type createRelationRequest struct {
+	TargetDisplayID string `json:"target_display_id"`
+	RelationType    string `json:"relation_type"`
+}
+
+type relationResponse struct {
+	ID              uuid.UUID `json:"id"`
+	SourceDisplayID string    `json:"source_display_id"`
+	TargetDisplayID string    `json:"target_display_id"`
+	RelationType    string    `json:"relation_type"`
+	CreatedBy       uuid.UUID `json:"created_by"`
+	CreatedAt       time.Time `json:"created_at"`
+}
+
+func toRelationResponse(r *service.RelationWithDisplay) relationResponse {
+	return relationResponse{
+		ID:              r.ID,
+		SourceDisplayID: r.SourceDisplayID,
+		TargetDisplayID: r.TargetDisplayID,
+		RelationType:    r.RelationType,
+		CreatedBy:       r.CreatedBy,
+		CreatedAt:       r.CreatedAt,
+	}
+}
+
+// --- Event DTOs ---
+
+type eventActorResponse struct {
+	ID          uuid.UUID `json:"id"`
+	DisplayName string    `json:"display_name"`
+}
+
+type eventResponse struct {
+	ID         uuid.UUID              `json:"id"`
+	EventType  string                 `json:"event_type"`
+	Actor      *eventActorResponse    `json:"actor,omitempty"`
+	FieldName  *string                `json:"field_name,omitempty"`
+	OldValue   *string                `json:"old_value,omitempty"`
+	NewValue   *string                `json:"new_value,omitempty"`
+	Metadata   map[string]interface{} `json:"metadata"`
+	Visibility string                 `json:"visibility"`
+	CreatedAt  time.Time              `json:"created_at"`
+}
+
+func toEventResponse(e *model.WorkItemEventWithActor) eventResponse {
+	resp := eventResponse{
+		ID:         e.ID,
+		EventType:  e.EventType,
+		FieldName:  e.FieldName,
+		OldValue:   e.OldValue,
+		NewValue:   e.NewValue,
+		Metadata:   e.Metadata,
+		Visibility: e.Visibility,
+		CreatedAt:  e.CreatedAt,
+	}
+	if resp.Metadata == nil {
+		resp.Metadata = map[string]interface{}{}
+	}
+	if e.ActorID != nil {
+		actor := &eventActorResponse{ID: *e.ActorID}
+		if e.ActorDisplayName != nil {
+			actor.DisplayName = *e.ActorDisplayName
+		}
+		resp.Actor = actor
+	}
+	return resp
+}
+
+// --- Comment Handlers ---
+
+// CreateComment handles POST /api/v1/projects/{projectKey}/items/{itemNumber}/comments
+func (h *WorkItemHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	projectKey := chi.URLParam(r, "projectKey")
+	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		return
+	}
+
+	var req createCommentRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		return
+	}
+
+	if req.Body == "" {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "body is required")
+		return
+	}
+
+	comment, err := h.items.CreateComment(r.Context(), info, projectKey, itemNumber, service.CreateCommentInput{
+		Body:       req.Body,
+		Visibility: req.Visibility,
+	})
+	if err != nil {
+		handleWorkItemError(w, r, err, "failed to create comment")
+		return
+	}
+
+	writeData(w, http.StatusCreated, toCommentResponse(comment))
+}
+
+// ListComments handles GET /api/v1/projects/{projectKey}/items/{itemNumber}/comments
+func (h *WorkItemHandler) ListComments(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	projectKey := chi.URLParam(r, "projectKey")
+	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		return
+	}
+
+	visibility := r.URL.Query().Get("visibility")
+
+	comments, err := h.items.ListComments(r.Context(), info, projectKey, itemNumber, visibility)
+	if err != nil {
+		handleWorkItemError(w, r, err, "failed to list comments")
+		return
+	}
+
+	resp := make([]commentResponse, len(comments))
+	for i := range comments {
+		resp[i] = toCommentResponse(&comments[i])
+	}
+
+	writeData(w, http.StatusOK, resp)
+}
+
+// UpdateComment handles PATCH /api/v1/projects/{projectKey}/items/{itemNumber}/comments/{commentId}
+func (h *WorkItemHandler) UpdateComment(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	projectKey := chi.URLParam(r, "projectKey")
+	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		return
+	}
+
+	commentID, err := uuid.Parse(chi.URLParam(r, "commentId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid comment ID")
+		return
+	}
+
+	var req updateCommentRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		return
+	}
+
+	if req.Body == "" {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "body is required")
+		return
+	}
+
+	comment, err := h.items.UpdateComment(r.Context(), info, projectKey, itemNumber, commentID, req.Body)
+	if err != nil {
+		handleWorkItemError(w, r, err, "failed to update comment")
+		return
+	}
+
+	writeData(w, http.StatusOK, toCommentResponse(comment))
+}
+
+// DeleteComment handles DELETE /api/v1/projects/{projectKey}/items/{itemNumber}/comments/{commentId}
+func (h *WorkItemHandler) DeleteComment(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	projectKey := chi.URLParam(r, "projectKey")
+	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		return
+	}
+
+	commentID, err := uuid.Parse(chi.URLParam(r, "commentId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid comment ID")
+		return
+	}
+
+	if err := h.items.DeleteComment(r.Context(), info, projectKey, itemNumber, commentID); err != nil {
+		handleWorkItemError(w, r, err, "failed to delete comment")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// --- Relation Handlers ---
+
+// CreateRelation handles POST /api/v1/projects/{projectKey}/items/{itemNumber}/relations
+func (h *WorkItemHandler) CreateRelation(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	projectKey := chi.URLParam(r, "projectKey")
+	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		return
+	}
+
+	var req createRelationRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		return
+	}
+
+	if req.TargetDisplayID == "" {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "target_display_id is required")
+		return
+	}
+	if req.RelationType == "" {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "relation_type is required")
+		return
+	}
+
+	rel, err := h.items.CreateRelation(r.Context(), info, projectKey, itemNumber, service.CreateRelationInput{
+		TargetDisplayID: req.TargetDisplayID,
+		RelationType:    req.RelationType,
+	})
+	if err != nil {
+		handleWorkItemError(w, r, err, "failed to create relation")
+		return
+	}
+
+	writeData(w, http.StatusCreated, toRelationResponse(rel))
+}
+
+// ListRelations handles GET /api/v1/projects/{projectKey}/items/{itemNumber}/relations
+func (h *WorkItemHandler) ListRelations(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	projectKey := chi.URLParam(r, "projectKey")
+	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		return
+	}
+
+	relations, err := h.items.ListRelations(r.Context(), info, projectKey, itemNumber)
+	if err != nil {
+		handleWorkItemError(w, r, err, "failed to list relations")
+		return
+	}
+
+	resp := make([]relationResponse, len(relations))
+	for i := range relations {
+		resp[i] = toRelationResponse(&relations[i])
+	}
+
+	writeData(w, http.StatusOK, resp)
+}
+
+// DeleteRelation handles DELETE /api/v1/projects/{projectKey}/items/{itemNumber}/relations/{relationId}
+func (h *WorkItemHandler) DeleteRelation(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	projectKey := chi.URLParam(r, "projectKey")
+	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		return
+	}
+
+	relationID, err := uuid.Parse(chi.URLParam(r, "relationId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid relation ID")
+		return
+	}
+
+	if err := h.items.DeleteRelation(r.Context(), info, projectKey, itemNumber, relationID); err != nil {
+		handleWorkItemError(w, r, err, "failed to delete relation")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// --- Event Handlers ---
+
+// ListEvents handles GET /api/v1/projects/{projectKey}/items/{itemNumber}/events
+func (h *WorkItemHandler) ListEvents(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	projectKey := chi.URLParam(r, "projectKey")
+	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		return
+	}
+
+	visibility := r.URL.Query().Get("visibility")
+
+	events, err := h.items.ListEvents(r.Context(), info, projectKey, itemNumber, visibility)
+	if err != nil {
+		handleWorkItemError(w, r, err, "failed to list events")
+		return
+	}
+
+	resp := make([]eventResponse, len(events))
+	for i := range events {
+		resp[i] = toEventResponse(&events[i])
+	}
+
+	writeData(w, http.StatusOK, resp)
+}
+
 // handleWorkItemError maps service errors to HTTP responses.
 func handleWorkItemError(w http.ResponseWriter, r *http.Request, err error, logMsg string) {
 	if errors.Is(err, model.ErrNotFound) {
