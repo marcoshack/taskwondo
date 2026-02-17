@@ -66,11 +66,13 @@ func main() {
 	workItemEventRepo := repository.NewWorkItemEventRepository(db)
 	commentRepo := repository.NewCommentRepository(db)
 	relationRepo := repository.NewWorkItemRelationRepository(db)
+	workflowRepo := repository.NewWorkflowRepository(db)
 
 	// Initialize services
 	authService := service.NewAuthService(userRepo, apiKeyRepo, cfg.JWTSecret, cfg.JWTExpiry)
 	projectService := service.NewProjectService(projectRepo, projectMemberRepo, userRepo)
-	workItemService := service.NewWorkItemService(workItemRepo, workItemEventRepo, commentRepo, relationRepo, projectRepo, projectMemberRepo)
+	workflowService := service.NewWorkflowService(workflowRepo)
+	workItemService := service.NewWorkItemService(workItemRepo, workItemEventRepo, commentRepo, relationRepo, projectRepo, projectMemberRepo, workflowRepo)
 
 	// Seed admin user if configured
 	if cfg.AdminEmail != "" && cfg.AdminPassword != "" {
@@ -79,10 +81,16 @@ func main() {
 		}
 	}
 
+	// Seed default workflows
+	if err := workflowService.SeedDefaultWorkflows(ctx); err != nil {
+		log.Fatal().Err(err).Msg("failed to seed default workflows")
+	}
+
 	// Initialize handlers
 	health := handler.NewHealthHandler(db)
 	auth := handler.NewAuthHandler(authService)
 	projects := handler.NewProjectHandler(projectService)
+	workflows := handler.NewWorkflowHandler(workflowService)
 	items := handler.NewWorkItemHandler(workItemService)
 
 	// Set up router
@@ -115,6 +123,17 @@ func main() {
 			r.Get("/user/api-keys", auth.ListAPIKeys)
 			r.Post("/user/api-keys", auth.CreateAPIKey)
 			r.Delete("/user/api-keys/{keyId}", auth.DeleteAPIKey)
+
+			// Workflows
+			r.Route("/workflows", func(r chi.Router) {
+				r.Get("/", workflows.List)
+				r.Post("/", workflows.Create)
+				r.Route("/{workflowId}", func(r chi.Router) {
+					r.Get("/", workflows.Get)
+					r.Patch("/", workflows.Update)
+					r.Get("/transitions", workflows.ListTransitions)
+				})
+			})
 
 			// Projects
 			r.Route("/projects", func(r chi.Router) {

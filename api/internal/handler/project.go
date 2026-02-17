@@ -27,15 +27,17 @@ func NewProjectHandler(projects *service.ProjectService) *ProjectHandler {
 // --- Request DTOs ---
 
 type createProjectRequest struct {
-	Name        string  `json:"name"`
-	Key         string  `json:"key"`
-	Description *string `json:"description,omitempty"`
+	Name              string  `json:"name"`
+	Key               string  `json:"key"`
+	Description       *string `json:"description,omitempty"`
+	DefaultWorkflowID *string `json:"default_workflow_id,omitempty"`
 }
 
 type updateProjectRequest struct {
-	Name        *string `json:"name,omitempty"`
-	Key         *string `json:"key,omitempty"`
-	Description *string `json:"description"`
+	Name              *string `json:"name,omitempty"`
+	Key               *string `json:"key,omitempty"`
+	Description       *string `json:"description"`
+	DefaultWorkflowID *string `json:"default_workflow_id,omitempty"`
 }
 
 type addMemberRequest struct {
@@ -50,13 +52,14 @@ type updateMemberRoleRequest struct {
 // --- Response DTOs ---
 
 type projectResponse struct {
-	ID          uuid.UUID  `json:"id"`
-	Name        string     `json:"name"`
-	Key         string     `json:"key"`
-	Description *string    `json:"description,omitempty"`
-	ItemCounter int        `json:"item_counter"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
+	ID                uuid.UUID  `json:"id"`
+	Name              string     `json:"name"`
+	Key               string     `json:"key"`
+	Description       *string    `json:"description,omitempty"`
+	DefaultWorkflowID *uuid.UUID `json:"default_workflow_id,omitempty"`
+	ItemCounter       int        `json:"item_counter"`
+	CreatedAt         time.Time  `json:"created_at"`
+	UpdatedAt         time.Time  `json:"updated_at"`
 }
 
 type memberResponse struct {
@@ -70,13 +73,14 @@ type memberResponse struct {
 
 func toProjectResponse(p *model.Project) projectResponse {
 	return projectResponse{
-		ID:          p.ID,
-		Name:        p.Name,
-		Key:         p.Key,
-		Description: p.Description,
-		ItemCounter: p.ItemCounter,
-		CreatedAt:   p.CreatedAt,
-		UpdatedAt:   p.UpdatedAt,
+		ID:                p.ID,
+		Name:              p.Name,
+		Key:               p.Key,
+		Description:       p.Description,
+		DefaultWorkflowID: p.DefaultWorkflowID,
+		ItemCounter:       p.ItemCounter,
+		CreatedAt:         p.CreatedAt,
+		UpdatedAt:         p.UpdatedAt,
 	}
 }
 
@@ -116,7 +120,17 @@ func (h *ProjectHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	project, err := h.projects.Create(r.Context(), info, req.Name, req.Key, req.Description)
+	var workflowID *uuid.UUID
+	if req.DefaultWorkflowID != nil {
+		id, err := uuid.Parse(*req.DefaultWorkflowID)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid default_workflow_id format")
+			return
+		}
+		workflowID = &id
+	}
+
+	project, err := h.projects.Create(r.Context(), info, req.Name, req.Key, req.Description, workflowID)
 	if err != nil {
 		handleProjectError(w, r, err, "failed to create project")
 		return
@@ -193,7 +207,17 @@ func (h *ProjectHandler) Update(w http.ResponseWriter, r *http.Request) {
 		_ = raw // description clearing handled via explicit null in JSON
 	}
 
-	project, err := h.projects.Update(r.Context(), info, projectKey, req.Name, req.Key, req.Description, clearDescription)
+	var workflowID *uuid.UUID
+	if req.DefaultWorkflowID != nil {
+		id, err := uuid.Parse(*req.DefaultWorkflowID)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid default_workflow_id format")
+			return
+		}
+		workflowID = &id
+	}
+
+	project, err := h.projects.Update(r.Context(), info, projectKey, req.Name, req.Key, req.Description, clearDescription, workflowID)
 	if err != nil {
 		handleProjectError(w, r, err, "failed to update project")
 		return

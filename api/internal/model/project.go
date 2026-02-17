@@ -20,10 +20,11 @@ type Project struct {
 	Name        string     `json:"name"`
 	Key         string     `json:"key"`
 	Description *string    `json:"description,omitempty"`
-	ItemCounter int        `json:"item_counter"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
-	DeletedAt   *time.Time `json:"-"`
+	DefaultWorkflowID *uuid.UUID `json:"default_workflow_id,omitempty"`
+	ItemCounter       int        `json:"item_counter"`
+	CreatedAt         time.Time  `json:"created_at"`
+	UpdatedAt         time.Time  `json:"updated_at"`
+	DeletedAt         *time.Time `json:"-"`
 }
 
 // ProjectMember associates a user with a project and their role within it.
