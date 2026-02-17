@@ -7,9 +7,10 @@ import { Spinner } from '@/components/ui/Spinner'
 interface CommentListProps {
   projectKey: string
   itemNumber: number
+  sortOrder?: 'asc' | 'desc'
 }
 
-export function CommentList({ projectKey, itemNumber }: CommentListProps) {
+export function CommentList({ projectKey, itemNumber, sortOrder = 'desc' }: CommentListProps) {
   const { user } = useAuth()
   const { data: comments, isLoading } = useComments(projectKey, itemNumber)
   const createMutation = useCreateComment(projectKey, itemNumber)
@@ -24,7 +25,7 @@ export function CommentList({ projectKey, itemNumber }: CommentListProps) {
 
   return (
     <div className="space-y-4">
-      {(comments ?? []).map((c) => (
+      {(sortOrder === 'desc' ? [...(comments ?? [])].reverse() : (comments ?? [])).map((c) => (
         <div key={c.id} className="border-b border-gray-100 pb-3">
           {editingId === c.id ? (
             <div className="space-y-2">
