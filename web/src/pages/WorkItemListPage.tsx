@@ -1,8 +1,9 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useWorkItems, useCreateWorkItem, useBulkUpdateWorkItems } from '@/hooks/useWorkItems'
 import { useMembers } from '@/hooks/useProjects'
 import { useProjectWorkflow } from '@/hooks/useWorkflows'
+import { useUserSetting, useSetUserSetting } from '@/hooks/useUserSettings'
 import { useDebounce } from '@/hooks/useDebounce'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Button } from '@/components/ui/Button'
@@ -19,11 +20,72 @@ import { listWorkItems, type WorkItem, type WorkItemFilter } from '@/api/workite
 
 type ViewMode = 'list' | 'board'
 
+const SETTINGS_KEY = 'workitem_filters'
+const closedCategories = new Set(['done', 'cancelled'])
+
+/** Pick only the persisted filter keys (not search/cursor/limit/sort). */
+type SavedFilter = Pick<WorkItemFilter, 'type' | 'status' | 'priority' | 'assignee'>
+
+function pickSavedFilter(f: WorkItemFilter): SavedFilter {
+  return {
+    type: f.type,
+    status: f.status,
+    priority: f.priority,
+    assignee: f.assignee,
+  }
+}
+
 export function WorkItemListPage() {
   const { projectKey } = useParams<{ projectKey: string }>()
   const navigate = useNavigate()
 
+  const { statuses, transitionsMap } = useProjectWorkflow(projectKey ?? '')
+  const { data: members } = useMembers(projectKey ?? '')
+
+  // Load saved filter from user settings
+  const { data: savedFilter, isLoading: settingsLoading } = useUserSetting<SavedFilter>(projectKey ?? '', SETTINGS_KEY)
+  const saveMutation = useSetUserSetting(projectKey ?? '')
+
+  // Compute default open statuses (exclude done/cancelled)
+  const defaultOpenStatuses = useMemo(() => {
+    if (!statuses.length) return undefined
+    return statuses.filter((s) => !closedCategories.has(s.category)).map((s) => s.name)
+  }, [statuses])
+
+  // Initialize filter from saved settings or defaults
   const [filter, setFilter] = useState<WorkItemFilter>({})
+  const [filterInitialized, setFilterInitialized] = useState(false)
+
+  useEffect(() => {
+    if (filterInitialized || settingsLoading) return
+    if (!statuses.length) return // wait for statuses to load
+
+    if (savedFilter) {
+      setFilter(savedFilter)
+    } else if (defaultOpenStatuses) {
+      setFilter({ status: defaultOpenStatuses })
+    }
+    setFilterInitialized(true)
+  }, [savedFilter, settingsLoading, defaultOpenStatuses, statuses, filterInitialized])
+
+  // Save filter preferences (debounced)
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  const saveMutationRef = useRef(saveMutation)
+  saveMutationRef.current = saveMutation
+
+  const saveFilter = useCallback((f: WorkItemFilter) => {
+    if (!projectKey || !filterInitialized) return
+    clearTimeout(saveTimerRef.current)
+    saveTimerRef.current = setTimeout(() => {
+      saveMutationRef.current.mutate({ key: SETTINGS_KEY, value: pickSavedFilter(f) })
+    }, 500)
+  }, [projectKey, filterInitialized])
+
+  function handleFilterChange(f: WorkItemFilter) {
+    setFilter(f)
+    saveFilter(f)
+  }
+
   const [search, setSearch] = useState('')
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [showCreate, setShowCreate] = useState(false)
@@ -38,8 +100,6 @@ export function WorkItemListPage() {
   }), [filter, debouncedSearch, viewMode])
 
   const { data: result, isLoading } = useWorkItems(projectKey ?? '', activeFilter)
-  const { statuses, transitionsMap } = useProjectWorkflow(projectKey ?? '')
-  const { data: members } = useMembers(projectKey ?? '')
   const createMutation = useCreateWorkItem(projectKey ?? '')
   const bulkMutation = useBulkUpdateWorkItems(projectKey ?? '')
   const items = result?.data ?? []
@@ -171,7 +231,7 @@ export function WorkItemListPage() {
 
       <WorkItemFilters
         filter={filter}
-        onFilterChange={setFilter}
+        onFilterChange={handleFilterChange}
         statuses={statuses}
         search={search}
         onSearchChange={setSearch}

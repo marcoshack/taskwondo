@@ -34,10 +34,10 @@ export interface WorkItemListMeta {
 
 export interface WorkItemFilter {
   q?: string
-  type?: string
-  status?: string
-  priority?: string
-  assignee?: string
+  type?: string[]
+  status?: string[]
+  priority?: string[]
+  assignee?: string[]
   queue?: string
   milestone?: string
   label?: string
@@ -125,10 +125,10 @@ interface DataResponse<T> {
 export async function listWorkItems(projectKey: string, filter: WorkItemFilter = {}) {
   const params = new URLSearchParams()
   if (filter.q) params.set('q', filter.q)
-  if (filter.type) params.set('type', filter.type)
-  if (filter.status) params.set('status', filter.status)
-  if (filter.priority) params.set('priority', filter.priority)
-  if (filter.assignee) params.set('assignee', filter.assignee)
+  if (filter.type?.length) params.set('type', filter.type.join(','))
+  if (filter.status?.length) params.set('status', filter.status.join(','))
+  if (filter.priority?.length) params.set('priority', filter.priority.join(','))
+  if (filter.assignee?.length) params.set('assignee', filter.assignee.join(','))
   if (filter.queue) params.set('queue', filter.queue)
   if (filter.milestone) params.set('milestone', filter.milestone)
   if (filter.label) params.set('label', filter.label)

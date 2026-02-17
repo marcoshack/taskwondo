@@ -69,6 +69,7 @@ func main() {
 	workflowRepo := repository.NewWorkflowRepository(db)
 	queueRepo := repository.NewQueueRepository(db)
 	milestoneRepo := repository.NewMilestoneRepository(db)
+	userSettingRepo := repository.NewUserSettingRepository(db)
 
 	// Initialize services
 	authService := service.NewAuthService(userRepo, apiKeyRepo, cfg.JWTSecret, cfg.JWTExpiry)
@@ -77,6 +78,7 @@ func main() {
 	queueService := service.NewQueueService(queueRepo, projectRepo, projectMemberRepo)
 	milestoneService := service.NewMilestoneService(milestoneRepo, projectRepo, projectMemberRepo)
 	workItemService := service.NewWorkItemService(workItemRepo, workItemEventRepo, commentRepo, relationRepo, projectRepo, projectMemberRepo, workflowRepo, queueRepo, milestoneRepo)
+	userSettingService := service.NewUserSettingService(userSettingRepo, projectRepo, projectMemberRepo)
 
 	// Seed admin user if configured
 	if cfg.AdminEmail != "" && cfg.AdminPassword != "" {
@@ -98,6 +100,7 @@ func main() {
 	queues := handler.NewQueueHandler(queueService)
 	milestones := handler.NewMilestoneHandler(milestoneService)
 	items := handler.NewWorkItemHandler(workItemService)
+	userSettings := handler.NewUserSettingHandler(userSettingService)
 
 	// Set up router
 	r := chi.NewRouter()
@@ -171,6 +174,14 @@ func main() {
 							r.Get("/", milestones.Get)
 							r.Patch("/", milestones.Update)
 							r.Delete("/", milestones.Delete)
+						})
+					})
+					r.Route("/user-settings", func(r chi.Router) {
+						r.Get("/", userSettings.List)
+						r.Route("/{key}", func(r chi.Router) {
+							r.Get("/", userSettings.Get)
+							r.Put("/", userSettings.Set)
+							r.Delete("/", userSettings.Delete)
 						})
 					})
 					r.Route("/items", func(r chi.Router) {
