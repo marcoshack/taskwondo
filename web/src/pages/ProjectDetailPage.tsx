@@ -6,10 +6,7 @@ import { Badge } from '@/components/ui/Badge'
 import { WorkItemListPage } from './WorkItemListPage'
 import { WorkItemDetailPage } from './WorkItemDetailPage'
 import { ProjectSettingsPage } from './ProjectSettingsPage'
-
-function ProjectOverview() {
-  return <p className="text-gray-500">Select a section from the sidebar.</p>
-}
+import { ProjectOverviewPage } from './ProjectOverviewPage'
 
 function PlaceholderPage({ title }: { title: string }) {
   return <p className="text-gray-500">{title} view coming soon.</p>
@@ -42,15 +39,12 @@ export function ProjectDetailPage() {
           <Badge color="indigo">{project.key}</Badge>
           <h1 className="text-xl font-semibold text-gray-900">{project.name}</h1>
         </div>
-        {project.description && (
-          <p className="mt-1 text-sm text-gray-500">{project.description}</p>
-        )}
       </div>
       <div className="flex gap-8">
         <Sidebar projectKey={project.key} />
         <div className="flex-1 min-w-0">
           <Routes>
-            <Route index element={<ProjectOverview />} />
+            <Route index element={<ProjectOverviewPage />} />
             <Route path="items" element={<WorkItemListPage />} />
             <Route path="items/:itemNumber" element={<WorkItemDetailPage />} />
             <Route path="queues" element={<PlaceholderPage title="Queues" />} />
