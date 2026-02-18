@@ -27,6 +27,7 @@
   "common.noData": "لا توجد بيانات",
   "common.loadMore": "تحميل المزيد",
   "common.copyToClipboard": "نسخ",
+  "common.copyAsMarkdown": "نسخ كـ Markdown",
   "common.copied": "تم النسخ!",
   "common.description": "الوصف",
   "common.you": "أنت",

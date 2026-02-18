@@ -27,6 +27,7 @@
   "common.noData": "데이터 없음",
   "common.loadMore": "더 불러오기",
   "common.copyToClipboard": "복사",
+  "common.copyAsMarkdown": "Markdown으로 복사",
   "common.copied": "복사됨!",
   "common.description": "설명",
   "common.you": "나",
