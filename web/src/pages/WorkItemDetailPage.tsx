@@ -195,6 +195,19 @@ export function WorkItemDetailPage() {
           <div className="group/desc">
             <div className="flex items-center gap-1 mb-1">
               <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('workitems.detail.description')}</h3>
+              {!editingDesc && (
+                <button
+                  className="group/edit relative inline-flex items-center justify-center w-7 h-7 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-gray-700 transition-colors opacity-0 group-hover/desc:opacity-100"
+                  onClick={() => { setDescDraft(item.description ?? ''); setEditingDesc(true) }}
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M11.5 2.5a1.5 1.5 0 012.121 2.121L6.5 11.743l-2.5.757.757-2.5L11.5 2.5z" />
+                  </svg>
+                  <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs text-white bg-gray-900 dark:bg-gray-700 rounded whitespace-nowrap opacity-0 group-hover/edit:opacity-100 transition-opacity">
+                    {t('common.edit')}
+                  </span>
+                </button>
+              )}
               {!editingDesc && item.description && (
                 <CopyButton text={item.description} className="opacity-0 group-hover/desc:opacity-100" />
               )}
@@ -221,8 +234,8 @@ export function WorkItemDetailPage() {
               </div>
             ) : (
               <div
-                className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded p-2 -m-2 min-h-[2rem]"
-                onClick={() => { setDescDraft(item.description ?? ''); setEditingDesc(true) }}
+                className="hover:bg-gray-50 dark:hover:bg-gray-800 rounded p-2 -m-2 min-h-[2rem]"
+                onDoubleClick={() => { setDescDraft(item.description ?? ''); setEditingDesc(true) }}
               >
                 {item.description ? (
                   <div className="prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300">

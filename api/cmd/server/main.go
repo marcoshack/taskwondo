@@ -230,6 +230,7 @@ func main() {
 								r.Get("/", items.ListAttachments)
 								r.Post("/", items.UploadAttachment)
 								r.Get("/{attachmentId}", items.DownloadAttachment)
+								r.Patch("/{attachmentId}", items.UpdateAttachmentComment)
 								r.Delete("/{attachmentId}", items.DeleteAttachment)
 							})
 							r.Get("/events", items.ListEvents)

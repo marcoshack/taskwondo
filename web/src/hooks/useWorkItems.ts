@@ -15,6 +15,7 @@ import {
   listEvents,
   listAttachments,
   uploadAttachment,
+  updateAttachmentComment,
   deleteAttachment,
   type WorkItemFilter,
   type CreateWorkItemInput,
@@ -186,6 +187,17 @@ export function useUploadAttachment(projectKey: string, itemNumber: number) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['projects', projectKey, 'items', itemNumber, 'attachments'] })
       qc.invalidateQueries({ queryKey: ['projects', projectKey, 'items', itemNumber, 'events'] })
+    },
+  })
+}
+
+export function useUpdateAttachmentComment(projectKey: string, itemNumber: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ attachmentId, comment }: { attachmentId: string; comment: string }) =>
+      updateAttachmentComment(projectKey, itemNumber, attachmentId, comment),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['projects', projectKey, 'items', itemNumber, 'attachments'] })
     },
   })
 }

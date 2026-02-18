@@ -203,7 +203,8 @@
   "comments.add": "댓글 작성",
   "comments.adding": "전송 중...",
   "comments.placeholder": "댓글을 입력하세요... (파일을 붙여넣기 또는 드래그하여 첨부)",
-  "comments.deleteConfirm": "이 댓글을 삭제하시겠습니까?",
+  "comments.deleteConfirm": "댓글 삭제",
+  "comments.deleteBody": "이 댓글은 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.",
   "comments.editCount_one": "({{count}}회 수정됨)",
   "comments.editCount_other": "({{count}}회 수정됨)",
 

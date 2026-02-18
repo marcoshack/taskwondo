@@ -203,7 +203,8 @@
   "comments.add": "Kommentieren",
   "comments.adding": "Wird gesendet...",
   "comments.placeholder": "Kommentar hinzufügen... (Dateien einfügen oder ziehen zum Anhängen)",
-  "comments.deleteConfirm": "Diesen Kommentar löschen?",
+  "comments.deleteConfirm": "Kommentar löschen",
+  "comments.deleteBody": "Dieser Kommentar wird dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
   "comments.editCount_one": "({{count}} Mal bearbeitet)",
   "comments.editCount_other": "({{count}} Mal bearbeitet)",
 

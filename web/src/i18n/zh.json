@@ -203,7 +203,8 @@
   "comments.add": "评论",
   "comments.adding": "发送中...",
   "comments.placeholder": "添加评论...（粘贴或拖放文件以附加）",
-  "comments.deleteConfirm": "确定删除此评论？",
+  "comments.deleteConfirm": "删除评论",
+  "comments.deleteBody": "此评论将被永久删除。此操作不可撤销。",
   "comments.editCount_one": "（已编辑{{count}}次）",
   "comments.editCount_other": "（已编辑{{count}}次）",
 

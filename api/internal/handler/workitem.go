@@ -1106,6 +1106,44 @@ func (h *WorkItemHandler) DeleteAttachment(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// UpdateAttachmentComment handles PATCH /api/v1/projects/{projectKey}/items/{itemNumber}/attachments/{attachmentId}
+func (h *WorkItemHandler) UpdateAttachmentComment(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	projectKey := chi.URLParam(r, "projectKey")
+	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		return
+	}
+
+	attachmentID, err := uuid.Parse(chi.URLParam(r, "attachmentId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid attachment ID")
+		return
+	}
+
+	var body struct {
+		Comment string `json:"comment"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid JSON body")
+		return
+	}
+
+	attachment, err := h.items.UpdateAttachmentComment(r.Context(), info, projectKey, itemNumber, attachmentID, body.Comment)
+	if err != nil {
+		handleWorkItemError(w, r, err, "failed to update attachment comment")
+		return
+	}
+
+	writeData(w, http.StatusOK, toAttachmentResponse(attachment, projectKey, itemNumber))
+}
+
 // handleWorkItemError maps service errors to HTTP responses.
 func handleWorkItemError(w http.ResponseWriter, r *http.Request, err error, logMsg string) {
 	if errors.Is(err, model.ErrNotFound) {

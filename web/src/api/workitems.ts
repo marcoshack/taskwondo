@@ -254,6 +254,19 @@ export async function deleteAttachment(
   )
 }
 
+export async function updateAttachmentComment(
+  projectKey: string,
+  itemNumber: number,
+  attachmentId: string,
+  comment: string
+) {
+  const res = await api.patch<DataResponse<Attachment>>(
+    `/projects/${projectKey}/items/${itemNumber}/attachments/${attachmentId}`,
+    { comment }
+  )
+  return res.data.data
+}
+
 export function getAttachmentDownloadURL(
   projectKey: string,
   itemNumber: number,

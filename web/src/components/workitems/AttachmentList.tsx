@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useAttachments, useUploadAttachment, useDeleteAttachment } from '@/hooks/useWorkItems'
+import { useAttachments, useUploadAttachment, useUpdateAttachmentComment, useDeleteAttachment } from '@/hooks/useWorkItems'
 import { useAuth } from '@/contexts/AuthContext'
 import { useMembers } from '@/hooks/useProjects'
 import { getAttachmentDownloadURL } from '@/api/workitems'
@@ -30,9 +30,12 @@ export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc', hig
   const { data: attachments, isLoading } = useAttachments(projectKey, itemNumber)
   const { data: members } = useMembers(projectKey)
   const uploadMutation = useUploadAttachment(projectKey, itemNumber)
+  const updateCommentMutation = useUpdateAttachmentComment(projectKey, itemNumber)
   const deleteMutation = useDeleteAttachment(projectKey, itemNumber)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [comment, setComment] = useState('')
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
+  const [editCommentDraft, setEditCommentDraft] = useState('')
   const highlightRef = useCallback((node: HTMLDivElement | null) => {
     if (node) {
       node.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -130,9 +133,45 @@ export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc', hig
             >
               {a.filename}
             </button>
-            {a.comment && (
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{a.comment}</p>
-            )}
+            {editingCommentId === a.id ? (
+              <div className="flex items-center gap-1 mt-0.5">
+                <input
+                  type="text"
+                  className="text-xs border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded px-1.5 py-0.5 flex-1"
+                  value={editCommentDraft}
+                  onChange={(e) => setEditCommentDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      updateCommentMutation.mutate({ attachmentId: a.id, comment: editCommentDraft })
+                      setEditingCommentId(null)
+                    }
+                    if (e.key === 'Escape') setEditingCommentId(null)
+                  }}
+                  autoFocus
+                />
+                <button
+                  className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline"
+                  onClick={() => {
+                    updateCommentMutation.mutate({ attachmentId: a.id, comment: editCommentDraft })
+                    setEditingCommentId(null)
+                  }}
+                >{t('common.save')}</button>
+                <button
+                  className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  onClick={() => setEditingCommentId(null)}
+                >{t('common.cancel')}</button>
+              </div>
+            ) : a.comment ? (
+              <p
+                className={`text-xs text-gray-500 dark:text-gray-400 mt-0.5 rounded ${user && a.uploader_id === user.id ? 'hover:bg-gray-100 dark:hover:bg-gray-700 cursor-default' : ''}`}
+                onDoubleClick={() => {
+                  if (user && a.uploader_id === user.id) {
+                    setEditingCommentId(a.id)
+                    setEditCommentDraft(a.comment)
+                  }
+                }}
+              >{a.comment}</p>
+            ) : null}
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
               {formatFileSize(a.size_bytes)} &middot; {uploaderName(a.uploader_id)} &middot; {new Date(a.created_at).toLocaleString()}
             </p>

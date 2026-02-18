@@ -53,6 +53,7 @@ type AttachmentRepository interface {
 	Create(ctx context.Context, attachment *model.Attachment) error
 	GetByID(ctx context.Context, id uuid.UUID) (*model.Attachment, error)
 	ListByWorkItem(ctx context.Context, workItemID uuid.UUID) ([]model.Attachment, error)
+	UpdateComment(ctx context.Context, id uuid.UUID, comment string) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }
 
@@ -1059,6 +1060,47 @@ func (s *WorkItemService) DeleteAttachment(ctx context.Context, info *model.Auth
 	})
 
 	return nil
+}
+
+// UpdateAttachmentComment updates the comment on an attachment. Only the uploader or project owner/admin can update.
+func (s *WorkItemService) UpdateAttachmentComment(ctx context.Context, info *model.AuthInfo, projectKey string, itemNumber int, attachmentID uuid.UUID, comment string) (*model.Attachment, error) {
+	project, err := s.projects.GetByKey(ctx, projectKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.requireMembership(ctx, info, project.ID); err != nil {
+		return nil, err
+	}
+
+	item, err := s.items.GetByProjectAndNumber(ctx, project.ID, itemNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	attachment, err := s.attachments.GetByID(ctx, attachmentID)
+	if err != nil {
+		return nil, err
+	}
+
+	if attachment.WorkItemID != item.ID {
+		return nil, model.ErrNotFound
+	}
+
+	isUploader := attachment.UploaderID == info.UserID
+	if !isUploader {
+		if err := s.requireRole(ctx, info, project.ID,
+			model.ProjectRoleOwner, model.ProjectRoleAdmin); err != nil {
+			return nil, model.ErrForbidden
+		}
+	}
+
+	if err := s.attachments.UpdateComment(ctx, attachmentID, comment); err != nil {
+		return nil, fmt.Errorf("updating attachment comment: %w", err)
+	}
+
+	attachment.Comment = comment
+	return attachment, nil
 }
 
 // --- Event methods ---

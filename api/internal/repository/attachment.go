@@ -76,6 +76,24 @@ func (r *AttachmentRepository) ListByWorkItem(ctx context.Context, workItemID uu
 	return attachments, rows.Err()
 }
 
+// UpdateComment updates the comment on an attachment.
+func (r *AttachmentRepository) UpdateComment(ctx context.Context, id uuid.UUID, comment string) error {
+	result, err := r.db.ExecContext(ctx,
+		`UPDATE attachments SET comment = $1
+		 WHERE id = $2 AND deleted_at IS NULL`, comment, id)
+	if err != nil {
+		return fmt.Errorf("updating attachment comment: %w", err)
+	}
+	n, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("checking rows affected: %w", err)
+	}
+	if n == 0 {
+		return model.ErrNotFound
+	}
+	return nil
+}
+
 // Delete soft-deletes an attachment.
 func (r *AttachmentRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	result, err := r.db.ExecContext(ctx,
