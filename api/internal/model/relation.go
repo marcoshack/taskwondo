@@ -16,6 +16,17 @@ type WorkItemRelation struct {
 	CreatedAt    time.Time `json:"created_at"`
 }
 
+// WorkItemRelationWithDetails is a relation enriched with display info from JOINed work items and projects.
+type WorkItemRelationWithDetails struct {
+	WorkItemRelation
+	SourceProjectKey string
+	SourceItemNumber int
+	SourceTitle      string
+	TargetProjectKey string
+	TargetItemNumber int
+	TargetTitle      string
+}
+
 // Relation type constants.
 const (
 	RelationBlocks     = "blocks"

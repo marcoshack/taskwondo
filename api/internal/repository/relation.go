@@ -76,6 +76,41 @@ func (r *WorkItemRelationRepository) ListByWorkItem(ctx context.Context, workIte
 	return relations, rows.Err()
 }
 
+// ListByWorkItemWithDetails returns all relations with display info for both sides.
+func (r *WorkItemRelationRepository) ListByWorkItemWithDetails(ctx context.Context, workItemID uuid.UUID) ([]model.WorkItemRelationWithDetails, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT r.id, r.source_id, r.target_id, r.relation_type, r.created_by, r.created_at,
+		        sp.key, sw.item_number, sw.title,
+		        tp.key, tw.item_number, tw.title
+		 FROM work_item_relations r
+		 JOIN work_items sw ON sw.id = r.source_id
+		 JOIN projects sp ON sp.id = sw.project_id
+		 JOIN work_items tw ON tw.id = r.target_id
+		 JOIN projects tp ON tp.id = tw.project_id
+		 WHERE r.source_id = $1 OR r.target_id = $1
+		 ORDER BY r.created_at ASC`, workItemID)
+	if err != nil {
+		return nil, fmt.Errorf("querying relations with details: %w", err)
+	}
+	defer rows.Close()
+
+	var relations []model.WorkItemRelationWithDetails
+	for rows.Next() {
+		var rel model.WorkItemRelationWithDetails
+		if err := rows.Scan(
+			&rel.ID, &rel.SourceID, &rel.TargetID, &rel.RelationType,
+			&rel.CreatedBy, &rel.CreatedAt,
+			&rel.SourceProjectKey, &rel.SourceItemNumber, &rel.SourceTitle,
+			&rel.TargetProjectKey, &rel.TargetItemNumber, &rel.TargetTitle,
+		); err != nil {
+			return nil, fmt.Errorf("scanning relation with details: %w", err)
+		}
+		relations = append(relations, rel)
+	}
+
+	return relations, rows.Err()
+}
+
 // Delete hard-deletes a relation.
 func (r *WorkItemRelationRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	result, err := r.db.ExecContext(ctx,

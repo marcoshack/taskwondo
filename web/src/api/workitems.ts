@@ -88,7 +88,9 @@ export interface Comment {
 export interface Relation {
   id: string
   source_display_id: string
+  source_title: string
   target_display_id: string
+  target_title: string
   relation_type: string
   created_by: string
   created_at: string
