@@ -40,8 +40,8 @@ export function BoardView({ projectKey, items, statuses, transitionsMap, onItemC
         <div key={status.name} className="min-w-[280px] w-72 shrink-0">
           <div className="flex items-center gap-2 mb-3 px-1">
             <span className={`w-2.5 h-2.5 rounded-full ${categoryDot[status.category] ?? 'bg-gray-400'}`} />
-            <h3 className="text-sm font-medium text-gray-700">{status.display_name}</h3>
-            <span className="text-xs text-gray-400">{itemsByStatus.get(status.name)?.length ?? 0}</span>
+            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">{status.display_name}</h3>
+            <span className="text-xs text-gray-400 dark:text-gray-500">{itemsByStatus.get(status.name)?.length ?? 0}</span>
           </div>
           <div className="space-y-2">
             {(itemsByStatus.get(status.name) ?? []).map((item) => (
@@ -81,28 +81,28 @@ function BoardCard({
 
   return (
     <div
-      className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm hover:shadow-md cursor-pointer relative"
+      className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 shadow-sm hover:shadow-md cursor-pointer relative"
       onClick={onClick}
     >
       <div className="flex items-center justify-between mb-1">
-        <span className="text-xs font-mono text-gray-400">{item.display_id}</span>
+        <span className="text-xs font-mono text-gray-400 dark:text-gray-500">{item.display_id}</span>
         {allowed.length > 0 && (
           <div className="relative">
             <button
-              className="text-gray-400 hover:text-gray-600 text-xs px-1"
+              className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-xs px-1"
               onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu) }}
               title="Move to..."
             >
               &hellip;
             </button>
             {showMenu && (
-              <div className="absolute right-0 top-5 z-10 bg-white border border-gray-200 rounded-md shadow-lg py-1 min-w-[140px]">
+              <div className="absolute right-0 top-5 z-10 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg py-1 min-w-[140px]">
                 {allowed.map((toStatus) => {
                   const ws = statuses.find((s) => s.name === toStatus)
                   return (
                     <button
                       key={toStatus}
-                      className="block w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+                      className="block w-full text-left px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
                       onClick={(e) => {
                         e.stopPropagation()
                         onStatusChange(toStatus)
@@ -118,7 +118,7 @@ function BoardCard({
           </div>
         )}
       </div>
-      <p className="text-sm font-medium text-gray-900 mb-2 line-clamp-2">{item.title}</p>
+      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2 line-clamp-2">{item.title}</p>
       <div className="flex items-center gap-2">
         <TypeBadge type={item.type} />
         <PriorityBadge priority={item.priority} />

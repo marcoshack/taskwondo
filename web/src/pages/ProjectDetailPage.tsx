@@ -9,7 +9,7 @@ import { ProjectSettingsPage } from './ProjectSettingsPage'
 import { ProjectOverviewPage } from './ProjectOverviewPage'
 
 function PlaceholderPage({ title }: { title: string }) {
-  return <p className="text-gray-500">{title} view coming soon.</p>
+  return <p className="text-gray-500 dark:text-gray-400">{title} view coming soon.</p>
 }
 
 export function ProjectDetailPage() {
@@ -37,7 +37,7 @@ export function ProjectDetailPage() {
       <div className="mb-6">
         <div className="flex items-center gap-3">
           <Badge color="indigo">{project.key}</Badge>
-          <h1 className="text-xl font-semibold text-gray-900">{project.name}</h1>
+          <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{project.name}</h1>
         </div>
       </div>
       <div className="flex gap-8">

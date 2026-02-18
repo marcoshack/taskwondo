@@ -4,6 +4,7 @@ import { AppShell } from '@/components/AppShell'
 import { LoginPage } from '@/pages/LoginPage'
 import { ProjectListPage } from '@/pages/ProjectListPage'
 import { ProjectDetailPage } from '@/pages/ProjectDetailPage'
+import { PreferencesPage } from '@/pages/PreferencesPage'
 
 export default function App() {
   return (
@@ -13,6 +14,7 @@ export default function App() {
         <Route element={<AppShell />}>
           <Route path="/projects" element={<ProjectListPage />} />
           <Route path="/projects/:projectKey/*" element={<ProjectDetailPage />} />
+          <Route path="/preferences" element={<PreferencesPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/projects" replace />} />

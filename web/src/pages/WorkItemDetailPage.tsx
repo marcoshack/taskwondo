@@ -60,7 +60,7 @@ export function WorkItemDetailPage() {
     <div className="space-y-4">
       {/* Back link */}
       <button
-        className="text-sm text-gray-400 hover:text-gray-600"
+        className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
         onClick={() => navigate(`/projects/${projectKey}/items`)}
       >
         &larr; Back to items
@@ -72,7 +72,7 @@ export function WorkItemDetailPage() {
           {/* Header */}
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-sm font-mono text-gray-400">{item.display_id}</span>
+              <span className="text-sm font-mono text-gray-400 dark:text-gray-500">{item.display_id}</span>
               <TypeBadge type={item.type} />
               <StatusBadge status={item.status} statuses={statuses} />
             </div>
@@ -81,7 +81,7 @@ export function WorkItemDetailPage() {
             {editingTitle ? (
               <div className="flex gap-2 items-center">
                 <input
-                  className="text-xl font-semibold text-gray-900 border-b border-indigo-500 outline-none flex-1 bg-transparent"
+                  className="text-xl font-semibold text-gray-900 dark:text-gray-100 border-b border-indigo-500 outline-none flex-1 bg-transparent"
                   value={titleDraft}
                   onChange={(e) => setTitleDraft(e.target.value)}
                   onKeyDown={(e) => {
@@ -97,7 +97,7 @@ export function WorkItemDetailPage() {
               </div>
             ) : (
               <h1
-                className="text-xl font-semibold text-gray-900 cursor-pointer hover:bg-gray-50 rounded px-1 -mx-1"
+                className="text-xl font-semibold text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded px-1 -mx-1"
                 onClick={() => { setTitleDraft(item.title); setEditingTitle(true) }}
               >
                 {item.title}
@@ -107,11 +107,11 @@ export function WorkItemDetailPage() {
 
           {/* Description */}
           <div>
-            <h3 className="text-sm font-medium text-gray-500 mb-1">Description</h3>
+            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Description</h3>
             {editingDesc ? (
               <div className="space-y-2">
                 <textarea
-                  className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                  className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm"
                   rows={6}
                   value={descDraft}
                   onChange={(e) => setDescDraft(e.target.value)}
@@ -127,15 +127,15 @@ export function WorkItemDetailPage() {
               </div>
             ) : (
               <div
-                className="cursor-pointer hover:bg-gray-50 rounded p-2 -m-2 min-h-[2rem]"
+                className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded p-2 -m-2 min-h-[2rem]"
                 onClick={() => { setDescDraft(item.description ?? ''); setEditingDesc(true) }}
               >
                 {item.description ? (
-                  <div className="prose prose-sm max-w-none text-gray-700">
+                  <div className="prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300">
                     <Markdown remarkPlugins={[remarkGfm]}>{item.description}</Markdown>
                   </div>
                 ) : (
-                  <span className="text-sm text-gray-400 italic">No description. Click to add.</span>
+                  <span className="text-sm text-gray-400 dark:text-gray-500 italic">No description. Click to add.</span>
                 )}
               </div>
             )}
@@ -143,15 +143,15 @@ export function WorkItemDetailPage() {
 
           {/* Tabs */}
           <div>
-            <div className="border-b border-gray-200 mb-4 flex items-center justify-between">
+            <div className="border-b border-gray-200 dark:border-gray-700 mb-4 flex items-center justify-between">
               <nav className="flex gap-6">
                 {tabs.map((tab) => (
                   <button
                     key={tab.key}
                     className={`pb-2 text-sm font-medium border-b-2 ${
                       activeTab === tab.key
-                        ? 'border-indigo-500 text-indigo-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700'
+                        ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
                     }`}
                     onClick={() => setActiveTab(tab.key)}
                   >
@@ -161,7 +161,7 @@ export function WorkItemDetailPage() {
               </nav>
               {(activeTab === 'comments' || activeTab === 'activity') && (
                 <button
-                  className="text-xs text-gray-400 hover:text-gray-600 pb-2 flex items-center gap-1"
+                  className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 pb-2 flex items-center gap-1"
                   onClick={() => setSortOrder((s) => (s === 'desc' ? 'asc' : 'desc'))}
                   title={sortOrder === 'desc' ? 'Showing newest first' : 'Showing oldest first'}
                 >
@@ -186,7 +186,7 @@ export function WorkItemDetailPage() {
             members={members ?? []}
             onUpdate={(input) => updateMutation.mutate({ itemNumber, input })}
           />
-          <div className="mt-6 pt-4 border-t border-gray-100">
+          <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
             <Button variant="danger" size="sm" onClick={() => setShowDelete(true)}>Delete Item</Button>
           </div>
         </div>
@@ -194,7 +194,7 @@ export function WorkItemDetailPage() {
 
       {/* Delete confirmation */}
       <Modal open={showDelete} onClose={() => setShowDelete(false)} title="Delete Work Item">
-        <p className="text-sm text-gray-600 mb-4">
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
           Are you sure you want to delete <strong>{item.display_id}</strong>? This action cannot be undone.
         </p>
         <div className="flex justify-end gap-3">

@@ -90,6 +90,20 @@ func (r *UserSettingRepository) Delete(ctx context.Context, userID uuid.UUID, pr
 	return nil
 }
 
+// ListGlobal returns all global (non-project-scoped) settings for a user.
+func (r *UserSettingRepository) ListGlobal(ctx context.Context, userID uuid.UUID) ([]model.UserSetting, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT user_id, project_id, key, value, updated_at
+		 FROM user_settings WHERE user_id = $1 AND project_id IS NULL ORDER BY key`,
+		userID)
+	if err != nil {
+		return nil, fmt.Errorf("querying global user settings: %w", err)
+	}
+	defer rows.Close()
+
+	return scanUserSettings(rows)
+}
+
 func scanUserSetting(row *sql.Row) (*model.UserSetting, error) {
 	var s model.UserSetting
 	var projectID uuid.NullUUID

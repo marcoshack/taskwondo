@@ -19,18 +19,18 @@ const columns: Column<Project>[] = [
   {
     key: 'name',
     header: 'Name',
-    render: (p) => <span className="font-medium text-gray-900">{p.name}</span>,
+    render: (p) => <span className="font-medium text-gray-900 dark:text-gray-100">{p.name}</span>,
   },
   {
     key: 'items',
     header: 'Items',
-    render: (p) => <span className="text-gray-500">{p.item_counter}</span>,
+    render: (p) => <span className="text-gray-500 dark:text-gray-400">{p.item_counter}</span>,
   },
   {
     key: 'updated',
     header: 'Updated',
     render: (p) => (
-      <span className="text-gray-500">{new Date(p.updated_at).toLocaleDateString()}</span>
+      <span className="text-gray-500 dark:text-gray-400">{new Date(p.updated_at).toLocaleDateString()}</span>
     ),
   },
 ]
@@ -91,10 +91,10 @@ export function ProjectListPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-semibold text-gray-900">Projects</h1>
+        <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Projects</h1>
         <Button onClick={() => setShowCreate(true)}>New Project</Button>
       </div>
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
         <DataTable
           columns={columns}
           data={projects ?? []}
@@ -120,14 +120,14 @@ export function ProjectListPage() {
             maxLength={10}
             required
           />
-          <p className="text-xs text-gray-400 -mt-3">1-10 uppercase letters/digits, must start with a letter</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 -mt-3">1-10 uppercase letters/digits, must start with a letter</p>
           <Input
             label="Description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Optional description"
           />
-          {formError && <p className="text-sm text-red-600">{formError}</p>}
+          {formError && <p className="text-sm text-red-600 dark:text-red-400">{formError}</p>}
           <div className="flex justify-end gap-3 pt-2">
             <Button type="button" variant="secondary" onClick={() => setShowCreate(false)}>Cancel</Button>
             <Button type="submit" disabled={createMutation.isPending || !name.trim() || !key.trim()}>

@@ -238,7 +238,7 @@ export function WorkItemListPage() {
       key: 'display_id',
       header: 'ID',
       className: 'w-28',
-      render: (row) => <span className="font-mono text-gray-500">{row.display_id}</span>,
+      render: (row) => <span className="font-mono text-gray-500 dark:text-gray-400">{row.display_id}</span>,
     },
     {
       key: 'type',
@@ -249,7 +249,7 @@ export function WorkItemListPage() {
     {
       key: 'title',
       header: 'Title',
-      render: (row) => <span className="font-medium text-gray-900 truncate max-w-xs block">{row.title}</span>,
+      render: (row) => <span className="font-medium text-gray-900 dark:text-gray-100 truncate max-w-xs block">{row.title}</span>,
     },
     {
       key: 'status',
@@ -267,19 +267,19 @@ export function WorkItemListPage() {
       key: 'updated',
       header: 'Updated',
       className: 'w-36',
-      render: (row) => <span className="text-gray-500">{new Date(row.updated_at).toLocaleDateString()}</span>,
+      render: (row) => <span className="text-gray-500 dark:text-gray-400">{new Date(row.updated_at).toLocaleDateString()}</span>,
     },
   ]
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
-        <h2 className="text-lg font-semibold text-gray-900">Work Items</h2>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Work Items</h2>
         <div className="flex items-center gap-2">
           <div className="inline-flex rounded-md shadow-sm">
             <button
               className={`px-3 py-1.5 text-sm font-medium rounded-l-md border ${
-                viewMode === 'list' ? 'bg-indigo-50 text-indigo-700 border-indigo-300' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                viewMode === 'list' ? 'bg-indigo-50 text-indigo-700 border-indigo-300 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-700' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700'
               }`}
               onClick={() => handleViewChange('list')}
             >
@@ -287,7 +287,7 @@ export function WorkItemListPage() {
             </button>
             <button
               className={`px-3 py-1.5 text-sm font-medium rounded-r-md border-t border-r border-b ${
-                viewMode === 'board' ? 'bg-indigo-50 text-indigo-700 border-indigo-300' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                viewMode === 'board' ? 'bg-indigo-50 text-indigo-700 border-indigo-300 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-700' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700'
               }`}
               onClick={() => handleViewChange('board')}
             >
@@ -308,8 +308,8 @@ export function WorkItemListPage() {
 
       {/* Bulk action toolbar */}
       {selected.size > 0 && (
-        <div className="flex items-center gap-3 rounded-md bg-indigo-50 px-4 py-2">
-          <span className="text-sm font-medium text-indigo-700">{selected.size} selected</span>
+        <div className="flex items-center gap-3 rounded-md bg-indigo-50 dark:bg-indigo-900/30 px-4 py-2">
+          <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">{selected.size} selected</span>
           <div className="w-40">
             <Select onChange={(e) => handleBulkStatus(e.target.value)} value="">
               <option value="">Change status...</option>
@@ -338,9 +338,9 @@ export function WorkItemListPage() {
         </div>
       ) : viewMode === 'list' ? (
         <>
-          <div className="border rounded-lg overflow-hidden">
-            <div className="bg-gray-50 px-6 py-2 border-b">
-              <label className="flex items-center gap-2 text-xs text-gray-500">
+          <div className="border dark:border-gray-700 rounded-lg overflow-hidden">
+            <div className="bg-gray-50 dark:bg-gray-800 px-6 py-2 border-b dark:border-gray-700">
+              <label className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                 <input
                   type="checkbox"
                   checked={items.length > 0 && selected.size === items.length}

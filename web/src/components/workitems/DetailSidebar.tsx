@@ -84,7 +84,7 @@ export function DetailSidebar({ item, statuses, allowedTransitions, members, onU
         />
       </Field>
 
-      <div className="border-t border-gray-100 pt-4 space-y-2 text-xs text-gray-400">
+      <div className="border-t border-gray-100 dark:border-gray-700 pt-4 space-y-2 text-xs text-gray-400 dark:text-gray-500">
         <div>Reporter: {members.find((m) => m.user_id === item.reporter_id)?.display_name ?? item.reporter_id}</div>
         <div>Created: {new Date(item.created_at).toLocaleString()}</div>
         <div>Updated: {new Date(item.updated_at).toLocaleString()}</div>
@@ -97,7 +97,7 @@ export function DetailSidebar({ item, statuses, allowedTransitions, members, onU
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
+      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{label}</label>
       {children}
     </div>
   )
