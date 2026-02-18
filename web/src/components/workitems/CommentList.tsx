@@ -6,6 +6,7 @@ import { usePasteUpload } from '@/hooks/usePasteUpload'
 import { Button } from '@/components/ui/Button'
 import { Avatar } from '@/components/ui/Avatar'
 import { Spinner } from '@/components/ui/Spinner'
+import { CopyButton } from '@/components/ui/CopyButton'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { markdownComponents } from '@/components/ui/markdownComponents'
@@ -83,7 +84,7 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc' }: Comm
       </div>
 
       {(sortOrder === 'desc' ? [...(comments ?? [])].reverse() : (comments ?? [])).map((c) => (
-        <div key={c.id} className="border-b border-gray-100 dark:border-gray-700 pb-3">
+        <div key={c.id} className="group/comment border-b border-gray-100 dark:border-gray-700 pb-3">
           {!addCommentVisible && (
             <div className="flex justify-end mb-1">
               <button
@@ -123,6 +124,7 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc' }: Comm
                 <Avatar name={authorName(c.author_id)} size="xs" />
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{authorName(c.author_id)}</span>
                 <span className="text-xs text-gray-400 dark:text-gray-500">{new Date(c.created_at).toLocaleString()}</span>
+                <CopyButton text={c.body} className="opacity-0 group-hover/comment:opacity-100" />
               </div>
               <div className="prose prose-sm dark:prose-invert max-w-none text-gray-900 dark:text-gray-100 pl-8">
                 <Markdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{c.body}</Markdown>
