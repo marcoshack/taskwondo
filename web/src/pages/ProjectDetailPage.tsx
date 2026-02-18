@@ -2,7 +2,6 @@ import { useParams, Routes, Route } from 'react-router-dom'
 import { useProject } from '@/hooks/useProjects'
 import { Sidebar } from '@/components/Sidebar'
 import { Spinner } from '@/components/ui/Spinner'
-import { Badge } from '@/components/ui/Badge'
 import { WorkItemListPage } from './WorkItemListPage'
 import { WorkItemDetailPage } from './WorkItemDetailPage'
 import { ProjectSettingsPage } from './ProjectSettingsPage'
@@ -33,13 +32,7 @@ export function ProjectDetailPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-6">
-        <div className="flex items-center gap-3">
-          <Badge color="indigo">{project.key}</Badge>
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{project.name}</h1>
-        </div>
-      </div>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <div className="flex gap-8">
         <Sidebar projectKey={project.key} />
         <div className="flex-1 min-w-0">
