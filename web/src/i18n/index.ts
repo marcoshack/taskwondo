@@ -4,8 +4,10 @@ import LanguageDetector from 'i18next-browser-languagedetector'
 import en from './en.json'
 import pt from './pt.json'
 import es from './es.json'
+import fr from './fr.json'
 import ja from './ja.json'
 import zh from './zh.json'
+import ar from './ar.json'
 
 export const LANGUAGE_KEY = 'trackforge_language'
 
@@ -17,8 +19,10 @@ i18n
       en: { translation: en },
       pt: { translation: pt },
       es: { translation: es },
+      fr: { translation: fr },
       ja: { translation: ja },
       zh: { translation: zh },
+      ar: { translation: ar },
     },
     fallbackLng: 'en',
     interpolation: {
