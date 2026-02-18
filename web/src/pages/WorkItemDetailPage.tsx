@@ -192,10 +192,25 @@ export function WorkItemDetailPage() {
         <div className="flex-1 min-w-0 space-y-6">
           {/* Header */}
           <div>
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-1 group/header">
               <span className="text-sm font-mono text-gray-400 dark:text-gray-500">{item.display_id}</span>
               <TypeBadge type={item.type} />
               <StatusBadge status={item.status} statuses={statuses} />
+              <CopyButton
+                text={[
+                  '---',
+                  `display_id: ${item.display_id}`,
+                  `type: ${item.type}`,
+                  `status: ${item.status}`,
+                  '---',
+                  '',
+                  `# ${item.display_id} - ${item.title}`,
+                  '',
+                  item.description ?? '',
+                ].join('\n')}
+                tooltip={t('common.copyAsMarkdown')}
+                className="opacity-0 group-hover/header:opacity-100"
+              />
             </div>
 
             {/* Title */}

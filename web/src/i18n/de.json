@@ -27,6 +27,7 @@
   "common.noData": "Keine Daten",
   "common.loadMore": "Mehr laden",
   "common.copyToClipboard": "Kopieren",
+  "common.copyAsMarkdown": "Als Markdown kopieren",
   "common.copied": "Kopiert!",
   "common.description": "Beschreibung",
   "common.you": "du",

@@ -27,6 +27,7 @@
   "common.noData": "暂无数据",
   "common.loadMore": "加载更多",
   "common.copyToClipboard": "复制",
+  "common.copyAsMarkdown": "复制为 Markdown",
   "common.copied": "已复制",
   "common.description": "描述",
   "common.you": "你",

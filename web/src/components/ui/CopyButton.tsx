@@ -4,9 +4,10 @@ import { useTranslation } from 'react-i18next'
 interface CopyButtonProps {
   text: string
   className?: string
+  tooltip?: string
 }
 
-export function CopyButton({ text, className = '' }: CopyButtonProps) {
+export function CopyButton({ text, className = '', tooltip }: CopyButtonProps) {
   const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
 
@@ -36,7 +37,7 @@ export function CopyButton({ text, className = '' }: CopyButtonProps) {
       type="button"
       className={`group/copy relative inline-flex items-center justify-center w-7 h-7 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-gray-700 transition-colors ${className}`}
       onClick={handleCopy}
-      aria-label={t('common.copyToClipboard')}
+      aria-label={tooltip ?? t('common.copyToClipboard')}
     >
       {copied ? (
         <svg className="w-4 h-4 text-green-500" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5">
@@ -49,7 +50,7 @@ export function CopyButton({ text, className = '' }: CopyButtonProps) {
         </svg>
       )}
       <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs text-white bg-gray-900 dark:bg-gray-700 rounded whitespace-nowrap opacity-0 group-hover/copy:opacity-100 transition-opacity">
-        {copied ? t('common.copied') : t('common.copyToClipboard')}
+        {copied ? t('common.copied') : (tooltip ?? t('common.copyToClipboard'))}
       </span>
     </button>
   )

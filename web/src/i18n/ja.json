@@ -27,6 +27,7 @@
   "common.noData": "データなし",
   "common.loadMore": "もっと読み込む",
   "common.copyToClipboard": "コピー",
+  "common.copyAsMarkdown": "Markdownでコピー",
   "common.copied": "コピー済み",
   "common.description": "説明",
   "common.you": "あなた",
