@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import type { ReactNode } from 'react'
+import { useKeyboardShortcutContext } from '@/contexts/KeyboardShortcutContext'
 
 interface ModalProps {
   open: boolean
@@ -12,6 +13,14 @@ interface ModalProps {
 }
 
 export function Modal({ open, onClose, title, position = 'center', size = 'default', children }: ModalProps) {
+  const { incrementModalOpen, decrementModalOpen } = useKeyboardShortcutContext()
+
+  useEffect(() => {
+    if (!open) return
+    incrementModalOpen()
+    return () => decrementModalOpen()
+  }, [open, incrementModalOpen, decrementModalOpen])
+
   useEffect(() => {
     if (!open) return
     const handler = (e: KeyboardEvent) => {

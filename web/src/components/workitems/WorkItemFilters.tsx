@@ -1,4 +1,5 @@
-import { useRef, useEffect } from 'react'
+import { useRef } from 'react'
+import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
 import { useTranslation } from 'react-i18next'
 import { Input } from '@/components/ui/Input'
 import { MultiSelect, type MultiSelectOption } from '@/components/ui/MultiSelect'
@@ -47,18 +48,7 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, search, onSe
     }))
   }
 
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key !== '/') return
-      const tag = (e.target as HTMLElement).tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
-      if ((e.target as HTMLElement).isContentEditable) return
-      e.preventDefault()
-      searchRef.current?.focus()
-    }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [])
+  useKeyboardShortcut({ key: '/' }, () => searchRef.current?.focus())
 
   function setArray(key: 'type' | 'status' | 'priority' | 'assignee', values: string[]) {
     onFilterChange({ ...filter, [key]: values.length > 0 ? values : undefined, cursor: undefined })
@@ -74,6 +64,7 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, search, onSe
           placeholder={t('workitems.filters.search')}
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Escape') searchRef.current?.blur() }}
         />
       </div>
       <div className="w-36">

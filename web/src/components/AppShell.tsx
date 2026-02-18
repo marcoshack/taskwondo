@@ -6,6 +6,9 @@ import { Avatar } from '@/components/ui/Avatar'
 import { Modal } from '@/components/ui/Modal'
 import { Spinner } from '@/components/ui/Spinner'
 import { useState, useRef, useEffect } from 'react'
+import { useKeyboardShortcutContext } from '@/contexts/KeyboardShortcutContext'
+import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
+import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal'
 
 export function AppShell() {
   const { t } = useTranslation()
@@ -13,6 +16,7 @@ export function AppShell() {
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
   const [switcherOpen, setSwitcherOpen] = useState(false)
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
   const projectMatch = useMatch('/projects/:projectKey/*')
@@ -30,19 +34,25 @@ export function AppShell() {
     return () => document.removeEventListener('mousedown', handler)
   }, [menuOpen])
 
+  // Sequential combos: g-p (project switcher), g-i (go to items)
+  const { registerSequentialCombo } = useKeyboardShortcutContext()
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'k' && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        const tag = (e.target as HTMLElement).tagName
-        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
-        if ((e.target as HTMLElement).isContentEditable) return
-        e.preventDefault()
-        setSwitcherOpen(true)
-      }
-    }
-    document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
-  }, [])
+    return registerSequentialCombo({
+      id: 'go-to-projects',
+      keys: ['g', 'p'],
+      callback: () => setSwitcherOpen(true),
+    })
+  }, [registerSequentialCombo])
+  useEffect(() => {
+    if (!activeProjectKey) return
+    return registerSequentialCombo({
+      id: 'go-to-items',
+      keys: ['g', 'i'],
+      callback: () => navigate(`/projects/${activeProjectKey}/items`),
+    })
+  }, [activeProjectKey, navigate, registerSequentialCombo])
+
+  useKeyboardShortcut({ key: '?' }, () => setShortcutsOpen(true))
 
   const handleLogout = () => {
     logout()
@@ -115,6 +125,7 @@ export function AppShell() {
           navigate(`/projects/${key}`)
         }}
       />
+      <KeyboardShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </div>
   )
 }

@@ -90,7 +90,7 @@ export function WorkItemForm({
           ))}
         </Select>
       )}
-      <Input label={t('workitems.form.title')} value={title} onChange={(e) => setTitle(e.target.value)} required />
+      <Input label={t('workitems.form.title')} value={title} onChange={(e) => setTitle(e.target.value)} required autoFocus />
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('workitems.form.description')}</label>
         <textarea

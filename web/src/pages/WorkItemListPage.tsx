@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { useWorkItems, useCreateWorkItem, useBulkUpdateWorkItems } from '@/hooks/useWorkItems'
+import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
+import { useWorkItems, useCreateWorkItem, useBulkUpdateWorkItems, useDeleteWorkItem } from '@/hooks/useWorkItems'
 import { useMembers } from '@/hooks/useProjects'
 import { useProjectWorkflow } from '@/hooks/useWorkflows'
 import { useUserSetting, useSetUserSetting } from '@/hooks/useUserSettings'
@@ -180,7 +181,11 @@ export function WorkItemListPage() {
   }
 
   const [showCreate, setShowCreate] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [activeRow, setActiveRow] = useState(-1)
+
+  useKeyboardShortcut({ key: 'c' }, () => setShowCreate(true))
 
   const debouncedSearch = useDebounce(search, 300)
 
@@ -194,6 +199,7 @@ export function WorkItemListPage() {
 
   const { data: result, isLoading } = useWorkItems(projectKey ?? '', activeFilter)
   const createMutation = useCreateWorkItem(projectKey ?? '')
+  const deleteMutation = useDeleteWorkItem(projectKey ?? '')
   const bulkMutation = useBulkUpdateWorkItems(projectKey ?? '')
   const items = result?.data ?? []
 
@@ -240,7 +246,26 @@ export function WorkItemListPage() {
     setPrevFilterKey(filterKey)
     setLoadedPages([])
     setSelected(new Set())
+    setActiveRow(-1)
   }
+
+  // List navigation: arrows + j/k (vim), o/Enter to open, # to delete, Escape to deselect
+  useKeyboardShortcut([{ key: 'ArrowDown' }, { key: 'j' }], () => setActiveRow((prev) => Math.min(prev + 1, allItems.length - 1)), viewMode === 'list')
+  useKeyboardShortcut([{ key: 'ArrowUp' }, { key: 'k' }], () => setActiveRow((prev) => Math.max(prev - 1, 0)), viewMode === 'list')
+  useKeyboardShortcut([{ key: 'Enter' }, { key: 'o' }], () => {
+    if (activeRow >= 0 && activeRow < allItems.length) {
+      navigate(`/projects/${projectKey}/items/${allItems[activeRow].item_number}`)
+    }
+  }, activeRow >= 0)
+  useKeyboardShortcut({ key: '#' }, () => setShowDeleteConfirm(true), selected.size > 0 || activeRow >= 0)
+  useKeyboardShortcut({ key: 'Escape' }, () => setActiveRow(-1), activeRow >= 0)
+
+  // Items targeted for deletion: selected checkboxes take priority, otherwise highlighted row
+  const deleteTargets = useMemo(() => {
+    if (selected.size > 0) return Array.from(selected)
+    if (activeRow >= 0 && activeRow < allItems.length) return [allItems[activeRow].item_number]
+    return []
+  }, [selected, activeRow, allItems])
 
   const columns: Column<WorkItem>[] = [
     {
@@ -385,6 +410,7 @@ export function WorkItemListPage() {
               sortBy={sort}
               sortOrder={order}
               onSort={handleSort}
+              activeRowIndex={activeRow}
             />
           </div>
           {result?.meta.has_more && (
@@ -425,6 +451,33 @@ export function WorkItemListPage() {
           onCancel={() => setShowCreate(false)}
           isSubmitting={createMutation.isPending}
         />
+      </Modal>
+
+      <Modal open={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)} title={t('workitems.deleteSelectedTitle')}>
+        <form onSubmit={(e) => {
+          e.preventDefault()
+          for (const num of deleteTargets) {
+            deleteMutation.mutate(num)
+          }
+          setShowDeleteConfirm(false)
+          setSelected(new Set())
+          setActiveRow(-1)
+        }}>
+          <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+            {t('workitems.deleteSelectedBody', { count: deleteTargets.length })}
+          </p>
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="secondary" onClick={() => setShowDeleteConfirm(false)}>{t('common.cancel')}</Button>
+            <Button
+              type="submit"
+              variant="danger"
+              autoFocus
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? t('common.deleting') : t('common.delete')}
+            </Button>
+          </div>
+        </form>
       </Modal>
     </div>
   )

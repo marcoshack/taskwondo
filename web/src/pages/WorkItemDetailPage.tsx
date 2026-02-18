@@ -1,4 +1,7 @@
 import { useState, useCallback, useRef, useMemo } from 'react'
+import { useConfirmFeedback } from '@/hooks/useConfirmFeedback'
+import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
+import { ConfirmCheck } from '@/components/ui/ConfirmCheck'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Trans, useTranslation } from 'react-i18next'
 import { useWorkItem, useUpdateWorkItem, useDeleteWorkItem, useUploadAttachment } from '@/hooks/useWorkItems'
@@ -48,6 +51,9 @@ export function WorkItemDetailPage() {
   const [highlightedAttachmentId, setHighlightedAttachmentId] = useState<string | null>(null)
   const [highlightedCommentId, setHighlightedCommentId] = useState<string | null>(null)
   const [previewTarget, setPreviewTarget] = useState<PreviewTarget | null>(null)
+  const { confirmed: titleConfirmed, showConfirm: showTitleConfirm } = useConfirmFeedback()
+  const { confirmed: descConfirmed, showConfirm: showDescConfirm } = useConfirmFeedback()
+  useKeyboardShortcut({ key: '#' }, () => setShowDelete(true))
   const dragCounter = useRef(0)
   const uploadMut = useUploadAttachment(projectKey ?? '', itemNumber)
 
@@ -174,20 +180,24 @@ export function WorkItemDetailPage() {
                     if (e.key === 'Enter') {
                       updateMutation.mutate({ itemNumber, input: { title: titleDraft } })
                       setEditingTitle(false)
+                      showTitleConfirm()
                     }
                     if (e.key === 'Escape') setEditingTitle(false)
                   }}
                   autoFocus
                 />
-                <Button size="sm" onClick={() => { updateMutation.mutate({ itemNumber, input: { title: titleDraft } }); setEditingTitle(false) }}>{t('common.save')}</Button>
+                <Button size="sm" onClick={() => { updateMutation.mutate({ itemNumber, input: { title: titleDraft } }); setEditingTitle(false); showTitleConfirm() }}>{t('common.save')}</Button>
               </div>
             ) : (
-              <h1
-                className="text-xl font-semibold text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded px-1 -mx-1"
-                onClick={() => { setTitleDraft(item.title); setEditingTitle(true) }}
-              >
-                {item.title}
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1
+                  className="text-xl font-semibold text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded px-1 -mx-1"
+                  onClick={() => { setTitleDraft(item.title); setEditingTitle(true) }}
+                >
+                  {item.title}
+                </h1>
+                <ConfirmCheck visible={titleConfirmed} />
+              </div>
             )}
           </div>
 
@@ -195,6 +205,7 @@ export function WorkItemDetailPage() {
           <div className="group/desc">
             <div className="flex items-center gap-1 mb-1">
               <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('workitems.detail.description')}</h3>
+              <ConfirmCheck visible={descConfirmed} />
               {!editingDesc && (
                 <button
                   className="group/edit relative inline-flex items-center justify-center w-7 h-7 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-gray-700 transition-colors opacity-0 group-hover/desc:opacity-100"
@@ -219,6 +230,15 @@ export function WorkItemDetailPage() {
                   rows={6}
                   value={descDraft}
                   onChange={(e) => setDescDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                      e.preventDefault()
+                      updateMutation.mutate({ itemNumber, input: { description: descDraft || null } })
+                      setEditingDesc(false)
+                      showDescConfirm()
+                    }
+                    if (e.key === 'Escape') setEditingDesc(false)
+                  }}
                   onPaste={handleDescPaste}
                   onDrop={handleDescDrop}
                   onDragOver={handleDescDragOver}
@@ -228,6 +248,7 @@ export function WorkItemDetailPage() {
                   <Button size="sm" onClick={() => {
                     updateMutation.mutate({ itemNumber, input: { description: descDraft || null } })
                     setEditingDesc(false)
+                    showDescConfirm()
                   }}>{t('common.save')}</Button>
                   <Button size="sm" variant="ghost" onClick={() => setEditingDesc(false)}>{t('common.cancel')}</Button>
                 </div>
@@ -302,23 +323,27 @@ export function WorkItemDetailPage() {
 
       {/* Delete confirmation */}
       <Modal open={showDelete} onClose={() => setShowDelete(false)} title={t('workitems.detail.deleteTitle')}>
-        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-          <Trans i18nKey="workitems.detail.deleteConfirmBody" values={{ displayId: item.display_id }} components={{ bold: <strong /> }} />
-        </p>
-        <div className="flex justify-end gap-3">
-          <Button variant="secondary" onClick={() => setShowDelete(false)}>{t('common.cancel')}</Button>
-          <Button
-            variant="danger"
-            onClick={() => {
-              deleteMutation.mutate(itemNumber, {
-                onSuccess: () => navigate(`/projects/${projectKey}/items`),
-              })
-            }}
-            disabled={deleteMutation.isPending}
-          >
-            {deleteMutation.isPending ? t('common.deleting') : t('common.delete')}
-          </Button>
-        </div>
+        <form onSubmit={(e) => {
+          e.preventDefault()
+          deleteMutation.mutate(itemNumber, {
+            onSuccess: () => navigate(`/projects/${projectKey}/items`),
+          })
+        }}>
+          <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+            <Trans i18nKey="workitems.detail.deleteConfirmBody" values={{ displayId: item.display_id }} components={{ bold: <strong /> }} />
+          </p>
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="secondary" onClick={() => setShowDelete(false)}>{t('common.cancel')}</Button>
+            <Button
+              type="submit"
+              variant="danger"
+              autoFocus
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? t('common.deleting') : t('common.delete')}
+            </Button>
+          </div>
+        </form>
       </Modal>
 
       {/* File preview */}

@@ -77,6 +77,13 @@ export function DetailSidebar({ item, statuses, allowedTransitions, members, onU
         <Input
           defaultValue={item.labels.join(', ')}
           placeholder={t('workitems.form.labelsPlaceholder')}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+            if (e.key === 'Escape') {
+              (e.target as HTMLInputElement).value = item.labels.join(', ')
+              ;(e.target as HTMLInputElement).blur()
+            }
+          }}
           onBlur={(e) => {
             const newLabels = e.target.value ? e.target.value.split(',').map((l) => l.trim()).filter(Boolean) : []
             if (JSON.stringify(newLabels) !== JSON.stringify(item.labels)) {
