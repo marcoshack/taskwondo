@@ -38,6 +38,7 @@ type WorkItem struct {
 	MilestoneID     *uuid.UUID             `json:"milestone_id,omitempty"`
 	ParentID        *uuid.UUID             `json:"parent_id,omitempty"`
 	ItemNumber      int                    `json:"item_number"`
+	DisplayID       string                 `json:"display_id"`
 	Type            string                 `json:"type"`
 	Title           string                 `json:"title"`
 	Description     *string                `json:"description,omitempty"`

@@ -77,7 +77,7 @@ func toWorkItemResponse(item *model.WorkItem, projectKey string) workItemRespons
 		ID:           item.ID,
 		ProjectKey:   projectKey,
 		ItemNumber:   item.ItemNumber,
-		DisplayID:    fmt.Sprintf("%s-%d", projectKey, item.ItemNumber),
+		DisplayID:    item.DisplayID,
 		Type:         item.Type,
 		Title:        item.Title,
 		Description:  item.Description,

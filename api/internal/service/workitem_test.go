@@ -124,9 +124,10 @@ func (m *mockWorkflowRepo) ListStatuses(_ context.Context, workflowID uuid.UUID)
 // --- Mock work item repository ---
 
 type mockWorkItemRepo struct {
-	items       map[uuid.UUID]*model.WorkItem
+	items        map[uuid.UUID]*model.WorkItem
 	byProjectNum map[string]*model.WorkItem // key: "projectID:itemNumber"
-	counters    map[uuid.UUID]int           // project item counters
+	counters     map[uuid.UUID]int          // project item counters
+	projectKeys  map[uuid.UUID]string       // projectID -> project key
 }
 
 func newMockWorkItemRepo() *mockWorkItemRepo {
@@ -134,6 +135,7 @@ func newMockWorkItemRepo() *mockWorkItemRepo {
 		items:        make(map[uuid.UUID]*model.WorkItem),
 		byProjectNum: make(map[string]*model.WorkItem),
 		counters:     make(map[uuid.UUID]int),
+		projectKeys:  make(map[uuid.UUID]string),
 	}
 }
 
@@ -148,6 +150,9 @@ func itoa(i int) string {
 func (m *mockWorkItemRepo) Create(_ context.Context, item *model.WorkItem) error {
 	m.counters[item.ProjectID]++
 	item.ItemNumber = m.counters[item.ProjectID]
+	if key, ok := m.projectKeys[item.ProjectID]; ok {
+		item.DisplayID = fmt.Sprintf("%s-%d", key, item.ItemNumber)
+	}
 	now := time.Now()
 	item.CreatedAt = now
 	item.UpdatedAt = now

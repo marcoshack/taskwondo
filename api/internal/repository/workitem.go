@@ -32,15 +32,17 @@ func (r *WorkItemRepository) Create(ctx context.Context, item *model.WorkItem) e
 	}
 	defer tx.Rollback()
 
-	// Atomically increment the project's item counter.
+	// Atomically increment the project's item counter and fetch the project key.
 	var itemNumber int
+	var projectKey string
 	err = tx.QueryRowContext(ctx,
-		`UPDATE projects SET item_counter = item_counter + 1 WHERE id = $1 RETURNING item_counter`,
-		item.ProjectID).Scan(&itemNumber)
+		`UPDATE projects SET item_counter = item_counter + 1 WHERE id = $1 RETURNING item_counter, key`,
+		item.ProjectID).Scan(&itemNumber, &projectKey)
 	if err != nil {
 		return fmt.Errorf("incrementing item counter: %w", err)
 	}
 	item.ItemNumber = itemNumber
+	item.DisplayID = fmt.Sprintf("%s-%d", projectKey, itemNumber)
 
 	customFieldsJSON, err := json.Marshal(item.CustomFields)
 	if err != nil {
@@ -49,11 +51,11 @@ func (r *WorkItemRepository) Create(ctx context.Context, item *model.WorkItem) e
 
 	_, err = tx.ExecContext(ctx,
 		`INSERT INTO work_items (
-			id, project_id, queue_id, milestone_id, parent_id, item_number, type, title, description,
+			id, project_id, queue_id, milestone_id, parent_id, item_number, display_id, type, title, description,
 			status, priority, assignee_id, reporter_id, portal_contact_id, visibility,
 			labels, custom_fields, due_date, sla_deadline
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
-		item.ID, item.ProjectID, item.QueueID, item.MilestoneID, item.ParentID, item.ItemNumber,
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)`,
+		item.ID, item.ProjectID, item.QueueID, item.MilestoneID, item.ParentID, item.ItemNumber, item.DisplayID,
 		item.Type, item.Title, item.Description, item.Status, item.Priority,
 		item.AssigneeID, item.ReporterID, item.PortalContactID, item.Visibility,
 		pq.Array(item.Labels), customFieldsJSON, item.DueDate, item.SLADeadline)
@@ -71,7 +73,7 @@ func (r *WorkItemRepository) Create(ctx context.Context, item *model.WorkItem) e
 // GetByProjectAndNumber returns a work item by project ID and item number.
 func (r *WorkItemRepository) GetByProjectAndNumber(ctx context.Context, projectID uuid.UUID, itemNumber int) (*model.WorkItem, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, project_id, queue_id, milestone_id, parent_id, item_number, type, title, description,
+		`SELECT id, project_id, queue_id, milestone_id, parent_id, item_number, display_id, type, title, description,
 		        status, priority, assignee_id, reporter_id, portal_contact_id, visibility,
 		        labels, custom_fields, due_date, sla_deadline, resolved_at,
 		        created_at, updated_at
@@ -133,9 +135,9 @@ func (r *WorkItemRepository) List(ctx context.Context, projectID uuid.UUID, filt
 		qb.add("parent_id = ?", *filter.ParentID)
 	}
 
-	// Full-text search
+	// Full-text search (OR simple config to match display_id tokens like "TF-29")
 	if filter.Search != "" {
-		qb.add("search_vector @@ plainto_tsquery('english', ?)", filter.Search)
+		qb.add("(search_vector @@ plainto_tsquery('english', ?) OR search_vector @@ plainto_tsquery('simple', ?))", filter.Search, filter.Search)
 	}
 
 	whereClause := "WHERE " + strings.Join(qb.conditions, " AND ")
@@ -184,7 +186,7 @@ func (r *WorkItemRepository) List(ctx context.Context, projectID uuid.UUID, filt
 	}
 
 	selectQuery := fmt.Sprintf(
-		`SELECT id, project_id, queue_id, milestone_id, parent_id, item_number, type, title, description,
+		`SELECT id, project_id, queue_id, milestone_id, parent_id, item_number, display_id, type, title, description,
 		        status, priority, assignee_id, reporter_id, portal_contact_id, visibility,
 		        labels, custom_fields, due_date, sla_deadline, resolved_at,
 		        created_at, updated_at
@@ -319,7 +321,7 @@ func scanWorkItem(row *sql.Row) (*model.WorkItem, error) {
 	)
 
 	err := row.Scan(
-		&item.ID, &item.ProjectID, &queueID, &milestoneID, &parentID, &item.ItemNumber,
+		&item.ID, &item.ProjectID, &queueID, &milestoneID, &parentID, &item.ItemNumber, &item.DisplayID,
 		&item.Type, &item.Title, &description, &item.Status, &item.Priority,
 		&assigneeID, &item.ReporterID, &portalContactID, &item.Visibility,
 		&labels, &customFieldsRaw, &dueDate, &slaDeadline, &resolvedAt,
@@ -357,7 +359,7 @@ func scanWorkItems(rows *sql.Rows) ([]model.WorkItem, error) {
 		)
 
 		if err := rows.Scan(
-			&item.ID, &item.ProjectID, &queueID, &milestoneID, &parentID, &item.ItemNumber,
+			&item.ID, &item.ProjectID, &queueID, &milestoneID, &parentID, &item.ItemNumber, &item.DisplayID,
 			&item.Type, &item.Title, &description, &item.Status, &item.Priority,
 			&assigneeID, &item.ReporterID, &portalContactID, &item.Visibility,
 			&labels, &customFieldsRaw, &dueDate, &slaDeadline, &resolvedAt,
