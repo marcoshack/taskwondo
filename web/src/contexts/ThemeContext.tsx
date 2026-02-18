@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { usePreference, useSetPreference } from '@/hooks/usePreferences'
 import { useAuth } from '@/contexts/AuthContext'
 
-export type Theme = 'light' | 'dark'
+export type Theme = 'light' | 'dark' | 'system'
 export type FontSize = 'small' | 'normal' | 'large'
 
 const fontSizePx: Record<FontSize, string> = {
@@ -23,8 +23,16 @@ const THEME_KEY = 'trackforge_theme'
 const FONT_SIZE_KEY = 'trackforge_font_size'
 const ThemeContext = createContext<ThemeContextValue | null>(null)
 
+const darkMediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+
+function resolveTheme(theme: Theme): 'light' | 'dark' {
+  if (theme === 'system') return darkMediaQuery.matches ? 'dark' : 'light'
+  return theme
+}
+
 function applyTheme(theme: Theme) {
-  if (theme === 'dark') {
+  const resolved = resolveTheme(theme)
+  if (resolved === 'dark') {
     document.documentElement.classList.add('dark')
   } else {
     document.documentElement.classList.remove('dark')
@@ -35,9 +43,13 @@ function applyFontSize(size: FontSize) {
   document.documentElement.style.fontSize = fontSizePx[size]
 }
 
+function isValidTheme(v: unknown): v is Theme {
+  return v === 'light' || v === 'dark' || v === 'system'
+}
+
 function getStoredTheme(): Theme {
   const stored = localStorage.getItem(THEME_KEY)
-  if (stored === 'dark' || stored === 'light') return stored
+  if (isValidTheme(stored)) return stored
   return 'light'
 }
 
@@ -63,7 +75,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   // Sync API theme to local state on load
   useEffect(() => {
-    if (apiTheme === 'dark' || apiTheme === 'light') {
+    if (isValidTheme(apiTheme)) {
       setThemeState(apiTheme)
       localStorage.setItem(THEME_KEY, apiTheme)
     }
@@ -80,6 +92,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // Apply theme class whenever it changes
   useEffect(() => {
     applyTheme(theme)
+  }, [theme])
+
+  // Listen for OS color scheme changes when theme is 'system'
+  useEffect(() => {
+    if (theme !== 'system') return
+    const handler = () => applyTheme('system')
+    darkMediaQuery.addEventListener('change', handler)
+    return () => darkMediaQuery.removeEventListener('change', handler)
   }, [theme])
 
   // Apply font size whenever it changes
