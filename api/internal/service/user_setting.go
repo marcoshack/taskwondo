@@ -16,6 +16,7 @@ type UserSettingRepository interface {
 	Upsert(ctx context.Context, s *model.UserSetting) error
 	Get(ctx context.Context, userID uuid.UUID, projectID *uuid.UUID, key string) (*model.UserSetting, error)
 	ListByProject(ctx context.Context, userID uuid.UUID, projectID uuid.UUID) ([]model.UserSetting, error)
+	ListGlobal(ctx context.Context, userID uuid.UUID) ([]model.UserSetting, error)
 	Delete(ctx context.Context, userID uuid.UUID, projectID *uuid.UUID, key string) error
 }
 
@@ -105,6 +106,40 @@ func (s *UserSettingService) Delete(ctx context.Context, info *model.AuthInfo, p
 	}
 
 	return s.settings.Delete(ctx, info.UserID, &project.ID, key)
+}
+
+// SetGlobal creates or updates a global (non-project-scoped) user setting.
+func (s *UserSettingService) SetGlobal(ctx context.Context, info *model.AuthInfo, key string, value json.RawMessage) (*model.UserSetting, error) {
+	setting := &model.UserSetting{
+		UserID: info.UserID,
+		Key:    key,
+		Value:  value,
+	}
+
+	if err := s.settings.Upsert(ctx, setting); err != nil {
+		return nil, fmt.Errorf("saving global user setting: %w", err)
+	}
+
+	log.Ctx(ctx).Info().
+		Str("key", key).
+		Msg("global user setting saved")
+
+	return s.settings.Get(ctx, info.UserID, nil, key)
+}
+
+// GetGlobal returns a single global user setting.
+func (s *UserSettingService) GetGlobal(ctx context.Context, info *model.AuthInfo, key string) (*model.UserSetting, error) {
+	return s.settings.Get(ctx, info.UserID, nil, key)
+}
+
+// ListGlobal returns all global settings for the authenticated user.
+func (s *UserSettingService) ListGlobal(ctx context.Context, info *model.AuthInfo) ([]model.UserSetting, error) {
+	return s.settings.ListGlobal(ctx, info.UserID)
+}
+
+// DeleteGlobal removes a global user setting.
+func (s *UserSettingService) DeleteGlobal(ctx context.Context, info *model.AuthInfo, key string) error {
+	return s.settings.Delete(ctx, info.UserID, nil, key)
 }
 
 func (s *UserSettingService) requireMembership(ctx context.Context, info *model.AuthInfo, projectID uuid.UUID) error {

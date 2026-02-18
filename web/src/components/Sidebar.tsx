@@ -26,8 +26,8 @@ export function Sidebar({ projectKey }: SidebarProps) {
               className={({ isActive }) =>
                 `block px-3 py-2 rounded-md text-sm font-medium ${
                   isActive
-                    ? 'bg-indigo-50 text-indigo-700'
-                    : 'text-gray-700 hover:bg-gray-100'
+                    ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
+                    : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
                 }`
               }
             >

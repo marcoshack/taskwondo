@@ -133,6 +133,16 @@ func main() {
 			r.Post("/user/api-keys", auth.CreateAPIKey)
 			r.Delete("/user/api-keys/{keyId}", auth.DeleteAPIKey)
 
+			// Global user preferences
+			r.Route("/user/preferences", func(r chi.Router) {
+				r.Get("/", userSettings.ListGlobal)
+				r.Route("/{key}", func(r chi.Router) {
+					r.Get("/", userSettings.GetGlobal)
+					r.Put("/", userSettings.SetGlobal)
+					r.Delete("/", userSettings.DeleteGlobal)
+				})
+			})
+
 			// Workflows
 			r.Route("/workflows", func(r chi.Router) {
 				r.Get("/", workflows.List)

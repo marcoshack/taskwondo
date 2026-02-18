@@ -35,9 +35,9 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
       <div className="max-w-sm w-full">
-        <h1 className="text-2xl font-bold text-center text-gray-900 mb-8">
+        <h1 className="text-2xl font-bold text-center text-gray-900 dark:text-gray-100 mb-8">
           Sign in to TrackForge
         </h1>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -58,7 +58,7 @@ export function LoginPage() {
             autoComplete="current-password"
           />
           {error && (
-            <p className="text-sm text-red-600">{error}</p>
+            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
           )}
           <Button type="submit" disabled={loading} className="w-full">
             {loading ? 'Signing in...' : 'Sign in'}

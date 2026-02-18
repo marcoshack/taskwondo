@@ -27,12 +27,12 @@ export function RelationList({ projectKey, itemNumber }: RelationListProps) {
       {(relations ?? []).map((r) => (
         <div key={r.id} className="flex items-center justify-between text-sm py-1">
           <div>
-            <span className="text-gray-500">{r.relation_type.replace(/_/g, ' ')}</span>
+            <span className="text-gray-500 dark:text-gray-400">{r.relation_type.replace(/_/g, ' ')}</span>
             {' '}
-            <span className="font-mono font-medium text-indigo-600">{r.target_display_id}</span>
+            <span className="font-mono font-medium text-indigo-600 dark:text-indigo-400">{r.target_display_id}</span>
           </div>
           <button
-            className="text-xs text-red-400 hover:text-red-600"
+            className="text-xs text-red-400 hover:text-red-600 dark:hover:text-red-300"
             onClick={() => deleteMutation.mutate(r.id)}
           >
             Remove
@@ -40,7 +40,7 @@ export function RelationList({ projectKey, itemNumber }: RelationListProps) {
         </div>
       ))}
 
-      <div className="flex items-end gap-2 pt-2 border-t border-gray-100">
+      <div className="flex items-end gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
         <div className="flex-1">
           <Input
             placeholder="TARGET-123"

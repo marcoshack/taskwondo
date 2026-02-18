@@ -90,9 +90,9 @@ export function WorkItemForm({
       )}
       <Input label="Title" value={title} onChange={(e) => setTitle(e.target.value)} required />
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
         <textarea
-          className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
           rows={4}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -115,7 +115,7 @@ export function WorkItemForm({
         </Select>
       )}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Assignee</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Assignee</label>
         <UserPicker members={members} value={assigneeId} onChange={setAssigneeId} />
       </div>
       <Input label="Labels" value={labels} onChange={(e) => setLabels(e.target.value)} placeholder="Comma-separated" />

@@ -40,23 +40,23 @@ export function UserPicker({ members, value, onChange, placeholder = 'Search mem
       {/* Display / trigger */}
       <button
         type="button"
-        className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-left shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+        className="block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-left shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800"
         onClick={() => { setOpen(!open); setTimeout(() => inputRef.current?.focus(), 0) }}
       >
         {selected ? (
-          <span className="text-gray-900">{selected.display_name}</span>
+          <span className="text-gray-900 dark:text-gray-100">{selected.display_name}</span>
         ) : (
-          <span className="text-gray-400">{value ? 'Unknown user' : 'Unassigned'}</span>
+          <span className="text-gray-400 dark:text-gray-500">{value ? 'Unknown user' : 'Unassigned'}</span>
         )}
       </button>
 
       {/* Dropdown */}
       {open && (
-        <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
+        <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg">
           <div className="p-2">
             <input
               ref={inputRef}
-              className="block w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
               placeholder={placeholder}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -67,8 +67,8 @@ export function UserPicker({ members, value, onChange, placeholder = 'Search mem
             <li>
               <button
                 type="button"
-                className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${
-                  !value ? 'bg-indigo-50 text-indigo-700' : 'text-gray-500 italic'
+                className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                  !value ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' : 'text-gray-500 dark:text-gray-400 italic'
                 }`}
                 onClick={() => { onChange(null); setOpen(false); setSearch('') }}
               >
@@ -79,8 +79,8 @@ export function UserPicker({ members, value, onChange, placeholder = 'Search mem
               <li key={m.user_id}>
                 <button
                   type="button"
-                  className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${
-                    m.user_id === value ? 'bg-indigo-50 text-indigo-700' : 'text-gray-900'
+                  className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                    m.user_id === value ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' : 'text-gray-900 dark:text-gray-100'
                   }`}
                   onClick={() => { onChange(m.user_id); setOpen(false); setSearch('') }}
                 >
@@ -90,7 +90,7 @@ export function UserPicker({ members, value, onChange, placeholder = 'Search mem
               </li>
             ))}
             {filtered.length === 0 && (
-              <li className="px-3 py-2 text-sm text-gray-400">No members found</li>
+              <li className="px-3 py-2 text-sm text-gray-400 dark:text-gray-500">No members found</li>
             )}
           </ul>
         </div>

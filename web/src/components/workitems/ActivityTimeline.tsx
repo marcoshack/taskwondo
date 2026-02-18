@@ -21,24 +21,24 @@ export function ActivityTimeline({ projectKey, itemNumber, sortOrder = 'desc' }:
   if (isLoading) return <Spinner size="sm" />
 
   if (!events?.length) {
-    return <p className="text-sm text-gray-400">No activity yet.</p>
+    return <p className="text-sm text-gray-400 dark:text-gray-500">No activity yet.</p>
   }
 
   const sorted = sortOrder === 'desc' ? [...events].reverse() : events
 
   return (
-    <div className="border-l-2 border-gray-200 pl-4 space-y-4">
+    <div className="border-l-2 border-gray-200 dark:border-gray-700 pl-4 space-y-4">
       {sorted.map((event) => (
         <div key={event.id} className="relative">
-          <div className="absolute -left-[21px] top-1.5 w-2.5 h-2.5 rounded-full bg-gray-300 border-2 border-white" />
+          <div className="absolute -left-[21px] top-1.5 w-2.5 h-2.5 rounded-full bg-gray-300 dark:bg-gray-600 border-2 border-white dark:border-gray-900" />
           <div className="text-sm">
-            <span className="font-medium text-gray-700">{event.actor?.display_name ?? 'System'}</span>
+            <span className="font-medium text-gray-700 dark:text-gray-300">{event.actor?.display_name ?? 'System'}</span>
             {' '}
-            <span className="text-gray-500">{formatEventLabel(event)}</span>
+            <span className="text-gray-500 dark:text-gray-400">{formatEventLabel(event)}</span>
           </div>
           <FieldChangeDiff event={event} members={members} />
           <CommentPreview event={event} />
-          <span className="text-xs text-gray-400">{new Date(event.created_at).toLocaleString()}</span>
+          <span className="text-xs text-gray-400 dark:text-gray-500">{new Date(event.created_at).toLocaleString()}</span>
         </div>
       ))}
     </div>
@@ -95,15 +95,15 @@ function FieldChangeDiff({ event, members }: { event: WorkItemEvent; members?: P
   if (!event.old_value && !event.new_value) return null
 
   return (
-    <div className="mt-1 mb-1 rounded-md border border-gray-200 bg-gray-50 text-xs font-mono overflow-hidden">
+    <div className="mt-1 mb-1 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs font-mono overflow-hidden">
       {event.old_value && (
-        <div className="px-3 py-1.5 bg-red-50 text-red-800 border-b border-gray-200">
+        <div className="px-3 py-1.5 bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300 border-b border-gray-200 dark:border-gray-700">
           <span className="select-none text-red-400 mr-2">&minus;</span>
           {truncate(resolveValue(event.field_name, event.old_value, members))}
         </div>
       )}
       {event.new_value && (
-        <div className="px-3 py-1.5 bg-green-50 text-green-800">
+        <div className="px-3 py-1.5 bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300">
           <span className="select-none text-green-400 mr-2">+</span>
           {truncate(resolveValue(event.field_name, event.new_value, members))}
         </div>
@@ -182,14 +182,14 @@ function CommentPreview({ event }: { event: WorkItemEvent }) {
     const hasMore = changedLines.length > COLLAPSED_LINES
 
     return (
-      <div className="mt-1 mb-1 rounded-md border border-gray-200 bg-gray-50 text-xs font-mono overflow-hidden">
+      <div className="mt-1 mb-1 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs font-mono overflow-hidden">
         {displayLines.map((line, i) => (
           <div
             key={i}
             className={
               line.type === 'remove'
-                ? 'px-3 py-0.5 bg-red-50 text-red-800'
-                : 'px-3 py-0.5 bg-green-50 text-green-800'
+                ? 'px-3 py-0.5 bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300'
+                : 'px-3 py-0.5 bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300'
             }
           >
             <span className={`select-none mr-2 ${line.type === 'remove' ? 'text-red-400' : 'text-green-400'}`}>
@@ -200,7 +200,7 @@ function CommentPreview({ event }: { event: WorkItemEvent }) {
         ))}
         {hasMore && (
           <button
-            className="w-full px-3 py-1 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100 text-left"
+            className="w-full px-3 py-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 text-left"
             onClick={() => setExpanded(!expanded)}
           >
             {expanded ? 'Show less' : `Show ${changedLines.length - COLLAPSED_LINES} more lines`}
@@ -217,11 +217,11 @@ function CommentPreview({ event }: { event: WorkItemEvent }) {
   const displayText = expanded ? preview : firstLines(preview, 2)
 
   return (
-    <div className="mt-1 mb-1 rounded-md border border-gray-200 bg-gray-50 text-xs overflow-hidden">
-      <div className="px-3 py-1.5 text-gray-600 whitespace-pre-wrap">{displayText}</div>
+    <div className="mt-1 mb-1 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs overflow-hidden">
+      <div className="px-3 py-1.5 text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{displayText}</div>
       {needsExpand && (
         <button
-          className="w-full px-3 py-1 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100 text-left"
+          className="w-full px-3 py-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 text-left"
           onClick={() => setExpanded(!expanded)}
         >
           {expanded ? 'Show less' : 'Show more'}
