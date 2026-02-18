@@ -359,6 +359,16 @@ func (m *mockRelationRepo) ListByWorkItem(_ context.Context, workItemID uuid.UUI
 	return result, nil
 }
 
+func (m *mockRelationRepo) ListByWorkItemWithDetails(_ context.Context, workItemID uuid.UUID) ([]model.WorkItemRelationWithDetails, error) {
+	var result []model.WorkItemRelationWithDetails
+	for _, rel := range m.relations {
+		if rel.SourceID == workItemID || rel.TargetID == workItemID {
+			result = append(result, model.WorkItemRelationWithDetails{WorkItemRelation: *rel})
+		}
+	}
+	return result, nil
+}
+
 func (m *mockRelationRepo) Delete(_ context.Context, id uuid.UUID) error {
 	if _, ok := m.relations[id]; !ok {
 		return model.ErrNotFound

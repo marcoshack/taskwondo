@@ -584,7 +584,9 @@ type createRelationRequest struct {
 type relationResponse struct {
 	ID              uuid.UUID `json:"id"`
 	SourceDisplayID string    `json:"source_display_id"`
+	SourceTitle     string    `json:"source_title"`
 	TargetDisplayID string    `json:"target_display_id"`
+	TargetTitle     string    `json:"target_title"`
 	RelationType    string    `json:"relation_type"`
 	CreatedBy       uuid.UUID `json:"created_by"`
 	CreatedAt       time.Time `json:"created_at"`
@@ -594,7 +596,9 @@ func toRelationResponse(r *service.RelationWithDisplay) relationResponse {
 	return relationResponse{
 		ID:              r.ID,
 		SourceDisplayID: r.SourceDisplayID,
+		SourceTitle:     r.SourceTitle,
 		TargetDisplayID: r.TargetDisplayID,
+		TargetTitle:     r.TargetTitle,
 		RelationType:    r.RelationType,
 		CreatedBy:       r.CreatedBy,
 		CreatedAt:       r.CreatedAt,

@@ -1,11 +1,40 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useRelations, useCreateRelation, useDeleteRelation } from '@/hooks/useWorkItems'
 import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
+import { WorkItemPicker } from '@/components/ui/WorkItemPicker'
 import { Select } from '@/components/ui/Select'
 import { Spinner } from '@/components/ui/Spinner'
+import type { Relation } from '@/api/workitems'
 
 const RELATION_TYPES = ['blocks', 'blocked_by', 'relates_to', 'duplicates', 'caused_by', 'parent_of', 'child_of']
+
+const INVERSE_TYPE: Record<string, string> = {
+  blocks: 'blocked by',
+  blocked_by: 'blocks',
+  parent_of: 'child of',
+  child_of: 'parent of',
+  relates_to: 'relates to',
+  duplicates: 'duplicated by',
+  caused_by: 'causes',
+}
+
+function getLinkedInfo(r: Relation, currentDisplayId: string) {
+  const isSource = r.source_display_id === currentDisplayId
+  return {
+    displayId: isSource ? r.target_display_id : r.source_display_id,
+    title: isSource ? r.target_title : r.source_title,
+    label: isSource
+      ? r.relation_type.replace(/_/g, ' ')
+      : (INVERSE_TYPE[r.relation_type] ?? r.relation_type.replace(/_/g, ' ')),
+  }
+}
+
+function displayIdToPath(displayId: string) {
+  const idx = displayId.lastIndexOf('-')
+  if (idx < 0) return '#'
+  return `/projects/${displayId.slice(0, idx)}/items/${displayId.slice(idx + 1)}`
+}
 
 interface RelationListProps {
   projectKey: string
@@ -20,32 +49,49 @@ export function RelationList({ projectKey, itemNumber }: RelationListProps) {
   const [targetId, setTargetId] = useState('')
   const [relationType, setRelationType] = useState('relates_to')
 
+  const currentDisplayId = `${projectKey}-${itemNumber}`
+
   if (isLoading) return <Spinner size="sm" />
 
   return (
-    <div className="space-y-3">
-      {(relations ?? []).map((r) => (
-        <div key={r.id} className="flex items-center justify-between text-sm py-1">
-          <div>
-            <span className="text-gray-500 dark:text-gray-400">{r.relation_type.replace(/_/g, ' ')}</span>
-            {' '}
-            <span className="font-mono font-medium text-indigo-600 dark:text-indigo-400">{r.target_display_id}</span>
+    <div className="space-y-1">
+      {(relations ?? []).map((r) => {
+        const linked = getLinkedInfo(r, currentDisplayId)
+        return (
+          <div key={r.id} className="flex items-center justify-between text-sm py-1.5">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-gray-500 dark:text-gray-400 shrink-0">{linked.label}</span>
+              <Link
+                to={displayIdToPath(linked.displayId)}
+                className="inline-flex items-center rounded-md bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 text-xs font-bold hover:bg-indigo-200 dark:hover:bg-indigo-900/60 transition-colors shrink-0"
+              >
+                {linked.displayId}
+              </Link>
+              <Link
+                to={displayIdToPath(linked.displayId)}
+                className="text-gray-700 dark:text-gray-300 truncate hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+              >
+                {linked.title}
+              </Link>
+            </div>
+            <button
+              className="text-xs text-red-400 hover:text-red-600 dark:hover:text-red-300 shrink-0 ml-2"
+              onClick={() => deleteMutation.mutate(r.id)}
+            >
+              Remove
+            </button>
           </div>
-          <button
-            className="text-xs text-red-400 hover:text-red-600 dark:hover:text-red-300"
-            onClick={() => deleteMutation.mutate(r.id)}
-          >
-            Remove
-          </button>
-        </div>
-      ))}
+        )
+      })}
 
       <div className="flex items-end gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
         <div className="flex-1">
-          <Input
-            placeholder="TARGET-123"
+          <WorkItemPicker
+            projectKey={projectKey}
+            excludeItemNumber={itemNumber}
             value={targetId}
-            onChange={(e) => setTargetId(e.target.value)}
+            onChange={setTargetId}
+            onSelect={setTargetId}
           />
         </div>
         <div className="w-40">

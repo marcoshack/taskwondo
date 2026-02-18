@@ -42,6 +42,7 @@ type WorkItemRelationRepository interface {
 	Create(ctx context.Context, relation *model.WorkItemRelation) error
 	GetByID(ctx context.Context, id uuid.UUID) (*model.WorkItemRelation, error)
 	ListByWorkItem(ctx context.Context, workItemID uuid.UUID) ([]model.WorkItemRelation, error)
+	ListByWorkItemWithDetails(ctx context.Context, workItemID uuid.UUID) ([]model.WorkItemRelationWithDetails, error)
 	Delete(ctx context.Context, id uuid.UUID) error
 }
 
@@ -96,11 +97,13 @@ type CreateRelationInput struct {
 	RelationType    string
 }
 
-// RelationWithDisplay is a relation enriched with display IDs.
+// RelationWithDisplay is a relation enriched with display IDs and titles.
 type RelationWithDisplay struct {
 	model.WorkItemRelation
 	SourceDisplayID string
+	SourceTitle     string
 	TargetDisplayID string
+	TargetTitle     string
 }
 
 // WorkItemService handles work item business logic and authorization.
@@ -784,7 +787,9 @@ func (s *WorkItemService) CreateRelation(ctx context.Context, info *model.AuthIn
 	return &RelationWithDisplay{
 		WorkItemRelation: *fetched,
 		SourceDisplayID:  sourceDisplayID,
+		SourceTitle:      sourceItem.Title,
 		TargetDisplayID:  targetDisplayID,
+		TargetTitle:      targetItem.Title,
 	}, nil
 }
 
@@ -804,20 +809,19 @@ func (s *WorkItemService) ListRelations(ctx context.Context, info *model.AuthInf
 		return nil, err
 	}
 
-	relations, err := s.relations.ListByWorkItem(ctx, item.ID)
+	relations, err := s.relations.ListByWorkItemWithDetails(ctx, item.ID)
 	if err != nil {
 		return nil, fmt.Errorf("listing relations: %w", err)
 	}
 
 	result := make([]RelationWithDisplay, len(relations))
 	for i, rel := range relations {
-		result[i] = RelationWithDisplay{WorkItemRelation: rel}
-		// We know the source is on this project if source matches item.ID
-		if rel.SourceID == item.ID {
-			result[i].SourceDisplayID = fmt.Sprintf("%s-%d", projectKey, itemNumber)
-		}
-		if rel.TargetID == item.ID {
-			result[i].TargetDisplayID = fmt.Sprintf("%s-%d", projectKey, itemNumber)
+		result[i] = RelationWithDisplay{
+			WorkItemRelation: rel.WorkItemRelation,
+			SourceDisplayID:  fmt.Sprintf("%s-%d", rel.SourceProjectKey, rel.SourceItemNumber),
+			SourceTitle:      rel.SourceTitle,
+			TargetDisplayID:  fmt.Sprintf("%s-%d", rel.TargetProjectKey, rel.TargetItemNumber),
+			TargetTitle:      rel.TargetTitle,
 		}
 	}
 
