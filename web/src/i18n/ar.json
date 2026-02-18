@@ -243,6 +243,10 @@
   "attachments.commentPlaceholder": "تعليق/وصف اختياري...",
   "attachments.deleteConfirm": "حذف هذا المرفق؟",
 
+  "preview.download": "تنزيل",
+  "preview.close": "إغلاق",
+  "preview.loadError": "فشل في تحميل معاينة الملف.",
+
   "multiSelect.selected": "{{count}} محدد",
 
   "userPicker.unassigned": "غير معيّن",

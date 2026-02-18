@@ -244,6 +244,10 @@
   "attachments.commentPlaceholder": "Optional comment/description...",
   "attachments.deleteConfirm": "Delete this attachment?",
 
+  "preview.download": "Download",
+  "preview.close": "Close",
+  "preview.loadError": "Failed to load file preview.",
+
   "multiSelect.selected": "{{count}} selected",
 
   "userPicker.unassigned": "Unassigned",

@@ -4,8 +4,10 @@ import { useAttachments, useUploadAttachment, useDeleteAttachment } from '@/hook
 import { useAuth } from '@/contexts/AuthContext'
 import { useMembers } from '@/hooks/useProjects'
 import { getAttachmentDownloadURL } from '@/api/workitems'
+import type { Attachment } from '@/api/workitems'
 import { getToken } from '@/api/client'
 import { Spinner } from '@/components/ui/Spinner'
+import { isPreviewable } from './FilePreviewModal'
 
 interface AttachmentListProps {
   projectKey: string
@@ -13,6 +15,7 @@ interface AttachmentListProps {
   sortOrder?: 'asc' | 'desc'
   highlightedAttachmentId?: string | null
   onHighlightClear?: () => void
+  onPreview?: (attachment: Attachment) => void
 }
 
 function formatFileSize(bytes: number): string {
@@ -21,7 +24,7 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc', highlightedAttachmentId, onHighlightClear }: AttachmentListProps) {
+export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc', highlightedAttachmentId, onHighlightClear, onPreview }: AttachmentListProps) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const { data: attachments, isLoading } = useAttachments(projectKey, itemNumber)
@@ -116,7 +119,13 @@ export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc', hig
         >
           <div className="flex-1 min-w-0">
             <button
-              onClick={() => handleDownload(a.id, a.filename)}
+              onClick={() => {
+                if (onPreview && isPreviewable(a)) {
+                  onPreview(a)
+                } else {
+                  handleDownload(a.id, a.filename)
+                }
+              }}
               className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline truncate block text-left cursor-pointer"
             >
               {a.filename}
@@ -128,16 +137,27 @@ export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc', hig
               {formatFileSize(a.size_bytes)} &middot; {uploaderName(a.uploader_id)} &middot; {new Date(a.created_at).toLocaleString()}
             </p>
           </div>
-          {user && a.uploader_id === user.id && (
+          <div className="flex items-center gap-1 shrink-0">
             <button
-              className="text-xs text-red-400 hover:text-red-600 dark:hover:text-red-300 shrink-0"
-              onClick={() => {
-                if (confirm(t('attachments.deleteConfirm'))) deleteMutation.mutate(a.id)
-              }}
+              className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+              onClick={() => handleDownload(a.id, a.filename)}
+              title={t('preview.download')}
             >
-              {t('common.delete')}
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 2v8m0 0l-3-3m3 3l3-3M3 12h10" />
+              </svg>
             </button>
-          )}
+            {user && a.uploader_id === user.id && (
+              <button
+                className="text-xs text-red-400 hover:text-red-600 dark:hover:text-red-300 px-1"
+                onClick={() => {
+                  if (confirm(t('attachments.deleteConfirm'))) deleteMutation.mutate(a.id)
+                }}
+              >
+                {t('common.delete')}
+              </button>
+            )}
+          </div>
         </div>
       ))}
 

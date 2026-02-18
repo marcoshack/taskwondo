@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Trans, useTranslation } from 'react-i18next'
 import { useWorkItem, useUpdateWorkItem, useDeleteWorkItem, useUploadAttachment } from '@/hooks/useWorkItems'
@@ -12,13 +12,15 @@ import { CommentList } from '@/components/workitems/CommentList'
 import { ActivityTimeline } from '@/components/workitems/ActivityTimeline'
 import { RelationList } from '@/components/workitems/RelationList'
 import { AttachmentList } from '@/components/workitems/AttachmentList'
+import { FilePreviewModal } from '@/components/workitems/FilePreviewModal'
+import type { PreviewTarget } from '@/components/workitems/FilePreviewModal'
 import { usePasteUpload } from '@/hooks/usePasteUpload'
 import { TypeBadge } from '@/components/workitems/TypeBadge'
 import { StatusBadge } from '@/components/workitems/StatusBadge'
 import { CopyButton } from '@/components/ui/CopyButton'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { markdownComponents } from '@/components/ui/markdownComponents'
+import { getMarkdownComponents } from '@/components/ui/markdownComponents'
 
 type Tab = 'comments' | 'activity' | 'relations' | 'attachments'
 
@@ -45,8 +47,15 @@ export function WorkItemDetailPage() {
   const [toast, setToast] = useState<string | null>(null)
   const [highlightedAttachmentId, setHighlightedAttachmentId] = useState<string | null>(null)
   const [highlightedCommentId, setHighlightedCommentId] = useState<string | null>(null)
+  const [previewTarget, setPreviewTarget] = useState<PreviewTarget | null>(null)
   const dragCounter = useRef(0)
   const uploadMut = useUploadAttachment(projectKey ?? '', itemNumber)
+
+  const handleImageClick = useCallback((src: string) => {
+    setPreviewTarget({ kind: 'image', src })
+  }, [])
+
+  const descMarkdownComponents = useMemo(() => getMarkdownComponents(handleImageClick), [handleImageClick])
 
   const handlePageDragEnter = useCallback((e: React.DragEvent) => {
     if (!e.dataTransfer.types.includes('Files')) return
@@ -217,7 +226,7 @@ export function WorkItemDetailPage() {
               >
                 {item.description ? (
                   <div className="prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300">
-                    <Markdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{item.description}</Markdown>
+                    <Markdown remarkPlugins={[remarkGfm]} components={descMarkdownComponents}>{item.description}</Markdown>
                   </div>
                 ) : (
                   <span className="text-sm text-gray-400 dark:text-gray-500 italic">{t('workitems.detail.noDescription')}</span>
@@ -256,10 +265,10 @@ export function WorkItemDetailPage() {
               )}
             </div>
 
-            {activeTab === 'comments' && <CommentList projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} highlightedCommentId={highlightedCommentId} onHighlightClear={() => setHighlightedCommentId(null)} />}
+            {activeTab === 'comments' && <CommentList projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} highlightedCommentId={highlightedCommentId} onHighlightClear={() => setHighlightedCommentId(null)} onImageClick={handleImageClick} />}
             {activeTab === 'activity' && <ActivityTimeline projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} onAttachmentClick={(id) => { setActiveTab('attachments'); setHighlightedAttachmentId(id) }} onCommentClick={(id) => { setActiveTab('comments'); setHighlightedCommentId(id) }} />}
             {activeTab === 'relations' && <RelationList projectKey={projectKey ?? ''} itemNumber={itemNumber} />}
-            {activeTab === 'attachments' && <AttachmentList projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} highlightedAttachmentId={highlightedAttachmentId} onHighlightClear={() => setHighlightedAttachmentId(null)} />}
+            {activeTab === 'attachments' && <AttachmentList projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} highlightedAttachmentId={highlightedAttachmentId} onHighlightClear={() => setHighlightedAttachmentId(null)} onPreview={(a) => setPreviewTarget({ kind: 'attachment', attachment: a, projectKey: projectKey ?? '', itemNumber })} />}
           </div>
         </div>
 
@@ -298,6 +307,9 @@ export function WorkItemDetailPage() {
           </Button>
         </div>
       </Modal>
+
+      {/* File preview */}
+      <FilePreviewModal target={previewTarget} onClose={() => setPreviewTarget(null)} />
     </div>
   )
 }
