@@ -3,3 +3,14 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+html {
+  scrollbar-gutter: stable;
+  scrollbar-color: #d1d5db #f9fafb;
+  background-color: #f9fafb;
+}
+
+html:where(.dark) {
+  scrollbar-color: #374151 #111827;
+  background-color: #111827;
+}
+
