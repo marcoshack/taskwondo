@@ -130,7 +130,7 @@ export function WorkItemListPage() {
   saveMutationRef.current = saveMutation
 
   const saveFilter = useCallback((f: WorkItemFilter) => {
-    if (!projectKey || !filterInitialized) return
+    if (!projectKey || !filterInitialized || loadedFromUrlRef.current) return
     clearTimeout(saveTimerRef.current)
     saveTimerRef.current = setTimeout(() => {
       saveMutationRef.current.mutate({ key: SETTINGS_KEY, value: pickSavedFilter(f) })
@@ -144,8 +144,6 @@ export function WorkItemListPage() {
   function handleFilterChange(f: WorkItemFilter) {
     setFilter(f)
     syncUrl(f, search, viewMode)
-    // User manually changed filters — save preferences
-    loadedFromUrlRef.current = false
     saveFilter(f)
   }
 
