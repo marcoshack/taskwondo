@@ -6,6 +6,7 @@ import { AuthProvider } from '@/contexts/AuthContext'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import { LanguageProvider } from '@/contexts/LanguageContext'
 import { SidebarProvider } from '@/contexts/SidebarContext'
+import { KeyboardShortcutProvider } from '@/contexts/KeyboardShortcutContext'
 import '@/i18n'
 import App from '@/App'
 import '@/index.css'
@@ -26,9 +27,11 @@ createRoot(document.getElementById('root')!).render(
         <AuthProvider>
           <ThemeProvider>
             <LanguageProvider>
-              <SidebarProvider>
-                <App />
-              </SidebarProvider>
+              <KeyboardShortcutProvider>
+                <SidebarProvider>
+                  <App />
+                </SidebarProvider>
+              </KeyboardShortcutProvider>
             </LanguageProvider>
           </ThemeProvider>
         </AuthProvider>

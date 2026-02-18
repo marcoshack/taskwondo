@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
 import type { ReactNode } from 'react'
 import { usePreference, useSetPreference } from '@/hooks/usePreferences'
 import { useAuth } from '@/contexts/AuthContext'
@@ -47,19 +48,7 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
   }, [collapsed, setCollapsed])
 
   // Keyboard shortcut: [ to toggle sidebar
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === '[' && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        const tag = (e.target as HTMLElement).tagName
-        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
-        if ((e.target as HTMLElement).isContentEditable) return
-        e.preventDefault()
-        toggleCollapsed()
-      }
-    }
-    document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
-  }, [toggleCollapsed])
+  useKeyboardShortcut({ key: '[' }, () => toggleCollapsed())
 
   return (
     <SidebarContext.Provider value={{ collapsed, toggleCollapsed }}>

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 export interface Column<T> {
@@ -17,6 +17,7 @@ interface DataTableProps<T> {
   sortBy?: string
   sortOrder?: 'asc' | 'desc'
   onSort?: (sortKey: string) => void
+  activeRowIndex?: number
 }
 
 function SortIndicator({ active, direction }: { active: boolean; direction?: 'asc' | 'desc' }) {
@@ -44,10 +45,18 @@ function SortIndicator({ active, direction }: { active: boolean; direction?: 'as
 
 export function DataTable<T>({
   columns, data, onRowClick, emptyMessage,
-  sortBy, sortOrder, onSort,
+  sortBy, sortOrder, onSort, activeRowIndex,
 }: DataTableProps<T>) {
   const { t } = useTranslation()
   const resolvedEmptyMessage = emptyMessage ?? t('common.noData')
+  const activeRowRef = useRef<HTMLTableRowElement>(null)
+
+  useEffect(() => {
+    if (activeRowIndex != null && activeRowIndex >= 0) {
+      activeRowRef.current?.scrollIntoView({ block: 'nearest' })
+    }
+  }, [activeRowIndex])
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full table-fixed divide-y divide-gray-200 dark:divide-gray-700">
@@ -79,11 +88,14 @@ export function DataTable<T>({
               </td>
             </tr>
           ) : (
-            data.map((row, i) => (
+            data.map((row, i) => {
+              const isActive = activeRowIndex === i
+              return (
               <tr
                 key={i}
+                ref={isActive ? activeRowRef : undefined}
                 onClick={() => onRowClick?.(row)}
-                className={onRowClick ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800' : ''}
+                className={`${onRowClick ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800' : ''} ${isActive ? 'ring-2 ring-inset ring-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/20' : ''}`}
               >
                 {columns.map((col) => (
                   <td key={col.key} className={`px-6 py-4 whitespace-nowrap text-sm ${col.className ?? ''}`}>
@@ -91,7 +103,8 @@ export function DataTable<T>({
                   </td>
                 ))}
               </tr>
-            ))
+              )
+            })
           )}
         </tbody>
       </table>

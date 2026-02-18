@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
 import { useProjects, useCreateProject } from '@/hooks/useProjects'
 import { DataTable } from '@/components/ui/DataTable'
 import { Badge } from '@/components/ui/Badge'
@@ -18,6 +19,20 @@ export function ProjectListPage() {
   const createMutation = useCreateProject()
 
   const [showCreate, setShowCreate] = useState(false)
+  const [activeRow, setActiveRow] = useState(-1)
+
+  useKeyboardShortcut({ key: 'n' }, () => setShowCreate(true))
+
+  const projectList = projects ?? []
+  useKeyboardShortcut([{ key: 'ArrowDown' }, { key: 'j' }], () => setActiveRow((prev) => Math.min(prev + 1, projectList.length - 1)))
+  useKeyboardShortcut([{ key: 'ArrowUp' }, { key: 'k' }], () => setActiveRow((prev) => Math.max(prev - 1, 0)))
+  useKeyboardShortcut([{ key: 'Enter' }, { key: 'o' }], () => {
+    if (activeRow >= 0 && activeRow < projectList.length) {
+      navigate(`/projects/${projectList[activeRow].key}`)
+    }
+  }, activeRow >= 0)
+  useKeyboardShortcut({ key: 'Escape' }, () => setActiveRow(-1), activeRow >= 0)
+
   const [name, setName] = useState('')
   const [key, setKey] = useState('')
   const [description, setDescription] = useState('')
@@ -99,9 +114,10 @@ export function ProjectListPage() {
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
         <DataTable
           columns={columns}
-          data={projects ?? []}
+          data={projectList}
           onRowClick={(p) => navigate(`/projects/${p.key}`)}
           emptyMessage={t('projects.empty')}
+          activeRowIndex={activeRow}
         />
       </div>
 

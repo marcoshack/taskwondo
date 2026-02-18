@@ -105,6 +105,12 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
           placeholder={t('comments.placeholder')}
           value={newBody}
           onChange={(e) => setNewBody(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && newBody.trim()) {
+              e.preventDefault()
+              createMutation.mutate({ body: newBody }, { onSuccess: () => setNewBody('') })
+            }
+          }}
           onPaste={handlePaste}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
@@ -147,6 +153,13 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
                 rows={3}
                 value={editBody}
                 onChange={(e) => setEditBody(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                    e.preventDefault()
+                    updateMutation.mutate({ commentId: c.id, body: editBody }, { onSuccess: () => setEditingId(null) })
+                  }
+                  if (e.key === 'Escape') setEditingId(null)
+                }}
               />
               <div className="flex gap-2">
                 <Button

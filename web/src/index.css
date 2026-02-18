@@ -14,3 +14,14 @@ html:where(.dark) {
   background-color: #111827;
 }
 
+@keyframes confirm-fade {
+  0% { opacity: 0; transform: scale(0.8); }
+  15% { opacity: 1; transform: scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.animate-confirm {
+  animation: confirm-fade 1.5s ease-out forwards;
+}
+
