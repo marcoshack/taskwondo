@@ -11,7 +11,7 @@ import { markdownComponents } from '@/components/ui/markdownComponents'
 
 export type PreviewTarget =
   | { kind: 'attachment'; attachment: Attachment; projectKey: string; itemNumber: number }
-  | { kind: 'image'; src: string }
+  | { kind: 'image'; src: string; label?: string; comment?: string }
 
 interface FilePreviewModalProps {
   target: PreviewTarget | null
@@ -41,15 +41,15 @@ export function isPreviewable(attachment: Attachment): boolean {
   return getPreviewType(attachment.content_type, attachment.filename) !== null
 }
 
-function getTargetInfo(target: PreviewTarget): { url: string; filename: string; previewType: PreviewType } {
+function getTargetInfo(target: PreviewTarget): { url: string; filename: string; comment?: string; previewType: PreviewType } {
   if (target.kind === 'image') {
-    const filename = target.src.split('/').pop() ?? 'image'
-    return { url: target.src, filename, previewType: 'image' }
+    const filename = target.label ?? target.src.split('/').pop() ?? 'image'
+    return { url: target.src, filename, comment: target.comment, previewType: 'image' }
   }
   const { attachment, projectKey, itemNumber } = target
   const url = getAttachmentDownloadURL(projectKey, itemNumber, attachment.id)
   const previewType = getPreviewType(attachment.content_type, attachment.filename) ?? 'image'
-  return { url, filename: attachment.filename, previewType }
+  return { url, filename: attachment.filename, comment: attachment.comment || undefined, previewType }
 }
 
 export function FilePreviewModal({ target, onClose }: FilePreviewModalProps) {
@@ -135,9 +135,16 @@ export function FilePreviewModal({ target, onClose }: FilePreviewModalProps) {
      <div ref={containerRef} tabIndex={-1} className="flex flex-col h-full outline-none">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 shrink-0" onMouseEnter={() => containerRef.current?.focus()}>
-        <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate mr-4">
-          {info?.filename}
-        </span>
+        <div className="flex items-center gap-2 min-w-0 mr-4">
+          <span className="text-sm font-medium text-gray-900 dark:text-gray-100 shrink-0">
+            {info?.filename}
+          </span>
+          {info?.comment && (
+            <span className="text-sm text-gray-500 dark:text-gray-400 truncate" title={info.comment}>
+              &mdash; {info.comment}
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           <button
             className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
