@@ -4,7 +4,7 @@ import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
 import { ConfirmCheck } from '@/components/ui/ConfirmCheck'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Trans, useTranslation } from 'react-i18next'
-import { useWorkItem, useUpdateWorkItem, useDeleteWorkItem, useUploadAttachment } from '@/hooks/useWorkItems'
+import { useWorkItem, useUpdateWorkItem, useDeleteWorkItem, useUploadAttachment, useAttachments } from '@/hooks/useWorkItems'
 import { useMembers } from '@/hooks/useProjects'
 import { useProjectWorkflow } from '@/hooks/useWorkflows'
 import { Spinner } from '@/components/ui/Spinner'
@@ -56,10 +56,16 @@ export function WorkItemDetailPage() {
   useKeyboardShortcut({ key: '#' }, () => setShowDelete(true))
   const dragCounter = useRef(0)
   const uploadMut = useUploadAttachment(projectKey ?? '', itemNumber)
+  const { data: allAttachments } = useAttachments(projectKey ?? '', itemNumber)
 
   const handleImageClick = useCallback((src: string) => {
-    setPreviewTarget({ kind: 'image', src })
-  }, [])
+    // Try to resolve attachment filename from the URL (e.g. /api/v1/projects/X/items/N/attachments/{id})
+    const parts = src.split('/')
+    const attIdx = parts.indexOf('attachments')
+    const attId = attIdx >= 0 ? parts[attIdx + 1] : undefined
+    const match = attId ? allAttachments?.find((a) => a.id === attId) : undefined
+    setPreviewTarget({ kind: 'image', src, label: match?.filename, comment: match?.comment || undefined })
+  }, [allAttachments])
 
   const descMarkdownComponents = useMemo(() => getMarkdownComponents(handleImageClick), [handleImageClick])
 

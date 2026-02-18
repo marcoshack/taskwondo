@@ -7,6 +7,8 @@ import { getAttachmentDownloadURL } from '@/api/workitems'
 import type { Attachment } from '@/api/workitems'
 import { getToken } from '@/api/client'
 import { Spinner } from '@/components/ui/Spinner'
+import { Modal } from '@/components/ui/Modal'
+import { Button } from '@/components/ui/Button'
 import { isPreviewable } from './FilePreviewModal'
 
 interface AttachmentListProps {
@@ -36,6 +38,7 @@ export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc', hig
   const [comment, setComment] = useState('')
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
   const [editCommentDraft, setEditCommentDraft] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState<Attachment | null>(null)
   const highlightRef = useCallback((node: HTMLDivElement | null) => {
     if (node) {
       node.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -177,6 +180,20 @@ export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc', hig
             </p>
           </div>
           <div className="flex items-center gap-1 shrink-0">
+            {user && a.uploader_id === user.id && (
+              <button
+                className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                onClick={() => {
+                  setEditingCommentId(a.id)
+                  setEditCommentDraft(a.comment ?? '')
+                }}
+                title={t('attachments.editDescription')}
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M11.5 2.5a1.5 1.5 0 012.121 2.121L6.5 11.743l-2.5.757.757-2.5L11.5 2.5z" />
+                </svg>
+              </button>
+            )}
             <button
               className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
               onClick={() => handleDownload(a.id, a.filename)}
@@ -188,12 +205,13 @@ export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc', hig
             </button>
             {user && a.uploader_id === user.id && (
               <button
-                className="text-xs text-red-400 hover:text-red-600 dark:hover:text-red-300 px-1"
-                onClick={() => {
-                  if (confirm(t('attachments.deleteConfirm'))) deleteMutation.mutate(a.id)
-                }}
+                className="p-1 text-red-400 hover:text-red-600 dark:hover:text-red-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                onClick={() => setDeleteTarget(a)}
+                title={t('common.delete')}
               >
-                {t('common.delete')}
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h10M6 4V3a1 1 0 011-1h2a1 1 0 011 1v1m2 0v9a1 1 0 01-1 1H5a1 1 0 01-1-1V4h8zM7 7v4M9 7v4" />
+                </svg>
               </button>
             )}
           </div>
@@ -203,6 +221,29 @@ export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc', hig
       {(attachments ?? []).length === 0 && (
         <p className="text-sm text-gray-400 italic">{t('attachments.noAttachments')}</p>
       )}
+
+      {/* Delete confirmation modal */}
+      <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} title={t('attachments.deleteTitle')}>
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+          {t('attachments.deleteConfirm')} <strong>{deleteTarget?.filename}</strong>
+        </p>
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="secondary" onClick={() => setDeleteTarget(null)}>{t('common.cancel')}</Button>
+          <Button
+            type="button"
+            variant="danger"
+            autoFocus
+            disabled={deleteMutation.isPending}
+            onClick={() => {
+              if (deleteTarget) {
+                deleteMutation.mutate(deleteTarget.id, { onSuccess: () => setDeleteTarget(null) })
+              }
+            }}
+          >
+            {deleteMutation.isPending ? t('common.deleting') : t('common.delete')}
+          </Button>
+        </div>
+      </Modal>
     </div>
   )
 }

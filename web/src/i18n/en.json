@@ -248,7 +248,9 @@
   "attachments.noAttachments": "No attachments yet.",
   "attachments.uploadFailed": "Upload failed. Please try again.",
   "attachments.commentPlaceholder": "Optional comment/description...",
-  "attachments.deleteConfirm": "Delete this attachment?",
+  "attachments.deleteTitle": "Delete Attachment",
+  "attachments.deleteConfirm": "Are you sure you want to delete this attachment?",
+  "attachments.editDescription": "Edit description",
 
   "preview.download": "Download",
   "preview.close": "Close",
