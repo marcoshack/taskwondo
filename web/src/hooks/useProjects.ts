@@ -4,10 +4,14 @@ import {
   getProject,
   createProject,
   listMembers,
+  addMember,
+  updateMemberRole,
+  removeMember,
   updateProject,
   deleteProject,
   type CreateProjectInput,
   type UpdateProjectInput,
+  type AddMemberInput,
 } from '@/api/projects'
 
 export function useProjects() {
@@ -30,6 +34,37 @@ export function useMembers(projectKey: string) {
     queryKey: ['projects', projectKey, 'members'],
     queryFn: () => listMembers(projectKey),
     enabled: !!projectKey,
+  })
+}
+
+export function useAddMember(projectKey: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: AddMemberInput) => addMember(projectKey, input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['projects', projectKey, 'members'] })
+    },
+  })
+}
+
+export function useUpdateMemberRole(projectKey: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ userId, role }: { userId: string; role: string }) =>
+      updateMemberRole(projectKey, userId, role),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['projects', projectKey, 'members'] })
+    },
+  })
+}
+
+export function useRemoveMember(projectKey: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (userId: string) => removeMember(projectKey, userId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['projects', projectKey, 'members'] })
+    },
   })
 }
 

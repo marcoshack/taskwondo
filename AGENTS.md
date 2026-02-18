@@ -9,6 +9,7 @@ TrackForge is a self-hosted task and ticket management system built with Go (bac
 - [docs/architecture.md](docs/architecture.md) — System design and deployment
 - [docs/data-model.md](docs/data-model.md) — Database schema and entity relationships
 - [docs/api-design.md](docs/api-design.md) — REST API specification
+- [docs/access-control.md](docs/access-control.md) - How user permissions are structured
 - [docs/workflows.md](docs/workflows.md) — Work item lifecycles and automation
 - [docs/public-portal.md](docs/public-portal.md) — Public portal specification
 - [docs/integrations.md](docs/integrations.md) — Webhooks, Discord, email

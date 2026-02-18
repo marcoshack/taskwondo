@@ -23,6 +23,7 @@ type UserRepository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*model.User, error)
 	Create(ctx context.Context, user *model.User) error
 	UpdateLastLogin(ctx context.Context, id uuid.UUID) error
+	Search(ctx context.Context, query string) ([]model.User, error)
 }
 
 // APIKeyRepository defines the persistence operations the auth service needs for API keys.
@@ -119,6 +120,18 @@ func (s *AuthService) GetUser(ctx context.Context, id uuid.UUID) (*model.User, e
 		return nil, fmt.Errorf("getting user: %w", err)
 	}
 	return user, nil
+}
+
+// SearchUsers finds active users matching a query string (by email or display name).
+func (s *AuthService) SearchUsers(ctx context.Context, query string) ([]model.User, error) {
+	if len(query) < 2 {
+		return nil, nil
+	}
+	users, err := s.users.Search(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("searching users: %w", err)
+	}
+	return users, nil
 }
 
 // ValidateJWT parses and validates a JWT token string.

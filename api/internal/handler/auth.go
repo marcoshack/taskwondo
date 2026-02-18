@@ -222,6 +222,34 @@ func (h *AuthHandler) CreateAPIKey(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// SearchUsers handles GET /api/v1/users/search?q=...
+func (h *AuthHandler) SearchUsers(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	query := r.URL.Query().Get("q")
+	if query == "" {
+		writeData(w, http.StatusOK, []userResponse{})
+		return
+	}
+
+	users, err := h.auth.SearchUsers(r.Context(), query)
+	if err != nil {
+		log.Ctx(r.Context()).Error().Err(err).Msg("failed to search users")
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		return
+	}
+
+	resp := make([]userResponse, len(users))
+	for i := range users {
+		resp[i] = toUserResponse(&users[i])
+	}
+	writeData(w, http.StatusOK, resp)
+}
+
 // DeleteAPIKey deletes an API key by ID.
 func (h *AuthHandler) DeleteAPIKey(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())

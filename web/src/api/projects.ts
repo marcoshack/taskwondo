@@ -54,6 +54,24 @@ export async function listMembers(projectKey: string) {
   return res.data.data
 }
 
+export interface AddMemberInput {
+  user_id: string
+  role: string
+}
+
+export async function addMember(projectKey: string, input: AddMemberInput) {
+  const res = await api.post<{ data: ProjectMember }>(`/projects/${projectKey}/members`, input)
+  return res.data.data
+}
+
+export async function updateMemberRole(projectKey: string, userId: string, role: string) {
+  await api.patch(`/projects/${projectKey}/members/${userId}`, { role })
+}
+
+export async function removeMember(projectKey: string, userId: string) {
+  await api.delete(`/projects/${projectKey}/members/${userId}`)
+}
+
 export interface UpdateProjectInput {
   name?: string
   description?: string | null

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -58,6 +59,17 @@ func (m *mockUserRepo) UpdateLastLogin(_ context.Context, id uuid.UUID) error {
 		u.LastLoginAt = &now
 	}
 	return nil
+}
+
+func (m *mockUserRepo) Search(_ context.Context, query string) ([]model.User, error) {
+	var result []model.User
+	q := strings.ToLower(query)
+	for _, u := range m.byID {
+		if u.IsActive && (strings.Contains(strings.ToLower(u.Email), q) || strings.Contains(strings.ToLower(u.DisplayName), q)) {
+			result = append(result, *u)
+		}
+	}
+	return result, nil
 }
 
 type mockAPIKeyRepo struct {
