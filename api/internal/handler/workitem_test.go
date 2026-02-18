@@ -129,6 +129,7 @@ type mockWorkItemRepo struct {
 	items        map[uuid.UUID]*model.WorkItem
 	byProjectNum map[string]*model.WorkItem
 	counters     map[uuid.UUID]int
+	projectKeys  map[uuid.UUID]string
 }
 
 func newMockWorkItemRepo() *mockWorkItemRepo {
@@ -136,6 +137,7 @@ func newMockWorkItemRepo() *mockWorkItemRepo {
 		items:        make(map[uuid.UUID]*model.WorkItem),
 		byProjectNum: make(map[string]*model.WorkItem),
 		counters:     make(map[uuid.UUID]int),
+		projectKeys:  make(map[uuid.UUID]string),
 	}
 }
 
@@ -146,6 +148,9 @@ func wiKey(projectID uuid.UUID, itemNumber int) string {
 func (m *mockWorkItemRepo) Create(_ context.Context, item *model.WorkItem) error {
 	m.counters[item.ProjectID]++
 	item.ItemNumber = m.counters[item.ProjectID]
+	if key, ok := m.projectKeys[item.ProjectID]; ok {
+		item.DisplayID = fmt.Sprintf("%s-%d", key, item.ItemNumber)
+	}
 	now := time.Now()
 	item.CreatedAt = now
 	item.UpdatedAt = now
@@ -617,6 +622,7 @@ func workItemTestSetup(t *testing.T) (*WorkItemHandler, *model.AuthInfo, string)
 	// Create a project and add the user as owner
 	project := &model.Project{ID: uuid.New(), Name: "Test Project", Key: "TEST"}
 	projectRepo.Create(context.Background(), project)
+	itemRepo.projectKeys[project.ID] = project.Key
 	memberRepo.Add(context.Background(), &model.ProjectMember{
 		ID:        uuid.New(),
 		ProjectID: project.ID,

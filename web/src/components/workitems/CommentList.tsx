@@ -36,18 +36,20 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
   // Use lifted state from parent if provided, otherwise fall back to local state
   const [localBody, setLocalBody] = useState('')
   const newBody = draft ?? localBody
+  // Ref keeps the latest value so async callbacks (paste-upload) never read a stale draft.
+  const draftRef = useRef(newBody)
+  draftRef.current = newBody
   const setNewBody = useCallback((value: string | ((prev: string) => string)) => {
     if (onDraftChange) {
       if (typeof value === 'function') {
-        // onDraftChange is a plain setter; resolve the updater with current draft
-        onDraftChange(value(draft ?? ''))
+        onDraftChange(value(draftRef.current))
       } else {
         onDraftChange(value)
       }
     } else {
       setLocalBody(value)
     }
-  }, [onDraftChange, draft])
+  }, [onDraftChange])
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editBody, setEditBody] = useState('')
   const [deletingId, setDeletingId] = useState<string | null>(null)
