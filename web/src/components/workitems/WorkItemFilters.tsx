@@ -1,4 +1,5 @@
 import { useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Input } from '@/components/ui/Input'
 import { MultiSelect, type MultiSelectOption } from '@/components/ui/MultiSelect'
 import type { WorkItemFilter } from '@/api/workitems'
@@ -12,38 +13,39 @@ interface WorkItemFiltersProps {
   onSearchChange: (value: string) => void
 }
 
-const typeOptions: MultiSelectOption[] = [
-  { value: 'task', label: 'Task' },
-  { value: 'ticket', label: 'Ticket' },
-  { value: 'bug', label: 'Bug' },
-  { value: 'feedback', label: 'Feedback' },
-  { value: 'epic', label: 'Epic' },
-]
-
-const priorityOptions: MultiSelectOption[] = [
-  { value: 'critical', label: 'Critical' },
-  { value: 'high', label: 'High' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'low', label: 'Low' },
-]
-
-const assigneeOptions: MultiSelectOption[] = [
-  { value: 'me', label: 'Assigned to me' },
-  { value: 'unassigned', label: 'Unassigned' },
-]
-
 const closedCategories = new Set(['done', 'cancelled'])
 
-function buildStatusOptions(statuses: WorkflowStatus[]): MultiSelectOption[] {
-  return statuses.map((s) => ({
-    value: s.name,
-    label: s.display_name,
-    group: closedCategories.has(s.category) ? 'Closed' : 'Open',
-  }))
-}
-
 export function WorkItemFilters({ filter, onFilterChange, statuses, search, onSearchChange }: WorkItemFiltersProps) {
+  const { t } = useTranslation()
   const searchRef = useRef<HTMLInputElement>(null)
+
+  const typeOptions: MultiSelectOption[] = [
+    { value: 'task', label: t('workitems.types.task') },
+    { value: 'ticket', label: t('workitems.types.ticket') },
+    { value: 'bug', label: t('workitems.types.bug') },
+    { value: 'feedback', label: t('workitems.types.feedback') },
+    { value: 'epic', label: t('workitems.types.epic') },
+  ]
+
+  const priorityOptions: MultiSelectOption[] = [
+    { value: 'critical', label: t('workitems.priorities.critical') },
+    { value: 'high', label: t('workitems.priorities.high') },
+    { value: 'medium', label: t('workitems.priorities.medium') },
+    { value: 'low', label: t('workitems.priorities.low') },
+  ]
+
+  const assigneeOptions: MultiSelectOption[] = [
+    { value: 'me', label: t('workitems.filters.assignedToMe') },
+    { value: 'unassigned', label: t('workitems.filters.unassigned') },
+  ]
+
+  function buildStatusOptions(ss: WorkflowStatus[]): MultiSelectOption[] {
+    return ss.map((s) => ({
+      value: s.name,
+      label: s.display_name,
+      group: closedCategories.has(s.category) ? t('workitems.filters.statusGroupClosed') : t('workitems.filters.statusGroupOpen'),
+    }))
+  }
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -69,7 +71,7 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, search, onSe
       <div className="flex-1 min-w-[200px]">
         <Input
           ref={searchRef}
-          placeholder="Search items... ( / )"
+          placeholder={t('workitems.filters.search')}
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
         />
@@ -79,7 +81,7 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, search, onSe
           options={typeOptions}
           selected={filter.type ?? []}
           onChange={(v) => setArray('type', v)}
-          placeholder="All types"
+          placeholder={t('workitems.filters.allTypes')}
         />
       </div>
       <div className="w-36">
@@ -87,7 +89,7 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, search, onSe
           options={priorityOptions}
           selected={filter.priority ?? []}
           onChange={(v) => setArray('priority', v)}
-          placeholder="All priorities"
+          placeholder={t('workitems.filters.allPriorities')}
         />
       </div>
       <div className="w-40">
@@ -95,7 +97,7 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, search, onSe
           options={statusOptions}
           selected={filter.status ?? []}
           onChange={(v) => setArray('status', v)}
-          placeholder="All statuses"
+          placeholder={t('workitems.filters.allStatuses')}
         />
       </div>
       <div className="w-40">
@@ -103,7 +105,7 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, search, onSe
           options={assigneeOptions}
           selected={filter.assignee ?? []}
           onChange={(v) => setArray('assignee', v)}
-          placeholder="All assignees"
+          placeholder={t('workitems.filters.allAssignees')}
         />
       </div>
     </div>

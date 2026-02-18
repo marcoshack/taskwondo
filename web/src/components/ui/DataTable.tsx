@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 
 export interface Column<T> {
   key: string
@@ -42,9 +43,11 @@ function SortIndicator({ active, direction }: { active: boolean; direction?: 'as
 }
 
 export function DataTable<T>({
-  columns, data, onRowClick, emptyMessage = 'No data',
+  columns, data, onRowClick, emptyMessage,
   sortBy, sortOrder, onSort,
 }: DataTableProps<T>) {
+  const { t } = useTranslation()
+  const resolvedEmptyMessage = emptyMessage ?? t('common.noData')
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -72,7 +75,7 @@ export function DataTable<T>({
           {data.length === 0 ? (
             <tr>
               <td colSpan={columns.length} className="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
-                {emptyMessage}
+                {resolvedEmptyMessage}
               </td>
             </tr>
           ) : (

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useComments, useCreateComment, useUpdateComment, useDeleteComment } from '@/hooks/useWorkItems'
 import { useAuth } from '@/contexts/AuthContext'
 import { useMembers } from '@/hooks/useProjects'
@@ -20,6 +21,7 @@ interface CommentListProps {
 }
 
 export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highlightedCommentId, onHighlightClear }: CommentListProps) {
+  const { t } = useTranslation()
   const { user } = useAuth()
   const { data: comments, isLoading } = useComments(projectKey, itemNumber)
   const { data: members } = useMembers(projectKey)
@@ -82,9 +84,9 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
   })
 
   function authorName(authorId: string | null): string {
-    if (!authorId) return 'Unknown'
+    if (!authorId) return t('common.unknown')
     const member = members?.find((m) => m.user_id === authorId)
-    return member?.display_name ?? 'Unknown'
+    return member?.display_name ?? t('common.unknown')
   }
 
   if (isLoading) return <Spinner size="sm" />
@@ -95,7 +97,7 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
         <textarea
           className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm"
           rows={3}
-          placeholder="Add a comment... (paste or drag files to attach)"
+          placeholder={t('comments.placeholder')}
           value={newBody}
           onChange={(e) => setNewBody(e.target.value)}
           onPaste={handlePaste}
@@ -111,7 +113,7 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
           }}
           disabled={!newBody.trim() || createMutation.isPending}
         >
-          {createMutation.isPending ? 'Adding...' : 'Add Comment'}
+          {createMutation.isPending ? t('comments.adding') : t('comments.add')}
         </Button>
       </div>
 
@@ -129,7 +131,7 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
                 className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 flex items-center gap-1"
                 onClick={() => addCommentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
               >
-                &uarr; Top
+                &uarr; {t('common.top')}
               </button>
             </div>
           )}
@@ -151,9 +153,9 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
                   }}
                   disabled={updateMutation.isPending}
                 >
-                  Save
+                  {t('common.save')}
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>Cancel</Button>
+                <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>{t('common.cancel')}</Button>
               </div>
             </div>
           ) : (
@@ -163,7 +165,7 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{authorName(c.author_id)}</span>
                 <span className="text-xs text-gray-400 dark:text-gray-500">
                   {new Date(c.created_at).toLocaleString()}
-                  {c.edit_count > 0 && <span className="ml-1 italic">(edited {c.edit_count} {c.edit_count === 1 ? 'time' : 'times'})</span>}
+                  {c.edit_count > 0 && <span className="ml-1 italic">{t('comments.editCount', { count: c.edit_count })}</span>}
                 </span>
                 <CopyButton text={c.body} className="opacity-0 group-hover/comment:opacity-100" />
               </div>
@@ -180,13 +182,13 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
                       className="text-xs text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
                       onClick={() => { setEditingId(c.id); setEditBody(c.body) }}
                     >
-                      Edit
+                      {t('common.edit')}
                     </button>
                     <button
                       className="text-xs text-red-400 hover:text-red-600 dark:hover:text-red-300"
-                      onClick={() => { if (confirm('Delete this comment?')) deleteMutation.mutate(c.id) }}
+                      onClick={() => { if (confirm(t('comments.deleteConfirm'))) deleteMutation.mutate(c.id) }}
                     >
-                      Delete
+                      {t('common.delete')}
                     </button>
                   </>
                 )}

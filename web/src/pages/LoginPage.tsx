@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { isAxiosError } from 'axios'
 
 export function LoginPage() {
+  const { t } = useTranslation()
   const { user, login } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -27,7 +29,7 @@ export function LoginPage() {
       if (isAxiosError(err) && err.response?.data?.error?.message) {
         setError(err.response.data.error.message)
       } else {
-        setError('Login failed. Please try again.')
+        setError(t('login.error'))
       }
     } finally {
       setLoading(false)
@@ -38,11 +40,11 @@ export function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
       <div className="max-w-sm w-full">
         <h1 className="text-2xl font-bold text-center text-gray-900 dark:text-gray-100 mb-8">
-          Sign in to TrackForge
+          {t('login.title')}
         </h1>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
-            label="Email"
+            label={t('login.email')}
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -50,7 +52,7 @@ export function LoginPage() {
             autoComplete="email"
           />
           <Input
-            label="Password"
+            label={t('login.password')}
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -61,7 +63,7 @@ export function LoginPage() {
             <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
           )}
           <Button type="submit" disabled={loading} className="w-full">
-            {loading ? 'Signing in...' : 'Sign in'}
+            {loading ? t('login.submitting') : t('login.submit')}
           </Button>
         </form>
       </div>

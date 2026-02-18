@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAttachments, useUploadAttachment, useDeleteAttachment } from '@/hooks/useWorkItems'
 import { useAuth } from '@/contexts/AuthContext'
 import { useMembers } from '@/hooks/useProjects'
@@ -21,6 +22,7 @@ function formatFileSize(bytes: number): string {
 }
 
 export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc', highlightedAttachmentId, onHighlightClear }: AttachmentListProps) {
+  const { t } = useTranslation()
   const { user } = useAuth()
   const { data: attachments, isLoading } = useAttachments(projectKey, itemNumber)
   const { data: members } = useMembers(projectKey)
@@ -40,7 +42,7 @@ export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc', hig
 
   function uploaderName(uploaderId: string): string {
     const member = members?.find((m) => m.user_id === uploaderId)
-    return member?.display_name ?? 'Unknown'
+    return member?.display_name ?? t('common.unknown')
   }
 
   async function handleDownload(attachmentId: string, filename: string) {
@@ -84,7 +86,7 @@ export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc', hig
         <input
           type="text"
           className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-1.5 text-sm"
-          placeholder="Optional comment/description..."
+          placeholder={t('attachments.commentPlaceholder')}
           value={comment}
           onChange={(e) => setComment(e.target.value)}
         />
@@ -99,7 +101,7 @@ export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc', hig
           {uploadMutation.isPending && <Spinner size="sm" />}
         </div>
         {uploadMutation.isError && (
-          <p className="text-xs text-red-500">Upload failed. Please try again.</p>
+          <p className="text-xs text-red-500">{t('attachments.uploadFailed')}</p>
         )}
       </div>
 
@@ -130,17 +132,17 @@ export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc', hig
             <button
               className="text-xs text-red-400 hover:text-red-600 dark:hover:text-red-300 shrink-0"
               onClick={() => {
-                if (confirm('Delete this attachment?')) deleteMutation.mutate(a.id)
+                if (confirm(t('attachments.deleteConfirm'))) deleteMutation.mutate(a.id)
               }}
             >
-              Delete
+              {t('common.delete')}
             </button>
           )}
         </div>
       ))}
 
       {(attachments ?? []).length === 0 && (
-        <p className="text-sm text-gray-400 italic">No attachments yet.</p>
+        <p className="text-sm text-gray-400 italic">{t('attachments.noAttachments')}</p>
       )}
     </div>
   )

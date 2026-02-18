@@ -1,19 +1,21 @@
 import { NavLink } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 
 interface SidebarProps {
   projectKey: string
 }
 
-const navItems = [
-  { to: '', label: 'Overview', end: true },
-  { to: 'items', label: 'Items', end: false },
-  { to: 'queues', label: 'Queues', end: false },
-  { to: 'milestones', label: 'Milestones', end: false },
-  { to: 'settings', label: 'Settings', end: false },
-]
-
 export function Sidebar({ projectKey }: SidebarProps) {
+  const { t } = useTranslation()
   const base = `/projects/${projectKey}`
+
+  const navItems = [
+    { to: '', label: t('sidebar.overview'), end: true },
+    { to: 'items', label: t('sidebar.items'), end: false },
+    { to: 'queues', label: t('sidebar.queues'), end: false },
+    { to: 'milestones', label: t('sidebar.milestones'), end: false },
+    { to: 'settings', label: t('sidebar.settings'), end: false },
+  ]
 
   return (
     <nav className="w-48 shrink-0">

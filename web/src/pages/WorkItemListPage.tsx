@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useWorkItems, useCreateWorkItem, useBulkUpdateWorkItems } from '@/hooks/useWorkItems'
 import { useMembers } from '@/hooks/useProjects'
 import { useProjectWorkflow } from '@/hooks/useWorkflows'
@@ -68,6 +69,7 @@ function buildUrlParams(filter: WorkItemFilter, search: string, view: ViewMode, 
 }
 
 export function WorkItemListPage() {
+  const { t } = useTranslation()
   const { projectKey } = useParams<{ projectKey: string }>()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -256,41 +258,41 @@ export function WorkItemListPage() {
     },
     {
       key: 'display_id',
-      header: 'ID',
+      header: t('workitems.table.id'),
       className: 'w-28',
       sortKey: 'item_number',
       render: (row) => <span className="font-mono text-gray-500 dark:text-gray-400">{row.display_id}</span>,
     },
     {
       key: 'type',
-      header: 'Type',
+      header: t('workitems.table.type'),
       className: 'w-24',
       sortKey: 'type',
       render: (row) => <TypeBadge type={row.type} />,
     },
     {
       key: 'title',
-      header: 'Title',
+      header: t('workitems.table.title'),
       sortKey: 'title',
       render: (row) => <span className="font-medium text-gray-900 dark:text-gray-100 truncate max-w-xs block">{row.title}</span>,
     },
     {
       key: 'status',
-      header: 'Status',
+      header: t('workitems.table.status'),
       className: 'w-32',
       sortKey: 'status',
       render: (row) => <StatusBadge status={row.status} statuses={statuses} />,
     },
     {
       key: 'priority',
-      header: 'Priority',
+      header: t('workitems.table.priority'),
       className: 'w-28',
       sortKey: 'priority',
       render: (row) => <PriorityBadge priority={row.priority} />,
     },
     {
       key: 'updated',
-      header: 'Updated',
+      header: t('workitems.table.updated'),
       className: 'w-36',
       sortKey: 'updated_at',
       render: (row) => <span className="text-gray-500 dark:text-gray-400">{new Date(row.updated_at).toLocaleDateString()}</span>,
@@ -300,7 +302,7 @@ export function WorkItemListPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Work Items</h2>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('workitems.title')}</h2>
         <div className="flex items-center gap-2">
           <div className="inline-flex rounded-md shadow-sm">
             <button
@@ -309,7 +311,7 @@ export function WorkItemListPage() {
               }`}
               onClick={() => handleViewChange('list')}
             >
-              List
+              {t('workitems.view.list')}
             </button>
             <button
               className={`px-3 py-1.5 text-sm font-medium rounded-r-md border-t border-r border-b ${
@@ -317,10 +319,10 @@ export function WorkItemListPage() {
               }`}
               onClick={() => handleViewChange('board')}
             >
-              Board
+              {t('workitems.view.board')}
             </button>
           </div>
-          <Button onClick={() => setShowCreate(true)}>New Item</Button>
+          <Button onClick={() => setShowCreate(true)}>{t('workitems.new')}</Button>
         </div>
       </div>
 
@@ -335,10 +337,10 @@ export function WorkItemListPage() {
       {/* Bulk action toolbar */}
       {selected.size > 0 && (
         <div className="flex items-center gap-3 rounded-md bg-indigo-50 dark:bg-indigo-900/30 px-4 py-2">
-          <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">{selected.size} selected</span>
+          <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">{t('workitems.selected', { count: selected.size })}</span>
           <div className="w-40">
             <Select onChange={(e) => handleBulkStatus(e.target.value)} value="">
-              <option value="">Change status...</option>
+              <option value="">{t('workitems.bulk.changeStatus')}</option>
               {statuses.map((s) => (
                 <option key={s.name} value={s.name}>{s.display_name}</option>
               ))}
@@ -346,14 +348,14 @@ export function WorkItemListPage() {
           </div>
           <div className="w-44">
             <Select onChange={(e) => handleBulkAssign(e.target.value)} value="">
-              <option value="">Assign...</option>
-              <option value="unassign">Unassign</option>
+              <option value="">{t('workitems.bulk.assign')}</option>
+              <option value="unassign">{t('workitems.bulk.unassign')}</option>
               {(members ?? []).map((m) => (
                 <option key={m.user_id} value={m.user_id}>{m.display_name}</option>
               ))}
             </Select>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>Clear</Button>
+          <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>{t('common.clear')}</Button>
           {bulkMutation.isPending && <Spinner size="sm" />}
         </div>
       )}
@@ -372,14 +374,14 @@ export function WorkItemListPage() {
                   checked={items.length > 0 && selected.size === items.length}
                   onChange={toggleSelectAll}
                 />
-                Select all
+                {t('common.selectAll')}
               </label>
             </div>
             <DataTable
               columns={columns}
               data={allItems}
               onRowClick={(row) => navigate(`/projects/${projectKey}/items/${row.item_number}`)}
-              emptyMessage="No work items found"
+              emptyMessage={t('workitems.empty')}
               sortBy={sort}
               sortOrder={order}
               onSort={handleSort}
@@ -396,7 +398,7 @@ export function WorkItemListPage() {
                   setLoadedPages((prev) => [...prev, next.data])
                 }}
               >
-                Load more
+                {t('common.loadMore')}
               </Button>
             </div>
           )}
@@ -411,7 +413,7 @@ export function WorkItemListPage() {
         />
       )}
 
-      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="New Work Item">
+      <Modal open={showCreate} onClose={() => setShowCreate(false)} title={t('workitems.newTitle')}>
         <WorkItemForm
           mode="create"
           members={members ?? []}

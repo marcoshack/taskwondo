@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 
 export interface MultiSelectOption {
   value: string
@@ -15,6 +16,7 @@ interface MultiSelectProps {
 }
 
 export function MultiSelect({ options, selected, onChange, placeholder = 'All', className = '' }: MultiSelectProps) {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -50,7 +52,7 @@ export function MultiSelect({ options, selected, onChange, placeholder = 'All', 
       ? placeholder
       : selected.length === 1
         ? options.find((o) => o.value === selected[0])?.label ?? selected[0]
-        : `${selected.length} selected`
+        : t('multiSelect.selected', { count: selected.length })
 
   // Group options if any have a group
   const hasGroups = options.some((o) => o.group)
@@ -86,10 +88,10 @@ export function MultiSelect({ options, selected, onChange, placeholder = 'All', 
         <div className="absolute z-20 mt-1 w-full min-w-[180px] rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg">
           <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-100 dark:border-gray-700">
             <button type="button" className="text-xs text-indigo-600 hover:text-indigo-800" onClick={selectAll}>
-              All
+              {t('common.all')}
             </button>
             <button type="button" className="text-xs text-gray-400 hover:text-gray-600" onClick={clearAll}>
-              None
+              {t('common.none')}
             </button>
           </div>
           <div className="max-h-60 overflow-y-auto py-1">

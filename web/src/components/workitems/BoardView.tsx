@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useUpdateWorkItem } from '@/hooks/useWorkItems'
 import { PriorityBadge } from './PriorityBadge'
 import { TypeBadge } from './TypeBadge'
@@ -76,8 +77,9 @@ function BoardCard({
   onClick: () => void
   onStatusChange: (status: string) => void
 }) {
+  const { t } = useTranslation()
   const [showMenu, setShowMenu] = useState(false)
-  const allowed = transitionsMap?.[item.status]?.map((t) => t.to_status) ?? []
+  const allowed = transitionsMap?.[item.status]?.map((tr) => tr.to_status) ?? []
 
   return (
     <div
@@ -91,7 +93,7 @@ function BoardCard({
             <button
               className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-xs px-1"
               onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu) }}
-              title="Move to..."
+              title={t('workitems.view.moveTo')}
             >
               &hellip;
             </button>

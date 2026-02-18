@@ -1,4 +1,5 @@
 import { Outlet, Link, useNavigate, useMatch } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/contexts/AuthContext'
 import { useProject, useProjects } from '@/hooks/useProjects'
 import { Avatar } from '@/components/ui/Avatar'
@@ -7,6 +8,7 @@ import { Spinner } from '@/components/ui/Spinner'
 import { useState, useRef, useEffect } from 'react'
 
 export function AppShell() {
+  const { t } = useTranslation()
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -54,7 +56,7 @@ export function AppShell() {
           <div className="flex justify-between h-14">
             <div className="flex items-center gap-6">
               <Link to="/projects" className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
-                TrackForge
+                {t('brand.name')}
               </Link>
               {activeProject && (
                 <button
@@ -87,13 +89,13 @@ export function AppShell() {
                     onClick={() => { setMenuOpen(false); navigate('/preferences') }}
                     className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                   >
-                    Preferences
+                    {t('nav.preferences')}
                   </button>
                   <button
                     onClick={handleLogout}
                     className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                   >
-                    Sign out
+                    {t('nav.signOut')}
                   </button>
                 </div>
               )}
@@ -128,6 +130,7 @@ function ProjectSwitcherModal({
   activeProjectKey?: string
   onSelect: (key: string) => void
 }) {
+  const { t } = useTranslation()
   const { data: projects, isLoading } = useProjects()
   const [search, setSearch] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -146,11 +149,11 @@ function ProjectSwitcherModal({
   })
 
   return (
-    <Modal open={open} onClose={onClose} title="Switch Project" position="top">
+    <Modal open={open} onClose={onClose} title={t('projects.switcher.title')} position="top">
       <input
         ref={inputRef}
         type="text"
-        placeholder="Search projects..."
+        placeholder={t('projects.switcher.search')}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         onKeyDown={(e) => {
@@ -164,7 +167,7 @@ function ProjectSwitcherModal({
       {isLoading ? (
         <div className="flex justify-center py-6"><Spinner /></div>
       ) : filtered.length === 0 ? (
-        <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">No projects found.</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">{t('projects.noProjectsFound')}</p>
       ) : (
         <ul className="max-h-64 overflow-y-auto -mx-2">
           {filtered.map((p, i) => (
@@ -182,7 +185,7 @@ function ProjectSwitcherModal({
                 </span>
                 <span className="text-gray-900 dark:text-gray-100 font-medium truncate">{p.name}</span>
                 {p.key === activeProjectKey && (
-                  <span className="ml-auto text-xs text-indigo-600 dark:text-indigo-400 shrink-0">Current</span>
+                  <span className="ml-auto text-xs text-indigo-600 dark:text-indigo-400 shrink-0">{t('common.current')}</span>
                 )}
               </button>
             </li>

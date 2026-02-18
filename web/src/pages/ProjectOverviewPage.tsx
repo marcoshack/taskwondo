@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useProject, useMembers } from '@/hooks/useProjects'
@@ -11,22 +12,22 @@ import { Spinner } from '@/components/ui/Spinner'
 const closedCategories = new Set(['done', 'cancelled'])
 const primaryTypes = new Set(['task', 'ticket', 'bug'])
 
-const panels = [
-  { key: 'task', label: 'Tasks', color: 'text-blue-700 dark:text-blue-400', iconBg: 'bg-blue-100 dark:bg-blue-900/30' },
-  { key: 'ticket', label: 'Tickets', color: 'text-indigo-700 dark:text-indigo-300', iconBg: 'bg-indigo-100 dark:bg-indigo-900/30' },
-  { key: 'bug', label: 'Bugs', color: 'text-red-700 dark:text-red-400', iconBg: 'bg-red-100 dark:bg-red-900/30' },
-  { key: 'other', label: 'Other', color: 'text-yellow-700 dark:text-yellow-400', iconBg: 'bg-yellow-100 dark:bg-yellow-900/30' },
-  { key: 'total', label: 'Total', color: 'text-gray-900 dark:text-gray-100', iconBg: 'bg-gray-200 dark:bg-gray-600' },
-]
-
 export function ProjectOverviewPage() {
+  const { t } = useTranslation()
   const { projectKey } = useParams<{ projectKey: string }>()
   const navigate = useNavigate()
   const { data: project } = useProject(projectKey ?? '')
   const { data: members, isLoading: membersLoading } = useMembers(projectKey ?? '')
   const { statuses } = useProjectWorkflow(projectKey ?? '')
 
-  // Compute open status names (exclude done/cancelled categories)
+  const panels = [
+    { key: 'task', label: t('projects.overview.tasks'), color: 'text-blue-700 dark:text-blue-400', iconBg: 'bg-blue-100 dark:bg-blue-900/30' },
+    { key: 'ticket', label: t('projects.overview.tickets'), color: 'text-indigo-700 dark:text-indigo-300', iconBg: 'bg-indigo-100 dark:bg-indigo-900/30' },
+    { key: 'bug', label: t('projects.overview.bugs'), color: 'text-red-700 dark:text-red-400', iconBg: 'bg-red-100 dark:bg-red-900/30' },
+    { key: 'other', label: t('projects.overview.other'), color: 'text-yellow-700 dark:text-yellow-400', iconBg: 'bg-yellow-100 dark:bg-yellow-900/30' },
+    { key: 'total', label: t('projects.overview.total'), color: 'text-gray-900 dark:text-gray-100', iconBg: 'bg-gray-200 dark:bg-gray-600' },
+  ]
+
   const openStatusNames = useMemo(
     () => statuses.filter((s) => !closedCategories.has(s.category)).map((s) => s.name),
     [statuses],
@@ -37,7 +38,6 @@ export function ProjectOverviewPage() {
     status: openStatusNames.length ? openStatusNames : undefined,
   })
 
-  // Count open items by panel category
   const counts = useMemo(() => {
     const byKey: Record<string, number> = { task: 0, ticket: 0, bug: 0, other: 0, total: 0 }
     const otherTypes: string[] = []
@@ -56,7 +56,7 @@ export function ProjectOverviewPage() {
   }, [itemsData])
 
   const allTypes = ['task', 'ticket', 'bug', 'feedback', 'epic']
-  const otherTypes = allTypes.filter((t) => !primaryTypes.has(t))
+  const otherTypes = allTypes.filter((tp) => !primaryTypes.has(tp))
 
   function navigateToItems(panelKey: string) {
     const params = new URLSearchParams()
@@ -66,7 +66,6 @@ export function ProjectOverviewPage() {
     } else if (panelKey === 'other') {
       params.set('type', otherTypes.join(','))
     } else {
-      // total — all types
       params.set('type', allTypes.join(','))
     }
     navigate(`/projects/${projectKey}/items?${params.toString()}`)
@@ -76,10 +75,9 @@ export function ProjectOverviewPage() {
 
   return (
     <div className="space-y-6">
-      {/* Stats row */}
       <div>
         <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
-          Open Work Items
+          {t('projects.overview.openWorkItems')}
         </h2>
         {loading ? (
           <div className="flex items-center justify-center py-8">
@@ -106,12 +104,10 @@ export function ProjectOverviewPage() {
         )}
       </div>
 
-      {/* Description + Members */}
       <div className="flex gap-6">
-        {/* Description — left 80% */}
         <div className="w-4/5 min-w-0">
           <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
-            About
+            {t('projects.overview.about')}
           </h2>
           <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm">
             {project?.description ? (
@@ -119,21 +115,20 @@ export function ProjectOverviewPage() {
                 <Markdown remarkPlugins={[remarkGfm]}>{project.description}</Markdown>
               </div>
             ) : (
-              <p className="text-sm text-gray-400 dark:text-gray-500 italic">No description provided.</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 italic">{t('projects.overview.noDescription')}</p>
             )}
           </div>
         </div>
 
-        {/* Members — right 20% */}
         <div className="w-1/5 min-w-[160px]">
           <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
-            Members
+            {t('projects.overview.members')}
           </h2>
           <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 shadow-sm">
             {membersLoading ? (
               <Spinner />
             ) : !members || members.length === 0 ? (
-              <p className="text-sm text-gray-400 dark:text-gray-500">No members.</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500">{t('projects.overview.noMembers')}</p>
             ) : (
               <ul className="space-y-3">
                 {members.map((member) => (

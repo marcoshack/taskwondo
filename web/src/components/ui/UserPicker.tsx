@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { ProjectMember } from '@/api/projects'
 
 interface UserPickerProps {
@@ -8,7 +9,8 @@ interface UserPickerProps {
   placeholder?: string
 }
 
-export function UserPicker({ members, value, onChange, placeholder = 'Search members...' }: UserPickerProps) {
+export function UserPicker({ members, value, onChange, placeholder }: UserPickerProps) {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
   const ref = useRef<HTMLDivElement>(null)
@@ -46,7 +48,7 @@ export function UserPicker({ members, value, onChange, placeholder = 'Search mem
         {selected ? (
           <span className="text-gray-900 dark:text-gray-100">{selected.display_name}</span>
         ) : (
-          <span className="text-gray-400 dark:text-gray-500">{value ? 'Unknown user' : 'Unassigned'}</span>
+          <span className="text-gray-400 dark:text-gray-500">{value ? t('userPicker.unknownUser') : t('userPicker.unassigned')}</span>
         )}
       </button>
 
@@ -57,7 +59,7 @@ export function UserPicker({ members, value, onChange, placeholder = 'Search mem
             <input
               ref={inputRef}
               className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              placeholder={placeholder}
+              placeholder={placeholder ?? t('userPicker.searchMembers')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -72,7 +74,7 @@ export function UserPicker({ members, value, onChange, placeholder = 'Search mem
                 }`}
                 onClick={() => { onChange(null); setOpen(false); setSearch('') }}
               >
-                Unassigned
+                {t('userPicker.unassigned')}
               </button>
             </li>
             {filtered.map((m) => (
@@ -90,7 +92,7 @@ export function UserPicker({ members, value, onChange, placeholder = 'Search mem
               </li>
             ))}
             {filtered.length === 0 && (
-              <li className="px-3 py-2 text-sm text-gray-400 dark:text-gray-500">No members found</li>
+              <li className="px-3 py-2 text-sm text-gray-400 dark:text-gray-500">{t('userPicker.noMembersFound')}</li>
             )}
           </ul>
         </div>
