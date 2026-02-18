@@ -125,7 +125,7 @@ export function WorkItemListPage() {
   }, [filterInitialized, filter, search, viewMode, setSearchParams])
 
   // Save filter preferences (debounced) — only on manual user changes
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const saveMutationRef = useRef(saveMutation)
   saveMutationRef.current = saveMutation
 
