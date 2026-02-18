@@ -144,6 +144,9 @@ func main() {
 			r.Post("/user/api-keys", auth.CreateAPIKey)
 			r.Delete("/user/api-keys/{keyId}", auth.DeleteAPIKey)
 
+			// User search
+			r.Get("/users/search", auth.SearchUsers)
+
 			// Global user preferences
 			r.Route("/user/preferences", func(r chi.Router) {
 				r.Get("/", userSettings.ListGlobal)

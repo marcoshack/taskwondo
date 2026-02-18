@@ -143,6 +143,7 @@ trackforge/
 - [Architecture](docs/architecture.md) — System design, component details, deployment model
 - [Data Model](docs/data-model.md) — Entities, relationships, database schema
 - [API Design](docs/api-design.md) — REST endpoints, request/response schemas, auth
+- [Access Control](docs/access-control.md) - How user permissions are structured
 - [Workflows](docs/workflows.md) — Work item lifecycles, automation rules, state machines
 - [Public Portal](docs/public-portal.md) — Public interface spec, permissions, submission flow
 - [Integrations](docs/integrations.md) — Prometheus, Discord, email, webhooks
