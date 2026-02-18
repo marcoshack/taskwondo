@@ -19,6 +19,7 @@ import (
 	"github.com/marcoshack/trackforge/internal/middleware"
 	"github.com/marcoshack/trackforge/internal/repository"
 	"github.com/marcoshack/trackforge/internal/service"
+	"github.com/marcoshack/trackforge/internal/storage"
 )
 
 func main() {
@@ -70,6 +71,16 @@ func main() {
 	queueRepo := repository.NewQueueRepository(db)
 	milestoneRepo := repository.NewMilestoneRepository(db)
 	userSettingRepo := repository.NewUserSettingRepository(db)
+	attachmentRepo := repository.NewAttachmentRepository(db)
+
+	// Initialize storage
+	store, err := storage.NewMinIOStorage(
+		cfg.StorageEndpoint, cfg.StorageAccessKey, cfg.StorageSecretKey,
+		cfg.StorageBucket, cfg.StorageRegion, cfg.StorageUseSSL,
+	)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to initialize storage")
+	}
 
 	// Initialize services
 	authService := service.NewAuthService(userRepo, apiKeyRepo, cfg.JWTSecret, cfg.JWTExpiry)
@@ -77,7 +88,7 @@ func main() {
 	workflowService := service.NewWorkflowService(workflowRepo)
 	queueService := service.NewQueueService(queueRepo, projectRepo, projectMemberRepo)
 	milestoneService := service.NewMilestoneService(milestoneRepo, projectRepo, projectMemberRepo)
-	workItemService := service.NewWorkItemService(workItemRepo, workItemEventRepo, commentRepo, relationRepo, projectRepo, projectMemberRepo, workflowRepo, queueRepo, milestoneRepo)
+	workItemService := service.NewWorkItemService(workItemRepo, workItemEventRepo, commentRepo, relationRepo, attachmentRepo, projectRepo, projectMemberRepo, workflowRepo, queueRepo, milestoneRepo, store, cfg.MaxUploadSize)
 	userSettingService := service.NewUserSettingService(userSettingRepo, projectRepo, projectMemberRepo)
 
 	// Seed admin user if configured
@@ -99,7 +110,7 @@ func main() {
 	workflows := handler.NewWorkflowHandler(workflowService)
 	queues := handler.NewQueueHandler(queueService)
 	milestones := handler.NewMilestoneHandler(milestoneService)
-	items := handler.NewWorkItemHandler(workItemService)
+	items := handler.NewWorkItemHandler(workItemService, cfg.MaxUploadSize)
 	userSettings := handler.NewUserSettingHandler(userSettingService)
 
 	// Set up router
@@ -212,6 +223,12 @@ func main() {
 								r.Post("/", items.CreateRelation)
 								r.Delete("/{relationId}", items.DeleteRelation)
 							})
+							r.Route("/attachments", func(r chi.Router) {
+								r.Get("/", items.ListAttachments)
+								r.Post("/", items.UploadAttachment)
+								r.Get("/{attachmentId}", items.DownloadAttachment)
+								r.Delete("/{attachmentId}", items.DeleteAttachment)
+							})
 							r.Get("/events", items.ListEvents)
 						})
 					})
@@ -224,8 +241,8 @@ func main() {
 	srv := &http.Server{
 		Addr:         cfg.ListenAddr(),
 		Handler:      r,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  120 * time.Second,
+		WriteTimeout: 120 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
 

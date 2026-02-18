@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -19,12 +20,13 @@ import (
 
 // WorkItemHandler handles work item endpoints.
 type WorkItemHandler struct {
-	items *service.WorkItemService
+	items         *service.WorkItemService
+	maxUploadSize int64
 }
 
 // NewWorkItemHandler creates a new WorkItemHandler.
-func NewWorkItemHandler(items *service.WorkItemService) *WorkItemHandler {
-	return &WorkItemHandler{items: items}
+func NewWorkItemHandler(items *service.WorkItemService, maxUploadSize int64) *WorkItemHandler {
+	return &WorkItemHandler{items: items, maxUploadSize: maxUploadSize}
 }
 
 // --- Request DTOs ---
@@ -922,6 +924,184 @@ func (h *WorkItemHandler) ListEvents(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeData(w, http.StatusOK, resp)
+}
+
+// --- Attachment DTOs ---
+
+type attachmentResponse struct {
+	ID          uuid.UUID `json:"id"`
+	UploaderID  uuid.UUID `json:"uploader_id"`
+	Filename    string    `json:"filename"`
+	ContentType string    `json:"content_type"`
+	SizeBytes   int64     `json:"size_bytes"`
+	Comment     string    `json:"comment"`
+	DownloadURL string    `json:"download_url"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+func toAttachmentResponse(a *model.Attachment, projectKey string, itemNumber int) attachmentResponse {
+	return attachmentResponse{
+		ID:          a.ID,
+		UploaderID:  a.UploaderID,
+		Filename:    a.Filename,
+		ContentType: a.ContentType,
+		SizeBytes:   a.SizeBytes,
+		Comment:     a.Comment,
+		DownloadURL: fmt.Sprintf("/api/v1/projects/%s/items/%d/attachments/%s", projectKey, itemNumber, a.ID),
+		CreatedAt:   a.CreatedAt,
+	}
+}
+
+// --- Attachment Handlers ---
+
+// UploadAttachment handles POST /api/v1/projects/{projectKey}/items/{itemNumber}/attachments
+func (h *WorkItemHandler) UploadAttachment(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	projectKey := chi.URLParam(r, "projectKey")
+	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		return
+	}
+
+	// Limit request body size (maxUploadSize + 1MB overhead for multipart headers)
+	r.Body = http.MaxBytesReader(w, r.Body, h.maxUploadSize+1024*1024)
+
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
+		if err.Error() == "http: request body too large" {
+			writeError(w, http.StatusRequestEntityTooLarge, "FILE_TOO_LARGE", "file exceeds maximum upload size")
+			return
+		}
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid multipart form")
+		return
+	}
+
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "file field is required")
+		return
+	}
+	defer file.Close()
+
+	comment := r.FormValue("comment")
+
+	contentType := header.Header.Get("Content-Type")
+	if contentType == "" {
+		contentType = "application/octet-stream"
+	}
+
+	attachment, err := h.items.UploadAttachment(r.Context(), info, projectKey, itemNumber, service.CreateAttachmentInput{
+		Filename:    header.Filename,
+		ContentType: contentType,
+		Size:        header.Size,
+		Comment:     comment,
+		Reader:      file,
+	})
+	if err != nil {
+		handleWorkItemError(w, r, err, "failed to upload attachment")
+		return
+	}
+
+	writeData(w, http.StatusCreated, toAttachmentResponse(attachment, projectKey, itemNumber))
+}
+
+// ListAttachments handles GET /api/v1/projects/{projectKey}/items/{itemNumber}/attachments
+func (h *WorkItemHandler) ListAttachments(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	projectKey := chi.URLParam(r, "projectKey")
+	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		return
+	}
+
+	attachments, err := h.items.ListAttachments(r.Context(), info, projectKey, itemNumber)
+	if err != nil {
+		handleWorkItemError(w, r, err, "failed to list attachments")
+		return
+	}
+
+	resp := make([]attachmentResponse, len(attachments))
+	for i := range attachments {
+		resp[i] = toAttachmentResponse(&attachments[i], projectKey, itemNumber)
+	}
+
+	writeData(w, http.StatusOK, resp)
+}
+
+// DownloadAttachment handles GET /api/v1/projects/{projectKey}/items/{itemNumber}/attachments/{attachmentId}
+func (h *WorkItemHandler) DownloadAttachment(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	projectKey := chi.URLParam(r, "projectKey")
+	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		return
+	}
+
+	attachmentID, err := uuid.Parse(chi.URLParam(r, "attachmentId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid attachment ID")
+		return
+	}
+
+	attachment, reader, err := h.items.GetAttachmentFile(r.Context(), info, projectKey, itemNumber, attachmentID)
+	if err != nil {
+		handleWorkItemError(w, r, err, "failed to download attachment")
+		return
+	}
+	defer reader.Close()
+
+	w.Header().Set("Content-Type", attachment.ContentType)
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, attachment.Filename))
+	w.Header().Set("Content-Length", strconv.FormatInt(attachment.SizeBytes, 10))
+	w.WriteHeader(http.StatusOK)
+
+	io.Copy(w, reader)
+}
+
+// DeleteAttachment handles DELETE /api/v1/projects/{projectKey}/items/{itemNumber}/attachments/{attachmentId}
+func (h *WorkItemHandler) DeleteAttachment(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	projectKey := chi.URLParam(r, "projectKey")
+	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		return
+	}
+
+	attachmentID, err := uuid.Parse(chi.URLParam(r, "attachmentId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid attachment ID")
+		return
+	}
+
+	if err := h.items.DeleteAttachment(r.Context(), info, projectKey, itemNumber, attachmentID); err != nil {
+		handleWorkItemError(w, r, err, "failed to delete attachment")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // handleWorkItemError maps service errors to HTTP responses.

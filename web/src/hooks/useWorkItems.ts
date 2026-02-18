@@ -13,6 +13,9 @@ import {
   createRelation,
   deleteRelation,
   listEvents,
+  listAttachments,
+  uploadAttachment,
+  deleteAttachment,
   type WorkItemFilter,
   type CreateWorkItemInput,
   type UpdateWorkItemInput,
@@ -162,5 +165,39 @@ export function useEvents(projectKey: string, itemNumber: number) {
     queryKey: ['projects', projectKey, 'items', itemNumber, 'events'],
     queryFn: () => listEvents(projectKey, itemNumber),
     enabled: !!projectKey && itemNumber > 0,
+  })
+}
+
+// --- Attachment hooks ---
+
+export function useAttachments(projectKey: string, itemNumber: number) {
+  return useQuery({
+    queryKey: ['projects', projectKey, 'items', itemNumber, 'attachments'],
+    queryFn: () => listAttachments(projectKey, itemNumber),
+    enabled: !!projectKey && itemNumber > 0,
+  })
+}
+
+export function useUploadAttachment(projectKey: string, itemNumber: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ file, comment }: { file: File; comment?: string }) =>
+      uploadAttachment(projectKey, itemNumber, file, comment),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['projects', projectKey, 'items', itemNumber, 'attachments'] })
+      qc.invalidateQueries({ queryKey: ['projects', projectKey, 'items', itemNumber, 'events'] })
+    },
+  })
+}
+
+export function useDeleteAttachment(projectKey: string, itemNumber: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (attachmentId: string) =>
+      deleteAttachment(projectKey, itemNumber, attachmentId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['projects', projectKey, 'items', itemNumber, 'attachments'] })
+      qc.invalidateQueries({ queryKey: ['projects', projectKey, 'items', itemNumber, 'events'] })
+    },
   })
 }
