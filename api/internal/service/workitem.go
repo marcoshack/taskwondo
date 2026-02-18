@@ -1196,7 +1196,7 @@ func isValidVisibility(v string) bool {
 
 func isValidSortField(s string) bool {
 	switch s {
-	case "created_at", "updated_at", "priority", "due_date", "item_number":
+	case "created_at", "updated_at", "priority", "due_date", "item_number", "type", "title", "status":
 		return true
 	}
 	return false

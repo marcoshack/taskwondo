@@ -150,7 +150,7 @@ func (r *WorkItemRepository) List(ctx context.Context, projectID uuid.UUID, filt
 	// Determine sort column and order
 	sortCol := "created_at"
 	switch filter.Sort {
-	case "updated_at", "priority", "due_date", "item_number":
+	case "updated_at", "priority", "due_date", "item_number", "type", "title", "status":
 		sortCol = filter.Sort
 	}
 	sortOrder := "DESC"
@@ -158,16 +158,17 @@ func (r *WorkItemRepository) List(ctx context.Context, projectID uuid.UUID, filt
 		sortOrder = "ASC"
 	}
 
-	// Cursor pagination: fetch the cursor item to get its sort value
+	// Cursor pagination: fetch the cursor item's sort column value for tuple comparison.
+	// sortCol is already sanitized by the switch above, so this Sprintf is safe.
 	if filter.Cursor != nil {
-		var cursorCreatedAt sql.NullTime
+		var cursorVal interface{}
 		err := r.db.QueryRowContext(ctx,
-			`SELECT created_at FROM work_items WHERE id = $1`, *filter.Cursor).Scan(&cursorCreatedAt)
-		if err == nil && cursorCreatedAt.Valid {
+			fmt.Sprintf(`SELECT %s FROM work_items WHERE id = $1`, sortCol), *filter.Cursor).Scan(&cursorVal)
+		if err == nil && cursorVal != nil {
 			if sortOrder == "DESC" {
-				qb.add("("+sortCol+", id) < (?, ?)", cursorCreatedAt.Time, *filter.Cursor)
+				qb.add("("+sortCol+", id) < (?, ?)", cursorVal, *filter.Cursor)
 			} else {
-				qb.add("("+sortCol+", id) > (?, ?)", cursorCreatedAt.Time, *filter.Cursor)
+				qb.add("("+sortCol+", id) > (?, ?)", cursorVal, *filter.Cursor)
 			}
 			// Rebuild WHERE clause with cursor condition
 			whereClause = "WHERE " + strings.Join(qb.conditions, " AND ")
