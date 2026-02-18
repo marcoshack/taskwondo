@@ -122,6 +122,8 @@
   "sidebar.queues": "キュー",
   "sidebar.milestones": "マイルストーン",
   "sidebar.settings": "設定",
+  "sidebar.collapse": "サイドバーを折りたたむ",
+  "sidebar.expand": "サイドバーを展開する",
 
   "workitems.title": "アイテム一覧",
   "workitems.new": "新規作成",

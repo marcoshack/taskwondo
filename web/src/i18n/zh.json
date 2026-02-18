@@ -122,6 +122,8 @@
   "sidebar.queues": "队列",
   "sidebar.milestones": "里程碑",
   "sidebar.settings": "设置",
+  "sidebar.collapse": "收起侧栏",
+  "sidebar.expand": "展开侧栏",
 
   "workitems.title": "工作条目",
   "workitems.new": "新建条目",

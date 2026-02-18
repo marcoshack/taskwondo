@@ -123,6 +123,8 @@
   "sidebar.queues": "Queues",
   "sidebar.milestones": "Milestones",
   "sidebar.settings": "Settings",
+  "sidebar.collapse": "Collapse sidebar",
+  "sidebar.expand": "Expand sidebar",
 
   "workitems.title": "Work Items",
   "workitems.new": "New Item",

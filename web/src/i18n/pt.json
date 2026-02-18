@@ -122,6 +122,8 @@
   "sidebar.queues": "Filas",
   "sidebar.milestones": "Etapas",
   "sidebar.settings": "Configurações",
+  "sidebar.collapse": "Recolher barra lateral",
+  "sidebar.expand": "Expandir barra lateral",
 
   "workitems.title": "Itens de Trabalho",
   "workitems.new": "Novo Item",

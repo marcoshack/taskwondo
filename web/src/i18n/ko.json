@@ -122,6 +122,8 @@
   "sidebar.queues": "큐",
   "sidebar.milestones": "마일스톤",
   "sidebar.settings": "설정",
+  "sidebar.collapse": "사이드바 접기",
+  "sidebar.expand": "사이드바 펼치기",
 
   "workitems.title": "작업 항목",
   "workitems.new": "새 항목",

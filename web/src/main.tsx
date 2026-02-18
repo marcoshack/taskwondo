@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import { LanguageProvider } from '@/contexts/LanguageContext'
+import { SidebarProvider } from '@/contexts/SidebarContext'
 import '@/i18n'
 import App from '@/App'
 import '@/index.css'
@@ -25,7 +26,9 @@ createRoot(document.getElementById('root')!).render(
         <AuthProvider>
           <ThemeProvider>
             <LanguageProvider>
-              <App />
+              <SidebarProvider>
+                <App />
+              </SidebarProvider>
             </LanguageProvider>
           </ThemeProvider>
         </AuthProvider>

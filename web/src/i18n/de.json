@@ -122,6 +122,8 @@
   "sidebar.queues": "Warteschlangen",
   "sidebar.milestones": "Meilensteine",
   "sidebar.settings": "Einstellungen",
+  "sidebar.collapse": "Seitenleiste einklappen",
+  "sidebar.expand": "Seitenleiste ausklappen",
 
   "workitems.title": "Arbeitselemente",
   "workitems.new": "Neues Element",
