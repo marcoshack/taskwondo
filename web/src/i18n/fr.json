@@ -194,6 +194,18 @@
   "workitems.priorities.high": "Haute",
   "workitems.priorities.critical": "Critique",
 
+  "workitems.statuses.open": "Ouvert",
+  "workitems.statuses.in_progress": "En cours",
+  "workitems.statuses.in_review": "En revue",
+  "workitems.statuses.done": "Terminé",
+  "workitems.statuses.cancelled": "Annulé",
+  "workitems.statuses.new": "Nouveau",
+  "workitems.statuses.triaged": "Trié",
+  "workitems.statuses.investigating": "En investigation",
+  "workitems.statuses.waiting_on_customer": "En attente du client",
+  "workitems.statuses.resolved": "Résolu",
+  "workitems.statuses.closed": "Fermé",
+
   "workitems.visibilities.internal": "interne",
   "workitems.visibilities.portal": "portail",
   "workitems.visibilities.public": "public",

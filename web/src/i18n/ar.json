@@ -194,6 +194,18 @@
   "workitems.priorities.high": "عالية",
   "workitems.priorities.critical": "حرجة",
 
+  "workitems.statuses.open": "مفتوح",
+  "workitems.statuses.in_progress": "قيد التنفيذ",
+  "workitems.statuses.in_review": "قيد المراجعة",
+  "workitems.statuses.done": "مكتمل",
+  "workitems.statuses.cancelled": "ملغى",
+  "workitems.statuses.new": "جديد",
+  "workitems.statuses.triaged": "مُصنَّف",
+  "workitems.statuses.investigating": "قيد التحقيق",
+  "workitems.statuses.waiting_on_customer": "بانتظار العميل",
+  "workitems.statuses.resolved": "تم الحل",
+  "workitems.statuses.closed": "مغلق",
+
   "workitems.visibilities.internal": "داخلي",
   "workitems.visibilities.portal": "بوابة",
   "workitems.visibilities.public": "عام",

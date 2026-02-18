@@ -194,6 +194,18 @@
   "workitems.priorities.high": "높음",
   "workitems.priorities.critical": "긴급",
 
+  "workitems.statuses.open": "열림",
+  "workitems.statuses.in_progress": "진행 중",
+  "workitems.statuses.in_review": "검토 중",
+  "workitems.statuses.done": "완료",
+  "workitems.statuses.cancelled": "취소됨",
+  "workitems.statuses.new": "새 항목",
+  "workitems.statuses.triaged": "분류됨",
+  "workitems.statuses.investigating": "조사 중",
+  "workitems.statuses.waiting_on_customer": "고객 대기 중",
+  "workitems.statuses.resolved": "해결됨",
+  "workitems.statuses.closed": "닫힘",
+
   "workitems.visibilities.internal": "내부",
   "workitems.visibilities.portal": "포털",
   "workitems.visibilities.public": "공개",

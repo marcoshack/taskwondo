@@ -107,12 +107,12 @@ export function WorkItemForm({
       </Select>
       {mode === 'edit' && statuses && allowedTransitions && (
         <Select label={t('workitems.form.status')} value={status} onChange={(e) => setStatus(e.target.value)}>
-          <option value={initialValues.status}>{statuses.find((s) => s.name === initialValues.status)?.display_name ?? initialValues.status}</option>
+          <option value={initialValues.status}>{t(`workitems.statuses.${initialValues.status}`, { defaultValue: statuses.find((s) => s.name === initialValues.status)?.display_name ?? initialValues.status })}</option>
           {allowedTransitions
             .filter((tr) => tr !== initialValues.status)
             .map((tr) => {
               const ws = statuses.find((s) => s.name === tr)
-              return <option key={tr} value={tr}>{ws?.display_name ?? tr}</option>
+              return <option key={tr} value={tr}>{t(`workitems.statuses.${tr}`, { defaultValue: ws?.display_name ?? tr })}</option>
             })}
         </Select>
       )}

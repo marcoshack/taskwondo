@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Badge } from '@/components/ui/Badge'
 import type { WorkflowStatus } from '@/api/workflows'
 
@@ -14,9 +15,10 @@ interface StatusBadgeProps {
 }
 
 export function StatusBadge({ status, statuses }: StatusBadgeProps) {
+  const { t } = useTranslation()
   const ws = statuses?.find((s) => s.name === status)
   const category = ws?.category ?? 'todo'
   const color = categoryColors[category as keyof typeof categoryColors] ?? 'gray'
-  const label = ws?.display_name ?? status
+  const label = t(`workitems.statuses.${status}`, { defaultValue: ws?.display_name ?? status })
   return <Badge color={color}>{label}</Badge>
 }

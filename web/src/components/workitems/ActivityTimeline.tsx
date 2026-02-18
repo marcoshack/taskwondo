@@ -10,6 +10,14 @@ import type { ProjectMember } from '@/api/projects'
 /** Fields whose values are user UUIDs that should be resolved to display names */
 const userFields = new Set(['assignee_id', 'reporter_id'])
 
+/** Fields whose values should be translated via i18n */
+const translatedFields: Record<string, string> = {
+  status: 'workitems.statuses',
+  priority: 'workitems.priorities',
+  type: 'workitems.types',
+  visibility: 'workitems.visibilities',
+}
+
 interface ActivityTimelineProps {
   projectKey: string
   itemNumber: number
@@ -65,7 +73,7 @@ export function ActivityTimeline({ projectKey, itemNumber, sortOrder = 'desc', o
             <CommentLink event={event} onClick={onCommentClick} t={t} />
             <AttachmentLink event={event} onClick={onAttachmentClick} />
           </div>
-          <FieldChangeDiff event={event} members={members} />
+          <FieldChangeDiff event={event} members={members} t={t} />
           <CommentPreview event={event} t={t} />
           <span className="text-xs text-gray-400 dark:text-gray-500">{new Date(event.created_at).toLocaleString()}</span>
         </div>
@@ -78,15 +86,19 @@ function truncate(value: string, max: number = 120): string {
   return value.length > max ? value.slice(0, max) + '\u2026' : value
 }
 
-function resolveValue(fieldName: string, value: string, members?: ProjectMember[]): string {
+function resolveValue(fieldName: string, value: string, members: ProjectMember[] | undefined, t: TFunction): string {
   if (userFields.has(fieldName) && members) {
     const member = members.find((m) => m.user_id === value)
     if (member) return member.display_name
   }
+  const prefix = translatedFields[fieldName]
+  if (prefix) {
+    return t(`${prefix}.${value}`, { defaultValue: value })
+  }
   return value
 }
 
-function FieldChangeDiff({ event, members }: { event: WorkItemEvent; members?: ProjectMember[] }) {
+function FieldChangeDiff({ event, members, t }: { event: WorkItemEvent; members?: ProjectMember[]; t: TFunction }) {
   if (!event.field_name) return null
   if (!event.old_value && !event.new_value) return null
 
@@ -95,13 +107,13 @@ function FieldChangeDiff({ event, members }: { event: WorkItemEvent; members?: P
       {event.old_value && (
         <div className="px-3 py-1.5 bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300 border-b border-gray-200 dark:border-gray-700">
           <span className="select-none text-red-400 mr-2">&minus;</span>
-          {truncate(resolveValue(event.field_name, event.old_value, members))}
+          {truncate(resolveValue(event.field_name, event.old_value, members, t))}
         </div>
       )}
       {event.new_value && (
         <div className="px-3 py-1.5 bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300">
           <span className="select-none text-green-400 mr-2">+</span>
-          {truncate(resolveValue(event.field_name, event.new_value, members))}
+          {truncate(resolveValue(event.field_name, event.new_value, members, t))}
         </div>
       )}
     </div>
