@@ -299,7 +299,7 @@ export function WorkItemListPage() {
       key: 'title',
       header: t('workitems.table.title'),
       sortKey: 'title',
-      render: (row) => <span className="font-medium text-gray-900 dark:text-gray-100 truncate max-w-xs block">{row.title}</span>,
+      render: (row) => <span className="font-medium text-gray-900 dark:text-gray-100 truncate block">{row.title}</span>,
     },
     {
       key: 'status',
