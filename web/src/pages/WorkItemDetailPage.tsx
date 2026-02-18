@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useMemo } from 'react'
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import { useConfirmFeedback } from '@/hooks/useConfirmFeedback'
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
 import { ConfirmCheck } from '@/components/ui/ConfirmCheck'
@@ -24,6 +24,7 @@ import { CopyButton } from '@/components/ui/CopyButton'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { getMarkdownComponents } from '@/components/ui/markdownComponents'
+import { useNavigationGuard } from '@/contexts/NavigationGuardContext'
 
 type Tab = 'comments' | 'activity' | 'relations' | 'attachments'
 
@@ -41,6 +42,7 @@ export function WorkItemDetailPage() {
 
   const [activeTab, setActiveTab] = useState<Tab>('comments')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+  const [commentDraft, setCommentDraft] = useState('')
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleDraft, setTitleDraft] = useState('')
   const [editingDesc, setEditingDesc] = useState(false)
@@ -54,6 +56,27 @@ export function WorkItemDetailPage() {
   const { confirmed: titleConfirmed, showConfirm: showTitleConfirm } = useConfirmFeedback()
   const { confirmed: descConfirmed, showConfirm: showDescConfirm } = useConfirmFeedback()
   useKeyboardShortcut({ key: '#' }, () => setShowDelete(true))
+
+  // Navigation guard for unsaved comment draft
+  const hasUnsavedComment = commentDraft.trim().length > 0
+  const { guardRef, cancelCallbackRef, guardedNavigate, pendingPath, confirmNavigation, cancelNavigation } = useNavigationGuard()
+
+  useEffect(() => {
+    guardRef.current = () => commentDraft.trim().length > 0
+    cancelCallbackRef.current = () => setActiveTab('comments')
+    return () => {
+      guardRef.current = null
+      cancelCallbackRef.current = null
+    }
+  }, [commentDraft, guardRef, cancelCallbackRef])
+
+  // Browser refresh/tab close warning
+  useEffect(() => {
+    if (!hasUnsavedComment) return
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault() }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [hasUnsavedComment])
   const dragCounter = useRef(0)
   const uploadMut = useUploadAttachment(projectKey ?? '', itemNumber)
   const { data: allAttachments } = useAttachments(projectKey ?? '', itemNumber)
@@ -159,7 +182,7 @@ export function WorkItemDetailPage() {
       {/* Back link */}
       <button
         className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-        onClick={() => navigate(`/projects/${projectKey}/items`)}
+        onClick={() => guardedNavigate(`/projects/${projectKey}/items`)}
       >
         &larr; {t('workitems.backToItems')}
       </button>
@@ -305,7 +328,7 @@ export function WorkItemDetailPage() {
               )}
             </div>
 
-            {activeTab === 'comments' && <CommentList projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} highlightedCommentId={highlightedCommentId} onHighlightClear={() => setHighlightedCommentId(null)} onImageClick={handleImageClick} />}
+            {activeTab === 'comments' && <CommentList projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} highlightedCommentId={highlightedCommentId} onHighlightClear={() => setHighlightedCommentId(null)} onImageClick={handleImageClick} draft={commentDraft} onDraftChange={setCommentDraft} />}
             {activeTab === 'activity' && <ActivityTimeline projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} onAttachmentClick={(id) => { setActiveTab('attachments'); setHighlightedAttachmentId(id) }} onCommentClick={(id) => { setActiveTab('comments'); setHighlightedCommentId(id) }} />}
             {activeTab === 'relations' && <RelationList projectKey={projectKey ?? ''} itemNumber={itemNumber} />}
             {activeTab === 'attachments' && <AttachmentList projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} highlightedAttachmentId={highlightedAttachmentId} onHighlightClear={() => setHighlightedAttachmentId(null)} onPreview={(a) => setPreviewTarget({ kind: 'attachment', attachment: a, projectKey: projectKey ?? '', itemNumber })} />}
@@ -350,6 +373,21 @@ export function WorkItemDetailPage() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Unsaved comment warning */}
+      <Modal open={!!pendingPath} onClose={cancelNavigation} title={t('comments.unsavedTitle')}>
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+          {t('comments.unsavedBody')}
+        </p>
+        <div className="flex justify-end gap-3">
+          <Button variant="secondary" onClick={cancelNavigation}>
+            {t('comments.keepEditing')}
+          </Button>
+          <Button variant="danger" onClick={() => { setCommentDraft(''); confirmNavigation() }}>
+            {t('comments.discard')}
+          </Button>
+        </div>
       </Modal>
 
       {/* File preview */}

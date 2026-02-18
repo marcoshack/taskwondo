@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useSidebar } from '@/contexts/SidebarContext'
+import { useNavigationGuard } from '@/contexts/NavigationGuardContext'
 import {
   LayoutDashboard,
   ClipboardList,
@@ -19,6 +20,7 @@ interface SidebarProps {
 export function Sidebar({ projectKey }: SidebarProps) {
   const { t } = useTranslation()
   const { collapsed, toggleCollapsed } = useSidebar()
+  const { guardRef, guardedNavigate } = useNavigationGuard()
   const base = `/projects/${projectKey}`
 
   const navItems: { to: string; label: string; icon: LucideIcon; end: boolean }[] = [
@@ -42,6 +44,12 @@ export function Sidebar({ projectKey }: SidebarProps) {
               to={`${base}/${item.to}`}
               end={item.end}
               title={collapsed ? item.label : undefined}
+              onClick={(e) => {
+                if (guardRef.current?.()) {
+                  e.preventDefault()
+                  guardedNavigate(`${base}/${item.to}`)
+                }
+              }}
               className={({ isActive }) =>
                 `group/nav relative flex items-center gap-3 rounded-md text-sm font-medium transition-colors ${
                   collapsed ? 'justify-center px-0 py-2' : 'px-3 py-2'

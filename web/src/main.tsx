@@ -7,6 +7,7 @@ import { ThemeProvider } from '@/contexts/ThemeContext'
 import { LanguageProvider } from '@/contexts/LanguageContext'
 import { SidebarProvider } from '@/contexts/SidebarContext'
 import { KeyboardShortcutProvider } from '@/contexts/KeyboardShortcutContext'
+import { NavigationGuardProvider } from '@/contexts/NavigationGuardContext'
 import '@/i18n'
 import App from '@/App'
 import '@/index.css'
@@ -28,9 +29,11 @@ createRoot(document.getElementById('root')!).render(
           <ThemeProvider>
             <LanguageProvider>
               <KeyboardShortcutProvider>
-                <SidebarProvider>
-                  <App />
-                </SidebarProvider>
+                <NavigationGuardProvider>
+                  <SidebarProvider>
+                    <App />
+                  </SidebarProvider>
+                </NavigationGuardProvider>
               </KeyboardShortcutProvider>
             </LanguageProvider>
           </ThemeProvider>

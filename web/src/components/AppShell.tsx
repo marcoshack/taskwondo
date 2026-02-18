@@ -1,6 +1,8 @@
-import { Outlet, Link, useNavigate, useMatch } from 'react-router-dom'
+import { Outlet, useNavigate, useMatch } from 'react-router-dom'
+
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/contexts/AuthContext'
+import { useNavigationGuard } from '@/contexts/NavigationGuardContext'
 import { useProject, useProjects } from '@/hooks/useProjects'
 import { Avatar } from '@/components/ui/Avatar'
 import { Modal } from '@/components/ui/Modal'
@@ -14,6 +16,7 @@ export function AppShell() {
   const { t } = useTranslation()
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const { guardedNavigate } = useNavigationGuard()
   const [menuOpen, setMenuOpen] = useState(false)
   const [switcherOpen, setSwitcherOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
@@ -48,7 +51,7 @@ export function AppShell() {
     return registerSequentialCombo({
       id: 'go-to-items',
       keys: ['g', 'i'],
-      callback: () => navigate(`/projects/${activeProjectKey}/items`),
+      callback: () => guardedNavigate(`/projects/${activeProjectKey}/items`),
     })
   }, [activeProjectKey, navigate, registerSequentialCombo])
 
@@ -65,9 +68,9 @@ export function AppShell() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-14">
             <div className="flex items-center gap-6">
-              <Link to="/projects" className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
+              <button onClick={() => guardedNavigate('/projects')} className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
                 {t('brand.name')}
-              </Link>
+              </button>
               {activeProject && (
                 <button
                   onClick={() => setSwitcherOpen(true)}
@@ -96,7 +99,7 @@ export function AppShell() {
                     {user?.email}
                   </div>
                   <button
-                    onClick={() => { setMenuOpen(false); navigate('/preferences') }}
+                    onClick={() => { setMenuOpen(false); guardedNavigate('/preferences') }}
                     className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                   >
                     {t('nav.preferences')}
@@ -122,7 +125,7 @@ export function AppShell() {
         activeProjectKey={activeProjectKey}
         onSelect={(key) => {
           setSwitcherOpen(false)
-          navigate(`/projects/${key}`)
+          guardedNavigate(`/projects/${key}`)
         }}
       />
       <KeyboardShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />

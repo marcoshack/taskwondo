@@ -20,9 +20,11 @@ interface CommentListProps {
   highlightedCommentId?: string | null
   onHighlightClear?: () => void
   onImageClick?: (src: string) => void
+  draft?: string
+  onDraftChange?: (value: string) => void
 }
 
-export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highlightedCommentId, onHighlightClear, onImageClick }: CommentListProps) {
+export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highlightedCommentId, onHighlightClear, onImageClick, draft, onDraftChange }: CommentListProps) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const { data: comments, isLoading } = useComments(projectKey, itemNumber)
@@ -31,7 +33,21 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
   const updateMutation = useUpdateComment(projectKey, itemNumber)
   const deleteMutation = useDeleteComment(projectKey, itemNumber)
 
-  const [newBody, setNewBody] = useState('')
+  // Use lifted state from parent if provided, otherwise fall back to local state
+  const [localBody, setLocalBody] = useState('')
+  const newBody = draft ?? localBody
+  const setNewBody = useCallback((value: string | ((prev: string) => string)) => {
+    if (onDraftChange) {
+      if (typeof value === 'function') {
+        // onDraftChange is a plain setter; resolve the updater with current draft
+        onDraftChange(value(draft ?? ''))
+      } else {
+        onDraftChange(value)
+      }
+    } else {
+      setLocalBody(value)
+    }
+  }, [onDraftChange, draft])
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editBody, setEditBody] = useState('')
   const [deletingId, setDeletingId] = useState<string | null>(null)
