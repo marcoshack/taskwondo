@@ -5,7 +5,7 @@ import { usePreference, useSetPreference } from '@/hooks/usePreferences'
 import { useAuth } from '@/contexts/AuthContext'
 import { LANGUAGE_KEY } from '@/i18n'
 
-export type Language = 'en' | 'pt' | 'es' | 'ja' | 'zh'
+export type Language = 'en' | 'pt' | 'es' | 'fr' | 'ja' | 'zh' | 'ar'
 
 interface LanguageContextValue {
   language: Language
@@ -17,9 +17,13 @@ const SUPPORTED_LANGUAGES: LanguageContextValue['availableLanguages'] = [
   { value: 'en', label: 'English', nativeLabel: 'English' },
   { value: 'pt', label: 'Portuguese', nativeLabel: 'Português' },
   { value: 'es', label: 'Spanish', nativeLabel: 'Español' },
+  { value: 'fr', label: 'French', nativeLabel: 'Français' },
   { value: 'ja', label: 'Japanese', nativeLabel: '日本語' },
   { value: 'zh', label: 'Chinese', nativeLabel: '中文' },
+  { value: 'ar', label: 'Arabic', nativeLabel: 'العربية' },
 ]
+
+const RTL_LANGUAGES = new Set<Language>(['ar'])
 
 const LanguageContext = createContext<LanguageContextValue | null>(null)
 
@@ -54,6 +58,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       i18n.changeLanguage(language)
     }
   }, [language, i18n])
+
+  useEffect(() => {
+    document.documentElement.dir = RTL_LANGUAGES.has(language) ? 'rtl' : 'ltr'
+  }, [language])
 
   const setLanguage = useCallback(
     (newLang: Language) => {
