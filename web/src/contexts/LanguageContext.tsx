@@ -5,7 +5,7 @@ import { usePreference, useSetPreference } from '@/hooks/usePreferences'
 import { useAuth } from '@/contexts/AuthContext'
 import { LANGUAGE_KEY } from '@/i18n'
 
-export type Language = 'en' | 'pt' | 'es'
+export type Language = 'en' | 'pt' | 'es' | 'ja'
 
 interface LanguageContextValue {
   language: Language
@@ -17,6 +17,7 @@ const SUPPORTED_LANGUAGES: LanguageContextValue['availableLanguages'] = [
   { value: 'en', label: 'English', nativeLabel: 'English' },
   { value: 'pt', label: 'Portuguese', nativeLabel: 'Português' },
   { value: 'es', label: 'Spanish', nativeLabel: 'Español' },
+  { value: 'ja', label: 'Japanese', nativeLabel: '日本語' },
 ]
 
 const LanguageContext = createContext<LanguageContextValue | null>(null)
