@@ -14,6 +14,7 @@ type Comment struct {
 	PortalContactID *uuid.UUID `json:"portal_contact_id,omitempty"`
 	Body            string     `json:"body"`
 	Visibility      string     `json:"visibility"`
+	EditCount       int        `json:"edit_count"`
 	CreatedAt       time.Time  `json:"created_at"`
 	UpdatedAt       time.Time  `json:"updated_at"`
 }

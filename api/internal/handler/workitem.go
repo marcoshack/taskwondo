@@ -561,6 +561,7 @@ type commentResponse struct {
 	AuthorID   *uuid.UUID `json:"author_id,omitempty"`
 	Body       string     `json:"body"`
 	Visibility string     `json:"visibility"`
+	EditCount  int        `json:"edit_count"`
 	CreatedAt  time.Time  `json:"created_at"`
 	UpdatedAt  time.Time  `json:"updated_at"`
 }
@@ -571,6 +572,7 @@ func toCommentResponse(c *model.Comment) commentResponse {
 		AuthorID:   c.AuthorID,
 		Body:       c.Body,
 		Visibility: c.Visibility,
+		EditCount:  c.EditCount,
 		CreatedAt:  c.CreatedAt,
 		UpdatedAt:  c.UpdatedAt,
 	}

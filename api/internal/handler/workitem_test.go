@@ -316,6 +316,7 @@ func (m *mockCommentRepo) Update(_ context.Context, comment *model.Comment) erro
 		return model.ErrNotFound
 	}
 	existing.Body = comment.Body
+	existing.EditCount++
 	existing.UpdatedAt = time.Now()
 	return nil
 }

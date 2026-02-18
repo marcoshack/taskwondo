@@ -42,11 +42,11 @@ func (r *CommentRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.C
 	)
 
 	err := r.db.QueryRowContext(ctx,
-		`SELECT id, work_item_id, author_id, portal_contact_id, body, visibility, created_at, updated_at
+		`SELECT id, work_item_id, author_id, portal_contact_id, body, visibility, edit_count, created_at, updated_at
 		 FROM comments
 		 WHERE id = $1 AND deleted_at IS NULL`, id).Scan(
 		&comment.ID, &comment.WorkItemID, &authorID, &portalContactID,
-		&comment.Body, &comment.Visibility, &comment.CreatedAt, &comment.UpdatedAt)
+		&comment.Body, &comment.Visibility, &comment.EditCount, &comment.CreatedAt, &comment.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, model.ErrNotFound
 	}
@@ -67,7 +67,7 @@ func (r *CommentRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.C
 // ListByWorkItem returns all non-deleted comments for a work item, ordered by creation time.
 // If visibility is non-empty, only comments matching that visibility are returned.
 func (r *CommentRepository) ListByWorkItem(ctx context.Context, workItemID uuid.UUID, visibility string) ([]model.Comment, error) {
-	query := `SELECT id, work_item_id, author_id, portal_contact_id, body, visibility, created_at, updated_at
+	query := `SELECT id, work_item_id, author_id, portal_contact_id, body, visibility, edit_count, created_at, updated_at
 		 FROM comments
 		 WHERE work_item_id = $1 AND deleted_at IS NULL`
 	args := []interface{}{workItemID}
@@ -95,7 +95,7 @@ func (r *CommentRepository) ListByWorkItem(ctx context.Context, workItemID uuid.
 
 		if err := rows.Scan(
 			&c.ID, &c.WorkItemID, &authorID, &portalContactID,
-			&c.Body, &c.Visibility, &c.CreatedAt, &c.UpdatedAt,
+			&c.Body, &c.Visibility, &c.EditCount, &c.CreatedAt, &c.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scanning comment: %w", err)
 		}
@@ -116,7 +116,7 @@ func (r *CommentRepository) ListByWorkItem(ctx context.Context, workItemID uuid.
 // Update modifies a comment's body.
 func (r *CommentRepository) Update(ctx context.Context, comment *model.Comment) error {
 	result, err := r.db.ExecContext(ctx,
-		`UPDATE comments SET body = $1, updated_at = now()
+		`UPDATE comments SET body = $1, edit_count = edit_count + 1, updated_at = now()
 		 WHERE id = $2 AND deleted_at IS NULL`,
 		comment.Body, comment.ID)
 	if err != nil {

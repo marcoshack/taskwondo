@@ -13,9 +13,10 @@ interface ActivityTimelineProps {
   itemNumber: number
   sortOrder?: 'asc' | 'desc'
   onAttachmentClick?: (attachmentId: string) => void
+  onCommentClick?: (commentId: string) => void
 }
 
-export function ActivityTimeline({ projectKey, itemNumber, sortOrder = 'desc', onAttachmentClick }: ActivityTimelineProps) {
+export function ActivityTimeline({ projectKey, itemNumber, sortOrder = 'desc', onAttachmentClick, onCommentClick }: ActivityTimelineProps) {
   const { data: events, isLoading } = useEvents(projectKey, itemNumber)
   const { data: members } = useMembers(projectKey)
 
@@ -36,6 +37,7 @@ export function ActivityTimeline({ projectKey, itemNumber, sortOrder = 'desc', o
             <span className="font-medium text-gray-700 dark:text-gray-300">{event.actor?.display_name ?? 'System'}</span>
             {' '}
             <span className="text-gray-500 dark:text-gray-400">{formatEventLabel(event)}</span>
+            <CommentLink event={event} onClick={onCommentClick} />
             <AttachmentLink event={event} onClick={onAttachmentClick} />
           </div>
           <FieldChangeDiff event={event} members={members} />
@@ -67,9 +69,9 @@ function fieldLabel(name: string): string {
 
 function formatEventLabel(event: WorkItemEvent): string {
   if (event.event_type === 'created') return 'created this item'
-  if (event.event_type === 'comment_added') return 'added a comment'
-  if (event.event_type === 'comment_updated') return 'edited a comment'
-  if (event.event_type === 'comment_deleted') return 'deleted a comment'
+  if (event.event_type === 'comment_added') return 'added'
+  if (event.event_type === 'comment_updated') return 'edited'
+  if (event.event_type === 'comment_deleted') return 'deleted'
   if (event.field_name) {
     if (event.old_value && event.new_value) {
       return `changed ${fieldLabel(event.field_name)}`
@@ -231,6 +233,28 @@ function CommentPreview({ event }: { event: WorkItemEvent }) {
       )}
     </div>
   )
+}
+
+function CommentLink({ event, onClick }: { event: WorkItemEvent; onClick?: (commentId: string) => void }) {
+  const isCommentEvent = event.event_type === 'comment_added' || event.event_type === 'comment_updated' || event.event_type === 'comment_deleted'
+  if (!isCommentEvent) return null
+  const commentId = event.metadata?.comment_id as string | undefined
+
+  if (commentId && onClick && event.event_type !== 'comment_deleted') {
+    return (
+      <>
+        {' '}
+        <button
+          className="text-indigo-600 dark:text-indigo-400 hover:underline"
+          onClick={() => onClick(commentId)}
+        >
+          a comment
+        </button>
+      </>
+    )
+  }
+
+  return <span className="text-gray-500 dark:text-gray-400"> a comment</span>
 }
 
 function AttachmentLink({ event, onClick }: { event: WorkItemEvent; onClick?: (attachmentId: string) => void }) {

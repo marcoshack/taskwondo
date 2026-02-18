@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useComments, useCreateComment, useUpdateComment, useDeleteComment } from '@/hooks/useWorkItems'
 import { useAuth } from '@/contexts/AuthContext'
 import { useMembers } from '@/hooks/useProjects'
@@ -15,9 +15,11 @@ interface CommentListProps {
   projectKey: string
   itemNumber: number
   sortOrder?: 'asc' | 'desc'
+  highlightedCommentId?: string | null
+  onHighlightClear?: () => void
 }
 
-export function CommentList({ projectKey, itemNumber, sortOrder = 'desc' }: CommentListProps) {
+export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highlightedCommentId, onHighlightClear }: CommentListProps) {
   const { user } = useAuth()
   const { data: comments, isLoading } = useComments(projectKey, itemNumber)
   const { data: members } = useMembers(projectKey)
@@ -31,6 +33,36 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc' }: Comm
 
   const addCommentRef = useRef<HTMLDivElement>(null)
   const [addCommentVisible, setAddCommentVisible] = useState(true)
+
+  const highlightNodeRef = useRef<HTMLDivElement | null>(null)
+
+  const highlightRef = useCallback((node: HTMLDivElement | null) => {
+    highlightNodeRef.current = node
+  }, [highlightedCommentId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const node = highlightNodeRef.current
+    if (!node || !highlightedCommentId) return
+
+    node.scrollIntoView({ behavior: 'smooth', block: 'center' })
+
+    // Re-scroll when images in sibling comments load and shift layout.
+    // Uses capture phase because load events don't bubble.
+    const list = node.parentElement
+    if (!list) return
+
+    const rescroll = () => node.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    list.addEventListener('load', rescroll, true)
+
+    const highlightTimer = setTimeout(() => onHighlightClear?.(), 2000)
+    const cleanupTimer = setTimeout(() => list.removeEventListener('load', rescroll, true), 5000)
+
+    return () => {
+      list.removeEventListener('load', rescroll, true)
+      clearTimeout(highlightTimer)
+      clearTimeout(cleanupTimer)
+    }
+  }, [highlightedCommentId, onHighlightClear])
 
   useEffect(() => {
     const el = addCommentRef.current
@@ -84,7 +116,13 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc' }: Comm
       </div>
 
       {(sortOrder === 'desc' ? [...(comments ?? [])].reverse() : (comments ?? [])).map((c) => (
-        <div key={c.id} className="group/comment border-b border-gray-100 dark:border-gray-700 pb-3">
+        <div
+          key={c.id}
+          ref={c.id === highlightedCommentId ? highlightRef : undefined}
+          className={`group/comment border-b border-gray-100 dark:border-gray-700 pb-3 rounded-md transition-colors duration-700 ${
+            c.id === highlightedCommentId ? 'bg-indigo-50 dark:bg-indigo-900/30 ring-1 ring-indigo-300 dark:ring-indigo-600 px-2 py-2 -mx-2' : ''
+          }`}
+        >
           {!addCommentVisible && (
             <div className="flex justify-end mb-1">
               <button
@@ -123,7 +161,10 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc' }: Comm
               <div className="flex items-center gap-2 mb-1">
                 <Avatar name={authorName(c.author_id)} size="xs" />
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{authorName(c.author_id)}</span>
-                <span className="text-xs text-gray-400 dark:text-gray-500">{new Date(c.created_at).toLocaleString()}</span>
+                <span className="text-xs text-gray-400 dark:text-gray-500">
+                  {new Date(c.created_at).toLocaleString()}
+                  {c.edit_count > 0 && <span className="ml-1 italic">(edited {c.edit_count} {c.edit_count === 1 ? 'time' : 'times'})</span>}
+                </span>
                 <CopyButton text={c.body} className="opacity-0 group-hover/comment:opacity-100" />
               </div>
               <div className="prose prose-sm dark:prose-invert max-w-none text-gray-900 dark:text-gray-100 pl-8">
