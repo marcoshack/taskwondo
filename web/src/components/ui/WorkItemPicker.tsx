@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useWorkItems } from '@/hooks/useWorkItems'
 import { useDebounce } from '@/hooks/useDebounce'
 import { Spinner } from '@/components/ui/Spinner'
@@ -18,8 +19,9 @@ export function WorkItemPicker({
   value,
   onChange,
   onSelect,
-  placeholder = 'Search by title or ID...',
+  placeholder,
 }: WorkItemPickerProps) {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -53,7 +55,7 @@ export function WorkItemPicker({
       <input
         ref={inputRef}
         className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-        placeholder={placeholder}
+        placeholder={placeholder ?? t('workItemPicker.searchPlaceholder')}
         value={value}
         onChange={(e) => {
           onChange(e.target.value)
@@ -92,7 +94,7 @@ export function WorkItemPicker({
             </ul>
           ) : (
             <div className="px-3 py-3 text-sm text-gray-400 dark:text-gray-500">
-              No items found
+              {t('workItemPicker.noItems')}
             </div>
           )}
         </div>

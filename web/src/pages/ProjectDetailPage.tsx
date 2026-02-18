@@ -1,4 +1,5 @@
 import { useParams, Routes, Route } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useProject } from '@/hooks/useProjects'
 import { Sidebar } from '@/components/Sidebar'
 import { Spinner } from '@/components/ui/Spinner'
@@ -8,10 +9,12 @@ import { ProjectSettingsPage } from './ProjectSettingsPage'
 import { ProjectOverviewPage } from './ProjectOverviewPage'
 
 function PlaceholderPage({ title }: { title: string }) {
-  return <p className="text-gray-500 dark:text-gray-400">{title} view coming soon.</p>
+  const { t } = useTranslation()
+  return <p className="text-gray-500 dark:text-gray-400">{t('projects.placeholder.comingSoon', { title })}</p>
 }
 
 export function ProjectDetailPage() {
+  const { t } = useTranslation()
   const { projectKey } = useParams<{ projectKey: string }>()
   const { data: project, isLoading, error } = useProject(projectKey ?? '')
 
@@ -26,7 +29,7 @@ export function ProjectDetailPage() {
   if (error || !project) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <p className="text-red-600">Project not found.</p>
+        <p className="text-red-600">{t('projects.notFound')}</p>
       </div>
     )
   }
@@ -40,8 +43,8 @@ export function ProjectDetailPage() {
             <Route index element={<ProjectOverviewPage />} />
             <Route path="items" element={<WorkItemListPage />} />
             <Route path="items/:itemNumber" element={<WorkItemDetailPage />} />
-            <Route path="queues" element={<PlaceholderPage title="Queues" />} />
-            <Route path="milestones" element={<PlaceholderPage title="Milestones" />} />
+            <Route path="queues" element={<PlaceholderPage title={t('sidebar.queues')} />} />
+            <Route path="milestones" element={<PlaceholderPage title={t('sidebar.milestones')} />} />
             <Route path="settings" element={<ProjectSettingsPage />} />
           </Routes>
         </div>

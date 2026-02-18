@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { Trans, useTranslation } from 'react-i18next'
 import { useWorkItem, useUpdateWorkItem, useDeleteWorkItem, useUploadAttachment } from '@/hooks/useWorkItems'
 import { useMembers } from '@/hooks/useProjects'
 import { useProjectWorkflow } from '@/hooks/useWorkflows'
@@ -22,6 +23,7 @@ import { markdownComponents } from '@/components/ui/markdownComponents'
 type Tab = 'comments' | 'activity' | 'relations' | 'attachments'
 
 export function WorkItemDetailPage() {
+  const { t } = useTranslation()
   const { projectKey, itemNumber: itemNumberParam } = useParams<{ projectKey: string; itemNumber: string }>()
   const navigate = useNavigate()
   const itemNumber = Number(itemNumberParam)
@@ -77,12 +79,12 @@ export function WorkItemDetailPage() {
     for (const file of files) {
       uploadMut.mutate({ file }, {
         onSuccess: () => {
-          setToast(`Attached "${file.name}"`)
+          setToast(t('workitems.attached', { filename: file.name }))
           setTimeout(() => setToast(null), 3000)
         },
       })
     }
-  }, [uploadMut])
+  }, [uploadMut, t])
 
   const { handlePaste: handleDescPaste, handleDrop: handleDescDrop, handleDragOver: handleDescDragOver } = usePasteUpload({
     projectKey: projectKey ?? '',
@@ -99,16 +101,16 @@ export function WorkItemDetailPage() {
   }
 
   if (!item) {
-    return <p className="text-red-600">Work item not found.</p>
+    return <p className="text-red-600">{t('workitems.notFound')}</p>
   }
 
-  const allowed = transitionsMap?.[item.status]?.map((t) => t.to_status) ?? []
+  const allowed = transitionsMap?.[item.status]?.map((tr) => tr.to_status) ?? []
 
   const tabs: { key: Tab; label: string }[] = [
-    { key: 'comments', label: 'Comments' },
-    { key: 'activity', label: 'Activity' },
-    { key: 'relations', label: 'Relations' },
-    { key: 'attachments', label: 'Attachments' },
+    { key: 'comments', label: t('tabs.comments') },
+    { key: 'activity', label: t('tabs.activity') },
+    { key: 'relations', label: t('tabs.relations') },
+    { key: 'attachments', label: t('tabs.attachments') },
   ]
 
   return (
@@ -122,7 +124,7 @@ export function WorkItemDetailPage() {
       {draggingOver && (
         <div className="fixed inset-0 z-50 bg-indigo-500/10 border-2 border-dashed border-indigo-400 flex items-center justify-center pointer-events-none">
           <span className="text-lg font-medium text-indigo-600 dark:text-indigo-400 bg-white dark:bg-gray-900 px-6 py-3 rounded-lg shadow-lg">
-            Drop files to attach
+            {t('workitems.dropToAttach')}
           </span>
         </div>
       )}
@@ -138,7 +140,7 @@ export function WorkItemDetailPage() {
         className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
         onClick={() => navigate(`/projects/${projectKey}/items`)}
       >
-        &larr; Back to items
+        &larr; {t('workitems.backToItems')}
       </button>
 
       <div className="flex gap-6">
@@ -168,7 +170,7 @@ export function WorkItemDetailPage() {
                   }}
                   autoFocus
                 />
-                <Button size="sm" onClick={() => { updateMutation.mutate({ itemNumber, input: { title: titleDraft } }); setEditingTitle(false) }}>Save</Button>
+                <Button size="sm" onClick={() => { updateMutation.mutate({ itemNumber, input: { title: titleDraft } }); setEditingTitle(false) }}>{t('common.save')}</Button>
               </div>
             ) : (
               <h1
@@ -183,7 +185,7 @@ export function WorkItemDetailPage() {
           {/* Description */}
           <div className="group/desc">
             <div className="flex items-center gap-1 mb-1">
-              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Description</h3>
+              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('workitems.detail.description')}</h3>
               {!editingDesc && item.description && (
                 <CopyButton text={item.description} className="opacity-0 group-hover/desc:opacity-100" />
               )}
@@ -204,8 +206,8 @@ export function WorkItemDetailPage() {
                   <Button size="sm" onClick={() => {
                     updateMutation.mutate({ itemNumber, input: { description: descDraft || null } })
                     setEditingDesc(false)
-                  }}>Save</Button>
-                  <Button size="sm" variant="ghost" onClick={() => setEditingDesc(false)}>Cancel</Button>
+                  }}>{t('common.save')}</Button>
+                  <Button size="sm" variant="ghost" onClick={() => setEditingDesc(false)}>{t('common.cancel')}</Button>
                 </div>
               </div>
             ) : (
@@ -218,7 +220,7 @@ export function WorkItemDetailPage() {
                     <Markdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{item.description}</Markdown>
                   </div>
                 ) : (
-                  <span className="text-sm text-gray-400 dark:text-gray-500 italic">No description. Click to add.</span>
+                  <span className="text-sm text-gray-400 dark:text-gray-500 italic">{t('workitems.detail.noDescription')}</span>
                 )}
               </div>
             )}
@@ -246,10 +248,10 @@ export function WorkItemDetailPage() {
                 <button
                   className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 pb-2 flex items-center gap-1"
                   onClick={() => setSortOrder((s) => (s === 'desc' ? 'asc' : 'desc'))}
-                  title={sortOrder === 'desc' ? 'Showing newest first' : 'Showing oldest first'}
+                  title={sortOrder === 'desc' ? t('common.showingNewestFirst') : t('common.showingOldestFirst')}
                 >
                   <span>{sortOrder === 'desc' ? '\u2193' : '\u2191'}</span>
-                  {sortOrder === 'desc' ? 'Newest first' : 'Oldest first'}
+                  {sortOrder === 'desc' ? t('common.newestFirst') : t('common.oldestFirst')}
                 </button>
               )}
             </div>
@@ -271,18 +273,18 @@ export function WorkItemDetailPage() {
             onUpdate={(input) => updateMutation.mutate({ itemNumber, input })}
           />
           <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-            <Button variant="danger" size="sm" onClick={() => setShowDelete(true)}>Delete Item</Button>
+            <Button variant="danger" size="sm" onClick={() => setShowDelete(true)}>{t('workitems.detail.deleteItem')}</Button>
           </div>
         </div>
       </div>
 
       {/* Delete confirmation */}
-      <Modal open={showDelete} onClose={() => setShowDelete(false)} title="Delete Work Item">
+      <Modal open={showDelete} onClose={() => setShowDelete(false)} title={t('workitems.detail.deleteTitle')}>
         <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-          Are you sure you want to delete <strong>{item.display_id}</strong>? This action cannot be undone.
+          <Trans i18nKey="workitems.detail.deleteConfirmBody" values={{ displayId: item.display_id }} components={{ bold: <strong /> }} />
         </p>
         <div className="flex justify-end gap-3">
-          <Button variant="secondary" onClick={() => setShowDelete(false)}>Cancel</Button>
+          <Button variant="secondary" onClick={() => setShowDelete(false)}>{t('common.cancel')}</Button>
           <Button
             variant="danger"
             onClick={() => {
@@ -292,7 +294,7 @@ export function WorkItemDetailPage() {
             }}
             disabled={deleteMutation.isPending}
           >
-            {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+            {deleteMutation.isPending ? t('common.deleting') : t('common.delete')}
           </Button>
         </div>
       </Modal>

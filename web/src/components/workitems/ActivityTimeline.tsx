@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import { useEvents } from '@/hooks/useWorkItems'
 import { useMembers } from '@/hooks/useProjects'
 import { Spinner } from '@/components/ui/Spinner'
@@ -16,14 +18,37 @@ interface ActivityTimelineProps {
   onCommentClick?: (commentId: string) => void
 }
 
+function fieldLabel(name: string, t: TFunction): string {
+  const key = `activity.fields.${name}`
+  const translated = t(key, { defaultValue: '' })
+  return translated || name.replace(/_/g, ' ')
+}
+
+function formatEventLabel(event: WorkItemEvent, t: TFunction): string {
+  if (event.event_type === 'created') return t('activity.createdItem')
+  if (event.event_type === 'comment_added') return t('activity.addedComment')
+  if (event.event_type === 'comment_updated') return t('activity.editedComment')
+  if (event.event_type === 'comment_deleted') return t('activity.deletedComment')
+  if (event.field_name) {
+    const field = fieldLabel(event.field_name, t)
+    if (event.old_value && event.new_value) {
+      return t('activity.changed', { field })
+    }
+    if (event.new_value) return t('activity.set', { field })
+    if (event.old_value) return t('activity.cleared', { field })
+  }
+  return event.event_type.replace(/_/g, ' ')
+}
+
 export function ActivityTimeline({ projectKey, itemNumber, sortOrder = 'desc', onAttachmentClick, onCommentClick }: ActivityTimelineProps) {
+  const { t } = useTranslation()
   const { data: events, isLoading } = useEvents(projectKey, itemNumber)
   const { data: members } = useMembers(projectKey)
 
   if (isLoading) return <Spinner size="sm" />
 
   if (!events?.length) {
-    return <p className="text-sm text-gray-400 dark:text-gray-500">No activity yet.</p>
+    return <p className="text-sm text-gray-400 dark:text-gray-500">{t('activity.noActivity')}</p>
   }
 
   const sorted = sortOrder === 'desc' ? [...events].reverse() : events
@@ -34,52 +59,19 @@ export function ActivityTimeline({ projectKey, itemNumber, sortOrder = 'desc', o
         <div key={event.id} className="relative">
           <div className="absolute -left-[21px] top-1.5 w-2.5 h-2.5 rounded-full bg-gray-300 dark:bg-gray-600 border-2 border-white dark:border-gray-900" />
           <div className="text-sm">
-            <span className="font-medium text-gray-700 dark:text-gray-300">{event.actor?.display_name ?? 'System'}</span>
+            <span className="font-medium text-gray-700 dark:text-gray-300">{event.actor?.display_name ?? t('common.system')}</span>
             {' '}
-            <span className="text-gray-500 dark:text-gray-400">{formatEventLabel(event)}</span>
-            <CommentLink event={event} onClick={onCommentClick} />
+            <span className="text-gray-500 dark:text-gray-400">{formatEventLabel(event, t)}</span>
+            <CommentLink event={event} onClick={onCommentClick} t={t} />
             <AttachmentLink event={event} onClick={onAttachmentClick} />
           </div>
           <FieldChangeDiff event={event} members={members} />
-          <CommentPreview event={event} />
+          <CommentPreview event={event} t={t} />
           <span className="text-xs text-gray-400 dark:text-gray-500">{new Date(event.created_at).toLocaleString()}</span>
         </div>
       ))}
     </div>
   )
-}
-
-const fieldLabels: Record<string, string> = {
-  status: 'Status',
-  priority: 'Priority',
-  type: 'Type',
-  title: 'Title',
-  description: 'Description',
-  assignee_id: 'Assignee',
-  labels: 'Labels',
-  visibility: 'Visibility',
-  due_date: 'Due date',
-  milestone_id: 'Milestone',
-  queue_id: 'Queue',
-}
-
-function fieldLabel(name: string): string {
-  return fieldLabels[name] ?? name.replace(/_/g, ' ')
-}
-
-function formatEventLabel(event: WorkItemEvent): string {
-  if (event.event_type === 'created') return 'created this item'
-  if (event.event_type === 'comment_added') return 'added'
-  if (event.event_type === 'comment_updated') return 'edited'
-  if (event.event_type === 'comment_deleted') return 'deleted'
-  if (event.field_name) {
-    if (event.old_value && event.new_value) {
-      return `changed ${fieldLabel(event.field_name)}`
-    }
-    if (event.new_value) return `set ${fieldLabel(event.field_name)}`
-    if (event.old_value) return `cleared ${fieldLabel(event.field_name)}`
-  }
-  return event.event_type.replace(/_/g, ' ')
 }
 
 function truncate(value: string, max: number = 120): string {
@@ -163,7 +155,7 @@ function firstLines(text: string, n: number): string {
 
 const COLLAPSED_LINES = 4
 
-function CommentPreview({ event }: { event: WorkItemEvent }) {
+function CommentPreview({ event, t }: { event: WorkItemEvent; t: TFunction }) {
   const [expanded, setExpanded] = useState(false)
 
   const isCommentEvent = event.event_type === 'comment_added' || event.event_type === 'comment_updated'
@@ -187,9 +179,9 @@ function CommentPreview({ event }: { event: WorkItemEvent }) {
 
     return (
       <div className="mt-1 mb-1 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs font-mono overflow-hidden">
-        {displayLines.map((line, i) => (
+        {displayLines.map((line, idx) => (
           <div
-            key={i}
+            key={idx}
             className={
               line.type === 'remove'
                 ? 'px-3 py-0.5 bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300'
@@ -207,7 +199,7 @@ function CommentPreview({ event }: { event: WorkItemEvent }) {
             className="w-full px-3 py-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 text-left"
             onClick={() => setExpanded(!expanded)}
           >
-            {expanded ? 'Show less' : `Show ${changedLines.length - COLLAPSED_LINES} more lines`}
+            {expanded ? t('common.showLess') : t('common.showMoreLines', { count: changedLines.length - COLLAPSED_LINES })}
           </button>
         )}
       </div>
@@ -228,14 +220,14 @@ function CommentPreview({ event }: { event: WorkItemEvent }) {
           className="w-full px-3 py-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 text-left"
           onClick={() => setExpanded(!expanded)}
         >
-          {expanded ? 'Show less' : 'Show more'}
+          {expanded ? t('common.showLess') : t('common.showMore')}
         </button>
       )}
     </div>
   )
 }
 
-function CommentLink({ event, onClick }: { event: WorkItemEvent; onClick?: (commentId: string) => void }) {
+function CommentLink({ event, onClick, t }: { event: WorkItemEvent; onClick?: (commentId: string) => void; t: TFunction }) {
   const isCommentEvent = event.event_type === 'comment_added' || event.event_type === 'comment_updated' || event.event_type === 'comment_deleted'
   if (!isCommentEvent) return null
   const commentId = event.metadata?.comment_id as string | undefined
@@ -248,13 +240,13 @@ function CommentLink({ event, onClick }: { event: WorkItemEvent; onClick?: (comm
           className="text-indigo-600 dark:text-indigo-400 hover:underline"
           onClick={() => onClick(commentId)}
         >
-          a comment
+          {t('activity.aComment')}
         </button>
       </>
     )
   }
 
-  return <span className="text-gray-500 dark:text-gray-400"> a comment</span>
+  return <span className="text-gray-500 dark:text-gray-400"> {t('activity.aComment')}</span>
 }
 
 function AttachmentLink({ event, onClick }: { event: WorkItemEvent; onClick?: (attachmentId: string) => void }) {
