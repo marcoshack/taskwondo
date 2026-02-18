@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useMembers } from '@/hooks/useProjects'
 import { usePasteUpload } from '@/hooks/usePasteUpload'
 import { Button } from '@/components/ui/Button'
+import { Modal } from '@/components/ui/Modal'
 import { Avatar } from '@/components/ui/Avatar'
 import { Spinner } from '@/components/ui/Spinner'
 import { CopyButton } from '@/components/ui/CopyButton'
@@ -33,6 +34,7 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
   const [newBody, setNewBody] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editBody, setEditBody] = useState('')
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const addCommentRef = useRef<HTMLDivElement>(null)
   const [addCommentVisible, setAddCommentVisible] = useState(true)
@@ -170,36 +172,74 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
                   {new Date(c.created_at).toLocaleString()}
                   {c.edit_count > 0 && <span className="ml-1 italic">{t('comments.editCount', { count: c.edit_count })}</span>}
                 </span>
-                <CopyButton text={c.body} className="opacity-0 group-hover/comment:opacity-100" />
-              </div>
-              <div className="prose prose-sm dark:prose-invert max-w-none text-gray-900 dark:text-gray-100 pl-8">
-                <Markdown remarkPlugins={[remarkGfm]} components={mdComponents}>{c.body}</Markdown>
-              </div>
-              <div className="flex items-center gap-3 mt-1 pl-8">
                 {c.visibility !== 'internal' && (
                   <span className="text-xs text-indigo-500">{c.visibility}</span>
                 )}
                 {user && c.author_id === user.id && (
-                  <>
-                    <button
-                      className="text-xs text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
-                      onClick={() => { setEditingId(c.id); setEditBody(c.body) }}
-                    >
+                  <button
+                    className="group/edit relative inline-flex items-center justify-center w-7 h-7 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-gray-700 transition-colors opacity-0 group-hover/comment:opacity-100"
+                    onClick={() => { setEditingId(c.id); setEditBody(c.body) }}
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M11.5 2.5a1.5 1.5 0 012.121 2.121L6.5 11.743l-2.5.757.757-2.5L11.5 2.5z" />
+                    </svg>
+                    <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs text-white bg-gray-900 dark:bg-gray-700 rounded whitespace-nowrap opacity-0 group-hover/edit:opacity-100 transition-opacity">
                       {t('common.edit')}
-                    </button>
-                    <button
-                      className="text-xs text-red-400 hover:text-red-600 dark:hover:text-red-300"
-                      onClick={() => { if (confirm(t('comments.deleteConfirm'))) deleteMutation.mutate(c.id) }}
-                    >
-                      {t('common.delete')}
-                    </button>
-                  </>
+                    </span>
+                  </button>
                 )}
+                <CopyButton text={c.body} className="opacity-0 group-hover/comment:opacity-100" />
+                {user && c.author_id === user.id && (
+                  <button
+                    className="group/del relative inline-flex items-center justify-center w-7 h-7 rounded-md text-red-400 hover:text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/30 transition-colors opacity-0 group-hover/comment:opacity-100"
+                    onClick={() => setDeletingId(c.id)}
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 4.5h10M6.5 4.5V3a1 1 0 011-1h1a1 1 0 011 1v1.5M5 4.5v8a1 1 0 001 1h4a1 1 0 001-1v-8" />
+                    </svg>
+                    <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs text-white bg-gray-900 dark:bg-gray-700 rounded whitespace-nowrap opacity-0 group-hover/del:opacity-100 transition-opacity">
+                      {t('common.delete')}
+                    </span>
+                  </button>
+                )}
+              </div>
+              <div
+                className={`prose prose-sm dark:prose-invert max-w-none text-gray-900 dark:text-gray-100 pl-8 rounded ${user && c.author_id === user.id ? 'hover:bg-gray-50 dark:hover:bg-gray-800' : ''}`}
+                onDoubleClick={() => {
+                  if (user && c.author_id === user.id) {
+                    setEditingId(c.id)
+                    setEditBody(c.body)
+                  }
+                }}
+              >
+                <Markdown remarkPlugins={[remarkGfm]} components={mdComponents}>{c.body}</Markdown>
               </div>
             </>
           )}
         </div>
       ))}
+
+      <Modal open={!!deletingId} onClose={() => setDeletingId(null)} title={t('comments.deleteConfirm')}>
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+          {t('comments.deleteBody')}
+        </p>
+        <div className="flex justify-end gap-3">
+          <Button variant="secondary" onClick={() => setDeletingId(null)}>{t('common.cancel')}</Button>
+          <Button
+            variant="danger"
+            onClick={() => {
+              if (deletingId) {
+                deleteMutation.mutate(deletingId, {
+                  onSuccess: () => setDeletingId(null),
+                })
+              }
+            }}
+            disabled={deleteMutation.isPending}
+          >
+            {deleteMutation.isPending ? t('common.deleting') : t('common.delete')}
+          </Button>
+        </div>
+      </Modal>
     </div>
   )
 }

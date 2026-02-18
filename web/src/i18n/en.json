@@ -204,7 +204,8 @@
   "comments.add": "Add Comment",
   "comments.adding": "Adding...",
   "comments.placeholder": "Add a comment... (paste or drag files to attach)",
-  "comments.deleteConfirm": "Delete this comment?",
+  "comments.deleteConfirm": "Delete comment",
+  "comments.deleteBody": "This comment will be permanently deleted. This action cannot be undone.",
   "comments.editCount_one": "(edited {{count}} time)",
   "comments.editCount_other": "(edited {{count}} times)",
 

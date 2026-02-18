@@ -203,7 +203,8 @@
   "comments.add": "تعليق",
   "comments.adding": "جارٍ الإرسال...",
   "comments.placeholder": "أضف تعليقاً... (الصق أو اسحب ملفات للإرفاق)",
-  "comments.deleteConfirm": "حذف هذا التعليق؟",
+  "comments.deleteConfirm": "حذف التعليق",
+  "comments.deleteBody": "سيتم حذف هذا التعليق نهائياً. لا يمكن التراجع عن هذا الإجراء.",
   "comments.editCount_one": "(تم التعديل {{count}} مرة)",
   "comments.editCount_other": "(تم التعديل {{count}} مرات)",
 

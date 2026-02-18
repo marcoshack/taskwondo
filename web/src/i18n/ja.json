@@ -203,7 +203,8 @@
   "comments.add": "コメント",
   "comments.adding": "送信中...",
   "comments.placeholder": "コメントを追加...（ファイルを貼り付けまたはドラッグ）",
-  "comments.deleteConfirm": "このコメントを削除しますか？",
+  "comments.deleteConfirm": "コメントを削除",
+  "comments.deleteBody": "このコメントは完全に削除されます。この操作は元に戻せません。",
   "comments.editCount_one": "（{{count}}回編集済み）",
   "comments.editCount_other": "（{{count}}回編集済み）",
 

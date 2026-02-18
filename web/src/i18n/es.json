@@ -203,7 +203,8 @@
   "comments.add": "Comentar",
   "comments.adding": "Enviando...",
   "comments.placeholder": "Agregue un comentario... (pegue o arrastre archivos para adjuntar)",
-  "comments.deleteConfirm": "¿Eliminar este comentario?",
+  "comments.deleteConfirm": "Eliminar comentario",
+  "comments.deleteBody": "Este comentario será eliminado permanentemente. Esta acción no se puede deshacer.",
   "comments.editCount_one": "(editado {{count}} vez)",
   "comments.editCount_other": "(editado {{count}} veces)",
 

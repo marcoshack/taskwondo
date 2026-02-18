@@ -203,7 +203,8 @@
   "comments.add": "Commenter",
   "comments.adding": "Envoi...",
   "comments.placeholder": "Ajouter un commentaire... (collez ou glissez des fichiers pour joindre)",
-  "comments.deleteConfirm": "Supprimer ce commentaire ?",
+  "comments.deleteConfirm": "Supprimer le commentaire",
+  "comments.deleteBody": "Ce commentaire sera définitivement supprimé. Cette action est irréversible.",
   "comments.editCount_one": "(modifié {{count}} fois)",
   "comments.editCount_other": "(modifié {{count}} fois)",
 

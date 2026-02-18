@@ -539,6 +539,15 @@ func (m *mockAttachmentRepo) ListByWorkItem(_ context.Context, workItemID uuid.U
 	return result, nil
 }
 
+func (m *mockAttachmentRepo) UpdateComment(_ context.Context, id uuid.UUID, comment string) error {
+	a, ok := m.attachments[id]
+	if !ok {
+		return model.ErrNotFound
+	}
+	a.Comment = comment
+	return nil
+}
+
 func (m *mockAttachmentRepo) Delete(_ context.Context, id uuid.UUID) error {
 	if _, ok := m.attachments[id]; !ok {
 		return model.ErrNotFound
