@@ -213,6 +213,10 @@
   "comments.deleteBody": "This comment will be permanently deleted. This action cannot be undone.",
   "comments.editCount_one": "(edited {{count}} time)",
   "comments.editCount_other": "(edited {{count}} times)",
+  "comments.unsavedTitle": "Unsaved comment",
+  "comments.unsavedBody": "You have an unsaved comment. If you leave, your comment will be lost.",
+  "comments.discard": "Discard",
+  "comments.keepEditing": "Keep editing",
 
   "activity.noActivity": "No activity yet.",
   "activity.createdItem": "created this item",
