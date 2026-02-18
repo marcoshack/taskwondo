@@ -14,6 +14,7 @@ import { AttachmentList } from '@/components/workitems/AttachmentList'
 import { usePasteUpload } from '@/hooks/usePasteUpload'
 import { TypeBadge } from '@/components/workitems/TypeBadge'
 import { StatusBadge } from '@/components/workitems/StatusBadge'
+import { CopyButton } from '@/components/ui/CopyButton'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { markdownComponents } from '@/components/ui/markdownComponents'
@@ -179,8 +180,13 @@ export function WorkItemDetailPage() {
           </div>
 
           {/* Description */}
-          <div>
-            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Description</h3>
+          <div className="group/desc">
+            <div className="flex items-center gap-1 mb-1">
+              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Description</h3>
+              {!editingDesc && item.description && (
+                <CopyButton text={item.description} className="opacity-0 group-hover/desc:opacity-100" />
+              )}
+            </div>
             {editingDesc ? (
               <div className="space-y-2">
                 <textarea
