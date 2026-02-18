@@ -40,6 +40,7 @@ export function WorkItemDetailPage() {
   const [showDelete, setShowDelete] = useState(false)
   const [draggingOver, setDraggingOver] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
+  const [highlightedAttachmentId, setHighlightedAttachmentId] = useState<string | null>(null)
   const dragCounter = useRef(0)
   const uploadMut = useUploadAttachment(projectKey ?? '', itemNumber)
 
@@ -247,9 +248,9 @@ export function WorkItemDetailPage() {
             </div>
 
             {activeTab === 'comments' && <CommentList projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} />}
-            {activeTab === 'activity' && <ActivityTimeline projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} />}
+            {activeTab === 'activity' && <ActivityTimeline projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} onAttachmentClick={(id) => { setActiveTab('attachments'); setHighlightedAttachmentId(id) }} />}
             {activeTab === 'relations' && <RelationList projectKey={projectKey ?? ''} itemNumber={itemNumber} />}
-            {activeTab === 'attachments' && <AttachmentList projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} />}
+            {activeTab === 'attachments' && <AttachmentList projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} highlightedAttachmentId={highlightedAttachmentId} onHighlightClear={() => setHighlightedAttachmentId(null)} />}
           </div>
         </div>
 

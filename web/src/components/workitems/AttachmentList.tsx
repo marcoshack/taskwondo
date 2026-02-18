@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { useAttachments, useUploadAttachment, useDeleteAttachment } from '@/hooks/useWorkItems'
 import { useAuth } from '@/contexts/AuthContext'
 import { useMembers } from '@/hooks/useProjects'
@@ -10,6 +10,8 @@ interface AttachmentListProps {
   projectKey: string
   itemNumber: number
   sortOrder?: 'asc' | 'desc'
+  highlightedAttachmentId?: string | null
+  onHighlightClear?: () => void
 }
 
 function formatFileSize(bytes: number): string {
@@ -18,7 +20,7 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc' }: AttachmentListProps) {
+export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc', highlightedAttachmentId, onHighlightClear }: AttachmentListProps) {
   const { user } = useAuth()
   const { data: attachments, isLoading } = useAttachments(projectKey, itemNumber)
   const { data: members } = useMembers(projectKey)
@@ -26,6 +28,15 @@ export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc' }: A
   const deleteMutation = useDeleteAttachment(projectKey, itemNumber)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [comment, setComment] = useState('')
+  const highlightRef = useCallback((node: HTMLDivElement | null) => {
+    if (node) {
+      node.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      if (onHighlightClear) {
+        const timer = setTimeout(onHighlightClear, 2000)
+        return () => clearTimeout(timer)
+      }
+    }
+  }, [highlightedAttachmentId, onHighlightClear]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function uploaderName(uploaderId: string): string {
     const member = members?.find((m) => m.user_id === uploaderId)
@@ -94,7 +105,13 @@ export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc' }: A
 
       {/* Attachment list */}
       {(sortOrder === 'desc' ? [...(attachments ?? [])].reverse() : (attachments ?? [])).map((a) => (
-        <div key={a.id} className="flex items-start gap-3 border-b border-gray-100 dark:border-gray-700 pb-3">
+        <div
+          key={a.id}
+          ref={a.id === highlightedAttachmentId ? highlightRef : undefined}
+          className={`flex items-start gap-3 border-b border-gray-100 dark:border-gray-700 pb-3 rounded-md transition-colors duration-700 ${
+            a.id === highlightedAttachmentId ? 'bg-indigo-50 dark:bg-indigo-900/30 ring-1 ring-indigo-300 dark:ring-indigo-600 px-2 py-2 -mx-2' : ''
+          }`}
+        >
           <div className="flex-1 min-w-0">
             <button
               onClick={() => handleDownload(a.id, a.filename)}

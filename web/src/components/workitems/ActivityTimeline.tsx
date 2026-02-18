@@ -12,9 +12,10 @@ interface ActivityTimelineProps {
   projectKey: string
   itemNumber: number
   sortOrder?: 'asc' | 'desc'
+  onAttachmentClick?: (attachmentId: string) => void
 }
 
-export function ActivityTimeline({ projectKey, itemNumber, sortOrder = 'desc' }: ActivityTimelineProps) {
+export function ActivityTimeline({ projectKey, itemNumber, sortOrder = 'desc', onAttachmentClick }: ActivityTimelineProps) {
   const { data: events, isLoading } = useEvents(projectKey, itemNumber)
   const { data: members } = useMembers(projectKey)
 
@@ -35,6 +36,7 @@ export function ActivityTimeline({ projectKey, itemNumber, sortOrder = 'desc' }:
             <span className="font-medium text-gray-700 dark:text-gray-300">{event.actor?.display_name ?? 'System'}</span>
             {' '}
             <span className="text-gray-500 dark:text-gray-400">{formatEventLabel(event)}</span>
+            <AttachmentLink event={event} onClick={onAttachmentClick} />
           </div>
           <FieldChangeDiff event={event} members={members} />
           <CommentPreview event={event} />
@@ -229,4 +231,27 @@ function CommentPreview({ event }: { event: WorkItemEvent }) {
       )}
     </div>
   )
+}
+
+function AttachmentLink({ event, onClick }: { event: WorkItemEvent; onClick?: (attachmentId: string) => void }) {
+  if (event.event_type !== 'attachment_added' && event.event_type !== 'attachment_removed') return null
+  const attachmentId = event.metadata?.attachment_id as string | undefined
+  const filename = event.metadata?.filename as string | undefined
+  if (!filename) return null
+
+  if (event.event_type === 'attachment_added' && attachmentId && onClick) {
+    return (
+      <>
+        {' '}
+        <button
+          className="text-indigo-600 dark:text-indigo-400 hover:underline"
+          onClick={() => onClick(attachmentId)}
+        >
+          {filename}
+        </button>
+      </>
+    )
+  }
+
+  return <span className="text-gray-600 dark:text-gray-300"> {filename}</span>
 }
