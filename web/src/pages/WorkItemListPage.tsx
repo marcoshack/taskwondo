@@ -38,7 +38,7 @@ function urlHasFilterParams(sp: URLSearchParams): boolean {
   for (const key of FILTER_PARAMS) {
     if (sp.has(key)) return true
   }
-  return sp.has('q') || sp.has('view')
+  return sp.has('q') || sp.has('view') || sp.has('sort')
 }
 
 /** Parse filter state from URL search params. */
@@ -51,8 +51,8 @@ function parseUrlFilter(sp: URLSearchParams): SavedFilter {
   return filter
 }
 
-/** Build URL search params from filter, search, and view. */
-function buildUrlParams(filter: WorkItemFilter, search: string, view: ViewMode): URLSearchParams {
+/** Build URL search params from filter, search, view, and sort. */
+function buildUrlParams(filter: WorkItemFilter, search: string, view: ViewMode, sort: string, order: string): URLSearchParams {
   const sp = new URLSearchParams()
   for (const key of FILTER_PARAMS) {
     const val = filter[key]
@@ -60,6 +60,10 @@ function buildUrlParams(filter: WorkItemFilter, search: string, view: ViewMode):
   }
   if (search) sp.set('q', search)
   if (view !== 'list') sp.set('view', view)
+  if (sort !== 'created_at' || order !== 'desc') {
+    sp.set('sort', sort)
+    sp.set('order', order)
+  }
   return sp
 }
 
@@ -82,7 +86,7 @@ export function WorkItemListPage() {
   }, [statuses])
 
   // Capture initial URL state once (before any effects run)
-  const initialUrlRef = useRef<{ hasParams: boolean; filter: SavedFilter; search: string; view: ViewMode } | null>(null)
+  const initialUrlRef = useRef<{ hasParams: boolean; filter: SavedFilter; search: string; view: ViewMode; sort: string; order: 'asc' | 'desc' } | null>(null)
   if (initialUrlRef.current === null) {
     const hasParams = urlHasFilterParams(searchParams)
     initialUrlRef.current = {
@@ -90,6 +94,8 @@ export function WorkItemListPage() {
       filter: parseUrlFilter(searchParams),
       search: searchParams.get('q') ?? '',
       view: (searchParams.get('view') === 'board' ? 'board' : 'list') as ViewMode,
+      sort: searchParams.get('sort') ?? 'created_at',
+      order: (searchParams.get('order') === 'asc' ? 'asc' : 'desc'),
     }
   }
 
@@ -102,6 +108,8 @@ export function WorkItemListPage() {
   const [filterInitialized, setFilterInitialized] = useState(initialUrlRef.current.hasParams)
   const [search, setSearch] = useState(initialUrlRef.current.search)
   const [viewMode, setViewMode] = useState<ViewMode>(initialUrlRef.current.view)
+  const [sort, setSort] = useState(initialUrlRef.current.sort)
+  const [order, setOrder] = useState<'asc' | 'desc'>(initialUrlRef.current.order)
 
   // If no URL params, initialize from saved settings or defaults once data loads
   useEffect(() => {
@@ -120,9 +128,9 @@ export function WorkItemListPage() {
   const urlSyncedRef = useRef(initialUrlRef.current.hasParams)
   useEffect(() => {
     if (!filterInitialized || urlSyncedRef.current) return
-    setSearchParams(buildUrlParams(filter, search, viewMode), { replace: true })
+    setSearchParams(buildUrlParams(filter, search, viewMode, sort, order), { replace: true })
     urlSyncedRef.current = true
-  }, [filterInitialized, filter, search, viewMode, setSearchParams])
+  }, [filterInitialized, filter, search, viewMode, sort, order, setSearchParams])
 
   // Save filter preferences (debounced) — only on manual user changes
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -137,8 +145,8 @@ export function WorkItemListPage() {
     }, 500)
   }, [projectKey, filterInitialized])
 
-  function syncUrl(f: WorkItemFilter, q: string, v: ViewMode) {
-    setSearchParams(buildUrlParams(f, q, v), { replace: true })
+  function syncUrl(f: WorkItemFilter, q: string, v: ViewMode, s: string = sort, o: 'asc' | 'desc' = order) {
+    setSearchParams(buildUrlParams(f, q, v, s, o), { replace: true })
   }
 
   function handleFilterChange(f: WorkItemFilter) {
@@ -157,6 +165,18 @@ export function WorkItemListPage() {
     syncUrl(filter, search, v)
   }
 
+  function handleSort(sortKey: string) {
+    let newOrder: 'asc' | 'desc'
+    if (sort === sortKey) {
+      newOrder = order === 'asc' ? 'desc' : 'asc'
+    } else {
+      newOrder = ['title', 'type', 'status'].includes(sortKey) ? 'asc' : 'desc'
+    }
+    setSort(sortKey)
+    setOrder(newOrder)
+    syncUrl(filter, search, viewMode, sortKey, newOrder)
+  }
+
   const [showCreate, setShowCreate] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
 
@@ -165,8 +185,10 @@ export function WorkItemListPage() {
   const activeFilter = useMemo(() => ({
     ...filter,
     q: debouncedSearch || undefined,
+    sort,
+    order,
     limit: viewMode === 'board' ? 200 : 50,
-  }), [filter, debouncedSearch, viewMode])
+  }), [filter, debouncedSearch, viewMode, sort, order])
 
   const { data: result, isLoading } = useWorkItems(projectKey ?? '', activeFilter)
   const createMutation = useCreateWorkItem(projectKey ?? '')
@@ -236,35 +258,41 @@ export function WorkItemListPage() {
       key: 'display_id',
       header: 'ID',
       className: 'w-28',
+      sortKey: 'item_number',
       render: (row) => <span className="font-mono text-gray-500 dark:text-gray-400">{row.display_id}</span>,
     },
     {
       key: 'type',
       header: 'Type',
       className: 'w-24',
+      sortKey: 'type',
       render: (row) => <TypeBadge type={row.type} />,
     },
     {
       key: 'title',
       header: 'Title',
+      sortKey: 'title',
       render: (row) => <span className="font-medium text-gray-900 dark:text-gray-100 truncate max-w-xs block">{row.title}</span>,
     },
     {
       key: 'status',
       header: 'Status',
       className: 'w-32',
+      sortKey: 'status',
       render: (row) => <StatusBadge status={row.status} statuses={statuses} />,
     },
     {
       key: 'priority',
       header: 'Priority',
       className: 'w-28',
+      sortKey: 'priority',
       render: (row) => <PriorityBadge priority={row.priority} />,
     },
     {
       key: 'updated',
       header: 'Updated',
       className: 'w-36',
+      sortKey: 'updated_at',
       render: (row) => <span className="text-gray-500 dark:text-gray-400">{new Date(row.updated_at).toLocaleDateString()}</span>,
     },
   ]
@@ -352,6 +380,9 @@ export function WorkItemListPage() {
               data={allItems}
               onRowClick={(row) => navigate(`/projects/${projectKey}/items/${row.item_number}`)}
               emptyMessage="No work items found"
+              sortBy={sort}
+              sortOrder={order}
+              onSort={handleSort}
             />
           </div>
           {result?.meta.has_more && (
