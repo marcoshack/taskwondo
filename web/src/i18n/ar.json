@@ -122,6 +122,8 @@
   "sidebar.queues": "قوائم الانتظار",
   "sidebar.milestones": "المراحل",
   "sidebar.settings": "الإعدادات",
+  "sidebar.collapse": "طي الشريط الجانبي",
+  "sidebar.expand": "توسيع الشريط الجانبي",
 
   "workitems.title": "عناصر العمل",
   "workitems.new": "عنصر جديد",

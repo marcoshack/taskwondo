@@ -2,6 +2,7 @@ import { useParams, Routes, Route } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useProject } from '@/hooks/useProjects'
 import { Sidebar } from '@/components/Sidebar'
+import { useSidebar } from '@/contexts/SidebarContext'
 import { Spinner } from '@/components/ui/Spinner'
 import { WorkItemListPage } from './WorkItemListPage'
 import { WorkItemDetailPage } from './WorkItemDetailPage'
@@ -15,6 +16,7 @@ function PlaceholderPage({ title }: { title: string }) {
 
 export function ProjectDetailPage() {
   const { t } = useTranslation()
+  const { collapsed } = useSidebar()
   const { projectKey } = useParams<{ projectKey: string }>()
   const { data: project, isLoading, error } = useProject(projectKey ?? '')
 
@@ -36,7 +38,7 @@ export function ProjectDetailPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-      <div className="flex gap-8">
+      <div className={`flex transition-all duration-200 ${collapsed ? 'gap-4' : 'gap-8'}`}>
         <Sidebar projectKey={project.key} />
         <div className="flex-1 min-w-0">
           <Routes>

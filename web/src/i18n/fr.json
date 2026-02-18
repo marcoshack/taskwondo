@@ -122,6 +122,8 @@
   "sidebar.queues": "Files",
   "sidebar.milestones": "Jalons",
   "sidebar.settings": "Paramètres",
+  "sidebar.collapse": "Réduire la barre latérale",
+  "sidebar.expand": "Développer la barre latérale",
 
   "workitems.title": "Éléments",
   "workitems.new": "Nouveau",
