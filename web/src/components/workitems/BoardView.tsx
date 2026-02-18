@@ -15,6 +15,7 @@ interface BoardViewProps {
 }
 
 export function BoardView({ projectKey, items, statuses, transitionsMap, onItemClick }: BoardViewProps) {
+  const { t } = useTranslation()
   const updateMutation = useUpdateWorkItem(projectKey)
 
   const sortedStatuses = [...statuses].sort((a, b) => a.position - b.position)
@@ -41,7 +42,7 @@ export function BoardView({ projectKey, items, statuses, transitionsMap, onItemC
         <div key={status.name} className="min-w-[280px] w-72 shrink-0">
           <div className="flex items-center gap-2 mb-3 px-1">
             <span className={`w-2.5 h-2.5 rounded-full ${categoryDot[status.category] ?? 'bg-gray-400'}`} />
-            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">{status.display_name}</h3>
+            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">{t(`workitems.statuses.${status.name}`, { defaultValue: status.display_name })}</h3>
             <span className="text-xs text-gray-400 dark:text-gray-500">{itemsByStatus.get(status.name)?.length ?? 0}</span>
           </div>
           <div className="space-y-2">
@@ -111,7 +112,7 @@ function BoardCard({
                         setShowMenu(false)
                       }}
                     >
-                      {ws?.display_name ?? toStatus}
+                      {t(`workitems.statuses.${toStatus}`, { defaultValue: ws?.display_name ?? toStatus })}
                     </button>
                   )
                 })}

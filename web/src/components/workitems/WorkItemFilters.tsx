@@ -43,7 +43,7 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, search, onSe
   function buildStatusOptions(ss: WorkflowStatus[]): MultiSelectOption[] {
     return ss.map((s) => ({
       value: s.name,
-      label: s.display_name,
+      label: t(`workitems.statuses.${s.name}`, { defaultValue: s.display_name }),
       group: closedCategories.has(s.category) ? t('workitems.filters.statusGroupClosed') : t('workitems.filters.statusGroupOpen'),
     }))
   }

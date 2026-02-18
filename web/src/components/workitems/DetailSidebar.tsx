@@ -20,7 +20,8 @@ const VISIBILITIES = ['internal', 'portal', 'public']
 
 export function DetailSidebar({ item, statuses, allowedTransitions, members, onUpdate }: DetailSidebarProps) {
   const { t } = useTranslation()
-  const currentStatusDisplay = statuses.find((s) => s.name === item.status)?.display_name ?? item.status
+  const currentWs = statuses.find((s) => s.name === item.status)
+  const currentStatusDisplay = t(`workitems.statuses.${item.status}`, { defaultValue: currentWs?.display_name ?? item.status })
 
   return (
     <div className="space-y-4">
@@ -34,7 +35,7 @@ export function DetailSidebar({ item, statuses, allowedTransitions, members, onU
             .filter((tr) => tr !== item.status)
             .map((tr) => {
               const ws = statuses.find((s) => s.name === tr)
-              return <option key={tr} value={tr}>{ws?.display_name ?? tr}</option>
+              return <option key={tr} value={tr}>{t(`workitems.statuses.${tr}`, { defaultValue: ws?.display_name ?? tr })}</option>
             })}
         </Select>
       </Field>

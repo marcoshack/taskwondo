@@ -367,7 +367,7 @@ export function WorkItemListPage() {
             <Select onChange={(e) => handleBulkStatus(e.target.value)} value="">
               <option value="">{t('workitems.bulk.changeStatus')}</option>
               {statuses.map((s) => (
-                <option key={s.name} value={s.name}>{s.display_name}</option>
+                <option key={s.name} value={s.name}>{t(`workitems.statuses.${s.name}`, { defaultValue: s.display_name })}</option>
               ))}
             </Select>
           </div>

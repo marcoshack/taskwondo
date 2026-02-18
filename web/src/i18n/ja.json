@@ -194,6 +194,18 @@
   "workitems.priorities.high": "高",
   "workitems.priorities.critical": "緊急",
 
+  "workitems.statuses.open": "未着手",
+  "workitems.statuses.in_progress": "進行中",
+  "workitems.statuses.in_review": "レビュー中",
+  "workitems.statuses.done": "完了",
+  "workitems.statuses.cancelled": "キャンセル",
+  "workitems.statuses.new": "新規",
+  "workitems.statuses.triaged": "トリアージ済み",
+  "workitems.statuses.investigating": "調査中",
+  "workitems.statuses.waiting_on_customer": "顧客待ち",
+  "workitems.statuses.resolved": "解決済み",
+  "workitems.statuses.closed": "クローズ",
+
   "workitems.visibilities.internal": "内部",
   "workitems.visibilities.portal": "ポータル",
   "workitems.visibilities.public": "公開",

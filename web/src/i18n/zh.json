@@ -194,6 +194,18 @@
   "workitems.priorities.high": "高",
   "workitems.priorities.critical": "紧急",
 
+  "workitems.statuses.open": "待处理",
+  "workitems.statuses.in_progress": "进行中",
+  "workitems.statuses.in_review": "审核中",
+  "workitems.statuses.done": "已完成",
+  "workitems.statuses.cancelled": "已取消",
+  "workitems.statuses.new": "新建",
+  "workitems.statuses.triaged": "已分类",
+  "workitems.statuses.investigating": "调查中",
+  "workitems.statuses.waiting_on_customer": "等待客户",
+  "workitems.statuses.resolved": "已解决",
+  "workitems.statuses.closed": "已关闭",
+
   "workitems.visibilities.internal": "内部",
   "workitems.visibilities.portal": "门户",
   "workitems.visibilities.public": "公开",
