@@ -1,4 +1,4 @@
-.PHONY: build help dev dev-db dev-api dev-web up down logs logs-api migrate migrate-new test
+.PHONY: build push help dev dev-db dev-api dev-web up down logs logs-api migrate migrate-new test
 
 build: ## Build all Docker images
 	docker compose build
@@ -38,6 +38,9 @@ logs: ## Tail logs from all services
 
 logs-api: ## Tail API logs
 	docker compose logs -f api
+
+push: ## Push images to GHCR (usage: make push or IMAGE_TAG=v1.0.0 make push)
+	docker compose push api web
 
 # --- Database ---
 
