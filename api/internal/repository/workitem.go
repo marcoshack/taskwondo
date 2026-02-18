@@ -152,8 +152,11 @@ func (r *WorkItemRepository) List(ctx context.Context, projectID uuid.UUID, filt
 	// Determine sort column and order
 	sortCol := "created_at"
 	switch filter.Sort {
-	case "updated_at", "priority", "due_date", "item_number", "type", "title", "status":
+	case "updated_at", "due_date", "item_number", "type", "title", "status":
 		sortCol = filter.Sort
+	case "priority":
+		// Use CASE expression for semantic ordering: critical(1) > high(2) > medium(3) > low(4)
+		sortCol = "CASE priority WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 WHEN 'low' THEN 4 ELSE 5 END"
 	}
 	sortOrder := "DESC"
 	if filter.Order == "asc" {
