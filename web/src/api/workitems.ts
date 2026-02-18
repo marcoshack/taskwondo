@@ -201,3 +201,62 @@ export async function listEvents(projectKey: string, itemNumber: number) {
   const res = await api.get<DataResponse<WorkItemEvent[]>>(`/projects/${projectKey}/items/${itemNumber}/events`)
   return res.data.data
 }
+
+// --- Attachment Types ---
+
+export interface Attachment {
+  id: string
+  uploader_id: string
+  filename: string
+  content_type: string
+  size_bytes: number
+  comment: string
+  download_url: string
+  created_at: string
+}
+
+// --- Attachment API Functions ---
+
+export async function listAttachments(projectKey: string, itemNumber: number) {
+  const res = await api.get<DataResponse<Attachment[]>>(
+    `/projects/${projectKey}/items/${itemNumber}/attachments`
+  )
+  return res.data.data
+}
+
+export async function uploadAttachment(
+  projectKey: string,
+  itemNumber: number,
+  file: File,
+  comment?: string
+) {
+  const formData = new FormData()
+  formData.append('file', file)
+  if (comment) {
+    formData.append('comment', comment)
+  }
+  const res = await api.post<DataResponse<Attachment>>(
+    `/projects/${projectKey}/items/${itemNumber}/attachments`,
+    formData,
+    { headers: { 'Content-Type': undefined as unknown as string } }
+  )
+  return res.data.data
+}
+
+export async function deleteAttachment(
+  projectKey: string,
+  itemNumber: number,
+  attachmentId: string
+) {
+  await api.delete(
+    `/projects/${projectKey}/items/${itemNumber}/attachments/${attachmentId}`
+  )
+}
+
+export function getAttachmentDownloadURL(
+  projectKey: string,
+  itemNumber: number,
+  attachmentId: string
+): string {
+  return `/api/v1/projects/${projectKey}/items/${itemNumber}/attachments/${attachmentId}`
+}

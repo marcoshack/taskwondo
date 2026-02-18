@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -28,6 +29,15 @@ type Config struct {
 	BaseURL   string
 	LogLevel  string
 	LogFormat string
+
+	// Storage (S3/MinIO)
+	StorageEndpoint  string
+	StorageAccessKey string
+	StorageSecretKey string
+	StorageBucket    string
+	StorageRegion    string
+	StorageUseSSL    bool
+	MaxUploadSize    int64 // bytes
 }
 
 // Load reads configuration from environment variables with defaults.
@@ -37,17 +47,31 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("parsing JWT_EXPIRY: %w", err)
 	}
 
+	maxUpload := int64(50 * 1024 * 1024) // default 50MB
+	if v := os.Getenv("MAX_UPLOAD_SIZE"); v != "" {
+		if parsed, err := strconv.ParseInt(v, 10, 64); err == nil {
+			maxUpload = parsed
+		}
+	}
+
 	cfg := &Config{
-		DatabaseURL:   envOrDefault("DATABASE_URL", "postgres://trackforge:trackforge@localhost:5432/trackforge?sslmode=disable"),
-		APIPort:       envOrDefault("API_PORT", "8080"),
-		APIHost:       envOrDefault("API_HOST", "0.0.0.0"),
-		JWTSecret:     envOrDefault("JWT_SECRET", ""),
-		JWTExpiry:     jwtExpiry,
-		AdminEmail:    envOrDefault("ADMIN_EMAIL", ""),
-		AdminPassword: envOrDefault("ADMIN_PASSWORD", ""),
-		BaseURL:       envOrDefault("BASE_URL", "http://localhost:3000"),
-		LogLevel:      envOrDefault("LOG_LEVEL", "info"),
-		LogFormat:     envOrDefault("LOG_FORMAT", "json"),
+		DatabaseURL:      envOrDefault("DATABASE_URL", "postgres://trackforge:trackforge@localhost:5432/trackforge?sslmode=disable"),
+		APIPort:          envOrDefault("API_PORT", "8080"),
+		APIHost:          envOrDefault("API_HOST", "0.0.0.0"),
+		JWTSecret:        envOrDefault("JWT_SECRET", ""),
+		JWTExpiry:        jwtExpiry,
+		AdminEmail:       envOrDefault("ADMIN_EMAIL", ""),
+		AdminPassword:    envOrDefault("ADMIN_PASSWORD", ""),
+		BaseURL:          envOrDefault("BASE_URL", "http://localhost:3000"),
+		LogLevel:         envOrDefault("LOG_LEVEL", "info"),
+		LogFormat:        envOrDefault("LOG_FORMAT", "json"),
+		StorageEndpoint:  envOrDefault("STORAGE_ENDPOINT", "localhost:9000"),
+		StorageAccessKey: envOrDefault("STORAGE_ACCESS_KEY", "trackforge"),
+		StorageSecretKey: envOrDefault("STORAGE_SECRET_KEY", "trackforge"),
+		StorageBucket:    envOrDefault("STORAGE_BUCKET", "trackforge-attachments"),
+		StorageRegion:    envOrDefault("STORAGE_REGION", "us-east-1"),
+		StorageUseSSL:    envOrDefault("STORAGE_USE_SSL", "false") == "true",
+		MaxUploadSize:    maxUpload,
 	}
 
 	return cfg, nil

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/marcoshack/trackforge/internal/model"
+	"github.com/marcoshack/trackforge/internal/storage"
 )
 
 // WorkItemRepository defines persistence operations for work items.
@@ -43,6 +45,14 @@ type WorkItemRelationRepository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*model.WorkItemRelation, error)
 	ListByWorkItem(ctx context.Context, workItemID uuid.UUID) ([]model.WorkItemRelation, error)
 	ListByWorkItemWithDetails(ctx context.Context, workItemID uuid.UUID) ([]model.WorkItemRelationWithDetails, error)
+	Delete(ctx context.Context, id uuid.UUID) error
+}
+
+// AttachmentRepository defines persistence operations for attachments.
+type AttachmentRepository interface {
+	Create(ctx context.Context, attachment *model.Attachment) error
+	GetByID(ctx context.Context, id uuid.UUID) (*model.Attachment, error)
+	ListByWorkItem(ctx context.Context, workItemID uuid.UUID) ([]model.Attachment, error)
 	Delete(ctx context.Context, id uuid.UUID) error
 }
 
@@ -97,6 +107,15 @@ type CreateRelationInput struct {
 	RelationType    string
 }
 
+// CreateAttachmentInput holds the input for uploading an attachment.
+type CreateAttachmentInput struct {
+	Filename    string
+	ContentType string
+	Size        int64
+	Comment     string
+	Reader      io.Reader
+}
+
 // RelationWithDisplay is a relation enriched with display IDs and titles.
 type RelationWithDisplay struct {
 	model.WorkItemRelation
@@ -108,15 +127,18 @@ type RelationWithDisplay struct {
 
 // WorkItemService handles work item business logic and authorization.
 type WorkItemService struct {
-	items      WorkItemRepository
-	events     WorkItemEventRepository
-	comments   CommentRepository
-	relations  WorkItemRelationRepository
-	projects   ProjectRepository
-	members    ProjectMemberRepository
-	workflows  WorkflowRepository
-	queues     QueueRepository
-	milestones MilestoneRepository
+	items         WorkItemRepository
+	events        WorkItemEventRepository
+	comments      CommentRepository
+	relations     WorkItemRelationRepository
+	attachments   AttachmentRepository
+	projects      ProjectRepository
+	members       ProjectMemberRepository
+	workflows     WorkflowRepository
+	queues        QueueRepository
+	milestones    MilestoneRepository
+	fileStorage   storage.Storage
+	maxUploadSize int64
 }
 
 // NewWorkItemService creates a new WorkItemService.
@@ -125,22 +147,28 @@ func NewWorkItemService(
 	events WorkItemEventRepository,
 	comments CommentRepository,
 	relations WorkItemRelationRepository,
+	attachments AttachmentRepository,
 	projects ProjectRepository,
 	members ProjectMemberRepository,
 	workflows WorkflowRepository,
 	queues QueueRepository,
 	milestones MilestoneRepository,
+	fileStorage storage.Storage,
+	maxUploadSize int64,
 ) *WorkItemService {
 	return &WorkItemService{
-		items:      items,
-		events:     events,
-		comments:   comments,
-		relations:  relations,
-		projects:   projects,
-		members:    members,
-		workflows:  workflows,
-		queues:     queues,
-		milestones: milestones,
+		items:         items,
+		events:        events,
+		comments:      comments,
+		relations:     relations,
+		attachments:   attachments,
+		projects:      projects,
+		members:       members,
+		workflows:     workflows,
+		queues:        queues,
+		milestones:    milestones,
+		fileStorage:   fileStorage,
+		maxUploadSize: maxUploadSize,
 	}
 }
 
@@ -862,6 +890,172 @@ func (s *WorkItemService) DeleteRelation(ctx context.Context, info *model.AuthIn
 	s.recordEventWithMetadata(ctx, item.ID, &info.UserID, "relation_removed", model.VisibilityInternal, map[string]interface{}{
 		"relation_id":   relationID.String(),
 		"relation_type": relation.RelationType,
+	})
+
+	return nil
+}
+
+// --- Attachment methods ---
+
+// UploadAttachment uploads a file and creates an attachment record.
+func (s *WorkItemService) UploadAttachment(ctx context.Context, info *model.AuthInfo, projectKey string, itemNumber int, input CreateAttachmentInput) (*model.Attachment, error) {
+	project, err := s.projects.GetByKey(ctx, projectKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.requireRole(ctx, info, project.ID,
+		model.ProjectRoleOwner, model.ProjectRoleAdmin, model.ProjectRoleMember); err != nil {
+		return nil, err
+	}
+
+	item, err := s.items.GetByProjectAndNumber(ctx, project.ID, itemNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	if strings.TrimSpace(input.Filename) == "" {
+		return nil, fmt.Errorf("filename is required: %w", model.ErrValidation)
+	}
+	if input.Size <= 0 {
+		return nil, fmt.Errorf("file is empty: %w", model.ErrValidation)
+	}
+	if input.Size > s.maxUploadSize {
+		return nil, fmt.Errorf("file exceeds maximum size of %d bytes: %w", s.maxUploadSize, model.ErrValidation)
+	}
+
+	attachmentID := uuid.Must(uuid.NewV7())
+	storageKey := fmt.Sprintf("%s/%s/%s/%s", project.ID, item.ID, attachmentID, input.Filename)
+
+	if _, err := s.fileStorage.Put(ctx, storageKey, input.Reader, input.Size, input.ContentType); err != nil {
+		return nil, fmt.Errorf("uploading file to storage: %w", err)
+	}
+
+	attachment := &model.Attachment{
+		ID:          attachmentID,
+		WorkItemID:  item.ID,
+		UploaderID:  info.UserID,
+		Filename:    input.Filename,
+		ContentType: input.ContentType,
+		SizeBytes:   input.Size,
+		StorageKey:  storageKey,
+		Comment:     input.Comment,
+	}
+
+	if err := s.attachments.Create(ctx, attachment); err != nil {
+		// Best-effort cleanup of storage on DB failure
+		_ = s.fileStorage.Delete(ctx, storageKey)
+		return nil, fmt.Errorf("creating attachment record: %w", err)
+	}
+
+	s.recordEventWithMetadata(ctx, item.ID, &info.UserID, "attachment_added", model.VisibilityInternal, map[string]interface{}{
+		"attachment_id": attachmentID.String(),
+		"filename":      input.Filename,
+		"size_bytes":    input.Size,
+	})
+
+	log.Ctx(ctx).Info().
+		Str("project_key", projectKey).
+		Int("item_number", itemNumber).
+		Str("filename", input.Filename).
+		Int64("size_bytes", input.Size).
+		Msg("attachment uploaded")
+
+	return s.attachments.GetByID(ctx, attachmentID)
+}
+
+// ListAttachments returns all attachments for a work item.
+func (s *WorkItemService) ListAttachments(ctx context.Context, info *model.AuthInfo, projectKey string, itemNumber int) ([]model.Attachment, error) {
+	project, err := s.projects.GetByKey(ctx, projectKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.requireMembership(ctx, info, project.ID); err != nil {
+		return nil, err
+	}
+
+	item, err := s.items.GetByProjectAndNumber(ctx, project.ID, itemNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.attachments.ListByWorkItem(ctx, item.ID)
+}
+
+// GetAttachmentFile returns the attachment metadata and a reader for the file content.
+func (s *WorkItemService) GetAttachmentFile(ctx context.Context, info *model.AuthInfo, projectKey string, itemNumber int, attachmentID uuid.UUID) (*model.Attachment, io.ReadCloser, error) {
+	project, err := s.projects.GetByKey(ctx, projectKey)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if err := s.requireMembership(ctx, info, project.ID); err != nil {
+		return nil, nil, err
+	}
+
+	item, err := s.items.GetByProjectAndNumber(ctx, project.ID, itemNumber)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	attachment, err := s.attachments.GetByID(ctx, attachmentID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if attachment.WorkItemID != item.ID {
+		return nil, nil, model.ErrNotFound
+	}
+
+	reader, _, err := s.fileStorage.Get(ctx, attachment.StorageKey)
+	if err != nil {
+		return nil, nil, fmt.Errorf("retrieving file from storage: %w", err)
+	}
+
+	return attachment, reader, nil
+}
+
+// DeleteAttachment soft-deletes an attachment. Only the uploader or project owner/admin can delete.
+func (s *WorkItemService) DeleteAttachment(ctx context.Context, info *model.AuthInfo, projectKey string, itemNumber int, attachmentID uuid.UUID) error {
+	project, err := s.projects.GetByKey(ctx, projectKey)
+	if err != nil {
+		return err
+	}
+
+	if err := s.requireMembership(ctx, info, project.ID); err != nil {
+		return err
+	}
+
+	item, err := s.items.GetByProjectAndNumber(ctx, project.ID, itemNumber)
+	if err != nil {
+		return err
+	}
+
+	attachment, err := s.attachments.GetByID(ctx, attachmentID)
+	if err != nil {
+		return err
+	}
+
+	if attachment.WorkItemID != item.ID {
+		return model.ErrNotFound
+	}
+
+	isUploader := attachment.UploaderID == info.UserID
+	if !isUploader {
+		if err := s.requireRole(ctx, info, project.ID,
+			model.ProjectRoleOwner, model.ProjectRoleAdmin); err != nil {
+			return model.ErrForbidden
+		}
+	}
+
+	if err := s.attachments.Delete(ctx, attachmentID); err != nil {
+		return fmt.Errorf("deleting attachment: %w", err)
+	}
+
+	s.recordEventWithMetadata(ctx, item.ID, &info.UserID, "attachment_removed", model.VisibilityInternal, map[string]interface{}{
+		"attachment_id": attachmentID.String(),
+		"filename":      attachment.Filename,
 	})
 
 	return nil

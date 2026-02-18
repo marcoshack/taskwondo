@@ -8,9 +8,15 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      minio:
+        condition: service_healthy
     env_file: .env
     environment:
       - DATABASE_URL=postgres://${POSTGRES_USER:-trackforge}:${POSTGRES_PASSWORD:-trackforge}@postgres:5432/${POSTGRES_DB:-trackforge}?sslmode=disable
+      - STORAGE_ENDPOINT=minio:9000
+      - STORAGE_ACCESS_KEY=${MINIO_ROOT_USER:-trackforge}
+      - STORAGE_SECRET_KEY=${MINIO_ROOT_PASSWORD:-trackforge}
+      - STORAGE_BUCKET=${MINIO_BUCKET:-trackforge-attachments}
     restart: unless-stopped
 
   web:
@@ -40,5 +46,40 @@ services:
       retries: 5
     restart: unless-stopped
 
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    volumes:
+      - miniodata:/data
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-trackforge}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-trackforge}
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 $${MINIO_ROOT_USER:-trackforge} $${MINIO_ROOT_PASSWORD:-trackforge};
+      mc mb --ignore-existing local/$${MINIO_BUCKET:-trackforge-attachments};
+      exit 0;
+      "
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-trackforge}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-trackforge}
+      MINIO_BUCKET: ${MINIO_BUCKET:-trackforge-attachments}
+
 volumes:
   pgdata:
+  miniodata:

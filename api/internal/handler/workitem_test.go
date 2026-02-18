@@ -13,8 +13,11 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
+	"io"
+
 	"github.com/marcoshack/trackforge/internal/model"
 	"github.com/marcoshack/trackforge/internal/service"
+	"github.com/marcoshack/trackforge/internal/storage"
 )
 
 // --- Mock workflow repository ---
@@ -501,6 +504,80 @@ func (m *mockMilestoneRepo) Delete(_ context.Context, id uuid.UUID) error {
 	return nil
 }
 
+// --- Mock attachment repo ---
+
+type mockAttachmentRepo struct {
+	attachments map[uuid.UUID]*model.Attachment
+}
+
+func newMockAttachmentRepo() *mockAttachmentRepo {
+	return &mockAttachmentRepo{attachments: make(map[uuid.UUID]*model.Attachment)}
+}
+
+func (m *mockAttachmentRepo) Create(_ context.Context, a *model.Attachment) error {
+	a.CreatedAt = time.Now()
+	m.attachments[a.ID] = a
+	return nil
+}
+
+func (m *mockAttachmentRepo) GetByID(_ context.Context, id uuid.UUID) (*model.Attachment, error) {
+	a, ok := m.attachments[id]
+	if !ok {
+		return nil, model.ErrNotFound
+	}
+	return a, nil
+}
+
+func (m *mockAttachmentRepo) ListByWorkItem(_ context.Context, workItemID uuid.UUID) ([]model.Attachment, error) {
+	var result []model.Attachment
+	for _, a := range m.attachments {
+		if a.WorkItemID == workItemID {
+			result = append(result, *a)
+		}
+	}
+	return result, nil
+}
+
+func (m *mockAttachmentRepo) Delete(_ context.Context, id uuid.UUID) error {
+	if _, ok := m.attachments[id]; !ok {
+		return model.ErrNotFound
+	}
+	delete(m.attachments, id)
+	return nil
+}
+
+// --- Mock storage ---
+
+type mockStorage struct {
+	objects map[string][]byte
+}
+
+func newMockStorage() *mockStorage {
+	return &mockStorage{objects: make(map[string][]byte)}
+}
+
+func (m *mockStorage) Put(_ context.Context, key string, reader io.Reader, _ int64, contentType string) (*storage.ObjectInfo, error) {
+	data, err := io.ReadAll(reader)
+	if err != nil {
+		return nil, err
+	}
+	m.objects[key] = data
+	return &storage.ObjectInfo{Key: key, Size: int64(len(data)), ContentType: contentType}, nil
+}
+
+func (m *mockStorage) Get(_ context.Context, key string) (io.ReadCloser, *storage.ObjectInfo, error) {
+	data, ok := m.objects[key]
+	if !ok {
+		return nil, nil, fmt.Errorf("object not found")
+	}
+	return io.NopCloser(bytes.NewReader(data)), &storage.ObjectInfo{Key: key, Size: int64(len(data))}, nil
+}
+
+func (m *mockStorage) Delete(_ context.Context, key string) error {
+	delete(m.objects, key)
+	return nil
+}
+
 // --- Test setup ---
 
 func workItemTestSetup(t *testing.T) (*WorkItemHandler, *model.AuthInfo, string) {
@@ -516,8 +593,10 @@ func workItemTestSetup(t *testing.T) (*WorkItemHandler, *model.AuthInfo, string)
 	workflowRepo := newMockWorkflowRepo()
 	queueRepo := newMockQueueRepo()
 	milestoneRepo := newMockMilestoneRepo()
-	svc := service.NewWorkItemService(itemRepo, eventRepo, commentRepo, relationRepo, projectRepo, memberRepo, workflowRepo, queueRepo, milestoneRepo)
-	h := NewWorkItemHandler(svc)
+	attachRepo := newMockAttachmentRepo()
+	store := newMockStorage()
+	svc := service.NewWorkItemService(itemRepo, eventRepo, commentRepo, relationRepo, attachRepo, projectRepo, memberRepo, workflowRepo, queueRepo, milestoneRepo, store, 50*1024*1024)
+	h := NewWorkItemHandler(svc, 50*1024*1024)
 
 	info := &model.AuthInfo{
 		UserID:     uuid.New(),

@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useWorkItem, useUpdateWorkItem, useDeleteWorkItem } from '@/hooks/useWorkItems'
+import { useWorkItem, useUpdateWorkItem, useDeleteWorkItem, useUploadAttachment } from '@/hooks/useWorkItems'
 import { useMembers } from '@/hooks/useProjects'
 import { useProjectWorkflow } from '@/hooks/useWorkflows'
 import { Spinner } from '@/components/ui/Spinner'
@@ -10,12 +10,15 @@ import { DetailSidebar } from '@/components/workitems/DetailSidebar'
 import { CommentList } from '@/components/workitems/CommentList'
 import { ActivityTimeline } from '@/components/workitems/ActivityTimeline'
 import { RelationList } from '@/components/workitems/RelationList'
+import { AttachmentList } from '@/components/workitems/AttachmentList'
+import { usePasteUpload } from '@/hooks/usePasteUpload'
 import { TypeBadge } from '@/components/workitems/TypeBadge'
 import { StatusBadge } from '@/components/workitems/StatusBadge'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { markdownComponents } from '@/components/ui/markdownComponents'
 
-type Tab = 'comments' | 'activity' | 'relations'
+type Tab = 'comments' | 'activity' | 'relations' | 'attachments'
 
 export function WorkItemDetailPage() {
   const { projectKey, itemNumber: itemNumberParam } = useParams<{ projectKey: string; itemNumber: string }>()
@@ -35,6 +38,54 @@ export function WorkItemDetailPage() {
   const [editingDesc, setEditingDesc] = useState(false)
   const [descDraft, setDescDraft] = useState('')
   const [showDelete, setShowDelete] = useState(false)
+  const [draggingOver, setDraggingOver] = useState(false)
+  const [toast, setToast] = useState<string | null>(null)
+  const dragCounter = useRef(0)
+  const uploadMut = useUploadAttachment(projectKey ?? '', itemNumber)
+
+  const handlePageDragEnter = useCallback((e: React.DragEvent) => {
+    if (!e.dataTransfer.types.includes('Files')) return
+    e.preventDefault()
+    dragCounter.current++
+    setDraggingOver(true)
+  }, [])
+
+  const handlePageDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    dragCounter.current--
+    if (dragCounter.current <= 0) {
+      dragCounter.current = 0
+      setDraggingOver(false)
+    }
+  }, [])
+
+  const handlePageDragOver = useCallback((e: React.DragEvent) => {
+    if (!e.dataTransfer.types.includes('Files')) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'copy'
+  }, [])
+
+  const handlePageDrop = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault()
+    dragCounter.current = 0
+    setDraggingOver(false)
+    const files = e.dataTransfer?.files
+    if (!files?.length) return
+    for (const file of files) {
+      uploadMut.mutate({ file }, {
+        onSuccess: () => {
+          setToast(`Attached "${file.name}"`)
+          setTimeout(() => setToast(null), 3000)
+        },
+      })
+    }
+  }, [uploadMut])
+
+  const { handlePaste: handleDescPaste, handleDrop: handleDescDrop, handleDragOver: handleDescDragOver } = usePasteUpload({
+    projectKey: projectKey ?? '',
+    itemNumber,
+    onTextChange: (updater) => setDescDraft(updater),
+  })
 
   if (isLoading) {
     return (
@@ -54,10 +105,31 @@ export function WorkItemDetailPage() {
     { key: 'comments', label: 'Comments' },
     { key: 'activity', label: 'Activity' },
     { key: 'relations', label: 'Relations' },
+    { key: 'attachments', label: 'Attachments' },
   ]
 
   return (
-    <div className="space-y-4">
+    <div
+      className="space-y-4 relative"
+      onDragEnter={handlePageDragEnter}
+      onDragLeave={handlePageDragLeave}
+      onDragOver={handlePageDragOver}
+      onDrop={handlePageDrop}
+    >
+      {draggingOver && (
+        <div className="fixed inset-0 z-50 bg-indigo-500/10 border-2 border-dashed border-indigo-400 flex items-center justify-center pointer-events-none">
+          <span className="text-lg font-medium text-indigo-600 dark:text-indigo-400 bg-white dark:bg-gray-900 px-6 py-3 rounded-lg shadow-lg">
+            Drop files to attach
+          </span>
+        </div>
+      )}
+
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-green-600 text-white text-sm px-4 py-2 rounded-lg shadow-lg animate-fade-in">
+          {toast}
+        </div>
+      )}
+
       {/* Back link */}
       <button
         className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
@@ -115,6 +187,9 @@ export function WorkItemDetailPage() {
                   rows={6}
                   value={descDraft}
                   onChange={(e) => setDescDraft(e.target.value)}
+                  onPaste={handleDescPaste}
+                  onDrop={handleDescDrop}
+                  onDragOver={handleDescDragOver}
                   autoFocus
                 />
                 <div className="flex gap-2">
@@ -132,7 +207,7 @@ export function WorkItemDetailPage() {
               >
                 {item.description ? (
                   <div className="prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300">
-                    <Markdown remarkPlugins={[remarkGfm]}>{item.description}</Markdown>
+                    <Markdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{item.description}</Markdown>
                   </div>
                 ) : (
                   <span className="text-sm text-gray-400 dark:text-gray-500 italic">No description. Click to add.</span>
@@ -159,7 +234,7 @@ export function WorkItemDetailPage() {
                   </button>
                 ))}
               </nav>
-              {(activeTab === 'comments' || activeTab === 'activity') && (
+              {(activeTab === 'comments' || activeTab === 'activity' || activeTab === 'attachments') && (
                 <button
                   className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 pb-2 flex items-center gap-1"
                   onClick={() => setSortOrder((s) => (s === 'desc' ? 'asc' : 'desc'))}
@@ -174,6 +249,7 @@ export function WorkItemDetailPage() {
             {activeTab === 'comments' && <CommentList projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} />}
             {activeTab === 'activity' && <ActivityTimeline projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} />}
             {activeTab === 'relations' && <RelationList projectKey={projectKey ?? ''} itemNumber={itemNumber} />}
+            {activeTab === 'attachments' && <AttachmentList projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} />}
           </div>
         </div>
 
