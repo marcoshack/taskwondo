@@ -5,6 +5,7 @@ import en from './en.json'
 import pt from './pt.json'
 import es from './es.json'
 import ja from './ja.json'
+import zh from './zh.json'
 
 export const LANGUAGE_KEY = 'trackforge_language'
 
@@ -17,6 +18,7 @@ i18n
       pt: { translation: pt },
       es: { translation: es },
       ja: { translation: ja },
+      zh: { translation: zh },
     },
     fallbackLng: 'en',
     interpolation: {
