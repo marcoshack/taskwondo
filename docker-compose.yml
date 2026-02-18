@@ -1,5 +1,6 @@
 services:
   api:
+    image: ghcr.io/marcoshack/trackforge/api:${IMAGE_TAG:-latest}
     build:
       context: ./api
       dockerfile: ../docker/Dockerfile.api
@@ -20,6 +21,7 @@ services:
     restart: unless-stopped
 
   web:
+    image: ghcr.io/marcoshack/trackforge/web:${IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: docker/Dockerfile.web
