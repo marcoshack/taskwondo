@@ -243,6 +243,10 @@
   "attachments.commentPlaceholder": "备注/描述（可选）...",
   "attachments.deleteConfirm": "确定删除此附件？",
 
+  "preview.download": "下载",
+  "preview.close": "关闭",
+  "preview.loadError": "加载文件预览失败。",
+
   "multiSelect.selected": "已选{{count}}项",
 
   "userPicker.unassigned": "未分配",

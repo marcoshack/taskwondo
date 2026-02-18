@@ -243,6 +243,10 @@
   "attachments.commentPlaceholder": "Commentaire/description optionnel...",
   "attachments.deleteConfirm": "Supprimer cette pièce jointe ?",
 
+  "preview.download": "Télécharger",
+  "preview.close": "Fermer",
+  "preview.loadError": "Échec du chargement de l'aperçu du fichier.",
+
   "multiSelect.selected": "{{count}} sélectionnés",
 
   "userPicker.unassigned": "Non assigné",

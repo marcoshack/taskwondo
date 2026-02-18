@@ -243,6 +243,10 @@
   "attachments.commentPlaceholder": "Comentário/descrição opcional...",
   "attachments.deleteConfirm": "Excluir este anexo?",
 
+  "preview.download": "Baixar",
+  "preview.close": "Fechar",
+  "preview.loadError": "Falha ao carregar a pré-visualização do arquivo.",
+
   "multiSelect.selected": "{{count}} selecionados",
 
   "userPicker.unassigned": "Não atribuído",

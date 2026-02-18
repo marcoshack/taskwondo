@@ -243,6 +243,10 @@
   "attachments.commentPlaceholder": "Comentario/descripción opcional...",
   "attachments.deleteConfirm": "¿Eliminar este adjunto?",
 
+  "preview.download": "Descargar",
+  "preview.close": "Cerrar",
+  "preview.loadError": "Error al cargar la vista previa del archivo.",
+
   "multiSelect.selected": "{{count}} seleccionados",
 
   "userPicker.unassigned": "Sin asignar",

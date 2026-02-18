@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useComments, useCreateComment, useUpdateComment, useDeleteComment } from '@/hooks/useWorkItems'
 import { useAuth } from '@/contexts/AuthContext'
@@ -10,7 +10,7 @@ import { Spinner } from '@/components/ui/Spinner'
 import { CopyButton } from '@/components/ui/CopyButton'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { markdownComponents } from '@/components/ui/markdownComponents'
+import { getMarkdownComponents } from '@/components/ui/markdownComponents'
 
 interface CommentListProps {
   projectKey: string
@@ -18,9 +18,10 @@ interface CommentListProps {
   sortOrder?: 'asc' | 'desc'
   highlightedCommentId?: string | null
   onHighlightClear?: () => void
+  onImageClick?: (src: string) => void
 }
 
-export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highlightedCommentId, onHighlightClear }: CommentListProps) {
+export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highlightedCommentId, onHighlightClear, onImageClick }: CommentListProps) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const { data: comments, isLoading } = useComments(projectKey, itemNumber)
@@ -82,6 +83,8 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
     itemNumber,
     onTextChange: (updater) => setNewBody(updater),
   })
+
+  const mdComponents = useMemo(() => getMarkdownComponents(onImageClick), [onImageClick])
 
   function authorName(authorId: string | null): string {
     if (!authorId) return t('common.unknown')
@@ -170,7 +173,7 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
                 <CopyButton text={c.body} className="opacity-0 group-hover/comment:opacity-100" />
               </div>
               <div className="prose prose-sm dark:prose-invert max-w-none text-gray-900 dark:text-gray-100 pl-8">
-                <Markdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{c.body}</Markdown>
+                <Markdown remarkPlugins={[remarkGfm]} components={mdComponents}>{c.body}</Markdown>
               </div>
               <div className="flex items-center gap-3 mt-1 pl-8">
                 {c.visibility !== 'internal' && (

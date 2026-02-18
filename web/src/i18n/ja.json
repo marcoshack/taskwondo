@@ -243,6 +243,10 @@
   "attachments.commentPlaceholder": "コメント/説明（任意）...",
   "attachments.deleteConfirm": "この添付ファイルを削除しますか？",
 
+  "preview.download": "ダウンロード",
+  "preview.close": "閉じる",
+  "preview.loadError": "ファイルプレビューの読み込みに失敗しました。",
+
   "multiSelect.selected": "{{count}}件選択中",
 
   "userPicker.unassigned": "未割当",

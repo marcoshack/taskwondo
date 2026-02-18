@@ -243,6 +243,10 @@
   "attachments.commentPlaceholder": "Kommentar/Beschreibung (optional)...",
   "attachments.deleteConfirm": "Diesen Anhang löschen?",
 
+  "preview.download": "Herunterladen",
+  "preview.close": "Schließen",
+  "preview.loadError": "Dateivorschau konnte nicht geladen werden.",
+
   "multiSelect.selected": "{{count}} ausgewählt",
 
   "userPicker.unassigned": "Nicht zugewiesen",

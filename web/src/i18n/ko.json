@@ -243,6 +243,10 @@
   "attachments.commentPlaceholder": "설명 (선택)...",
   "attachments.deleteConfirm": "이 첨부파일을 삭제하시겠습니까?",
 
+  "preview.download": "다운로드",
+  "preview.close": "닫기",
+  "preview.loadError": "파일 미리보기를 불러오지 못했습니다.",
+
   "multiSelect.selected": "{{count}}개 선택",
 
   "userPicker.unassigned": "미배정",
