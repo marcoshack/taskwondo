@@ -279,6 +279,12 @@
   "workItemPicker.searchPlaceholder": "제목 또는 ID로 검색...",
   "workItemPicker.noItems": "항목을 찾을 수 없습니다",
 
+  "mention.title": "링크 삽입",
+  "mention.searchPlaceholder": "프로젝트 및 작업 항목 검색...",
+  "mention.projects": "프로젝트",
+  "mention.workItems": "작업 항목",
+  "mention.noResults": "결과를 찾을 수 없습니다",
+
   "preferences.title": "환경설정",
   "preferences.theme": "테마",
   "preferences.fontSize": "글꼴 크기",
