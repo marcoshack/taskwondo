@@ -9,7 +9,7 @@ interface SidebarContextValue {
   toggleCollapsed: () => void
 }
 
-const SIDEBAR_COLLAPSED_KEY = 'trackforge_sidebar_collapsed'
+const SIDEBAR_COLLAPSED_KEY = 'taskwondo_sidebar_collapsed'
 const SidebarContext = createContext<SidebarContextValue | null>(null)
 
 function getStoredCollapsed(): boolean {

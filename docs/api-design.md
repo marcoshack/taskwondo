@@ -2,7 +2,7 @@
 
 ## Overview
 
-TrackForge exposes a RESTful JSON API. All internal and portal functionality is available via the API — the React frontend is a pure API client.
+Taskwondo exposes a RESTful JSON API. All internal and portal functionality is available via the API — the React frontend is a pure API client.
 
 **Base URLs:**
 - Internal API: `/api/v1/`
@@ -65,7 +65,7 @@ TrackForge exposes a RESTful JSON API. All internal and portal functionality is 
 
 **Internal API:**
 - JWT via `Authorization: Bearer <token>` header or `session` httpOnly cookie
-- API key via `Authorization: Bearer tfk_<key>` header
+- API key via `Authorization: Bearer twk_<key>` header
 
 **Portal API:**
 - Portal token via `Authorization: Bearer tfp_<token>` header or `portal_session` cookie
@@ -517,8 +517,8 @@ Browse resolved/public items as a knowledge base (optional feature).
   "data": {
     "id": "uuid",
     "name": "CI/CD Pipeline",
-    "key": "tfk_live_a1b2c3d4e5f6...",
-    "key_prefix": "tfk_live_a1",
+    "key": "twk_live_a1b2c3d4e5f6...",
+    "key_prefix": "twk_live_a1",
     "permissions": ["work_items:write", "comments:write"],
     "expires_at": "2026-01-15T00:00:00Z"
   }

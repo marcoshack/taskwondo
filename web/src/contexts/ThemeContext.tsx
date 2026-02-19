@@ -19,8 +19,8 @@ interface ThemeContextValue {
   setFontSize: (size: FontSize) => void
 }
 
-const THEME_KEY = 'trackforge_theme'
-const FONT_SIZE_KEY = 'trackforge_font_size'
+const THEME_KEY = 'taskwondo_theme'
+const FONT_SIZE_KEY = 'taskwondo_font_size'
 const ThemeContext = createContext<ThemeContextValue | null>(null)
 
 const darkMediaQuery = window.matchMedia('(prefers-color-scheme: dark)')

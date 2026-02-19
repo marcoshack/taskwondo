@@ -2,16 +2,16 @@
 
 ## Overview
 
-TrackForge integrates with external systems through inbound webhooks (receiving alerts and events) and outbound webhooks (sending notifications). The integration system is designed to work with the monitoring and communication tools commonly used in self-hosted infrastructure environments.
+Taskwondo integrates with external systems through inbound webhooks (receiving alerts and events) and outbound webhooks (sending notifications). The integration system is designed to work with the monitoring and communication tools commonly used in self-hosted infrastructure environments.
 
 ## Inbound Webhooks
 
-Inbound webhooks allow external systems to create work items in TrackForge automatically.
+Inbound webhooks allow external systems to create work items in Taskwondo automatically.
 
 ### Architecture
 
 ```
-External System                      TrackForge
+External System                      Taskwondo
 ─────────────                        ──────────
 Prometheus Alertmanager  ──POST──▶  /webhooks/:endpointId
 Grafana Alerts           ──POST──▶  /webhooks/:endpointId
@@ -69,15 +69,15 @@ Each webhook endpoint is configured with:
 
 ### Prometheus Alertmanager
 
-TrackForge accepts the standard Alertmanager webhook payload format.
+Taskwondo accepts the standard Alertmanager webhook payload format.
 
 **Alertmanager webhook config:**
 ```yaml
 # alertmanager.yml
 receivers:
-  - name: trackforge
+  - name: taskwondo
     webhook_configs:
-      - url: 'https://trackforge.yourdomain.com/webhooks/<endpoint-id>'
+      - url: 'https://taskwondo.yourdomain.com/webhooks/<endpoint-id>'
         http_config:
           bearer_token: 'your-webhook-secret'
         send_resolved: true
@@ -85,7 +85,7 @@ receivers:
 
 **Payload processing:**
 
-| Alertmanager Field | TrackForge Mapping |
+| Alertmanager Field | Taskwondo Mapping |
 |-------------------|-------------------|
 | `alerts[].labels.alertname` | Title (via template) |
 | `alerts[].annotations.summary` | Title supplement |
@@ -97,25 +97,25 @@ receivers:
 | `alerts[].startsAt` | Stored in custom_fields |
 | `alerts[].generatorURL` | Stored in custom_fields, linked in description |
 
-**Deduplication:** When a webhook arrives with a fingerprint matching an existing open ticket in the same queue, TrackForge adds a comment to the existing ticket instead of creating a new one. If the alert has `status: resolved`, the existing ticket is transitioned to "resolved" (if `auto_resolve_on_resolved` is enabled).
+**Deduplication:** When a webhook arrives with a fingerprint matching an existing open ticket in the same queue, Taskwondo adds a comment to the existing ticket instead of creating a new one. If the alert has `status: resolved`, the existing ticket is transitioned to "resolved" (if `auto_resolve_on_resolved` is enabled).
 
 **Batch handling:** Alertmanager sends arrays of alerts. Each alert in the batch is processed independently, potentially creating or updating multiple tickets from a single webhook call.
 
 ### Grafana Alerts
 
-TrackForge accepts Grafana's webhook notification channel format.
+Taskwondo accepts Grafana's webhook notification channel format.
 
 **Grafana contact point config:**
 ```
 Type: Webhook
-URL: https://trackforge.yourdomain.com/webhooks/<endpoint-id>
+URL: https://taskwondo.yourdomain.com/webhooks/<endpoint-id>
 HTTP Method: POST
 Authorization Header: Bearer your-webhook-secret
 ```
 
 **Payload processing:**
 
-| Grafana Field | TrackForge Mapping |
+| Grafana Field | Taskwondo Mapping |
 |--------------|-------------------|
 | `title` | Title |
 | `message` | Description |
@@ -157,7 +157,7 @@ All inbound webhooks are authenticated:
 
 | Method | How It Works |
 |--------|-------------|
-| **HMAC signature** | Webhook signs the payload with the shared secret. TrackForge validates `X-Webhook-Signature: sha256=<hex>` |
+| **HMAC signature** | Webhook signs the payload with the shared secret. Taskwondo validates `X-Webhook-Signature: sha256=<hex>` |
 | **Bearer token** | Simple `Authorization: Bearer <token>` header. Easier to configure, suitable for most cases |
 
 Additional protections:
@@ -205,7 +205,7 @@ Automated notifications to Discord channels via Discord webhooks. Configured as 
 
 ### Inbound: Discord Bot (Future Enhancement)
 
-A Discord bot allowing users to interact with TrackForge from Discord:
+A Discord bot allowing users to interact with Taskwondo from Discord:
 
 **Commands:**
 ```
@@ -219,8 +219,8 @@ A Discord bot allowing users to interact with TrackForge from Discord:
 **Implementation approach:**
 - Separate Go process or goroutine within the API server
 - Uses Discord Gateway API (discordgo library)
-- Authenticates via API key to TrackForge's own API
-- Maps Discord users to TrackForge users via linked accounts
+- Authenticates via API key to Taskwondo's own API
+- Maps Discord users to Taskwondo users via linked accounts
 
 Scoped as a future enhancement — outbound webhook notifications cover the most critical Discord use case initially.
 
@@ -230,7 +230,7 @@ Scoped as a future enhancement — outbound webhook notifications cover the most
 
 ### Outbound Email
 
-TrackForge sends emails for:
+Taskwondo sends emails for:
 - Portal verification codes
 - Portal ticket notifications (new comment, status change, resolution)
 - Internal user notifications (if email channel is enabled)
@@ -239,9 +239,9 @@ TrackForge sends emails for:
 ```env
 SMTP_HOST=smtp.example.com
 SMTP_PORT=587
-SMTP_USERNAME=trackforge@example.com
+SMTP_USERNAME=taskwondo@example.com
 SMTP_PASSWORD=...
-SMTP_FROM=TrackForge <trackforge@example.com>
+SMTP_FROM=Taskwondo <taskwondo@example.com>
 SMTP_TLS=true
 ```
 
@@ -252,7 +252,7 @@ SMTP_TLS=true
 Accept emails to create or update tickets:
 
 ```
-Incoming email to: support+GAME@trackforge.yourdomain.com
+Incoming email to: support+GAME@taskwondo.yourdomain.com
                           └──┘
                         queue key
 
@@ -270,7 +270,7 @@ Requires either a self-hosted SMTP server or a third-party inbound email service
 
 ## Outbound Webhooks
 
-TrackForge can POST to external URLs when events occur, enabling integration with any system that accepts webhooks.
+Taskwondo can POST to external URLs when events occur, enabling integration with any system that accepts webhooks.
 
 ### Configuration
 
@@ -309,14 +309,14 @@ CREATE TABLE webhook_deliveries (
 
 ## OpenTelemetry Integration
 
-TrackForge exports observability data via OpenTelemetry, integrating with your existing monitoring stack.
+Taskwondo exports observability data via OpenTelemetry, integrating with your existing monitoring stack.
 
 ### Configuration
 
 ```env
 OTEL_ENABLED=true
 OTEL_EXPORTER_OTLP_ENDPOINT=http://grafana-alloy:4317
-OTEL_SERVICE_NAME=trackforge
+OTEL_SERVICE_NAME=taskwondo
 OTEL_RESOURCE_ATTRIBUTES=deployment.environment=production
 ```
 
@@ -336,7 +336,7 @@ OTEL_RESOURCE_ATTRIBUTES=deployment.environment=production
 
 ### Prometheus Metrics Endpoint
 
-In addition to OTLP export, TrackForge exposes a `/metrics` endpoint for direct Prometheus scraping. This is useful if you prefer pull-based metrics or don't have an OTLP collector.
+In addition to OTLP export, Taskwondo exposes a `/metrics` endpoint for direct Prometheus scraping. This is useful if you prefer pull-based metrics or don't have an OTLP collector.
 
 ---
 

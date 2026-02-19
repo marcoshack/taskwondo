@@ -14,14 +14,14 @@ import (
 	"github.com/rs/zerolog/log"
 	"golang.org/x/time/rate"
 
-	"github.com/marcoshack/trackforge/internal/config"
-	"github.com/marcoshack/trackforge/internal/database"
-	"github.com/marcoshack/trackforge/internal/dataport"
-	"github.com/marcoshack/trackforge/internal/handler"
-	"github.com/marcoshack/trackforge/internal/middleware"
-	"github.com/marcoshack/trackforge/internal/repository"
-	"github.com/marcoshack/trackforge/internal/service"
-	"github.com/marcoshack/trackforge/internal/storage"
+	"github.com/marcoshack/taskwondo/internal/config"
+	"github.com/marcoshack/taskwondo/internal/database"
+	"github.com/marcoshack/taskwondo/internal/dataport"
+	"github.com/marcoshack/taskwondo/internal/handler"
+	"github.com/marcoshack/taskwondo/internal/middleware"
+	"github.com/marcoshack/taskwondo/internal/repository"
+	"github.com/marcoshack/taskwondo/internal/service"
+	"github.com/marcoshack/taskwondo/internal/storage"
 )
 
 func main() {
@@ -41,7 +41,7 @@ func main() {
 
 	ctx := log.Logger.WithContext(context.Background())
 
-	log.Info().Msg("starting trackforge")
+	log.Info().Msg("starting taskwondo")
 
 	// Connect to database
 	db, err := database.Connect(ctx, cfg.DatabaseURL)

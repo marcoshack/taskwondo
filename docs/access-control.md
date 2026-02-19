@@ -1,6 +1,6 @@
 # Access Control
 
-TrackForge uses a **two-tier RBAC system** (global + project-level).
+Taskwondo uses a **two-tier RBAC system** (global + project-level).
 
 ## 1. Global Roles
 
@@ -53,6 +53,6 @@ Comments and attachments use an **author/uploader override** — you can always 
 Two auth methods, both via `Authorization: Bearer <token>`:
 
 - **JWT** — issued on login, contains `UserID`, `Email`, `GlobalRole` in claims (HMAC-SHA256)
-- **API Keys** — prefixed `tfk_`, SHA-256 hashed for storage, supports expiration and `LastUsedAt` tracking
+- **API Keys** — prefixed `twk_`, SHA-256 hashed for storage, supports expiration and `LastUsedAt` tracking
 
-The middleware detects which type based on the `tfk_` prefix, validates it, and injects `AuthInfo` into the request context. Disabled accounts (`IsActive = false`) are rejected at both JWT-login and API-key-validation time.
+The middleware detects which type based on the `twk_` prefix, validates it, and injects `AuthInfo` into the request context. Disabled accounts (`IsActive = false`) are rejected at both JWT-login and API-key-validation time.

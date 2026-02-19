@@ -13,7 +13,7 @@ import (
 	"github.com/lib/pq"
 	"github.com/rs/zerolog/log"
 
-	"github.com/marcoshack/trackforge/internal/storage"
+	"github.com/marcoshack/taskwondo/internal/storage"
 )
 
 // Exporter exports all data from the database and storage into a tar.gz archive.

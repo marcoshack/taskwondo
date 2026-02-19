@@ -1,6 +1,6 @@
 services:
   api:
-    image: ghcr.io/marcoshack/trackforge/api:${IMAGE_TAG:-latest}
+    image: ghcr.io/marcoshack/taskwondo/api:${IMAGE_TAG:-latest}
     build:
       context: ./api
       dockerfile: ../docker/Dockerfile.api
@@ -13,16 +13,16 @@ services:
         condition: service_healthy
     env_file: .env
     environment:
-      - DATABASE_URL=postgres://${POSTGRES_USER:?required}:${POSTGRES_PASSWORD:?required}@postgres:5432/${POSTGRES_DB:-trackforge}?sslmode=disable
+      - DATABASE_URL=postgres://${POSTGRES_USER:?required}:${POSTGRES_PASSWORD:?required}@postgres:5432/${POSTGRES_DB:-taskwondo}?sslmode=disable
       - JWT_SECRET=${JWT_SECRET:?required — generate a random string of at least 32 chars}
       - STORAGE_ENDPOINT=minio:9000
       - STORAGE_ACCESS_KEY=${MINIO_ROOT_USER:?required}
       - STORAGE_SECRET_KEY=${MINIO_ROOT_PASSWORD:?required}
-      - STORAGE_BUCKET=${MINIO_BUCKET:-trackforge-attachments}
+      - STORAGE_BUCKET=${MINIO_BUCKET:-taskwondo-attachments}
     restart: unless-stopped
 
   web:
-    image: ghcr.io/marcoshack/trackforge/web:${IMAGE_TAG:-latest}
+    image: ghcr.io/marcoshack/taskwondo/web:${IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: docker/Dockerfile.web
@@ -39,7 +39,7 @@ services:
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?required}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?required}
-      POSTGRES_DB: ${POSTGRES_DB:-trackforge}
+      POSTGRES_DB: ${POSTGRES_DB:-taskwondo}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     healthcheck:
@@ -75,16 +75,16 @@ services:
     entrypoint: >
       /bin/sh -c "
       mc alias set local http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD};
-      mc mb --ignore-existing local/$${MINIO_BUCKET:-trackforge-attachments};
+      mc mb --ignore-existing local/$${MINIO_BUCKET:-taskwondo-attachments};
       exit 0;
       "
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:?required}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?required}
-      MINIO_BUCKET: ${MINIO_BUCKET:-trackforge-attachments}
+      MINIO_BUCKET: ${MINIO_BUCKET:-taskwondo-attachments}
 
   export:
-    image: ghcr.io/marcoshack/trackforge/api:${IMAGE_TAG:-latest}
+    image: ghcr.io/marcoshack/taskwondo/api:${IMAGE_TAG:-latest}
     build:
       context: ./api
       dockerfile: ../docker/Dockerfile.api
@@ -96,17 +96,17 @@ services:
         condition: service_healthy
     env_file: .env
     environment:
-      - DATABASE_URL=postgres://${POSTGRES_USER:?required}:${POSTGRES_PASSWORD:?required}@postgres:5432/${POSTGRES_DB:-trackforge}?sslmode=disable
+      - DATABASE_URL=postgres://${POSTGRES_USER:?required}:${POSTGRES_PASSWORD:?required}@postgres:5432/${POSTGRES_DB:-taskwondo}?sslmode=disable
       - STORAGE_ENDPOINT=minio:9000
       - STORAGE_ACCESS_KEY=${MINIO_ROOT_USER:?required}
       - STORAGE_SECRET_KEY=${MINIO_ROOT_PASSWORD:?required}
-      - STORAGE_BUCKET=${MINIO_BUCKET:-trackforge-attachments}
+      - STORAGE_BUCKET=${MINIO_BUCKET:-taskwondo-attachments}
     volumes:
       - ./backups:/backups
-    entrypoint: ["/bin/trackforge", "--export", "/backups/trackforge-export.tar.gz"]
+    entrypoint: ["/bin/taskwondo", "--export", "/backups/taskwondo-export.tar.gz"]
 
   import:
-    image: ghcr.io/marcoshack/trackforge/api:${IMAGE_TAG:-latest}
+    image: ghcr.io/marcoshack/taskwondo/api:${IMAGE_TAG:-latest}
     build:
       context: ./api
       dockerfile: ../docker/Dockerfile.api
@@ -118,14 +118,14 @@ services:
         condition: service_healthy
     env_file: .env
     environment:
-      - DATABASE_URL=postgres://${POSTGRES_USER:?required}:${POSTGRES_PASSWORD:?required}@postgres:5432/${POSTGRES_DB:-trackforge}?sslmode=disable
+      - DATABASE_URL=postgres://${POSTGRES_USER:?required}:${POSTGRES_PASSWORD:?required}@postgres:5432/${POSTGRES_DB:-taskwondo}?sslmode=disable
       - STORAGE_ENDPOINT=minio:9000
       - STORAGE_ACCESS_KEY=${MINIO_ROOT_USER:?required}
       - STORAGE_SECRET_KEY=${MINIO_ROOT_PASSWORD:?required}
-      - STORAGE_BUCKET=${MINIO_BUCKET:-trackforge-attachments}
+      - STORAGE_BUCKET=${MINIO_BUCKET:-taskwondo-attachments}
     volumes:
       - ./backups:/backups
-    entrypoint: ["/bin/trackforge", "--import", "/backups/${IMPORT_FILE:-trackforge-export.tar.gz}"]
+    entrypoint: ["/bin/taskwondo", "--import", "/backups/${IMPORT_FILE:-taskwondo-export.tar.gz}"]
 
 volumes:
   pgdata:

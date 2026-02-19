@@ -16,7 +16,7 @@ import (
 	"github.com/lib/pq"
 	"github.com/rs/zerolog/log"
 
-	"github.com/marcoshack/trackforge/internal/storage"
+	"github.com/marcoshack/taskwondo/internal/storage"
 )
 
 // Importer imports data from a tar.gz archive into an empty database and storage.
@@ -37,7 +37,7 @@ func (imp *Importer) Import(ctx context.Context, r io.Reader) error {
 	start := time.Now()
 
 	// Extract archive to temp directory.
-	tmpDir, err := os.MkdirTemp("", "trackforge-import-*")
+	tmpDir, err := os.MkdirTemp("", "taskwondo-import-*")
 	if err != nil {
 		return fmt.Errorf("creating temp dir: %w", err)
 	}

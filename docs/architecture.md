@@ -2,7 +2,7 @@
 
 ## Overview
 
-TrackForge is composed by a Go service backed by a single PostgreSQL database, with a React/TypeScript frontend served via Nginx. The system is deployed as 3 Docker Compose services.
+Taskwondo is composed by a Go service backed by a single PostgreSQL database, with a React/TypeScript frontend served via Nginx. The system is deployed as 3 Docker Compose services.
 
 ```
 ┌──────────────────────────────────────────────────────────┐
@@ -139,7 +139,7 @@ Additionally, work items have a **visibility** field:
 
 ## Background Processing
 
-Instead of a separate worker service or message queue, TrackForge uses an internal task scheduler:
+Instead of a separate worker service or message queue, Taskwondo uses an internal task scheduler:
 
 ```go
 // Lightweight background processor
@@ -178,13 +178,13 @@ Prometheus metrics exposed at `/metrics`:
 
 | Metric | Type | Description |
 |--------|------|-------------|
-| `trackforge_http_requests_total` | Counter | Requests by method, path, status |
-| `trackforge_http_request_duration_seconds` | Histogram | Request latency |
-| `trackforge_workitems_created_total` | Counter | Work items created by type |
-| `trackforge_workitems_open` | Gauge | Currently open work items by type/project |
-| `trackforge_automation_rules_triggered_total` | Counter | Automation rule executions |
-| `trackforge_webhook_deliveries_total` | Counter | Outbound webhooks by status |
-| `trackforge_db_query_duration_seconds` | Histogram | Database query latency |
+| `taskwondo_http_requests_total` | Counter | Requests by method, path, status |
+| `taskwondo_http_request_duration_seconds` | Histogram | Request latency |
+| `taskwondo_workitems_created_total` | Counter | Work items created by type |
+| `taskwondo_workitems_open` | Gauge | Currently open work items by type/project |
+| `taskwondo_automation_rules_triggered_total` | Counter | Automation rule executions |
+| `taskwondo_webhook_deliveries_total` | Counter | Outbound webhooks by status |
+| `taskwondo_db_query_duration_seconds` | Histogram | Database query latency |
 
 ### Logging
 

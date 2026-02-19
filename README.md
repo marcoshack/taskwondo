@@ -1,16 +1,16 @@
-# TrackForge
+# Taskwondo
 
 **A self-hosted task and ticket management system with integrated project management and public-facing support portal.**
 
-TrackForge combines project/task management (like a simplified JIRA) with a ticketing system for incident tracking and customer support — all in a single, tightly integrated platform.
+Taskwondo combines project/task management (like a simplified JIRA) with a ticketing system for incident tracking and customer support — all in a single, tightly integrated platform.
 
-## Why TrackForge?
+## Why Taskwondo?
 
 Most self-hosted project management tools fall into two camps:
 - **Enterprise behemoths** with 10+ services, multiple databases, and painful setup (looking at you, Plane)
 - **Glorified to-do lists** that lack the workflow, automation, and integration capabilities needed for real operations
 
-TrackForge sits in the middle: powerful enough for real project management and incident tracking, simple enough to deploy with a minimal Docker Compose stack.
+Taskwondo sits in the middle: powerful enough for real project management and incident tracking, simple enough to deploy with a minimal Docker Compose stack.
 
 ## Core Concepts
 
@@ -60,8 +60,8 @@ A scoped, read-only (plus submission) interface where external users (players, c
 
 ```bash
 # Clone and configure
-git clone https://github.com/youruser/trackforge.git
-cd trackforge
+git clone https://github.com/youruser/taskwondo.git
+cd taskwondo
 ./install.sh
 
 # Start

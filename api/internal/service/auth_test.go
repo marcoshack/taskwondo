@@ -12,7 +12,7 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/marcoshack/trackforge/internal/model"
+	"github.com/marcoshack/taskwondo/internal/model"
 )
 
 // --- Mock repositories ---
@@ -325,8 +325,8 @@ func TestCreateAndValidateAPIKey(t *testing.T) {
 	if apiKey.Name != "Test Key" {
 		t.Fatalf("expected name 'Test Key', got %s", apiKey.Name)
 	}
-	if fullKey[:4] != "tfk_" {
-		t.Fatalf("expected key to start with 'tfk_', got %s", fullKey[:4])
+	if fullKey[:4] != "twk_" {
+		t.Fatalf("expected key to start with 'twk_', got %s", fullKey[:4])
 	}
 	if apiKey.KeyPrefix != fullKey[:8] {
 		t.Fatalf("expected key_prefix %s, got %s", fullKey[:8], apiKey.KeyPrefix)
@@ -361,7 +361,7 @@ func TestValidateAPIKey_Expired(t *testing.T) {
 func TestValidateAPIKey_InvalidKey(t *testing.T) {
 	svc, _, _ := newTestAuthService()
 
-	_, err := svc.ValidateAPIKey(context.Background(), "tfk_invalid_key_12345")
+	_, err := svc.ValidateAPIKey(context.Background(), "twk_invalid_key_12345")
 	if err != model.ErrUnauthorized {
 		t.Fatalf("expected ErrUnauthorized, got %v", err)
 	}
@@ -904,7 +904,7 @@ func TestFindOrCreateOAuthUser_NoEmail(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	expectedEmail := "discord_555666777@oauth.trackforge.local"
+	expectedEmail := "discord_555666777@oauth.taskwondo.local"
 	if user.Email != expectedEmail {
 		t.Fatalf("expected email %s, got %s", expectedEmail, user.Email)
 	}

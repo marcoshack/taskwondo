@@ -32,12 +32,12 @@
   "common.description": "説明",
   "common.you": "あなた",
 
-  "brand.name": "TrackForge",
+  "brand.name": "Taskwondo",
 
   "nav.preferences": "設定",
   "nav.signOut": "ログアウト",
 
-  "login.title": "TrackForgeにログイン",
+  "login.title": "Taskwondoにログイン",
   "login.email": "メール",
   "login.password": "パスワード",
   "login.submit": "ログイン",

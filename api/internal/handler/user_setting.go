@@ -8,8 +8,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 
-	"github.com/marcoshack/trackforge/internal/model"
-	"github.com/marcoshack/trackforge/internal/service"
+	"github.com/marcoshack/taskwondo/internal/model"
+	"github.com/marcoshack/taskwondo/internal/service"
 )
 
 // UserSettingHandler handles user setting endpoints.

@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/marcoshack/trackforge/internal/model"
+	"github.com/marcoshack/taskwondo/internal/model"
 )
 
 // Authenticator validates authentication tokens.
@@ -16,7 +16,7 @@ type Authenticator interface {
 }
 
 // Auth extracts and validates authentication from the Authorization header.
-// Supports both JWT tokens and API keys (prefixed with "tfk_").
+// Supports both JWT tokens and API keys (prefixed with "twk_").
 func Auth(authenticator Authenticator) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -40,7 +40,7 @@ func Auth(authenticator Authenticator) func(http.Handler) http.Handler {
 			var authInfo *model.AuthInfo
 			var err error
 
-			if strings.HasPrefix(token, "tfk_") {
+			if strings.HasPrefix(token, "twk_") {
 				authInfo, err = authenticator.ValidateAPIKey(r.Context(), token)
 			} else {
 				authInfo, err = authenticator.ValidateJWT(token)
