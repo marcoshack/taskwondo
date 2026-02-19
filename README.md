@@ -56,36 +56,13 @@ A scoped, read-only (plus submission) interface where external users (players, c
 | Deployment | Docker Compose (3 services: api, frontend, postgres) |
 | Observability | OpenTelemetry → Prometheus/Grafana |
 
-## Architecture Overview
-
-```
-┌──────────────────────────────────────────────────────────┐
-│                     Docker Compose                       │
-│                                                          │
-│  ┌─────────────┐  ┌─────────────┐  ┌──────────────────┐  │
-│  │  Frontend   │  │  API Server │  │   PostgreSQL     │  │
-│  │  (React/TS) │──│  (Go)       │──│                  │  │
-│  │  Nginx      │  │             │  │  Single DB       │  │
-│  │  :3000      │  │  :8080      │  │  :5432           │  │
-│  └─────────────┘  └──────┬──────┘  └──────────────────┘  │
-│                          │                               │
-└──────────────────────────┼───────────────────────────────┘
-                           │
-              ┌────────────┼────────────┐
-              │            │            │
-         Webhooks     Discord Bot   Email Inbound
-         (Prometheus,  (optional)   (optional)
-          Grafana)
-```
-
 ## Deployment
 
 ```bash
 # Clone and configure
 git clone https://github.com/youruser/trackforge.git
 cd trackforge
-cp .env.example .env
-# Edit .env with your settings
+./install.sh
 
 # Start
 docker compose up -d
@@ -94,48 +71,6 @@ docker compose up -d
 # Frontend:     http://localhost:3000
 # API:          http://localhost:8080
 # Health check: http://localhost:8080/healthz
-```
-
-## Project Structure
-
-```
-trackforge/
-├── api/                     # Go API server
-│   ├── cmd/
-│   │   └── server/          # Application entrypoint
-│   │       └── main.go
-│   ├── internal/
-│   │   ├── config/          # Configuration loading
-│   │   ├── database/        # Database connection, migrations
-│   │   │   └── migrations/  # SQL migration files
-│   │   ├── handler/         # HTTP handlers (grouped by domain)
-│   │   ├── middleware/      # Auth, logging, CORS, rate limiting
-│   │   ├── model/           # Domain types and interfaces
-│   │   ├── repository/      # Database access layer
-│   │   ├── service/         # Business logic layer
-│   │   ├── automation/      # Rule engine, webhook processing
-│   │   └── otel/            # OpenTelemetry setup
-│   ├── go.mod
-│   └── go.sum
-├── web/                     # React frontend
-│   ├── src/
-│   │   ├── components/
-│   │   ├── pages/
-│   │   ├── hooks/
-│   │   ├── api/             # API client
-│   │   ├── types/
-│   │   └── portal/          # Public portal pages
-│   ├── package.json
-│   └── vite.config.ts
-├── docs/                    # Design documents
-├── docker/
-│   ├── Dockerfile.api
-│   ├── Dockerfile.web
-│   └── nginx.conf
-├── docker-compose.yml
-├── .env.example
-├── Makefile
-└── AGENTS.md                # AI agent implementation guide
 ```
 
 ## Documentation
@@ -147,7 +82,6 @@ trackforge/
 - [Workflows](docs/workflows.md) — Work item lifecycles, automation rules, state machines
 - [Public Portal](docs/public-portal.md) — Public interface spec, permissions, submission flow
 - [Integrations](docs/integrations.md) — Prometheus, Discord, email, webhooks
-- [AGENTS.md](AGENTS.md) — Implementation guidance for AI coding agents
 
 ## License
 

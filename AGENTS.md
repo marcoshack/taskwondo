@@ -96,7 +96,7 @@ api/internal/middleware/requestid.go
 api/internal/handler/health.go
 docker/Dockerfile.api
 docker-compose.yml
-.env.example
+.env.template
 ```
 
 ### Phase 2: Authentication & Users

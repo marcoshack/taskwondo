@@ -1,7 +1,11 @@
 # Environment and secrets
 .env
 .env.local
+.env.backup*
 .env.*.local
+
+# temporary files
+tmp/
 
 # Go
 api/tmp/
