@@ -171,6 +171,7 @@
 
   "workitems.detail.description": "Beschreibung",
   "workitems.detail.noDescription": "Keine Beschreibung. Klicken zum Hinzufügen.",
+  "workitems.detail.properties": "Eigenschaften",
   "workitems.detail.deleteItem": "Element löschen",
   "workitems.detail.deleteTitle": "Element löschen",
   "workitems.detail.deleteConfirmBody": "Möchten Sie <bold>{{displayId}}</bold> wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
@@ -332,6 +333,7 @@
   "nav.systemSettings": "Systemeinstellungen",
 
   "admin.title": "Systemeinstellungen",
+  "admin.titleShort": "System",
   "admin.sidebar.users": "Benutzer",
 
   "admin.users.title": "Benutzer",

@@ -171,6 +171,7 @@
 
   "workitems.detail.description": "説明",
   "workitems.detail.noDescription": "説明なし。クリックして追加。",
+  "workitems.detail.properties": "プロパティ",
   "workitems.detail.deleteItem": "アイテム削除",
   "workitems.detail.deleteTitle": "アイテム削除",
   "workitems.detail.deleteConfirmBody": "<bold>{{displayId}}</bold>を削除しますか？この操作は元に戻せません。",
@@ -332,6 +333,7 @@
   "nav.systemSettings": "システム設定",
 
   "admin.title": "システム設定",
+  "admin.titleShort": "システム",
   "admin.sidebar.users": "ユーザー",
 
   "admin.users.title": "ユーザー",

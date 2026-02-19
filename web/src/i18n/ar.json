@@ -171,6 +171,7 @@
 
   "workitems.detail.description": "الوصف",
   "workitems.detail.noDescription": "لا يوجد وصف. انقر للإضافة.",
+  "workitems.detail.properties": "الخصائص",
   "workitems.detail.deleteItem": "حذف العنصر",
   "workitems.detail.deleteTitle": "حذف العنصر",
   "workitems.detail.deleteConfirmBody": "هل أنت متأكد من حذف <bold>{{displayId}}</bold>؟ لا يمكن التراجع عن هذا الإجراء.",
@@ -332,6 +333,7 @@
   "nav.systemSettings": "إعدادات النظام",
 
   "admin.title": "إعدادات النظام",
+  "admin.titleShort": "النظام",
   "admin.sidebar.users": "المستخدمون",
 
   "admin.users.title": "المستخدمون",

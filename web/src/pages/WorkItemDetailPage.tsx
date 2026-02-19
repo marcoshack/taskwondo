@@ -23,6 +23,7 @@ import { MentionModal } from '@/components/ui/MentionModal'
 import { TypeBadge } from '@/components/workitems/TypeBadge'
 import { StatusBadge } from '@/components/workitems/StatusBadge'
 import { CopyButton } from '@/components/ui/CopyButton'
+import { Settings2 } from 'lucide-react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { getMarkdownComponents } from '@/components/ui/markdownComponents'
@@ -50,6 +51,7 @@ export function WorkItemDetailPage() {
   const [editingDesc, setEditingDesc] = useState(false)
   const [descDraft, setDescDraft] = useState('')
   const [showDelete, setShowDelete] = useState(false)
+  const [showProperties, setShowProperties] = useState(false)
   const [draggingOver, setDraggingOver] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const [highlightedAttachmentId, setHighlightedAttachmentId] = useState<string | null>(null)
@@ -202,7 +204,7 @@ export function WorkItemDetailPage() {
           {/* Header */}
           <div>
             <div className="flex items-center gap-2 mb-1 group/header">
-              <span className="text-sm font-mono text-gray-400 dark:text-gray-500">{item.display_id}</span>
+              <span className="text-base sm:text-sm font-bold sm:font-normal font-mono text-gray-600 sm:text-gray-400 dark:text-gray-400 dark:sm:text-gray-500">{item.display_id}</span>
               <TypeBadge type={item.type} />
               <StatusBadge status={item.status} statuses={statuses} />
               <CopyButton
@@ -220,6 +222,13 @@ export function WorkItemDetailPage() {
                 tooltip={t('common.copyAsMarkdown')}
                 className="opacity-0 group-hover/header:opacity-100"
               />
+              <button
+                onClick={() => setShowProperties(true)}
+                className="sm:hidden ml-auto p-1.5 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                aria-label={t('workitems.detail.properties')}
+              >
+                <Settings2 className="h-5 w-5" />
+              </button>
             </div>
 
             {/* Title */}
@@ -349,8 +358,8 @@ export function WorkItemDetailPage() {
                   onClick={() => setSortOrder((s) => (s === 'desc' ? 'asc' : 'desc'))}
                   title={sortOrder === 'desc' ? t('common.showingNewestFirst') : t('common.showingOldestFirst')}
                 >
-                  <span>{sortOrder === 'desc' ? '\u2193' : '\u2191'}</span>
-                  {sortOrder === 'desc' ? t('common.newestFirst') : t('common.oldestFirst')}
+                  <span className="text-base sm:text-xs">{sortOrder === 'desc' ? '\u2193' : '\u2191'}</span>
+                  <span className="hidden sm:inline">{sortOrder === 'desc' ? t('common.newestFirst') : t('common.oldestFirst')}</span>
                 </button>
               )}
             </div>
@@ -362,8 +371,8 @@ export function WorkItemDetailPage() {
           </div>
         </div>
 
-        {/* Right sidebar */}
-        <div className="w-52 shrink-0">
+        {/* Right sidebar (desktop only) */}
+        <div className="hidden sm:block w-52 shrink-0">
           <DetailSidebar
             item={item}
             statuses={statuses}
@@ -384,6 +393,20 @@ export function WorkItemDetailPage() {
         onSelect={descMention.onMentionSelect}
         projectKey={projectKey ?? ''}
       />
+
+      {/* Mobile properties modal */}
+      <Modal open={showProperties} onClose={() => setShowProperties(false)} title={t('workitems.detail.properties')}>
+        <DetailSidebar
+          item={item}
+          statuses={statuses}
+          allowedTransitions={allowed}
+          members={members ?? []}
+          onUpdate={(input) => updateMutation.mutate({ itemNumber, input })}
+        />
+        <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
+          <Button variant="danger" size="sm" onClick={() => { setShowProperties(false); setShowDelete(true) }}>{t('workitems.detail.deleteItem')}</Button>
+        </div>
+      </Modal>
 
       {/* Delete confirmation */}
       <Modal open={showDelete} onClose={() => setShowDelete(false)} title={t('workitems.detail.deleteTitle')}>

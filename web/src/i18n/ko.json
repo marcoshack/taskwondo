@@ -171,6 +171,7 @@
 
   "workitems.detail.description": "설명",
   "workitems.detail.noDescription": "설명 없음. 클릭하여 추가.",
+  "workitems.detail.properties": "속성",
   "workitems.detail.deleteItem": "항목 삭제",
   "workitems.detail.deleteTitle": "항목 삭제",
   "workitems.detail.deleteConfirmBody": "<bold>{{displayId}}</bold>을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
@@ -332,6 +333,7 @@
   "nav.systemSettings": "시스템 설정",
 
   "admin.title": "시스템 설정",
+  "admin.titleShort": "시스템",
   "admin.sidebar.users": "사용자",
 
   "admin.users.title": "사용자",
