@@ -1,4 +1,4 @@
-.PHONY: build push help dev dev-db dev-api dev-web up down logs logs-api migrate migrate-new test check-env
+.PHONY: build push help dev dev-db dev-api dev-web up down logs logs-api migrate migrate-new test check-env export import
 
 # Required environment variables (checked by sourcing .env)
 REQUIRED_VARS := POSTGRES_USER POSTGRES_PASSWORD MINIO_ROOT_USER MINIO_ROOT_PASSWORD JWT_SECRET DATABASE_URL STORAGE_ACCESS_KEY STORAGE_SECRET_KEY
@@ -74,6 +74,15 @@ migrate-new: ## Create a new migration (usage: make migrate-new name=create_user
 	touch "api/internal/database/migrations/$${num}_$(name).up.sql"; \
 	touch "api/internal/database/migrations/$${num}_$(name).down.sql"; \
 	echo "Created migrations: $${num}_$(name).{up,down}.sql"
+
+# --- Data Export/Import ---
+
+export: check-env ## Export all data to backups/trackforge-export.tar.gz
+	mkdir -p backups
+	docker compose run --rm export
+
+import: check-env ## Import data from backups/ (IMPORT_FILE=filename.tar.gz)
+	docker compose run --rm import
 
 # --- Testing ---
 
