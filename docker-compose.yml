@@ -83,6 +83,50 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?required}
       MINIO_BUCKET: ${MINIO_BUCKET:-trackforge-attachments}
 
+  export:
+    image: ghcr.io/marcoshack/trackforge/api:${IMAGE_TAG:-latest}
+    build:
+      context: ./api
+      dockerfile: ../docker/Dockerfile.api
+    profiles: ["tools"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER:?required}:${POSTGRES_PASSWORD:?required}@postgres:5432/${POSTGRES_DB:-trackforge}?sslmode=disable
+      - STORAGE_ENDPOINT=minio:9000
+      - STORAGE_ACCESS_KEY=${MINIO_ROOT_USER:?required}
+      - STORAGE_SECRET_KEY=${MINIO_ROOT_PASSWORD:?required}
+      - STORAGE_BUCKET=${MINIO_BUCKET:-trackforge-attachments}
+    volumes:
+      - ./backups:/backups
+    entrypoint: ["/bin/trackforge", "--export", "/backups/trackforge-export.tar.gz"]
+
+  import:
+    image: ghcr.io/marcoshack/trackforge/api:${IMAGE_TAG:-latest}
+    build:
+      context: ./api
+      dockerfile: ../docker/Dockerfile.api
+    profiles: ["tools"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER:?required}:${POSTGRES_PASSWORD:?required}@postgres:5432/${POSTGRES_DB:-trackforge}?sslmode=disable
+      - STORAGE_ENDPOINT=minio:9000
+      - STORAGE_ACCESS_KEY=${MINIO_ROOT_USER:?required}
+      - STORAGE_SECRET_KEY=${MINIO_ROOT_PASSWORD:?required}
+      - STORAGE_BUCKET=${MINIO_BUCKET:-trackforge-attachments}
+    volumes:
+      - ./backups:/backups
+    entrypoint: ["/bin/trackforge", "--import", "/backups/${IMPORT_FILE:-trackforge-export.tar.gz}"]
+
 volumes:
   pgdata:
   miniodata:

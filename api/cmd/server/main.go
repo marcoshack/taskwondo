@@ -16,6 +16,7 @@ import (
 
 	"github.com/marcoshack/trackforge/internal/config"
 	"github.com/marcoshack/trackforge/internal/database"
+	"github.com/marcoshack/trackforge/internal/dataport"
 	"github.com/marcoshack/trackforge/internal/handler"
 	"github.com/marcoshack/trackforge/internal/middleware"
 	"github.com/marcoshack/trackforge/internal/repository"
@@ -25,6 +26,8 @@ import (
 
 func main() {
 	migrateOnly := flag.Bool("migrate-only", false, "Run migrations and exit")
+	exportPath := flag.String("export", "", "Export all data to the specified tar.gz file and exit")
+	importPath := flag.String("import", "", "Import data from the specified tar.gz file and exit")
 	flag.Parse()
 
 	// Load configuration
@@ -57,6 +60,48 @@ func main() {
 	if *migrateOnly {
 		log.Info().Msg("migrations complete, exiting")
 		return
+	}
+
+	// Export/import modes: initialize storage and run, then exit.
+	if *exportPath != "" || *importPath != "" {
+		store, err := storage.NewMinIOStorage(
+			cfg.StorageEndpoint, cfg.StorageAccessKey, cfg.StorageSecretKey,
+			cfg.StorageBucket, cfg.StorageRegion, cfg.StorageUseSSL,
+		)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to initialize storage")
+		}
+
+		if *exportPath != "" {
+			exporter := dataport.NewExporter(db, store)
+			f, err := os.Create(*exportPath)
+			if err != nil {
+				log.Fatal().Err(err).Str("path", *exportPath).Msg("failed to create export file")
+			}
+			if err := exporter.Export(ctx, f); err != nil {
+				f.Close()
+				os.Remove(*exportPath)
+				log.Fatal().Err(err).Msg("export failed")
+			}
+			f.Close()
+			log.Info().Str("path", *exportPath).Msg("export complete")
+			return
+		}
+
+		if *importPath != "" {
+			importer := dataport.NewImporter(db, store)
+			f, err := os.Open(*importPath)
+			if err != nil {
+				log.Fatal().Err(err).Str("path", *importPath).Msg("failed to open import file")
+			}
+			if err := importer.Import(ctx, f); err != nil {
+				f.Close()
+				log.Fatal().Err(err).Msg("import failed")
+			}
+			f.Close()
+			log.Info().Str("path", *importPath).Msg("import complete")
+			return
+		}
 	}
 
 	// Initialize repositories

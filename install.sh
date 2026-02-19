@@ -15,6 +15,7 @@ GITHUB_RAW_URL="https://raw.githubusercontent.com/marcoshack/trackforge/main"
 BASE_URL=""
 TARGET_DIR="."
 NON_INTERACTIVE=false
+IMPORT_FILE=""
 
 usage() {
     cat <<EOF
@@ -23,11 +24,12 @@ Usage: $(basename "$0") [options]
 Sets up TrackForge by generating a .env file from the configuration template.
 
 Options:
-  --url URL    Base URL for downloading files
-               (default: $GITHUB_RAW_URL)
-  --dir DIR    Target directory (default: current directory)
-  -y           Non-interactive mode: auto-generate all values, skip prompts
-  -h, --help   Show this help message
+  --url URL        Base URL for downloading files
+                   (default: $GITHUB_RAW_URL)
+  --dir DIR        Target directory (default: current directory)
+  --import FILE    Import data from a backup archive after setup
+  -y               Non-interactive mode: auto-generate all values, skip prompts
+  -h, --help       Show this help message
 EOF
     exit 0
 }
@@ -36,9 +38,10 @@ EOF
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --url)  BASE_URL="$2"; shift 2 ;;
-        --dir)  TARGET_DIR="$2"; shift 2 ;;
-        -y)     NON_INTERACTIVE=true; shift ;;
+        --url)     BASE_URL="$2"; shift 2 ;;
+        --dir)     TARGET_DIR="$2"; shift 2 ;;
+        --import)  IMPORT_FILE="$2"; shift 2 ;;
+        -y)        NON_INTERACTIVE=true; shift ;;
         -h|--help) usage ;;
         *)      echo "Unknown option: $1"; usage ;;
     esac
@@ -260,15 +263,61 @@ printf '%s' "$output" > "$ENV_FILE"
 echo
 ok "=== TrackForge Setup Complete ==="
 echo
-printf "  Admin email:     %s\n" "${vars[ADMIN_EMAIL]:-not set}"
-printf "  Admin password:  %s\n" "${vars[ADMIN_PASSWORD]:-not set}"
-echo
 printf "  Web UI:  http://localhost:%s\n" "${vars[WEB_PORT]:-3000}"
 printf "  API:     http://localhost:%s\n" "${vars[API_PORT]:-8080}"
 echo
-info "To start TrackForge:"
-echo "  docker compose up -d"
-echo
-info "The API will automatically run database migrations and"
-info "seed the admin user on first start."
-echo
+
+# --- Import from backup ---
+
+if [[ -n "$IMPORT_FILE" ]]; then
+    if [[ ! -f "$IMPORT_FILE" ]]; then
+        error "Import file not found: $IMPORT_FILE"
+    fi
+
+    info "Importing data from: $IMPORT_FILE"
+    echo
+
+    # Copy import file to backups directory.
+    mkdir -p "$TARGET_DIR/backups"
+    cp "$IMPORT_FILE" "$TARGET_DIR/backups/trackforge-import.tar.gz"
+
+    # Start database and storage services.
+    info "Starting database and storage services..."
+    cd "$TARGET_DIR"
+    docker compose up -d postgres minio minio-init
+
+    info "Waiting for services to be healthy..."
+    local_attempts=0
+    while ! docker compose exec -T postgres pg_isready -U "${vars[POSTGRES_USER]:-trackforge}" &>/dev/null; do
+        local_attempts=$((local_attempts + 1))
+        if [[ $local_attempts -ge 30 ]]; then
+            error "Timed out waiting for database to be ready."
+        fi
+        sleep 1
+    done
+
+    # Run import.
+    info "Running import..."
+    IMPORT_FILE=trackforge-import.tar.gz docker compose run --rm import
+
+    # Start all services.
+    info "Starting all services..."
+    docker compose up -d
+
+    echo
+    ok "=== TrackForge restored from backup and running ==="
+    echo
+    printf "  Web UI:  http://localhost:%s\n" "${vars[WEB_PORT]:-3000}"
+    printf "  API:     http://localhost:%s\n" "${vars[API_PORT]:-8080}"
+    echo
+else
+    printf "  Admin email:     %s\n" "${vars[ADMIN_EMAIL]:-not set}"
+    printf "  Admin password:  %s\n" "${vars[ADMIN_PASSWORD]:-not set}"
+    echo
+    info "To start TrackForge:"
+    echo "  docker compose up -d"
+    echo
+    info "The API will automatically run database migrations and"
+    info "seed the admin user on first start."
+    echo
+fi
