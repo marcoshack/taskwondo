@@ -171,6 +171,7 @@
 
   "workitems.detail.description": "Description",
   "workitems.detail.noDescription": "Aucune description. Cliquez pour ajouter.",
+  "workitems.detail.properties": "Propriétés",
   "workitems.detail.deleteItem": "Supprimer",
   "workitems.detail.deleteTitle": "Supprimer l'élément",
   "workitems.detail.deleteConfirmBody": "Voulez-vous vraiment supprimer <bold>{{displayId}}</bold> ? Cette action est irréversible.",
@@ -332,6 +333,7 @@
   "nav.systemSettings": "Paramètres Système",
 
   "admin.title": "Paramètres Système",
+  "admin.titleShort": "Système",
   "admin.sidebar.users": "Utilisateurs",
 
   "admin.users.title": "Utilisateurs",

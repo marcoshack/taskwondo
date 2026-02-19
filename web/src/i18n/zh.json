@@ -171,6 +171,7 @@
 
   "workitems.detail.description": "描述",
   "workitems.detail.noDescription": "暂无描述。点击添加。",
+  "workitems.detail.properties": "属性",
   "workitems.detail.deleteItem": "删除条目",
   "workitems.detail.deleteTitle": "删除条目",
   "workitems.detail.deleteConfirmBody": "确定要删除<bold>{{displayId}}</bold>吗？此操作不可撤销。",
@@ -332,6 +333,7 @@
   "nav.systemSettings": "系统设置",
 
   "admin.title": "系统设置",
+  "admin.titleShort": "系统",
   "admin.sidebar.users": "用户",
 
   "admin.users.title": "用户",

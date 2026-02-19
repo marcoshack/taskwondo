@@ -171,6 +171,7 @@
 
   "workitems.detail.description": "Descrição",
   "workitems.detail.noDescription": "Sem descrição. Clique para adicionar.",
+  "workitems.detail.properties": "Propriedades",
   "workitems.detail.deleteItem": "Excluir Item",
   "workitems.detail.deleteTitle": "Excluir Item",
   "workitems.detail.deleteConfirmBody": "Tem certeza que deseja excluir <bold>{{displayId}}</bold>? Esta ação não pode ser desfeita.",
@@ -332,6 +333,7 @@
   "nav.systemSettings": "Sistema",
 
   "admin.title": "Configurações do Sistema",
+  "admin.titleShort": "Sistema",
   "admin.sidebar.users": "Usuários",
 
   "admin.users.title": "Usuários",

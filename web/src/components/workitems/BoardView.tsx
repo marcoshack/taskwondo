@@ -87,10 +87,12 @@ function BoardCard({
       className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 shadow-sm hover:shadow-md cursor-pointer relative"
       onClick={onClick}
     >
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-xs font-mono text-gray-400 dark:text-gray-500">{item.display_id}</span>
+      <div className="flex items-center gap-1.5 mb-1">
+        <span className="text-xs font-bold font-mono text-gray-600 dark:text-gray-400">{item.display_id}</span>
+        <TypeBadge type={item.type} />
+        <PriorityBadge priority={item.priority} />
         {allowed.length > 0 && (
-          <div className="relative">
+          <div className="relative ml-auto">
             <button
               className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-xs px-1"
               onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu) }}
@@ -121,11 +123,10 @@ function BoardCard({
           </div>
         )}
       </div>
-      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2 line-clamp-2">{item.title}</p>
-      <div className="flex items-center gap-2">
-        <TypeBadge type={item.type} />
-        <PriorityBadge priority={item.priority} />
-      </div>
+      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 line-clamp-2">{item.title}</p>
+      {item.description && (
+        <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5">{item.description}</p>
+      )}
     </div>
   )
 }

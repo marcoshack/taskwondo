@@ -71,33 +71,32 @@ export function AppShell() {
       <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-14">
-            <div className="flex items-center gap-6">
-              <button onClick={() => guardedNavigate('/projects')} className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
+            <div className="flex items-center gap-6 min-w-0">
+              <button onClick={() => guardedNavigate('/projects')} className="text-lg font-bold text-indigo-600 dark:text-indigo-400 shrink-0">
                 {t('brand.name')}
               </button>
               {adminMatch ? (
-                <div className="flex items-center gap-2.5">
-                  <Settings className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-                  <span className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                    {t('admin.title')}
-                  </span>
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Settings className="h-5 w-5 text-gray-500 dark:text-gray-400 shrink-0" />
+                  <span className="text-base font-semibold text-gray-900 dark:text-gray-100 sm:hidden">{t('admin.titleShort')}</span>
+                  <span className="text-base font-semibold text-gray-900 dark:text-gray-100 hidden sm:inline">{t('admin.title')}</span>
                 </div>
               ) : activeProject ? (
                 <button
                   onClick={() => setSwitcherOpen(true)}
-                  className="flex items-center gap-2.5 hover:opacity-80 transition-opacity"
+                  className="flex items-center gap-2.5 hover:opacity-80 transition-opacity min-w-0"
                 >
-                  <span className="inline-flex items-center rounded-md bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-2.5 py-1 text-sm font-bold">
+                  <span className="inline-flex items-center rounded-md bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-2.5 py-1 text-sm font-bold shrink-0">
                     {activeProject.key}
                   </span>
-                  <span className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                  <span className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">
                     {activeProject.name}
                   </span>
                 </button>
               ) : null}
             </div>
             <div className="relative flex items-center gap-2" ref={menuRef}>
-              {activeProjectKey && (
+              {(activeProjectKey || adminMatch) && (
                 <button
                   onClick={toggleMobileOpen}
                   className="sm:hidden p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"

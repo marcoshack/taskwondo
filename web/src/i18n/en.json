@@ -172,6 +172,7 @@
 
   "workitems.detail.description": "Description",
   "workitems.detail.noDescription": "No description. Click to add.",
+  "workitems.detail.properties": "Properties",
   "workitems.detail.deleteItem": "Delete Item",
   "workitems.detail.deleteTitle": "Delete Work Item",
   "workitems.detail.deleteConfirmBody": "Are you sure you want to delete <bold>{{displayId}}</bold>? This action cannot be undone.",
@@ -342,6 +343,7 @@
   "nav.systemSettings": "System Settings",
 
   "admin.title": "System Settings",
+  "admin.titleShort": "System",
   "admin.sidebar.users": "Users",
 
   "admin.users.title": "Users",

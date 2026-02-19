@@ -171,6 +171,7 @@
 
   "workitems.detail.description": "Descripción",
   "workitems.detail.noDescription": "Sin descripción. Clic para agregar.",
+  "workitems.detail.properties": "Propiedades",
   "workitems.detail.deleteItem": "Eliminar Ítem",
   "workitems.detail.deleteTitle": "Eliminar Ítem",
   "workitems.detail.deleteConfirmBody": "¿Está seguro de eliminar <bold>{{displayId}}</bold>? Esta acción no se puede deshacer.",
@@ -332,6 +333,7 @@
   "nav.systemSettings": "Sistema",
 
   "admin.title": "Configuración del Sistema",
+  "admin.titleShort": "Sistema",
   "admin.sidebar.users": "Usuarios",
 
   "admin.users.title": "Usuarios",
