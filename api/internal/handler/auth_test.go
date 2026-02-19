@@ -61,6 +61,13 @@ func (m *mockUserRepo) UpdateLastLogin(_ context.Context, id uuid.UUID) error {
 	return nil
 }
 
+func (m *mockUserRepo) UpdateAvatarURL(_ context.Context, id uuid.UUID, avatarURL string) error {
+	if u, ok := m.byID[id]; ok {
+		u.AvatarURL = &avatarURL
+	}
+	return nil
+}
+
 func (m *mockUserRepo) Search(_ context.Context, query string) ([]model.User, error) {
 	var result []model.User
 	q := strings.ToLower(query)
@@ -126,6 +133,48 @@ func (m *mockAPIKeyRepo) UpdateLastUsed(_ context.Context, _ uuid.UUID) error {
 	return nil
 }
 
+type mockOAuthAccountRepo struct {
+	accounts map[string]*model.OAuthAccount
+	byUser   map[uuid.UUID][]model.OAuthAccount
+}
+
+func newMockOAuthAccountRepo() *mockOAuthAccountRepo {
+	return &mockOAuthAccountRepo{
+		accounts: make(map[string]*model.OAuthAccount),
+		byUser:   make(map[uuid.UUID][]model.OAuthAccount),
+	}
+}
+
+func (m *mockOAuthAccountRepo) GetByProviderUser(_ context.Context, provider, providerUserID string) (*model.OAuthAccount, error) {
+	key := provider + ":" + providerUserID
+	a, ok := m.accounts[key]
+	if !ok {
+		return nil, model.ErrNotFound
+	}
+	return a, nil
+}
+
+func (m *mockOAuthAccountRepo) Create(_ context.Context, account *model.OAuthAccount) error {
+	key := account.Provider + ":" + account.ProviderUserID
+	m.accounts[key] = account
+	m.byUser[account.UserID] = append(m.byUser[account.UserID], *account)
+	return nil
+}
+
+func (m *mockOAuthAccountRepo) ListByUserID(_ context.Context, userID uuid.UUID) ([]model.OAuthAccount, error) {
+	return m.byUser[userID], nil
+}
+
+func (m *mockOAuthAccountRepo) Delete(_ context.Context, id, userID uuid.UUID) error {
+	for key, a := range m.accounts {
+		if a.ID == id && a.UserID == userID {
+			delete(m.accounts, key)
+			return nil
+		}
+	}
+	return model.ErrNotFound
+}
+
 // --- Test setup ---
 
 func testSetup(t *testing.T) (*AuthHandler, *service.AuthService, string) {
@@ -133,7 +182,10 @@ func testSetup(t *testing.T) (*AuthHandler, *service.AuthService, string) {
 
 	userRepo := newMockUserRepo()
 	apiKeyRepo := newMockAPIKeyRepo()
-	authSvc := service.NewAuthService(userRepo, apiKeyRepo, "test-secret-that-is-at-least-32!", 1*time.Hour)
+	oauthRepo := newMockOAuthAccountRepo()
+	authSvc := service.NewAuthService(userRepo, apiKeyRepo, oauthRepo,
+		"test-secret-that-is-at-least-32!", 1*time.Hour,
+		"test-client-id", "test-client-secret", "http://localhost:5173/auth/discord/callback")
 
 	if err := authSvc.SeedAdminUser(context.Background(), "admin@test.com", "adminpass"); err != nil {
 		t.Fatal(err)
@@ -372,5 +424,58 @@ func TestMeHandler_Unauthenticated(t *testing.T) {
 
 	if w.Code != http.StatusUnauthorized {
 		t.Fatalf("expected 401, got %d", w.Code)
+	}
+}
+
+// --- Discord OAuth handler tests ---
+
+func TestDiscordAuthHandler_ReturnsURL(t *testing.T) {
+	h, _, _ := testSetup(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/discord", nil)
+	w := httptest.NewRecorder()
+
+	h.DiscordAuth(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data := resp["data"].(map[string]interface{})
+	url, ok := data["url"].(string)
+	if !ok || url == "" {
+		t.Fatal("expected url in response")
+	}
+	if !strings.Contains(url, "discord.com/oauth2/authorize") {
+		t.Fatalf("expected discord authorize URL, got %s", url)
+	}
+}
+
+func TestDiscordCallbackHandler_MissingFields(t *testing.T) {
+	h, _, _ := testSetup(t)
+
+	body := `{"code":""}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/discord/callback", bytes.NewBufferString(body))
+	w := httptest.NewRecorder()
+
+	h.DiscordCallback(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestDiscordCallbackHandler_InvalidBody(t *testing.T) {
+	h, _, _ := testSetup(t)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/discord/callback", bytes.NewBufferString("not json"))
+	w := httptest.NewRecorder()
+
+	h.DiscordCallback(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
 	}
 }

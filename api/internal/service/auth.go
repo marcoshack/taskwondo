@@ -2,11 +2,19 @@ package service
 
 import (
 	"context"
+	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -23,6 +31,7 @@ type UserRepository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*model.User, error)
 	Create(ctx context.Context, user *model.User) error
 	UpdateLastLogin(ctx context.Context, id uuid.UUID) error
+	UpdateAvatarURL(ctx context.Context, id uuid.UUID, avatarURL string) error
 	Search(ctx context.Context, query string) ([]model.User, error)
 }
 
@@ -35,6 +44,14 @@ type APIKeyRepository interface {
 	UpdateLastUsed(ctx context.Context, id uuid.UUID) error
 }
 
+// OAuthAccountRepository defines the persistence operations for OAuth accounts.
+type OAuthAccountRepository interface {
+	GetByProviderUser(ctx context.Context, provider, providerUserID string) (*model.OAuthAccount, error)
+	Create(ctx context.Context, account *model.OAuthAccount) error
+	ListByUserID(ctx context.Context, userID uuid.UUID) ([]model.OAuthAccount, error)
+	Delete(ctx context.Context, id, userID uuid.UUID) error
+}
+
 // Claims are the JWT token claims.
 type Claims struct {
 	jwt.RegisteredClaims
@@ -42,21 +59,38 @@ type Claims struct {
 	GlobalRole string `json:"role"`
 }
 
+const oauthStateExpiry = 10 * time.Minute
+
 // AuthService handles authentication and authorization.
 type AuthService struct {
-	users     UserRepository
-	apiKeys   APIKeyRepository
-	jwtSecret []byte
-	jwtExpiry time.Duration
+	users              UserRepository
+	apiKeys            APIKeyRepository
+	oauthAccounts      OAuthAccountRepository
+	jwtSecret          []byte
+	jwtExpiry          time.Duration
+	discordClientID    string
+	discordSecret      string
+	discordRedirectURI string
 }
 
 // NewAuthService creates a new AuthService.
-func NewAuthService(users UserRepository, apiKeys APIKeyRepository, jwtSecret string, jwtExpiry time.Duration) *AuthService {
+func NewAuthService(
+	users UserRepository,
+	apiKeys APIKeyRepository,
+	oauthAccounts OAuthAccountRepository,
+	jwtSecret string,
+	jwtExpiry time.Duration,
+	discordClientID, discordSecret, discordRedirectURI string,
+) *AuthService {
 	return &AuthService{
-		users:     users,
-		apiKeys:   apiKeys,
-		jwtSecret: []byte(jwtSecret),
-		jwtExpiry: jwtExpiry,
+		users:              users,
+		apiKeys:            apiKeys,
+		oauthAccounts:      oauthAccounts,
+		jwtSecret:          []byte(jwtSecret),
+		jwtExpiry:          jwtExpiry,
+		discordClientID:    discordClientID,
+		discordSecret:      discordSecret,
+		discordRedirectURI: discordRedirectURI,
 	}
 }
 
@@ -263,6 +297,271 @@ func (s *AuthService) SeedAdminUser(ctx context.Context, email, password string)
 	return nil
 }
 
+// DiscordEnabled returns true if Discord OAuth is configured.
+func (s *AuthService) DiscordEnabled() bool {
+	return s.discordClientID != "" && s.discordSecret != "" && s.discordRedirectURI != ""
+}
+
+// DiscordOAuthURL generates the Discord authorization URL with a signed state parameter.
+func (s *AuthService) DiscordOAuthURL() (string, error) {
+	if !s.DiscordEnabled() {
+		return "", fmt.Errorf("discord oauth is not configured")
+	}
+
+	state, err := s.generateOAuthState()
+	if err != nil {
+		return "", fmt.Errorf("generating state: %w", err)
+	}
+
+	params := url.Values{
+		"client_id":     {s.discordClientID},
+		"redirect_uri":  {s.discordRedirectURI},
+		"response_type": {"code"},
+		"scope":         {"identify email"},
+		"state":         {state},
+	}
+
+	return "https://discord.com/oauth2/authorize?" + params.Encode(), nil
+}
+
+// DiscordCallback exchanges the authorization code for tokens, fetches the Discord user
+// profile, and either logs in or creates a new user account.
+func (s *AuthService) DiscordCallback(ctx context.Context, code, state string) (string, *model.User, error) {
+	if !s.DiscordEnabled() {
+		return "", nil, fmt.Errorf("discord oauth is not configured")
+	}
+
+	if err := s.validateOAuthState(state); err != nil {
+		return "", nil, fmt.Errorf("invalid state: %w", err)
+	}
+
+	accessToken, err := s.exchangeDiscordCode(ctx, code)
+	if err != nil {
+		return "", nil, fmt.Errorf("exchanging code: %w", err)
+	}
+
+	discordUser, err := s.fetchDiscordUser(ctx, accessToken)
+	if err != nil {
+		return "", nil, fmt.Errorf("fetching discord user: %w", err)
+	}
+
+	user, err := s.findOrCreateOAuthUser(ctx, model.OAuthProviderDiscord, discordUser)
+	if err != nil {
+		return "", nil, err
+	}
+
+	token, err := s.generateJWT(user)
+	if err != nil {
+		return "", nil, fmt.Errorf("generating token: %w", err)
+	}
+
+	if err := s.users.UpdateLastLogin(ctx, user.ID); err != nil {
+		log.Ctx(ctx).Warn().Err(err).Msg("failed to update last login")
+	}
+
+	return token, user, nil
+}
+
+func (s *AuthService) exchangeDiscordCode(ctx context.Context, code string) (string, error) {
+	data := url.Values{
+		"client_id":     {s.discordClientID},
+		"client_secret": {s.discordSecret},
+		"grant_type":    {"authorization_code"},
+		"code":          {code},
+		"redirect_uri":  {s.discordRedirectURI},
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
+		"https://discord.com/api/oauth2/token",
+		strings.NewReader(data.Encode()))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("token request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("discord token error: status=%d body=%s", resp.StatusCode, string(body))
+	}
+
+	var tokenResp struct {
+		AccessToken string `json:"access_token"`
+		TokenType   string `json:"token_type"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&tokenResp); err != nil {
+		return "", fmt.Errorf("decoding token response: %w", err)
+	}
+
+	return tokenResp.AccessToken, nil
+}
+
+func (s *AuthService) fetchDiscordUser(ctx context.Context, accessToken string) (*model.DiscordUser, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
+		"https://discord.com/api/v10/users/@me", nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("discord user request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("discord user error: status=%d body=%s", resp.StatusCode, string(body))
+	}
+
+	var discordUser model.DiscordUser
+	if err := json.NewDecoder(resp.Body).Decode(&discordUser); err != nil {
+		return nil, fmt.Errorf("decoding discord user: %w", err)
+	}
+
+	return &discordUser, nil
+}
+
+func (s *AuthService) findOrCreateOAuthUser(ctx context.Context, provider string, discord *model.DiscordUser) (*model.User, error) {
+	// Case 1: OAuth account already linked — log in existing user.
+	existing, err := s.oauthAccounts.GetByProviderUser(ctx, provider, discord.ID)
+	if err == nil {
+		user, err := s.users.GetByID(ctx, existing.UserID)
+		if err != nil {
+			return nil, fmt.Errorf("getting linked user: %w", err)
+		}
+		if !user.IsActive {
+			return nil, model.ErrAccountDisabled
+		}
+		avatarURL := discord.AvatarURL()
+		if err := s.users.UpdateAvatarURL(ctx, user.ID, avatarURL); err != nil {
+			log.Ctx(ctx).Warn().Err(err).Msg("failed to update avatar")
+		} else {
+			user.AvatarURL = &avatarURL
+		}
+		return user, nil
+	}
+	if !errors.Is(err, model.ErrNotFound) {
+		return nil, fmt.Errorf("looking up oauth account: %w", err)
+	}
+
+	// Case 2: User with same verified email exists — link and log in.
+	var user *model.User
+	if discord.Email != nil && *discord.Email != "" && discord.Verified != nil && *discord.Verified {
+		user, err = s.users.GetByEmail(ctx, *discord.Email)
+		if err != nil && !errors.Is(err, model.ErrNotFound) {
+			return nil, fmt.Errorf("looking up user by email: %w", err)
+		}
+	}
+
+	// Case 3: Create new user.
+	if user == nil {
+		email := ""
+		if discord.Email != nil {
+			email = *discord.Email
+		}
+		if email == "" {
+			email = "discord_" + discord.ID + "@oauth.trackforge.local"
+		}
+
+		avatarURL := discord.AvatarURL()
+		user = &model.User{
+			ID:          uuid.New(),
+			Email:       email,
+			DisplayName: discord.DisplayName(),
+			GlobalRole:  model.RoleUser,
+			AvatarURL:   &avatarURL,
+			IsActive:    true,
+		}
+		if err := s.users.Create(ctx, user); err != nil {
+			return nil, fmt.Errorf("creating oauth user: %w", err)
+		}
+		log.Ctx(ctx).Info().
+			Str("provider", provider).
+			Str("provider_user_id", discord.ID).
+			Str("email", email).
+			Msg("created new user via oauth")
+	} else {
+		if !user.IsActive {
+			return nil, model.ErrAccountDisabled
+		}
+		if user.AvatarURL == nil {
+			avatarURL := discord.AvatarURL()
+			if err := s.users.UpdateAvatarURL(ctx, user.ID, avatarURL); err != nil {
+				log.Ctx(ctx).Warn().Err(err).Msg("failed to update avatar")
+			} else {
+				user.AvatarURL = &avatarURL
+			}
+		}
+	}
+
+	// Link the OAuth account.
+	oauthAccount := &model.OAuthAccount{
+		ID:               uuid.New(),
+		UserID:           user.ID,
+		Provider:         provider,
+		ProviderUserID:   discord.ID,
+		ProviderEmail:    ptrStr(discord.Email),
+		ProviderUsername: discord.Username,
+		ProviderAvatar:   ptrStr(discord.Avatar),
+	}
+	if err := s.oauthAccounts.Create(ctx, oauthAccount); err != nil {
+		return nil, fmt.Errorf("linking oauth account: %w", err)
+	}
+
+	return user, nil
+}
+
+func (s *AuthService) generateOAuthState() (string, error) {
+	ts := fmt.Sprintf("%d", time.Now().Unix())
+	mac := hmac.New(sha256.New, s.jwtSecret)
+	mac.Write([]byte(ts))
+	sig := mac.Sum(nil)
+	raw := ts + "." + hex.EncodeToString(sig)
+	return base64.URLEncoding.EncodeToString([]byte(raw)), nil
+}
+
+func (s *AuthService) validateOAuthState(state string) error {
+	raw, err := base64.URLEncoding.DecodeString(state)
+	if err != nil {
+		return fmt.Errorf("decoding state: %w", err)
+	}
+
+	parts := strings.SplitN(string(raw), ".", 2)
+	if len(parts) != 2 {
+		return fmt.Errorf("malformed state")
+	}
+
+	ts, sigHex := parts[0], parts[1]
+	sig, err := hex.DecodeString(sigHex)
+	if err != nil {
+		return fmt.Errorf("decoding signature: %w", err)
+	}
+
+	mac := hmac.New(sha256.New, s.jwtSecret)
+	mac.Write([]byte(ts))
+	expected := mac.Sum(nil)
+	if !hmac.Equal(sig, expected) {
+		return fmt.Errorf("invalid signature")
+	}
+
+	unix, err := strconv.ParseInt(ts, 10, 64)
+	if err != nil {
+		return fmt.Errorf("parsing timestamp: %w", err)
+	}
+	if time.Since(time.Unix(unix, 0)) > oauthStateExpiry {
+		return fmt.Errorf("state expired")
+	}
+
+	return nil
+}
+
 func (s *AuthService) generateJWT(user *model.User) (string, error) {
 	now := time.Now()
 	claims := &Claims{
@@ -284,4 +583,11 @@ func (s *AuthService) generateJWT(user *model.User) (string, error) {
 func HashAPIKey(key string) string {
 	h := sha256.Sum256([]byte(key))
 	return hex.EncodeToString(h[:])
+}
+
+func ptrStr(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }

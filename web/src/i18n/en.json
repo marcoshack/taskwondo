@@ -43,6 +43,12 @@
   "login.submit": "Sign in",
   "login.submitting": "Signing in...",
   "login.error": "Login failed. Please try again.",
+  "login.or": "or continue with",
+  "login.discord.button": "Sign in with Discord",
+  "login.discord.error": "Failed to start Discord login. Please try again.",
+  "login.discord.authenticating": "Authenticating with Discord...",
+  "login.discord.callbackError": "Discord authentication failed. Please try again.",
+  "login.discord.backToLogin": "Back to sign in",
 
   "projects.title": "Projects",
   "projects.new": "New Project",

@@ -43,6 +43,12 @@
   "login.submit": "로그인",
   "login.submitting": "로그인 중...",
   "login.error": "로그인에 실패했습니다. 다시 시도해 주세요.",
+  "login.or": "또는 다음으로 계속",
+  "login.discord.button": "Discord로 로그인",
+  "login.discord.error": "Discord 로그인을 시작하지 못했습니다. 다시 시도해 주세요.",
+  "login.discord.authenticating": "Discord로 인증 중...",
+  "login.discord.callbackError": "Discord 인증에 실패했습니다. 다시 시도해 주세요.",
+  "login.discord.backToLogin": "로그인으로 돌아가기",
 
   "projects.title": "프로젝트",
   "projects.new": "새 프로젝트",
