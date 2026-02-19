@@ -131,6 +131,7 @@
   "sidebar.settings": "设置",
   "sidebar.collapse": "收起侧栏",
   "sidebar.expand": "展开侧栏",
+  "sidebar.menu": "菜单",
 
   "workitems.title": "工作条目",
   "workitems.new": "新建条目",
@@ -179,6 +180,7 @@
   "workitems.detail.updated": "更新时间",
   "workitems.detail.resolved": "解决时间",
 
+  "workitems.filters.title": "筛选",
   "workitems.filters.search": "搜索条目... ( / )",
   "workitems.filters.allTypes": "所有类型",
   "workitems.filters.allPriorities": "所有优先级",
@@ -188,6 +190,8 @@
   "workitems.filters.unassigned": "未分配",
   "workitems.filters.statusGroupOpen": "未关闭",
   "workitems.filters.statusGroupClosed": "已关闭",
+
+  "workitems.card.updatedAt": "更新于 {{date}}",
 
   "workitems.types.task": "任务",
   "workitems.types.ticket": "工单",

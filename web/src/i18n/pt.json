@@ -131,9 +131,10 @@
   "sidebar.settings": "Configurações",
   "sidebar.collapse": "Recolher barra lateral",
   "sidebar.expand": "Expandir barra lateral",
+  "sidebar.menu": "Menu",
 
   "workitems.title": "Itens de Trabalho",
-  "workitems.new": "Novo Item",
+  "workitems.new": "Novo",
   "workitems.newTitle": "Novo Item",
   "workitems.notFound": "Item não encontrado.",
   "workitems.empty": "Nenhum item encontrado",
@@ -179,6 +180,7 @@
   "workitems.detail.updated": "Atualizado",
   "workitems.detail.resolved": "Resolvido",
 
+  "workitems.filters.title": "Filtros",
   "workitems.filters.search": "Buscar itens... ( / )",
   "workitems.filters.allTypes": "Todos os tipos",
   "workitems.filters.allPriorities": "Todas prioridades",
@@ -188,6 +190,8 @@
   "workitems.filters.unassigned": "Não atribuído",
   "workitems.filters.statusGroupOpen": "Aberto",
   "workitems.filters.statusGroupClosed": "Fechado",
+
+  "workitems.card.updatedAt": "Atualizado em {{date}}",
 
   "workitems.types.task": "Tarefa",
   "workitems.types.ticket": "Ticket",

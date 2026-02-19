@@ -131,6 +131,7 @@
   "sidebar.settings": "Einstellungen",
   "sidebar.collapse": "Seitenleiste einklappen",
   "sidebar.expand": "Seitenleiste ausklappen",
+  "sidebar.menu": "Menü",
 
   "workitems.title": "Arbeitselemente",
   "workitems.new": "Neues Element",
@@ -179,6 +180,7 @@
   "workitems.detail.updated": "Aktualisiert",
   "workitems.detail.resolved": "Gelöst",
 
+  "workitems.filters.title": "Filter",
   "workitems.filters.search": "Elemente suchen... ( / )",
   "workitems.filters.allTypes": "Alle Typen",
   "workitems.filters.allPriorities": "Alle Prioritäten",
@@ -188,6 +190,8 @@
   "workitems.filters.unassigned": "Nicht zugewiesen",
   "workitems.filters.statusGroupOpen": "Offen",
   "workitems.filters.statusGroupClosed": "Geschlossen",
+
+  "workitems.card.updatedAt": "Aktualisiert am {{date}}",
 
   "workitems.types.task": "Aufgabe",
   "workitems.types.ticket": "Ticket",

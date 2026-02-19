@@ -131,6 +131,7 @@
   "sidebar.settings": "الإعدادات",
   "sidebar.collapse": "طي الشريط الجانبي",
   "sidebar.expand": "توسيع الشريط الجانبي",
+  "sidebar.menu": "القائمة",
 
   "workitems.title": "عناصر العمل",
   "workitems.new": "عنصر جديد",
@@ -179,6 +180,7 @@
   "workitems.detail.updated": "تاريخ التحديث",
   "workitems.detail.resolved": "تاريخ الحل",
 
+  "workitems.filters.title": "التصفية",
   "workitems.filters.search": "بحث في العناصر... ( / )",
   "workitems.filters.allTypes": "جميع الأنواع",
   "workitems.filters.allPriorities": "جميع الأولويات",
@@ -188,6 +190,8 @@
   "workitems.filters.unassigned": "غير معيّن",
   "workitems.filters.statusGroupOpen": "مفتوح",
   "workitems.filters.statusGroupClosed": "مغلق",
+
+  "workitems.card.updatedAt": "تم التحديث في {{date}}",
 
   "workitems.types.task": "مهمة",
   "workitems.types.ticket": "تذكرة",

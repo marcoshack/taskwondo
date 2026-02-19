@@ -131,6 +131,7 @@
   "sidebar.settings": "Configuración",
   "sidebar.collapse": "Contraer barra lateral",
   "sidebar.expand": "Expandir barra lateral",
+  "sidebar.menu": "Menú",
 
   "workitems.title": "Ítems de Trabajo",
   "workitems.new": "Nuevo Ítem",
@@ -179,6 +180,7 @@
   "workitems.detail.updated": "Actualizado",
   "workitems.detail.resolved": "Resuelto",
 
+  "workitems.filters.title": "Filtros",
   "workitems.filters.search": "Buscar ítems... ( / )",
   "workitems.filters.allTypes": "Todos los tipos",
   "workitems.filters.allPriorities": "Todas las prioridades",
@@ -188,6 +190,8 @@
   "workitems.filters.unassigned": "Sin asignar",
   "workitems.filters.statusGroupOpen": "Abierto",
   "workitems.filters.statusGroupClosed": "Cerrado",
+
+  "workitems.card.updatedAt": "Actualizado el {{date}}",
 
   "workitems.types.task": "Tarea",
   "workitems.types.ticket": "Ticket",
