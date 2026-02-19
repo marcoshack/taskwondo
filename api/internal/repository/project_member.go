@@ -123,6 +123,33 @@ func (r *ProjectMemberRepository) Remove(ctx context.Context, projectID, userID 
 	return nil
 }
 
+// ListByUser returns all project memberships for a user with project details.
+func (r *ProjectMemberRepository) ListByUser(ctx context.Context, userID uuid.UUID) ([]model.ProjectMemberWithProject, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT pm.id, pm.project_id, pm.user_id, pm.role, pm.created_at,
+		        p.name, p.key
+		 FROM project_members pm
+		 INNER JOIN projects p ON p.id = pm.project_id
+		 WHERE pm.user_id = $1 AND p.deleted_at IS NULL
+		 ORDER BY p.name`, userID)
+	if err != nil {
+		return nil, fmt.Errorf("querying user project memberships: %w", err)
+	}
+	defer rows.Close()
+
+	var members []model.ProjectMemberWithProject
+	for rows.Next() {
+		var m model.ProjectMemberWithProject
+		if err := rows.Scan(&m.ID, &m.ProjectID, &m.UserID, &m.Role, &m.CreatedAt,
+			&m.ProjectName, &m.ProjectKey); err != nil {
+			return nil, fmt.Errorf("scanning user project membership row: %w", err)
+		}
+		members = append(members, m)
+	}
+
+	return members, rows.Err()
+}
+
 // CountByRole returns the number of members with a given role in a project.
 func (r *ProjectMemberRepository) CountByRole(ctx context.Context, projectID uuid.UUID, role string) (int, error) {
 	var count int
