@@ -257,7 +257,7 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
                 )}
               </div>
               <div
-                className={`prose prose-sm dark:prose-invert max-w-none text-gray-900 dark:text-gray-100 pl-8 rounded ${user && c.author_id === user.id ? 'hover:bg-gray-50 dark:hover:bg-gray-800' : ''}`}
+                className={`prose prose-sm dark:prose-invert max-w-none text-gray-900 dark:text-gray-100 pl-8 rounded break-words ${user && c.author_id === user.id ? 'hover:bg-gray-50 dark:hover:bg-gray-800' : ''}`}
                 onDoubleClick={() => {
                   if (user && c.author_id === user.id) {
                     setEditingId(c.id)

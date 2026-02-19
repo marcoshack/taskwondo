@@ -324,7 +324,7 @@ export function WorkItemDetailPage() {
                 onDoubleClick={() => { setDescDraft(item.description ?? ''); setEditingDesc(true) }}
               >
                 {item.description ? (
-                  <div className="prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300">
+                  <div className="prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 break-words">
                     <Markdown remarkPlugins={[remarkGfm]} components={descMarkdownComponents}>{item.description}</Markdown>
                   </div>
                 ) : (
