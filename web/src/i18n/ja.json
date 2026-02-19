@@ -194,6 +194,17 @@
 
   "workitems.card.updatedAt": "{{date}} に更新",
 
+  "workitems.sort.title": "並べ替え",
+  "workitems.sort.created": "作成日",
+  "workitems.sort.updated": "更新日",
+  "workitems.sort.priority": "優先度",
+  "workitems.sort.name": "タイトル",
+  "workitems.sort.type": "タイプ",
+  "workitems.sort.status": "ステータス",
+  "workitems.sort.number": "番号",
+  "workitems.sort.asc": "昇順",
+  "workitems.sort.desc": "降順",
+
   "workitems.types.task": "タスク",
   "workitems.types.ticket": "チケット",
   "workitems.types.bug": "バグ",

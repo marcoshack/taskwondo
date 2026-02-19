@@ -180,6 +180,11 @@ export function WorkItemListPage() {
     syncUrl(filter, search, viewMode, sortKey, newOrder)
   }
 
+  function handleOrderChange(newOrder: 'asc' | 'desc') {
+    setOrder(newOrder)
+    syncUrl(filter, search, viewMode, sort, newOrder)
+  }
+
   const [showCreate, setShowCreate] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
@@ -357,6 +362,10 @@ export function WorkItemListPage() {
         statuses={statuses}
         search={search}
         onSearchChange={handleSearchChange}
+        sort={sort}
+        order={order}
+        onSort={handleSort}
+        onOrderChange={handleOrderChange}
       />
 
       {/* Bulk action toolbar */}

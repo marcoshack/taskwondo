@@ -194,6 +194,17 @@
 
   "workitems.card.updatedAt": "تم التحديث في {{date}}",
 
+  "workitems.sort.title": "ترتيب حسب",
+  "workitems.sort.created": "تاريخ الإنشاء",
+  "workitems.sort.updated": "تاريخ التحديث",
+  "workitems.sort.priority": "الأولوية",
+  "workitems.sort.name": "العنوان",
+  "workitems.sort.type": "النوع",
+  "workitems.sort.status": "الحالة",
+  "workitems.sort.number": "الرقم",
+  "workitems.sort.asc": "تصاعدي",
+  "workitems.sort.desc": "تنازلي",
+
   "workitems.types.task": "مهمة",
   "workitems.types.ticket": "تذكرة",
   "workitems.types.bug": "خطأ",

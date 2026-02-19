@@ -194,6 +194,17 @@
 
   "workitems.card.updatedAt": "Actualizado el {{date}}",
 
+  "workitems.sort.title": "Ordenar por",
+  "workitems.sort.created": "Fecha de creación",
+  "workitems.sort.updated": "Fecha de actualización",
+  "workitems.sort.priority": "Prioridad",
+  "workitems.sort.name": "Título",
+  "workitems.sort.type": "Tipo",
+  "workitems.sort.status": "Estado",
+  "workitems.sort.number": "Número",
+  "workitems.sort.asc": "Ascendente",
+  "workitems.sort.desc": "Descendente",
+
   "workitems.types.task": "Tarea",
   "workitems.types.ticket": "Ticket",
   "workitems.types.bug": "Bug",
