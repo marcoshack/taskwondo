@@ -23,8 +23,10 @@ export function WorkItemPicker({
 }: WorkItemPickerProps) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
+  const [highlightIndex, setHighlightIndex] = useState(-1)
   const ref = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const listRef = useRef<HTMLUListElement>(null)
 
   const debouncedSearch = useDebounce(value, 300)
   const shouldSearch = open && debouncedSearch.length >= 2
@@ -38,6 +40,18 @@ export function WorkItemPicker({
     ? (data?.data ?? []).filter((item) => item.item_number !== excludeItemNumber)
     : []
 
+  // Reset highlight when items change
+  useEffect(() => {
+    setHighlightIndex(-1)
+  }, [items.length, debouncedSearch])
+
+  // Scroll highlighted item into view
+  useEffect(() => {
+    if (highlightIndex < 0 || !listRef.current) return
+    const el = listRef.current.children[highlightIndex] as HTMLElement | undefined
+    el?.scrollIntoView({ block: 'nearest' })
+  }, [highlightIndex])
+
   // Close on click outside
   useEffect(() => {
     if (!open) return
@@ -49,6 +63,31 @@ export function WorkItemPicker({
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [open])
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (!open || items.length === 0) return
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault()
+        setHighlightIndex((i) => (i < items.length - 1 ? i + 1 : 0))
+        break
+      case 'ArrowUp':
+        e.preventDefault()
+        setHighlightIndex((i) => (i > 0 ? i - 1 : items.length - 1))
+        break
+      case 'Enter':
+        e.preventDefault()
+        if (highlightIndex >= 0 && highlightIndex < items.length) {
+          onSelect(items[highlightIndex].display_id)
+          setOpen(false)
+        }
+        break
+      case 'Escape':
+        setOpen(false)
+        break
+    }
+  }
 
   return (
     <div ref={ref} className="relative">
@@ -62,6 +101,7 @@ export function WorkItemPicker({
           if (!open) setOpen(true)
         }}
         onFocus={() => setOpen(true)}
+        onKeyDown={handleKeyDown}
       />
 
       {open && value.length >= 2 && (
@@ -71,16 +111,17 @@ export function WorkItemPicker({
               <Spinner size="sm" />
             </div>
           ) : items.length > 0 ? (
-            <ul className="max-h-48 overflow-auto py-1">
-              {items.map((item) => (
-                <li key={item.id}>
+            <ul ref={listRef} className="max-h-48 overflow-auto py-1" role="listbox">
+              {items.map((item, idx) => (
+                <li key={item.id} role="option" aria-selected={idx === highlightIndex}>
                   <button
                     type="button"
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700"
+                    className={`w-full text-left px-3 py-2 text-sm ${idx === highlightIndex ? 'bg-gray-100 dark:bg-gray-700' : 'hover:bg-gray-50 dark:hover:bg-gray-700'}`}
                     onClick={() => {
                       onSelect(item.display_id)
                       setOpen(false)
                     }}
+                    onMouseEnter={() => setHighlightIndex(idx)}
                   >
                     <span className="font-mono font-medium text-indigo-600 dark:text-indigo-400">
                       {item.display_id}
