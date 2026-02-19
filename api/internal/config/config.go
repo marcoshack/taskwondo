@@ -59,27 +59,50 @@ func Load() (*Config, error) {
 		}
 	}
 
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		return nil, fmt.Errorf("JWT_SECRET environment variable is required")
+	}
+	if len(jwtSecret) < 32 {
+		return nil, fmt.Errorf("JWT_SECRET must be at least 32 characters (got %d)", len(jwtSecret))
+	}
+
+	databaseURL := os.Getenv("DATABASE_URL")
+	if databaseURL == "" {
+		return nil, fmt.Errorf("DATABASE_URL environment variable is required")
+	}
+
+	storageAccessKey := os.Getenv("STORAGE_ACCESS_KEY")
+	if storageAccessKey == "" {
+		return nil, fmt.Errorf("STORAGE_ACCESS_KEY environment variable is required")
+	}
+
+	storageSecretKey := os.Getenv("STORAGE_SECRET_KEY")
+	if storageSecretKey == "" {
+		return nil, fmt.Errorf("STORAGE_SECRET_KEY environment variable is required")
+	}
+
 	cfg := &Config{
-		DatabaseURL:      envOrDefault("DATABASE_URL", "postgres://trackforge:trackforge@localhost:5432/trackforge?sslmode=disable"),
-		APIPort:          envOrDefault("API_PORT", "8080"),
-		APIHost:          envOrDefault("API_HOST", "0.0.0.0"),
-		JWTSecret:        envOrDefault("JWT_SECRET", ""),
-		JWTExpiry:        jwtExpiry,
-		AdminEmail:       envOrDefault("ADMIN_EMAIL", ""),
-		AdminPassword:    envOrDefault("ADMIN_PASSWORD", ""),
-		BaseURL:          envOrDefault("BASE_URL", "http://localhost:3000"),
-		LogLevel:         envOrDefault("LOG_LEVEL", "info"),
-		LogFormat:        envOrDefault("LOG_FORMAT", "json"),
+		DatabaseURL:         databaseURL,
+		APIPort:             envOrDefault("API_PORT", "8080"),
+		APIHost:             envOrDefault("API_HOST", "0.0.0.0"),
+		JWTSecret:           jwtSecret,
+		JWTExpiry:           jwtExpiry,
+		AdminEmail:          envOrDefault("ADMIN_EMAIL", ""),
+		AdminPassword:       envOrDefault("ADMIN_PASSWORD", ""),
+		BaseURL:             envOrDefault("BASE_URL", "http://localhost:3000"),
+		LogLevel:            envOrDefault("LOG_LEVEL", "info"),
+		LogFormat:           envOrDefault("LOG_FORMAT", "json"),
 		DiscordClientID:     envOrDefault("DISCORD_CLIENT_ID", ""),
 		DiscordClientSecret: envOrDefault("DISCORD_CLIENT_SECRET", ""),
 		DiscordRedirectURI:  envOrDefault("DISCORD_REDIRECT_URI", ""),
 		StorageEndpoint:     envOrDefault("STORAGE_ENDPOINT", "localhost:9000"),
-		StorageAccessKey: envOrDefault("STORAGE_ACCESS_KEY", "trackforge"),
-		StorageSecretKey: envOrDefault("STORAGE_SECRET_KEY", "trackforge"),
-		StorageBucket:    envOrDefault("STORAGE_BUCKET", "trackforge-attachments"),
-		StorageRegion:    envOrDefault("STORAGE_REGION", "us-east-1"),
-		StorageUseSSL:    envOrDefault("STORAGE_USE_SSL", "false") == "true",
-		MaxUploadSize:    maxUpload,
+		StorageAccessKey:    storageAccessKey,
+		StorageSecretKey:    storageSecretKey,
+		StorageBucket:       envOrDefault("STORAGE_BUCKET", "trackforge-attachments"),
+		StorageRegion:       envOrDefault("STORAGE_REGION", "us-east-1"),
+		StorageUseSSL:       envOrDefault("STORAGE_USE_SSL", "false") == "true",
+		MaxUploadSize:       maxUpload,
 	}
 
 	return cfg, nil

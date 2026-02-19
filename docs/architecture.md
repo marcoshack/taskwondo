@@ -2,9 +2,27 @@
 
 ## Overview
 
-TrackForge is a monolithic Go application backed by a single PostgreSQL database, with a React/TypeScript frontend served via Nginx. The system is deployed as 3 Docker Compose services.
+TrackForge is composed by a Go service backed by a single PostgreSQL database, with a React/TypeScript frontend served via Nginx. The system is deployed as 3 Docker Compose services.
 
-The architecture prioritizes simplicity: one API server, one database, one frontend container. No message queues, no Redis, no separate worker processes. Background work (automation rules, webhook retries) is handled by goroutines within the API server using a simple internal task scheduler.
+```
+┌──────────────────────────────────────────────────────────┐
+│                     Docker Compose                       │
+│                                                          │
+│  ┌─────────────┐  ┌─────────────┐  ┌──────────────────┐  │
+│  │  Frontend   │  │  API Server │  │   PostgreSQL     │  │
+│  │  (React/TS) │──│  (Go)       │──│                  │  │
+│  │  Nginx      │  │             │  │  Single DB       │  │
+│  │  :3000      │  │  :8080      │  │  :5432           │  │
+│  └─────────────┘  └──────┬──────┘  └──────────────────┘  │
+│                          │                               │
+└──────────────────────────┼───────────────────────────────┘
+                           │
+              ┌────────────┼────────────┐
+              │            │            │
+         Webhooks     Discord Bot   Email Inbound
+         (Prometheus,  (optional)   (optional)
+          Grafana)
+```
 
 ## Design Principles
 
