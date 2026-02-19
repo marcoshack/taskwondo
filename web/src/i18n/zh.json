@@ -194,6 +194,17 @@
 
   "workitems.card.updatedAt": "更新于 {{date}}",
 
+  "workitems.sort.title": "排序方式",
+  "workitems.sort.created": "创建日期",
+  "workitems.sort.updated": "更新日期",
+  "workitems.sort.priority": "优先级",
+  "workitems.sort.name": "标题",
+  "workitems.sort.type": "类型",
+  "workitems.sort.status": "状态",
+  "workitems.sort.number": "编号",
+  "workitems.sort.asc": "升序",
+  "workitems.sort.desc": "降序",
+
   "workitems.types.task": "任务",
   "workitems.types.ticket": "工单",
   "workitems.types.bug": "缺陷",

@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
 import { useTranslation } from 'react-i18next'
-import { SlidersHorizontal } from 'lucide-react'
+import { SlidersHorizontal, ArrowUpDown } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { MultiSelect, type MultiSelectOption } from '@/components/ui/MultiSelect'
@@ -14,14 +14,19 @@ interface WorkItemFiltersProps {
   statuses: WorkflowStatus[]
   search: string
   onSearchChange: (value: string) => void
+  sort?: string
+  order?: 'asc' | 'desc'
+  onSort?: (sortKey: string) => void
+  onOrderChange?: (order: 'asc' | 'desc') => void
 }
 
 const closedCategories = new Set(['done', 'cancelled'])
 
-export function WorkItemFilters({ filter, onFilterChange, statuses, search, onSearchChange }: WorkItemFiltersProps) {
+export function WorkItemFilters({ filter, onFilterChange, statuses, search, onSearchChange, sort, order, onSort, onOrderChange }: WorkItemFiltersProps) {
   const { t } = useTranslation()
   const searchRef = useRef<HTMLInputElement>(null)
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const [sortOpen, setSortOpen] = useState(false)
 
   const typeOptions: MultiSelectOption[] = [
     { value: 'task', label: t('workitems.types.task') },
@@ -65,6 +70,18 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, search, onSe
     (filter.status?.length ? 1 : 0) +
     (filter.assignee?.length ? 1 : 0)
 
+  const sortOptions: { key: string; label: string }[] = [
+    { key: 'created_at', label: t('workitems.sort.created') },
+    { key: 'updated_at', label: t('workitems.sort.updated') },
+    { key: 'priority', label: t('workitems.sort.priority') },
+    { key: 'title', label: t('workitems.sort.name') },
+    { key: 'type', label: t('workitems.sort.type') },
+    { key: 'status', label: t('workitems.sort.status') },
+    { key: 'item_number', label: t('workitems.sort.number') },
+  ]
+
+  const isDefaultSort = !sort || (sort === 'created_at' && order === 'desc')
+
   return (
     <>
       {/* Desktop: inline layout */}
@@ -92,15 +109,29 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, search, onSe
         </div>
       </div>
 
-      {/* Mobile: search + filter icon */}
+      {/* Mobile: search + sort icon + filter icon */}
       <div className="flex sm:hidden items-center gap-2">
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <Input
             placeholder={t('workitems.filters.search')}
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
           />
         </div>
+        {onSort && (
+          <button
+            onClick={() => setSortOpen(true)}
+            className="relative shrink-0 p-2.5 rounded-md border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+            aria-label={t('workitems.sort.title')}
+          >
+            <ArrowUpDown className="h-5 w-5" />
+            {!isDefaultSort && (
+              <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-600 text-[10px] font-bold text-white">
+                !
+              </span>
+            )}
+          </button>
+        )}
         <button
           onClick={() => setFiltersOpen(true)}
           className="relative shrink-0 p-2.5 rounded-md border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
@@ -114,6 +145,57 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, search, onSe
           )}
         </button>
       </div>
+
+      {/* Mobile sort modal */}
+      {onSort && onOrderChange && (
+        <Modal open={sortOpen} onClose={() => setSortOpen(false)} title={t('workitems.sort.title')}>
+          <div className="space-y-1">
+            {sortOptions.map((opt) => {
+              const isActive = sort === opt.key
+              return (
+                <div key={opt.key} className="flex items-center gap-1">
+                  <button
+                    onClick={() => { onSort(opt.key); setSortOpen(false) }}
+                    className={`flex-1 text-left px-3 py-2.5 rounded-md text-sm ${
+                      isActive
+                        ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 font-medium'
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                  {isActive && (
+                    <div className="flex shrink-0">
+                      <button
+                        onClick={() => { onOrderChange('asc'); setSortOpen(false) }}
+                        className={`px-2 py-1.5 rounded-l-md text-xs font-medium border ${
+                          order === 'asc'
+                            ? 'bg-indigo-100 text-indigo-700 border-indigo-300 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-700'
+                            : 'bg-white text-gray-500 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:bg-gray-700'
+                        }`}
+                        title={t('workitems.sort.asc')}
+                      >
+                        {'\u2191'}
+                      </button>
+                      <button
+                        onClick={() => { onOrderChange('desc'); setSortOpen(false) }}
+                        className={`px-2 py-1.5 rounded-r-md text-xs font-medium border-t border-r border-b ${
+                          order === 'desc'
+                            ? 'bg-indigo-100 text-indigo-700 border-indigo-300 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-700'
+                            : 'bg-white text-gray-500 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:bg-gray-700'
+                        }`}
+                        title={t('workitems.sort.desc')}
+                      >
+                        {'\u2193'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </Modal>
+      )}
 
       {/* Mobile filter modal */}
       <Modal open={filtersOpen} onClose={() => setFiltersOpen(false)} title={t('workitems.filters.title')}>
