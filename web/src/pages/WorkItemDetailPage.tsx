@@ -18,6 +18,8 @@ import { AttachmentList } from '@/components/workitems/AttachmentList'
 import { FilePreviewModal } from '@/components/workitems/FilePreviewModal'
 import type { PreviewTarget } from '@/components/workitems/FilePreviewModal'
 import { usePasteUpload } from '@/hooks/usePasteUpload'
+import { useMentionAutocomplete } from '@/hooks/useMentionAutocomplete'
+import { MentionModal } from '@/components/ui/MentionModal'
 import { TypeBadge } from '@/components/workitems/TypeBadge'
 import { StatusBadge } from '@/components/workitems/StatusBadge'
 import { CopyButton } from '@/components/ui/CopyButton'
@@ -134,6 +136,13 @@ export function WorkItemDetailPage() {
     projectKey: projectKey ?? '',
     itemNumber,
     onTextChange: (updater) => setDescDraft(updater),
+  })
+
+  const descTextareaRef = useRef<HTMLTextAreaElement>(null)
+  const descMention = useMentionAutocomplete({
+    value: descDraft,
+    onValueChange: setDescDraft,
+    textareaRef: descTextareaRef,
   })
 
   if (isLoading) {
@@ -270,11 +279,14 @@ export function WorkItemDetailPage() {
             {editingDesc ? (
               <div className="space-y-2">
                 <textarea
+                  ref={descTextareaRef}
                   className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm"
                   rows={6}
                   value={descDraft}
                   onChange={(e) => setDescDraft(e.target.value)}
                   onKeyDown={(e) => {
+                    descMention.onMentionKeyDown(e)
+                    if (e.defaultPrevented) return
                     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                       e.preventDefault()
                       updateMutation.mutate({ itemNumber, input: { description: descDraft || null } })
@@ -364,6 +376,14 @@ export function WorkItemDetailPage() {
           </div>
         </div>
       </div>
+
+      <MentionModal
+        open={descMention.mentionModalOpen}
+        position={descMention.dropdownPosition}
+        onClose={descMention.onMentionClose}
+        onSelect={descMention.onMentionSelect}
+        projectKey={projectKey ?? ''}
+      />
 
       {/* Delete confirmation */}
       <Modal open={showDelete} onClose={() => setShowDelete(false)} title={t('workitems.detail.deleteTitle')}>

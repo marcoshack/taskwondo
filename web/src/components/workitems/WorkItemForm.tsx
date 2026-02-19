@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { UserPicker } from '@/components/ui/UserPicker'
+import { MentionModal } from '@/components/ui/MentionModal'
+import { useMentionAutocomplete } from '@/hooks/useMentionAutocomplete'
 import type { WorkflowStatus } from '@/api/workflows'
 import type { ProjectMember } from '@/api/projects'
 
@@ -12,6 +14,7 @@ const PRIORITIES = ['low', 'medium', 'high', 'critical']
 const VISIBILITIES = ['internal', 'portal', 'public']
 
 interface WorkItemFormProps {
+  projectKey: string
   mode: 'create' | 'edit'
   members: ProjectMember[]
   initialValues?: {
@@ -33,6 +36,7 @@ interface WorkItemFormProps {
 }
 
 export function WorkItemForm({
+  projectKey,
   mode,
   members,
   initialValues = {},
@@ -52,6 +56,13 @@ export function WorkItemForm({
   const [visibility, setVisibility] = useState(initialValues.visibility ?? 'internal')
   const [dueDate, setDueDate] = useState(initialValues.due_date ?? '')
   const [status, setStatus] = useState(initialValues.status ?? '')
+
+  const descRef = useRef<HTMLTextAreaElement>(null)
+  const descMention = useMentionAutocomplete({
+    value: description,
+    onValueChange: setDescription,
+    textareaRef: descRef,
+  })
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -94,10 +105,21 @@ export function WorkItemForm({
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('workitems.form.description')}</label>
         <textarea
+          ref={descRef}
           className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
           rows={4}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
+          onKeyDown={(e) => {
+            descMention.onMentionKeyDown(e)
+          }}
+        />
+        <MentionModal
+          open={descMention.mentionModalOpen}
+          position={descMention.dropdownPosition}
+          onClose={descMention.onMentionClose}
+          onSelect={descMention.onMentionSelect}
+          projectKey={projectKey}
         />
       </div>
       <Select label={t('workitems.form.priority')} value={priority} onChange={(e) => setPriority(e.target.value)}>

@@ -441,6 +441,7 @@ export function WorkItemListPage() {
 
       <Modal open={showCreate} onClose={() => setShowCreate(false)} title={t('workitems.newTitle')}>
         <WorkItemForm
+          projectKey={projectKey ?? ''}
           mode="create"
           members={members ?? []}
           onSubmit={(values) => {
