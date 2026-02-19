@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAdminUsers, useUpdateUser, useUserProjects, useAddUserToProject, useRemoveUserFromProject } from '@/hooks/useAdmin'
+import { usePreference, useSetPreference } from '@/hooks/usePreferences'
 import { useProjects } from '@/hooks/useProjects'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
@@ -19,11 +20,34 @@ const ROLE_BADGE_COLORS: Record<string, 'indigo' | 'blue' | 'green' | 'gray'> = 
   viewer: 'gray',
 }
 
+type UserStatusFilter = 'active' | 'disabled' | 'all'
+
+const PREFERENCE_KEY = 'admin_users_status_filter'
+
+function isValidStatusFilter(v: unknown): v is UserStatusFilter {
+  return v === 'active' || v === 'disabled' || v === 'all'
+}
+
 export function AdminUsersPage() {
   const { t } = useTranslation()
   const { user: currentUser } = useAuth()
   const { data: users, isLoading } = useAdminUsers()
   const updateUserMutation = useUpdateUser()
+
+  const { data: savedFilter } = usePreference<string>(PREFERENCE_KEY)
+  const setPref = useSetPreference()
+  const statusFilter: UserStatusFilter = isValidStatusFilter(savedFilter) ? savedFilter : 'active'
+
+  function handleStatusFilterChange(value: string) {
+    if (!isValidStatusFilter(value)) return
+    setPref.mutate({ key: PREFERENCE_KEY, value })
+  }
+
+  const filteredUsers = useMemo(() => {
+    if (!users) return []
+    if (statusFilter === 'all') return users
+    return users.filter((u) => (statusFilter === 'active' ? u.is_active : !u.is_active))
+  }, [users, statusFilter])
 
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null)
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
@@ -100,9 +124,20 @@ export function AdminUsersPage() {
 
   return (
     <div className="max-w-4xl space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('admin.users.title')}</h2>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('admin.users.description')}</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('admin.users.title')}</h2>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('admin.users.description')}</p>
+        </div>
+        <select
+          className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          value={statusFilter}
+          onChange={(e) => handleStatusFilterChange(e.target.value)}
+        >
+          <option value="active">{t('admin.users.filterActive')}</option>
+          <option value="disabled">{t('admin.users.filterDisabled')}</option>
+          <option value="all">{t('admin.users.filterAll')}</option>
+        </select>
       </div>
 
       {feedback && (
@@ -111,11 +146,11 @@ export function AdminUsersPage() {
         </p>
       )}
 
-      {!users || users.length === 0 ? (
+      {filteredUsers.length === 0 ? (
         <p className="text-sm text-gray-500 dark:text-gray-400">{t('admin.users.noUsers')}</p>
       ) : (
         <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
-          {users.map((u) => {
+          {filteredUsers.map((u) => {
             const isSelf = u.id === currentUser?.id
             const isExpanded = expandedUserId === u.id
 
