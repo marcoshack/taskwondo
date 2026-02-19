@@ -9,7 +9,7 @@ import { useProject, useProjects } from '@/hooks/useProjects'
 import { Avatar } from '@/components/ui/Avatar'
 import { Modal } from '@/components/ui/Modal'
 import { Spinner } from '@/components/ui/Spinner'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useKeyboardShortcutContext } from '@/contexts/KeyboardShortcutContext'
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
 import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal'
@@ -175,11 +175,14 @@ function ProjectSwitcherModal({
   const { t } = useTranslation()
   const { data: projects, isLoading } = useProjects()
   const [search, setSearch] = useState('')
+  const [selectedIndex, setSelectedIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
+  const listRef = useRef<HTMLUListElement>(null)
 
   useEffect(() => {
     if (open) {
       setSearch('')
+      setSelectedIndex(0)
       setTimeout(() => inputRef.current?.focus(), 0)
     }
   }, [open])
@@ -190,6 +193,36 @@ function ProjectSwitcherModal({
     return p.key.toLowerCase().includes(q) || p.name.toLowerCase().includes(q)
   })
 
+  // Reset selection when search changes
+  useEffect(() => {
+    setSelectedIndex(0)
+  }, [search])
+
+  // Scroll selected item into view
+  const scrollSelectedIntoView = useCallback((index: number) => {
+    const list = listRef.current
+    if (!list) return
+    const item = list.children[index] as HTMLElement | undefined
+    item?.scrollIntoView({ block: 'nearest' })
+  }, [])
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      const next = Math.min(selectedIndex + 1, filtered.length - 1)
+      setSelectedIndex(next)
+      scrollSelectedIntoView(next)
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      const prev = Math.max(selectedIndex - 1, 0)
+      setSelectedIndex(prev)
+      scrollSelectedIntoView(prev)
+    } else if (e.key === 'Enter' && filtered.length > 0) {
+      e.preventDefault()
+      onSelect(filtered[selectedIndex].key)
+    }
+  }, [selectedIndex, filtered, onSelect, scrollSelectedIntoView])
+
   return (
     <Modal open={open} onClose={onClose} title={t('projects.switcher.title')} position="top">
       <input
@@ -198,12 +231,7 @@ function ProjectSwitcherModal({
         placeholder={t('projects.switcher.search')}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && filtered.length > 0) {
-            e.preventDefault()
-            onSelect(filtered[0].key)
-          }
-        }}
+        onKeyDown={handleKeyDown}
         className="block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-400 mb-3"
       />
       {isLoading ? (
@@ -211,13 +239,14 @@ function ProjectSwitcherModal({
       ) : filtered.length === 0 ? (
         <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">{t('projects.noProjectsFound')}</p>
       ) : (
-        <ul className="max-h-64 overflow-y-auto -mx-2">
+        <ul ref={listRef} className="max-h-64 overflow-y-auto -mx-2">
           {filtered.map((p, i) => (
             <li key={p.key}>
               <button
                 onClick={() => onSelect(p.key)}
+                onMouseEnter={() => setSelectedIndex(i)}
                 className={`w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-md text-sm ${
-                  i === 0
+                  i === selectedIndex
                     ? 'bg-indigo-50 dark:bg-indigo-900/30'
                     : 'hover:bg-gray-100 dark:hover:bg-gray-700'
                 }`}
