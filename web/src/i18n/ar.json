@@ -279,6 +279,12 @@
   "workItemPicker.searchPlaceholder": "بحث بالعنوان أو المعرّف...",
   "workItemPicker.noItems": "لم يتم العثور على عناصر",
 
+  "mention.title": "إدراج رابط",
+  "mention.searchPlaceholder": "البحث عن المشاريع وعناصر العمل...",
+  "mention.projects": "المشاريع",
+  "mention.workItems": "عناصر العمل",
+  "mention.noResults": "لم يتم العثور على نتائج",
+
   "preferences.title": "التفضيلات",
   "preferences.theme": "المظهر",
   "preferences.fontSize": "حجم الخط",

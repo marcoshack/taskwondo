@@ -279,6 +279,12 @@
   "workItemPicker.searchPlaceholder": "按标题或ID搜索...",
   "workItemPicker.noItems": "未找到条目",
 
+  "mention.title": "插入链接",
+  "mention.searchPlaceholder": "搜索项目和工作项...",
+  "mention.projects": "项目",
+  "mention.workItems": "工作项",
+  "mention.noResults": "未找到结果",
+
   "preferences.title": "偏好设置",
   "preferences.theme": "主题",
   "preferences.fontSize": "字体大小",

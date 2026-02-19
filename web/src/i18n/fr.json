@@ -279,6 +279,12 @@
   "workItemPicker.searchPlaceholder": "Rechercher par titre ou ID...",
   "workItemPicker.noItems": "Aucun élément trouvé",
 
+  "mention.title": "Insérer un lien",
+  "mention.searchPlaceholder": "Rechercher des projets et éléments de travail...",
+  "mention.projects": "Projets",
+  "mention.workItems": "Éléments de travail",
+  "mention.noResults": "Aucun résultat trouvé",
+
   "preferences.title": "Préférences",
   "preferences.theme": "Thème",
   "preferences.fontSize": "Taille de Police",

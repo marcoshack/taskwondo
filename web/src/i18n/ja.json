@@ -279,6 +279,12 @@
   "workItemPicker.searchPlaceholder": "タイトルまたはIDで検索...",
   "workItemPicker.noItems": "アイテムが見つかりません",
 
+  "mention.title": "リンクを挿入",
+  "mention.searchPlaceholder": "プロジェクトと作業アイテムを検索...",
+  "mention.projects": "プロジェクト",
+  "mention.workItems": "作業アイテム",
+  "mention.noResults": "結果が見つかりません",
+
   "preferences.title": "設定",
   "preferences.theme": "テーマ",
   "preferences.fontSize": "文字サイズ",
