@@ -43,6 +43,12 @@
   "login.submit": "ログイン",
   "login.submitting": "ログイン中...",
   "login.error": "ログインに失敗しました。再度お試しください。",
+  "login.or": "または次で続行",
+  "login.discord.button": "Discordでログイン",
+  "login.discord.error": "Discordログインの開始に失敗しました。再度お試しください。",
+  "login.discord.authenticating": "Discordで認証中...",
+  "login.discord.callbackError": "Discord認証に失敗しました。再度お試しください。",
+  "login.discord.backToLogin": "ログインに戻る",
 
   "projects.title": "プロジェクト",
   "projects.new": "新規プロジェクト",

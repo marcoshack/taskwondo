@@ -43,6 +43,12 @@
   "login.submit": "Anmelden",
   "login.submitting": "Anmeldung...",
   "login.error": "Anmeldung fehlgeschlagen. Bitte erneut versuchen.",
+  "login.or": "oder weiter mit",
+  "login.discord.button": "Mit Discord anmelden",
+  "login.discord.error": "Discord-Anmeldung konnte nicht gestartet werden. Bitte erneut versuchen.",
+  "login.discord.authenticating": "Authentifizierung mit Discord...",
+  "login.discord.callbackError": "Discord-Authentifizierung fehlgeschlagen. Bitte erneut versuchen.",
+  "login.discord.backToLogin": "Zurück zur Anmeldung",
 
   "projects.title": "Projekte",
   "projects.new": "Neues Projekt",

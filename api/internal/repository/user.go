@@ -62,6 +62,17 @@ func (r *UserRepository) UpdateLastLogin(ctx context.Context, id uuid.UUID) erro
 	return nil
 }
 
+// UpdateAvatarURL sets the avatar_url for a user.
+func (r *UserRepository) UpdateAvatarURL(ctx context.Context, id uuid.UUID, avatarURL string) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE users SET avatar_url = $1, updated_at = now() WHERE id = $2`,
+		sql.NullString{String: avatarURL, Valid: avatarURL != ""}, id)
+	if err != nil {
+		return fmt.Errorf("updating avatar url: %w", err)
+	}
+	return nil
+}
+
 // Search returns active users whose email or display_name match the query (ILIKE).
 // Results are limited to 20.
 func (r *UserRepository) Search(ctx context.Context, query string) ([]model.User, error) {

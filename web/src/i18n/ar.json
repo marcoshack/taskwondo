@@ -43,6 +43,12 @@
   "login.submit": "تسجيل الدخول",
   "login.submitting": "جارٍ الدخول...",
   "login.error": "فشل تسجيل الدخول. حاول مرة أخرى.",
+  "login.or": "أو المتابعة عبر",
+  "login.discord.button": "تسجيل الدخول عبر Discord",
+  "login.discord.error": "فشل بدء تسجيل الدخول عبر Discord. حاول مرة أخرى.",
+  "login.discord.authenticating": "جارٍ المصادقة عبر Discord...",
+  "login.discord.callbackError": "فشلت المصادقة عبر Discord. حاول مرة أخرى.",
+  "login.discord.backToLogin": "العودة إلى تسجيل الدخول",
 
   "projects.title": "المشاريع",
   "projects.new": "مشروع جديد",

@@ -43,6 +43,12 @@
   "login.submit": "Entrar",
   "login.submitting": "Entrando...",
   "login.error": "Falha no login. Tente novamente.",
+  "login.or": "ou continue com",
+  "login.discord.button": "Entrar com Discord",
+  "login.discord.error": "Falha ao iniciar login com Discord. Tente novamente.",
+  "login.discord.authenticating": "Autenticando com Discord...",
+  "login.discord.callbackError": "Falha na autenticação com Discord. Tente novamente.",
+  "login.discord.backToLogin": "Voltar ao login",
 
   "projects.title": "Projetos",
   "projects.new": "Novo Projeto",

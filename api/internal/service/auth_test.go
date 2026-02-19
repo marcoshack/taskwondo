@@ -56,6 +56,13 @@ func (m *mockUserRepo) UpdateLastLogin(_ context.Context, id uuid.UUID) error {
 	return nil
 }
 
+func (m *mockUserRepo) UpdateAvatarURL(_ context.Context, id uuid.UUID, avatarURL string) error {
+	if u, ok := m.byID[id]; ok {
+		u.AvatarURL = &avatarURL
+	}
+	return nil
+}
+
 func (m *mockUserRepo) Search(_ context.Context, query string) ([]model.User, error) {
 	var result []model.User
 	q := strings.ToLower(query)
@@ -68,9 +75,9 @@ func (m *mockUserRepo) Search(_ context.Context, query string) ([]model.User, er
 }
 
 type mockAPIKeyRepo struct {
-	keys    map[string]*model.APIKey // keyed by key_hash
-	byUser  map[uuid.UUID][]model.APIKey
-	byID    map[uuid.UUID]*model.APIKey
+	keys   map[string]*model.APIKey // keyed by key_hash
+	byUser map[uuid.UUID][]model.APIKey
+	byID   map[uuid.UUID]*model.APIKey
 }
 
 func newMockAPIKeyRepo() *mockAPIKeyRepo {
@@ -121,13 +128,72 @@ func (m *mockAPIKeyRepo) UpdateLastUsed(_ context.Context, id uuid.UUID) error {
 	return nil
 }
 
+type mockOAuthAccountRepo struct {
+	accounts map[string]*model.OAuthAccount // keyed by "provider:provider_user_id"
+	byUser   map[uuid.UUID][]model.OAuthAccount
+}
+
+func newMockOAuthAccountRepo() *mockOAuthAccountRepo {
+	return &mockOAuthAccountRepo{
+		accounts: make(map[string]*model.OAuthAccount),
+		byUser:   make(map[uuid.UUID][]model.OAuthAccount),
+	}
+}
+
+func (m *mockOAuthAccountRepo) GetByProviderUser(_ context.Context, provider, providerUserID string) (*model.OAuthAccount, error) {
+	key := provider + ":" + providerUserID
+	a, ok := m.accounts[key]
+	if !ok {
+		return nil, model.ErrNotFound
+	}
+	return a, nil
+}
+
+func (m *mockOAuthAccountRepo) Create(_ context.Context, account *model.OAuthAccount) error {
+	key := account.Provider + ":" + account.ProviderUserID
+	m.accounts[key] = account
+	m.byUser[account.UserID] = append(m.byUser[account.UserID], *account)
+	return nil
+}
+
+func (m *mockOAuthAccountRepo) ListByUserID(_ context.Context, userID uuid.UUID) ([]model.OAuthAccount, error) {
+	return m.byUser[userID], nil
+}
+
+func (m *mockOAuthAccountRepo) Delete(_ context.Context, id, userID uuid.UUID) error {
+	for key, a := range m.accounts {
+		if a.ID == id && a.UserID == userID {
+			delete(m.accounts, key)
+			accounts := m.byUser[userID]
+			for i, acc := range accounts {
+				if acc.ID == id {
+					m.byUser[userID] = append(accounts[:i], accounts[i+1:]...)
+					break
+				}
+			}
+			return nil
+		}
+	}
+	return model.ErrNotFound
+}
+
 // --- Tests ---
 
 func newTestAuthService() (*AuthService, *mockUserRepo, *mockAPIKeyRepo) {
 	userRepo := newMockUserRepo()
 	apiKeyRepo := newMockAPIKeyRepo()
-	svc := NewAuthService(userRepo, apiKeyRepo, "test-secret-at-least-32-chars!!", 24*time.Hour)
+	oauthRepo := newMockOAuthAccountRepo()
+	svc := NewAuthService(userRepo, apiKeyRepo, oauthRepo, "test-secret-at-least-32-chars!!", 24*time.Hour, "", "", "")
 	return svc, userRepo, apiKeyRepo
+}
+
+func newTestAuthServiceWithOAuth() (*AuthService, *mockUserRepo, *mockOAuthAccountRepo) {
+	userRepo := newMockUserRepo()
+	apiKeyRepo := newMockAPIKeyRepo()
+	oauthRepo := newMockOAuthAccountRepo()
+	svc := NewAuthService(userRepo, apiKeyRepo, oauthRepo, "test-secret-at-least-32-chars!!", 24*time.Hour,
+		"test-client-id", "test-client-secret", "http://localhost:5173/auth/discord/callback")
+	return svc, userRepo, oauthRepo
 }
 
 func createTestUser(t *testing.T, repo *mockUserRepo, email, password, role string) *model.User {
@@ -237,7 +303,7 @@ func TestValidateJWT_WrongSecret(t *testing.T) {
 	token, _, _ := svc1.Login(context.Background(), "test@example.com", "password123")
 
 	// Different service with different secret
-	svc2 := NewAuthService(newMockUserRepo(), newMockAPIKeyRepo(), "different-secret-at-least-32!!!", 24*time.Hour)
+	svc2 := NewAuthService(newMockUserRepo(), newMockAPIKeyRepo(), newMockOAuthAccountRepo(), "different-secret-at-least-32!!!", 24*time.Hour, "", "", "")
 
 	_, err := svc2.ValidateJWT(token)
 	if err != model.ErrUnauthorized {
@@ -374,5 +440,206 @@ func TestListAndDeleteAPIKeys(t *testing.T) {
 	keys, _ = svc.ListAPIKeys(context.Background(), user.ID)
 	if len(keys) != 1 {
 		t.Fatalf("expected 1 key after delete, got %d", len(keys))
+	}
+}
+
+// --- OAuth state tests ---
+
+func TestOAuthState_GenerateAndValidate(t *testing.T) {
+	svc, _, _ := newTestAuthServiceWithOAuth()
+
+	state, err := svc.generateOAuthState()
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if state == "" {
+		t.Fatal("expected non-empty state")
+	}
+
+	err = svc.validateOAuthState(state)
+	if err != nil {
+		t.Fatalf("expected valid state, got %v", err)
+	}
+}
+
+func TestOAuthState_InvalidSignature(t *testing.T) {
+	svc, _, _ := newTestAuthServiceWithOAuth()
+
+	// Create a service with different secret
+	svc2 := NewAuthService(newMockUserRepo(), newMockAPIKeyRepo(), newMockOAuthAccountRepo(),
+		"different-secret-at-least-32!!!", 24*time.Hour, "", "", "")
+
+	state, _ := svc2.generateOAuthState()
+
+	err := svc.validateOAuthState(state)
+	if err == nil {
+		t.Fatal("expected error for invalid signature")
+	}
+}
+
+func TestOAuthState_InvalidFormat(t *testing.T) {
+	svc, _, _ := newTestAuthServiceWithOAuth()
+
+	err := svc.validateOAuthState("not-valid-base64!!!")
+	if err == nil {
+		t.Fatal("expected error for invalid state format")
+	}
+}
+
+func TestDiscordOAuthURL(t *testing.T) {
+	svc, _, _ := newTestAuthServiceWithOAuth()
+
+	authURL, err := svc.DiscordOAuthURL()
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if !strings.Contains(authURL, "discord.com/oauth2/authorize") {
+		t.Fatalf("expected discord authorize URL, got %s", authURL)
+	}
+	if !strings.Contains(authURL, "client_id=test-client-id") {
+		t.Fatalf("expected client_id in URL, got %s", authURL)
+	}
+	if !strings.Contains(authURL, "scope=identify+email") {
+		t.Fatalf("expected scope in URL, got %s", authURL)
+	}
+}
+
+func TestFindOrCreateOAuthUser_NewUser(t *testing.T) {
+	svc, userRepo, oauthRepo := newTestAuthServiceWithOAuth()
+
+	email := "discord@example.com"
+	verified := true
+	globalName := "DiscordUser"
+	avatar := "abc123"
+	discord := &model.DiscordUser{
+		ID:         "123456789",
+		Username:   "discorduser",
+		GlobalName: &globalName,
+		Avatar:     &avatar,
+		Email:      &email,
+		Verified:   &verified,
+	}
+
+	user, err := svc.findOrCreateOAuthUser(context.Background(), model.OAuthProviderDiscord, discord)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if user.Email != email {
+		t.Fatalf("expected email %s, got %s", email, user.Email)
+	}
+	if user.DisplayName != "DiscordUser" {
+		t.Fatalf("expected display name 'DiscordUser', got %s", user.DisplayName)
+	}
+	if user.GlobalRole != model.RoleUser {
+		t.Fatalf("expected role user, got %s", user.GlobalRole)
+	}
+
+	// Verify user was created in repo
+	_, err = userRepo.GetByEmail(context.Background(), email)
+	if err != nil {
+		t.Fatalf("expected user in repo, got %v", err)
+	}
+
+	// Verify OAuth account was linked
+	accounts, _ := oauthRepo.ListByUserID(context.Background(), user.ID)
+	if len(accounts) != 1 {
+		t.Fatalf("expected 1 oauth account, got %d", len(accounts))
+	}
+	if accounts[0].ProviderUserID != "123456789" {
+		t.Fatalf("expected provider user id 123456789, got %s", accounts[0].ProviderUserID)
+	}
+}
+
+func TestFindOrCreateOAuthUser_ExistingLink(t *testing.T) {
+	svc, userRepo, oauthRepo := newTestAuthServiceWithOAuth()
+
+	// Create existing user and link
+	user := &model.User{
+		ID:          uuid.New(),
+		Email:       "existing@example.com",
+		DisplayName: "Existing User",
+		GlobalRole:  model.RoleUser,
+		IsActive:    true,
+	}
+	userRepo.Create(context.Background(), user)
+
+	oauthRepo.Create(context.Background(), &model.OAuthAccount{
+		ID:             uuid.New(),
+		UserID:         user.ID,
+		Provider:       model.OAuthProviderDiscord,
+		ProviderUserID: "123456789",
+	})
+
+	discord := &model.DiscordUser{
+		ID:       "123456789",
+		Username: "discorduser",
+	}
+
+	found, err := svc.findOrCreateOAuthUser(context.Background(), model.OAuthProviderDiscord, discord)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if found.ID != user.ID {
+		t.Fatalf("expected existing user ID %s, got %s", user.ID, found.ID)
+	}
+}
+
+func TestFindOrCreateOAuthUser_EmailMatch(t *testing.T) {
+	svc, userRepo, oauthRepo := newTestAuthServiceWithOAuth()
+
+	// Create existing user with matching email
+	existingUser := createTestUser(t, userRepo, "shared@example.com", "password123", model.RoleUser)
+
+	email := "shared@example.com"
+	verified := true
+	discord := &model.DiscordUser{
+		ID:       "987654321",
+		Username: "newdiscord",
+		Email:    &email,
+		Verified: &verified,
+	}
+
+	user, err := svc.findOrCreateOAuthUser(context.Background(), model.OAuthProviderDiscord, discord)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if user.ID != existingUser.ID {
+		t.Fatalf("expected existing user ID %s, got %s", existingUser.ID, user.ID)
+	}
+
+	// Verify OAuth account was linked to existing user
+	accounts, _ := oauthRepo.ListByUserID(context.Background(), existingUser.ID)
+	if len(accounts) != 1 {
+		t.Fatalf("expected 1 oauth account, got %d", len(accounts))
+	}
+}
+
+func TestFindOrCreateOAuthUser_DisabledExistingLink(t *testing.T) {
+	svc, userRepo, oauthRepo := newTestAuthServiceWithOAuth()
+
+	user := &model.User{
+		ID:          uuid.New(),
+		Email:       "disabled@example.com",
+		DisplayName: "Disabled User",
+		GlobalRole:  model.RoleUser,
+		IsActive:    false,
+	}
+	userRepo.Create(context.Background(), user)
+
+	oauthRepo.Create(context.Background(), &model.OAuthAccount{
+		ID:             uuid.New(),
+		UserID:         user.ID,
+		Provider:       model.OAuthProviderDiscord,
+		ProviderUserID: "111222333",
+	})
+
+	discord := &model.DiscordUser{
+		ID:       "111222333",
+		Username: "disableduser",
+	}
+
+	_, err := svc.findOrCreateOAuthUser(context.Background(), model.OAuthProviderDiscord, discord)
+	if err != model.ErrAccountDisabled {
+		t.Fatalf("expected ErrAccountDisabled, got %v", err)
 	}
 }

@@ -30,6 +30,11 @@ type Config struct {
 	LogLevel  string
 	LogFormat string
 
+	// Discord OAuth
+	DiscordClientID     string
+	DiscordClientSecret string
+	DiscordRedirectURI  string
+
 	// Storage (S3/MinIO)
 	StorageEndpoint  string
 	StorageAccessKey string
@@ -65,7 +70,10 @@ func Load() (*Config, error) {
 		BaseURL:          envOrDefault("BASE_URL", "http://localhost:3000"),
 		LogLevel:         envOrDefault("LOG_LEVEL", "info"),
 		LogFormat:        envOrDefault("LOG_FORMAT", "json"),
-		StorageEndpoint:  envOrDefault("STORAGE_ENDPOINT", "localhost:9000"),
+		DiscordClientID:     envOrDefault("DISCORD_CLIENT_ID", ""),
+		DiscordClientSecret: envOrDefault("DISCORD_CLIENT_SECRET", ""),
+		DiscordRedirectURI:  envOrDefault("DISCORD_REDIRECT_URI", ""),
+		StorageEndpoint:     envOrDefault("STORAGE_ENDPOINT", "localhost:9000"),
 		StorageAccessKey: envOrDefault("STORAGE_ACCESS_KEY", "trackforge"),
 		StorageSecretKey: envOrDefault("STORAGE_SECRET_KEY", "trackforge"),
 		StorageBucket:    envOrDefault("STORAGE_BUCKET", "trackforge-attachments"),

@@ -43,6 +43,12 @@
   "login.submit": "登录",
   "login.submitting": "登录中...",
   "login.error": "登录失败，请重试。",
+  "login.or": "或通过以下方式继续",
+  "login.discord.button": "使用 Discord 登录",
+  "login.discord.error": "无法启动 Discord 登录，请重试。",
+  "login.discord.authenticating": "正在通过 Discord 认证...",
+  "login.discord.callbackError": "Discord 认证失败，请重试。",
+  "login.discord.backToLogin": "返回登录",
 
   "projects.title": "项目",
   "projects.new": "新建项目",

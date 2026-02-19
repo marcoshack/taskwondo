@@ -10,7 +10,7 @@ help: ## Show this help
 
 dev: dev-services ## Start all services for development (API + Web)
 	trap 'kill 0' EXIT; \
-	(set -a && . ./.env.development && set +a && cd api && air) & \
+	(set -a && . ./.env.development && [ -f ./.env ] && . ./.env && set +a && cd api && air) & \
 	(cd web && npm run dev) & \
 	wait
 
@@ -20,7 +20,7 @@ dev-services: ## Start PostgreSQL and MinIO
 dev-db: dev-services ## Alias for dev-services (legacy)
 
 dev-api: dev-services ## Start API server with hot reload (requires air: go install github.com/air-verse/air@latest)
-	set -a && . ./.env.development && set +a && cd api && air
+	set -a && . ./.env.development && [ -f ./.env ] && . ./.env && set +a && cd api && air
 
 dev-web: ## Start frontend dev server (Vite on :5173, proxies /api to :8080)
 	cd web && npm run dev
@@ -45,7 +45,7 @@ push: ## Push images to GHCR (usage: make push or IMAGE_TAG=v1.0.0 make push)
 # --- Database ---
 
 migrate: ## Run database migrations
-	set -a && . ./.env.development && set +a && cd api && go run ./cmd/server -migrate-only
+	set -a && . ./.env.development && [ -f ./.env ] && . ./.env && set +a && cd api && go run ./cmd/server -migrate-only
 
 migrate-new: ## Create a new migration (usage: make migrate-new name=create_users)
 	@if [ -z "$(name)" ]; then echo "Usage: make migrate-new name=create_users"; exit 1; fi

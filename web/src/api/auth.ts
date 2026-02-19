@@ -50,3 +50,39 @@ export async function searchUsers(query: string) {
   const res = await api.get<{ data: UserSearchResult[] }>('/users/search', { params: { q: query } })
   return res.data.data
 }
+
+// Auth providers
+
+export interface AuthProviders {
+  discord: boolean
+}
+
+export async function getAuthProviders() {
+  const res = await api.get<{ data: AuthProviders }>('/auth/providers')
+  return res.data.data
+}
+
+// Discord OAuth
+
+interface DiscordAuthResponse {
+  data: {
+    url: string
+  }
+}
+
+export async function getDiscordAuthURL() {
+  const res = await api.get<DiscordAuthResponse>('/auth/discord')
+  return res.data.data
+}
+
+interface DiscordCallbackResponse {
+  data: {
+    token: string
+    user: User
+  }
+}
+
+export async function discordCallback(code: string, state: string) {
+  const res = await api.post<DiscordCallbackResponse>('/auth/discord/callback', { code, state })
+  return res.data.data
+}

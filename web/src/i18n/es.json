@@ -43,6 +43,12 @@
   "login.submit": "Iniciar sesión",
   "login.submitting": "Iniciando sesión...",
   "login.error": "Error de inicio de sesión. Intente de nuevo.",
+  "login.or": "o continuar con",
+  "login.discord.button": "Iniciar sesión con Discord",
+  "login.discord.error": "Error al iniciar sesión con Discord. Intente de nuevo.",
+  "login.discord.authenticating": "Autenticando con Discord...",
+  "login.discord.callbackError": "Falló la autenticación con Discord. Intente de nuevo.",
+  "login.discord.backToLogin": "Volver al inicio de sesión",
 
   "projects.title": "Proyectos",
   "projects.new": "Nuevo Proyecto",

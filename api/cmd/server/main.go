@@ -72,6 +72,7 @@ func main() {
 	milestoneRepo := repository.NewMilestoneRepository(db)
 	userSettingRepo := repository.NewUserSettingRepository(db)
 	attachmentRepo := repository.NewAttachmentRepository(db)
+	oauthAccountRepo := repository.NewOAuthAccountRepository(db)
 
 	// Initialize storage
 	store, err := storage.NewMinIOStorage(
@@ -83,7 +84,11 @@ func main() {
 	}
 
 	// Initialize services
-	authService := service.NewAuthService(userRepo, apiKeyRepo, cfg.JWTSecret, cfg.JWTExpiry)
+	authService := service.NewAuthService(
+		userRepo, apiKeyRepo, oauthAccountRepo,
+		cfg.JWTSecret, cfg.JWTExpiry,
+		cfg.DiscordClientID, cfg.DiscordClientSecret, cfg.DiscordRedirectURI,
+	)
 	projectService := service.NewProjectService(projectRepo, projectMemberRepo, userRepo, workflowRepo)
 	workflowService := service.NewWorkflowService(workflowRepo)
 	queueService := service.NewQueueService(queueRepo, projectRepo, projectMemberRepo)
@@ -130,6 +135,9 @@ func main() {
 	r.Route("/api/v1", func(r chi.Router) {
 		// Public auth routes
 		r.Post("/auth/login", auth.Login)
+		r.Get("/auth/providers", auth.AuthProviders)
+		r.Get("/auth/discord", auth.DiscordAuth)
+		r.Post("/auth/discord/callback", auth.DiscordCallback)
 
 		// Authenticated routes
 		r.Group(func(r chi.Router) {

@@ -43,6 +43,12 @@
   "login.submit": "Se connecter",
   "login.submitting": "Connexion...",
   "login.error": "Échec de connexion. Veuillez réessayer.",
+  "login.or": "ou continuer avec",
+  "login.discord.button": "Se connecter avec Discord",
+  "login.discord.error": "Échec du lancement de la connexion Discord. Veuillez réessayer.",
+  "login.discord.authenticating": "Authentification avec Discord...",
+  "login.discord.callbackError": "Échec de l'authentification Discord. Veuillez réessayer.",
+  "login.discord.backToLogin": "Retour à la connexion",
 
   "projects.title": "Projets",
   "projects.new": "Nouveau Projet",
