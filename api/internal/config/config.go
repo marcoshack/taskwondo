@@ -7,6 +7,12 @@ import (
 	"time"
 )
 
+// Default rate limit constants for authentication endpoints.
+const (
+	DefaultAuthRateLimit = 10 // requests per minute
+	DefaultAuthRateBurst = 5  // max burst size
+)
+
 // Config holds all configuration for the application.
 // Values are loaded from environment variables with sensible defaults.
 type Config struct {
@@ -43,6 +49,10 @@ type Config struct {
 	StorageRegion    string
 	StorageUseSSL    bool
 	MaxUploadSize    int64 // bytes
+
+	// Rate limiting
+	AuthRateLimit int // requests per minute for auth endpoints
+	AuthRateBurst int // max burst for auth endpoints
 }
 
 // Load reads configuration from environment variables with defaults.
@@ -56,6 +66,20 @@ func Load() (*Config, error) {
 	if v := os.Getenv("MAX_UPLOAD_SIZE"); v != "" {
 		if parsed, err := strconv.ParseInt(v, 10, 64); err == nil {
 			maxUpload = parsed
+		}
+	}
+
+	authRateLimit := DefaultAuthRateLimit
+	if v := os.Getenv("AUTH_RATE_LIMIT"); v != "" {
+		if parsed, err := strconv.Atoi(v); err == nil && parsed > 0 {
+			authRateLimit = parsed
+		}
+	}
+
+	authRateBurst := DefaultAuthRateBurst
+	if v := os.Getenv("AUTH_RATE_BURST"); v != "" {
+		if parsed, err := strconv.Atoi(v); err == nil && parsed > 0 {
+			authRateBurst = parsed
 		}
 	}
 
@@ -103,6 +127,8 @@ func Load() (*Config, error) {
 		StorageRegion:       envOrDefault("STORAGE_REGION", "us-east-1"),
 		StorageUseSSL:       envOrDefault("STORAGE_USE_SSL", "false") == "true",
 		MaxUploadSize:       maxUpload,
+		AuthRateLimit:       authRateLimit,
+		AuthRateBurst:       authRateBurst,
 	}
 
 	return cfg, nil

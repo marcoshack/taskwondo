@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/time/rate"
 
 	"github.com/marcoshack/trackforge/internal/config"
 	"github.com/marcoshack/trackforge/internal/database"
@@ -135,11 +136,12 @@ func main() {
 
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
-		// Public auth routes
-		r.Post("/auth/login", auth.Login)
+		// Public auth routes (rate-limited)
+		authLimiter := middleware.RateLimit(rate.Limit(cfg.AuthRateLimit)/60, cfg.AuthRateBurst)
+		r.With(authLimiter).Post("/auth/login", auth.Login)
 		r.Get("/auth/providers", auth.AuthProviders)
 		r.Get("/auth/discord", auth.DiscordAuth)
-		r.Post("/auth/discord/callback", auth.DiscordCallback)
+		r.With(authLimiter).Post("/auth/discord/callback", auth.DiscordCallback)
 
 		// Authenticated routes
 		r.Group(func(r chi.Router) {
@@ -170,11 +172,15 @@ func main() {
 			// Workflows
 			r.Route("/workflows", func(r chi.Router) {
 				r.Get("/", workflows.List)
-				r.Post("/", workflows.Create)
 				r.Route("/{workflowId}", func(r chi.Router) {
 					r.Get("/", workflows.Get)
-					r.Patch("/", workflows.Update)
 					r.Get("/transitions", workflows.ListTransitions)
+				})
+				// Create/Update require admin role
+				r.Group(func(r chi.Router) {
+					r.Use(middleware.RequireAdmin)
+					r.Post("/", workflows.Create)
+					r.Patch("/{workflowId}", workflows.Update)
 				})
 			})
 

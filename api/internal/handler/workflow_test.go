@@ -11,6 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
+	"github.com/marcoshack/trackforge/internal/middleware"
 	"github.com/marcoshack/trackforge/internal/model"
 	"github.com/marcoshack/trackforge/internal/service"
 )
@@ -231,6 +232,113 @@ func TestWorkflowHandler_ListTransitions(t *testing.T) {
 	}
 	if len(data["wip"]) != 1 {
 		t.Fatalf("expected 1 transition from 'wip', got %d", len(data["wip"]))
+	}
+}
+
+func TestWorkflowHandler_Create_AdminRequired(t *testing.T) {
+	h, _, _ := workflowTestSetup(t)
+
+	body := `{
+		"name": "Custom WF",
+		"statuses": [
+			{"name": "open", "display_name": "Open", "category": "todo", "position": 0},
+			{"name": "done", "display_name": "Done", "category": "done", "position": 1}
+		],
+		"transitions": [
+			{"from_status": "open", "to_status": "done", "name": "Complete"}
+		]
+	}`
+
+	// Regular user should get 403 via RequireAdmin middleware
+	userInfo := &model.AuthInfo{
+		UserID:     uuid.New(),
+		Email:      "user@test.com",
+		GlobalRole: model.RoleUser,
+	}
+
+	r := chi.NewRouter()
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.RequireAdmin)
+		r.Post("/api/v1/workflows", h.Create)
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/workflows", bytes.NewBufferString(body))
+	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), userInfo))
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 for non-admin, got %d: %s", w.Code, w.Body.String())
+	}
+
+	// Admin user should succeed
+	adminInfo := &model.AuthInfo{
+		UserID:     uuid.New(),
+		Email:      "admin@test.com",
+		GlobalRole: model.RoleAdmin,
+	}
+
+	req2 := httptest.NewRequest(http.MethodPost, "/api/v1/workflows", bytes.NewBufferString(body))
+	req2 = req2.WithContext(model.ContextWithAuthInfo(req2.Context(), adminInfo))
+	w2 := httptest.NewRecorder()
+	r.ServeHTTP(w2, req2)
+
+	if w2.Code != http.StatusCreated {
+		t.Fatalf("expected 201 for admin, got %d: %s", w2.Code, w2.Body.String())
+	}
+}
+
+func TestWorkflowHandler_Update_AdminRequired(t *testing.T) {
+	h, svc, _ := workflowTestSetup(t)
+
+	created, err := svc.Create(context.Background(), service.CreateWorkflowInput{
+		Name: "Old Name",
+		Statuses: []model.WorkflowStatus{
+			{Name: "open", DisplayName: "Open", Category: model.CategoryTodo, Position: 0},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	body := `{"name": "New Name"}`
+
+	// Regular user should get 403
+	userInfo := &model.AuthInfo{
+		UserID:     uuid.New(),
+		Email:      "user@test.com",
+		GlobalRole: model.RoleUser,
+	}
+
+	r := chi.NewRouter()
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.RequireAdmin)
+		r.Patch("/api/v1/workflows/{workflowId}", h.Update)
+	})
+
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/workflows/"+created.ID.String(), bytes.NewBufferString(body))
+	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), userInfo))
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 for non-admin, got %d: %s", w.Code, w.Body.String())
+	}
+
+	// Admin user should succeed
+	adminInfo := &model.AuthInfo{
+		UserID:     uuid.New(),
+		Email:      "admin@test.com",
+		GlobalRole: model.RoleAdmin,
+	}
+
+	req2 := httptest.NewRequest(http.MethodPatch, "/api/v1/workflows/"+created.ID.String(), bytes.NewBufferString(body))
+	req2 = req2.WithContext(model.ContextWithAuthInfo(req2.Context(), adminInfo))
+	w2 := httptest.NewRecorder()
+	r.ServeHTTP(w2, req2)
+
+	if w2.Code != http.StatusOK {
+		t.Fatalf("expected 200 for admin, got %d: %s", w2.Code, w2.Body.String())
 	}
 }
 
