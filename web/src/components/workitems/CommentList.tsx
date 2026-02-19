@@ -98,7 +98,7 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
     )
     observer.observe(el)
     return () => observer.disconnect()
-  }, [])
+  }, [isLoading])
 
   const { handlePaste, handleDrop, handleDragOver } = usePasteUpload({
     projectKey,
