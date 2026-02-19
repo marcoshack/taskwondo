@@ -7,6 +7,9 @@ import { useAuth } from '@/contexts/AuthContext'
 interface SidebarContextValue {
   collapsed: boolean
   toggleCollapsed: () => void
+  mobileOpen: boolean
+  toggleMobileOpen: () => void
+  closeMobile: () => void
 }
 
 const SIDEBAR_COLLAPSED_KEY = 'taskwondo_sidebar_collapsed'
@@ -47,11 +50,15 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
     setCollapsed(!collapsed)
   }, [collapsed, setCollapsed])
 
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const toggleMobileOpen = useCallback(() => setMobileOpen((v) => !v), [])
+  const closeMobile = useCallback(() => setMobileOpen(false), [])
+
   // Keyboard shortcut: [ to toggle sidebar
   useKeyboardShortcut({ key: '[' }, () => toggleCollapsed())
 
   return (
-    <SidebarContext.Provider value={{ collapsed, toggleCollapsed }}>
+    <SidebarContext.Provider value={{ collapsed, toggleCollapsed, mobileOpen, toggleMobileOpen, closeMobile }}>
       {children}
     </SidebarContext.Provider>
   )

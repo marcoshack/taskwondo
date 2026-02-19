@@ -132,6 +132,7 @@
   "sidebar.settings": "Settings",
   "sidebar.collapse": "Collapse sidebar",
   "sidebar.expand": "Expand sidebar",
+  "sidebar.menu": "Menu",
 
   "workitems.title": "Work Items",
   "workitems.new": "New Item",
@@ -183,6 +184,7 @@
   "workitems.detail.updated": "Updated",
   "workitems.detail.resolved": "Resolved",
 
+  "workitems.filters.title": "Filters",
   "workitems.filters.search": "Search items... ( / )",
   "workitems.filters.allTypes": "All types",
   "workitems.filters.allPriorities": "All priorities",
@@ -192,6 +194,8 @@
   "workitems.filters.unassigned": "Unassigned",
   "workitems.filters.statusGroupOpen": "Open",
   "workitems.filters.statusGroupClosed": "Closed",
+
+  "workitems.card.updatedAt": "Updated at {{date}}",
 
   "workitems.types.task": "Task",
   "workitems.types.ticket": "Ticket",

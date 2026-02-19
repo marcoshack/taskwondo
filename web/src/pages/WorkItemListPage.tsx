@@ -391,7 +391,8 @@ export function WorkItemListPage() {
         </div>
       ) : viewMode === 'list' ? (
         <>
-          <div className="border dark:border-gray-700 rounded-lg overflow-hidden">
+          {/* Desktop: table view */}
+          <div className="hidden sm:block border dark:border-gray-700 rounded-lg overflow-hidden">
             <div className="bg-gray-50 dark:bg-gray-800 px-6 py-2 border-b dark:border-gray-700">
               <label className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                 <input
@@ -413,6 +414,34 @@ export function WorkItemListPage() {
               activeRowIndex={activeRow}
             />
           </div>
+
+          {/* Mobile: card view */}
+          <div className="sm:hidden space-y-2">
+            {allItems.length === 0 ? (
+              <p className="text-center text-sm text-gray-500 dark:text-gray-400 py-12">{t('workitems.empty')}</p>
+            ) : (
+              allItems.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => navigate(`/projects/${projectKey}/items/${item.item_number}`)}
+                  className="w-full text-left rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 shadow-sm hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors"
+                >
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-mono text-sm font-semibold text-gray-700 dark:text-gray-300">{item.display_id}</span>
+                    <TypeBadge type={item.type} />
+                    <StatusBadge status={item.status} statuses={statuses} />
+                    <PriorityBadge priority={item.priority} />
+                    <span className="ml-auto text-xs text-gray-400 dark:text-gray-500">{new Date(item.updated_at).toLocaleDateString()}</span>
+                  </div>
+                  <p className="mt-1.5 text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{item.title}</p>
+                  {item.description && (
+                    <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400 truncate">{item.description}</p>
+                  )}
+                </button>
+              ))
+            )}
+          </div>
+
           {result?.meta.has_more && (
             <div className="flex justify-center pt-2">
               <Button

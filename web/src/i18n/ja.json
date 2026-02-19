@@ -131,6 +131,7 @@
   "sidebar.settings": "設定",
   "sidebar.collapse": "サイドバーを折りたたむ",
   "sidebar.expand": "サイドバーを展開する",
+  "sidebar.menu": "メニュー",
 
   "workitems.title": "アイテム一覧",
   "workitems.new": "新規作成",
@@ -179,6 +180,7 @@
   "workitems.detail.updated": "更新日",
   "workitems.detail.resolved": "解決日",
 
+  "workitems.filters.title": "フィルター",
   "workitems.filters.search": "アイテムを検索... ( / )",
   "workitems.filters.allTypes": "すべての種別",
   "workitems.filters.allPriorities": "すべての優先度",
@@ -188,6 +190,8 @@
   "workitems.filters.unassigned": "未割当",
   "workitems.filters.statusGroupOpen": "未完了",
   "workitems.filters.statusGroupClosed": "完了",
+
+  "workitems.card.updatedAt": "{{date}} に更新",
 
   "workitems.types.task": "タスク",
   "workitems.types.ticket": "チケット",

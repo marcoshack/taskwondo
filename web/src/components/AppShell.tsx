@@ -1,8 +1,9 @@
 import { Outlet, useNavigate, useMatch } from 'react-router-dom'
 
 import { useTranslation } from 'react-i18next'
-import { Settings } from 'lucide-react'
+import { Settings, Menu } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import { useSidebar } from '@/contexts/SidebarContext'
 import { useNavigationGuard } from '@/contexts/NavigationGuardContext'
 import { useProject, useProjects } from '@/hooks/useProjects'
 import { Avatar } from '@/components/ui/Avatar'
@@ -18,6 +19,7 @@ export function AppShell() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const { guardedNavigate } = useNavigationGuard()
+  const { toggleMobileOpen } = useSidebar()
   const [menuOpen, setMenuOpen] = useState(false)
   const [switcherOpen, setSwitcherOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
@@ -94,7 +96,16 @@ export function AppShell() {
                 </button>
               ) : null}
             </div>
-            <div className="relative flex items-center" ref={menuRef}>
+            <div className="relative flex items-center gap-2" ref={menuRef}>
+              {activeProjectKey && (
+                <button
+                  onClick={toggleMobileOpen}
+                  className="sm:hidden p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+                  aria-label={t('sidebar.menu')}
+                >
+                  <Menu className="h-5 w-5" />
+                </button>
+              )}
               <button
                 onClick={() => setMenuOpen(!menuOpen)}
                 className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"

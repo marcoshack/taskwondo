@@ -131,6 +131,7 @@
   "sidebar.settings": "설정",
   "sidebar.collapse": "사이드바 접기",
   "sidebar.expand": "사이드바 펼치기",
+  "sidebar.menu": "메뉴",
 
   "workitems.title": "작업 항목",
   "workitems.new": "새 항목",
@@ -179,6 +180,7 @@
   "workitems.detail.updated": "수정일",
   "workitems.detail.resolved": "해결일",
 
+  "workitems.filters.title": "필터",
   "workitems.filters.search": "항목 검색... ( / )",
   "workitems.filters.allTypes": "모든 유형",
   "workitems.filters.allPriorities": "모든 우선순위",
@@ -188,6 +190,8 @@
   "workitems.filters.unassigned": "미배정",
   "workitems.filters.statusGroupOpen": "미완료",
   "workitems.filters.statusGroupClosed": "완료",
+
+  "workitems.card.updatedAt": "{{date}}에 업데이트됨",
 
   "workitems.types.task": "작업",
   "workitems.types.ticket": "티켓",
