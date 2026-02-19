@@ -104,14 +104,14 @@ export function ProjectOverviewPage() {
         )}
       </div>
 
-      <div className="flex gap-6">
-        <div className="w-4/5 min-w-0">
+      <div className="flex flex-col sm:flex-row gap-6">
+        <div className="sm:w-4/5 min-w-0">
           <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
             {t('projects.overview.about')}
           </h2>
           <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm">
             {project?.description ? (
-              <div className="prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300">
+              <div className="prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 break-words">
                 <Markdown remarkPlugins={[remarkGfm]}>{project.description}</Markdown>
               </div>
             ) : (
@@ -120,7 +120,7 @@ export function ProjectOverviewPage() {
           </div>
         </div>
 
-        <div className="w-1/5 min-w-[160px]">
+        <div className="sm:w-1/5 sm:min-w-[160px]">
           <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
             {t('projects.overview.members')}
           </h2>

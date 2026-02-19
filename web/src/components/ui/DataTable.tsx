@@ -6,6 +6,7 @@ export interface Column<T> {
   header: string
   render: (row: T) => ReactNode
   className?: string
+  width?: string
   sortKey?: string
 }
 
@@ -59,8 +60,13 @@ export function DataTable<T>({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full table-fixed divide-y divide-gray-200 dark:divide-gray-700">
-        <thead className="bg-gray-50 dark:bg-gray-800">
+      <table className="w-full table-fixed sm:divide-y sm:divide-gray-200 sm:dark:divide-gray-700">
+        <colgroup>
+          {columns.map((col) => (
+            <col key={col.key} className={col.className ?? ''} style={col.width ? { width: col.width } : undefined} />
+          ))}
+        </colgroup>
+        <thead className="hidden sm:table-header-group bg-gray-50 dark:bg-gray-800">
           <tr>
             {columns.map((col) => {
               const isSortable = !!col.sortKey && !!onSort
@@ -68,7 +74,8 @@ export function DataTable<T>({
               return (
                 <th
                   key={col.key}
-                  className={`px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider ${col.className ?? ''} ${isSortable ? 'cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200' : ''}`}
+                  style={col.width ? { width: col.width } : undefined}
+                  className={`px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider ${col.className ?? ''} ${isSortable ? 'cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200' : ''}`}
                   onClick={isSortable ? () => onSort!(col.sortKey!) : undefined}
                 >
                   <span className="inline-flex items-center gap-1">
@@ -80,7 +87,7 @@ export function DataTable<T>({
             })}
           </tr>
         </thead>
-        <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+        <tbody className="bg-white dark:bg-gray-900 sm:divide-y sm:divide-gray-200 sm:dark:divide-gray-700">
           {data.length === 0 ? (
             <tr>
               <td colSpan={columns.length} className="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
@@ -98,7 +105,7 @@ export function DataTable<T>({
                 className={`${onRowClick ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800' : ''} ${isActive ? 'ring-2 ring-inset ring-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/20' : ''}`}
               >
                 {columns.map((col) => (
-                  <td key={col.key} className={`px-6 py-4 whitespace-nowrap text-sm ${col.className ?? ''}`}>
+                  <td key={col.key} className={`px-3 sm:px-6 py-4 whitespace-nowrap text-sm ${col.className ?? ''}`}>
                     {col.render(row)}
                   </td>
                 ))}

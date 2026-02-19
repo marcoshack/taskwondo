@@ -42,21 +42,25 @@ export function ProjectListPage() {
     {
       key: 'key',
       header: t('projects.table.key'),
+      width: '80px',
       render: (p) => <Badge color="indigo">{p.key}</Badge>,
     },
     {
       key: 'name',
       header: t('projects.table.name'),
-      render: (p) => <span className="font-medium text-gray-900 dark:text-gray-100">{p.name}</span>,
+      render: (p) => <span className="font-medium text-gray-900 dark:text-gray-100 truncate block">{p.name}</span>,
     },
     {
       key: 'items',
       header: t('projects.table.items'),
+      width: '70px',
+      className: 'text-right sm:text-left',
       render: (p) => <span className="text-gray-500 dark:text-gray-400">{p.item_counter}</span>,
     },
     {
       key: 'updated',
       header: t('projects.table.updated'),
+      className: 'hidden sm:table-cell',
       render: (p) => (
         <span className="text-gray-500 dark:text-gray-400">{new Date(p.updated_at).toLocaleDateString()}</span>
       ),
