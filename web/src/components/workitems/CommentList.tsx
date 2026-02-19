@@ -4,8 +4,10 @@ import { useComments, useCreateComment, useUpdateComment, useDeleteComment } fro
 import { useAuth } from '@/contexts/AuthContext'
 import { useMembers } from '@/hooks/useProjects'
 import { usePasteUpload } from '@/hooks/usePasteUpload'
+import { useMentionAutocomplete } from '@/hooks/useMentionAutocomplete'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
+import { MentionModal } from '@/components/ui/MentionModal'
 import { Avatar } from '@/components/ui/Avatar'
 import { Spinner } from '@/components/ui/Spinner'
 import { CopyButton } from '@/components/ui/CopyButton'
@@ -104,6 +106,20 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
     onTextChange: (updater) => setNewBody(updater),
   })
 
+  const newCommentRef = useRef<HTMLTextAreaElement>(null)
+  const newMention = useMentionAutocomplete({
+    value: newBody,
+    onValueChange: (v) => setNewBody(v),
+    textareaRef: newCommentRef,
+  })
+
+  const editCommentRef = useRef<HTMLTextAreaElement>(null)
+  const editMention = useMentionAutocomplete({
+    value: editBody,
+    onValueChange: setEditBody,
+    textareaRef: editCommentRef,
+  })
+
   const mdComponents = useMemo(() => getMarkdownComponents(onImageClick), [onImageClick])
 
   function authorName(authorId: string | null): string {
@@ -118,12 +134,15 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
     <div className="space-y-4">
       <div ref={addCommentRef} className="space-y-2 pb-3 border-b border-gray-100 dark:border-gray-700">
         <textarea
+          ref={newCommentRef}
           className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm"
           rows={3}
           placeholder={t('comments.placeholder')}
           value={newBody}
           onChange={(e) => setNewBody(e.target.value)}
           onKeyDown={(e) => {
+            newMention.onMentionKeyDown(e)
+            if (e.defaultPrevented) return
             if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && newBody.trim()) {
               e.preventDefault()
               createMutation.mutate({ body: newBody }, { onSuccess: () => setNewBody('') })
@@ -167,11 +186,14 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
           {editingId === c.id ? (
             <div className="space-y-2">
               <textarea
+                ref={editCommentRef}
                 className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm"
                 rows={3}
                 value={editBody}
                 onChange={(e) => setEditBody(e.target.value)}
                 onKeyDown={(e) => {
+                  editMention.onMentionKeyDown(e)
+                  if (e.defaultPrevented) return
                   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                     e.preventDefault()
                     updateMutation.mutate({ commentId: c.id, body: editBody }, { onSuccess: () => setEditingId(null) })
@@ -249,6 +271,21 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
           )}
         </div>
       ))}
+
+      <MentionModal
+        open={newMention.mentionModalOpen}
+        position={newMention.dropdownPosition}
+        onClose={newMention.onMentionClose}
+        onSelect={newMention.onMentionSelect}
+        projectKey={projectKey}
+      />
+      <MentionModal
+        open={editMention.mentionModalOpen}
+        position={editMention.dropdownPosition}
+        onClose={editMention.onMentionClose}
+        onSelect={editMention.onMentionSelect}
+        projectKey={projectKey}
+      />
 
       <Modal open={!!deletingId} onClose={() => setDeletingId(null)} title={t('comments.deleteConfirm')}>
         <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
