@@ -1,6 +1,7 @@
 import { Outlet, useNavigate, useMatch } from 'react-router-dom'
 
 import { useTranslation } from 'react-i18next'
+import { Settings } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useNavigationGuard } from '@/contexts/NavigationGuardContext'
 import { useProject, useProjects } from '@/hooks/useProjects'
@@ -23,6 +24,7 @@ export function AppShell() {
   const menuRef = useRef<HTMLDivElement>(null)
 
   const projectMatch = useMatch('/projects/:projectKey/*')
+  const adminMatch = useMatch('/admin/*')
   const activeProjectKey = projectMatch?.params.projectKey
   const { data: activeProject } = useProject(activeProjectKey ?? '')
 
@@ -71,7 +73,14 @@ export function AppShell() {
               <button onClick={() => guardedNavigate('/projects')} className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
                 {t('brand.name')}
               </button>
-              {activeProject && (
+              {adminMatch ? (
+                <div className="flex items-center gap-2.5">
+                  <Settings className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+                  <span className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                    {t('admin.title')}
+                  </span>
+                </div>
+              ) : activeProject ? (
                 <button
                   onClick={() => setSwitcherOpen(true)}
                   className="flex items-center gap-2.5 hover:opacity-80 transition-opacity"
@@ -83,7 +92,7 @@ export function AppShell() {
                     {activeProject.name}
                   </span>
                 </button>
-              )}
+              ) : null}
             </div>
             <div className="relative flex items-center" ref={menuRef}>
               <button
@@ -104,6 +113,15 @@ export function AppShell() {
                   >
                     {t('nav.preferences')}
                   </button>
+                  {user?.global_role === 'admin' && (
+                    <button
+                      onClick={() => { setMenuOpen(false); guardedNavigate('/admin') }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      {t('nav.systemSettings')}
+                    </button>
+                  )}
+                  <div className="border-t border-gray-100 dark:border-gray-700" />
                   <button
                     onClick={handleLogout}
                     className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"

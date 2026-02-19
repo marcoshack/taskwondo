@@ -113,6 +113,88 @@ func (r *UserRepository) Search(ctx context.Context, query string) ([]model.User
 	return users, nil
 }
 
+// ListAll returns all users (active and inactive), ordered by display_name.
+func (r *UserRepository) ListAll(ctx context.Context) ([]model.User, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT id, email, display_name, password_hash, global_role, avatar_url,
+		        is_active, last_login_at, created_at, updated_at
+		 FROM users
+		 ORDER BY display_name ASC`)
+	if err != nil {
+		return nil, fmt.Errorf("listing users: %w", err)
+	}
+	defer rows.Close()
+
+	var users []model.User
+	for rows.Next() {
+		var u model.User
+		var passwordHash sql.NullString
+		var avatarURL sql.NullString
+		var lastLoginAt sql.NullTime
+		if err := rows.Scan(
+			&u.ID, &u.Email, &u.DisplayName, &passwordHash, &u.GlobalRole,
+			&avatarURL, &u.IsActive, &lastLoginAt, &u.CreatedAt, &u.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scanning user row: %w", err)
+		}
+		if avatarURL.Valid {
+			u.AvatarURL = &avatarURL.String
+		}
+		if lastLoginAt.Valid {
+			u.LastLoginAt = &lastLoginAt.Time
+		}
+		users = append(users, u)
+	}
+	return users, nil
+}
+
+// UpdateGlobalRole changes a user's global role.
+func (r *UserRepository) UpdateGlobalRole(ctx context.Context, id uuid.UUID, role string) error {
+	result, err := r.db.ExecContext(ctx,
+		`UPDATE users SET global_role = $1, updated_at = now() WHERE id = $2`,
+		role, id)
+	if err != nil {
+		return fmt.Errorf("updating global role: %w", err)
+	}
+	n, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("checking rows affected: %w", err)
+	}
+	if n == 0 {
+		return model.ErrNotFound
+	}
+	return nil
+}
+
+// UpdateIsActive changes a user's active status.
+func (r *UserRepository) UpdateIsActive(ctx context.Context, id uuid.UUID, isActive bool) error {
+	result, err := r.db.ExecContext(ctx,
+		`UPDATE users SET is_active = $1, updated_at = now() WHERE id = $2`,
+		isActive, id)
+	if err != nil {
+		return fmt.Errorf("updating is_active: %w", err)
+	}
+	n, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("checking rows affected: %w", err)
+	}
+	if n == 0 {
+		return model.ErrNotFound
+	}
+	return nil
+}
+
+// CountByRole returns the number of users with a given global role.
+func (r *UserRepository) CountByRole(ctx context.Context, role string) (int, error) {
+	var count int
+	err := r.db.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM users WHERE global_role = $1 AND is_active = true`, role).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("counting users by role: %w", err)
+	}
+	return count, nil
+}
+
 func scanUser(row *sql.Row) (*model.User, error) {
 	var u model.User
 	var passwordHash sql.NullString

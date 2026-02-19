@@ -43,3 +43,10 @@ type ProjectMemberWithUser struct {
 	DisplayName string  `json:"display_name"`
 	AvatarURL   *string `json:"avatar_url,omitempty"`
 }
+
+// ProjectMemberWithProject includes project details alongside the membership.
+type ProjectMemberWithProject struct {
+	ProjectMember
+	ProjectName string `json:"project_name"`
+	ProjectKey  string `json:"project_key"`
+}

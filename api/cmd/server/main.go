@@ -95,6 +95,7 @@ func main() {
 	milestoneService := service.NewMilestoneService(milestoneRepo, projectRepo, projectMemberRepo)
 	workItemService := service.NewWorkItemService(workItemRepo, workItemEventRepo, commentRepo, relationRepo, attachmentRepo, projectRepo, projectMemberRepo, workflowRepo, queueRepo, milestoneRepo, store, cfg.MaxUploadSize)
 	userSettingService := service.NewUserSettingService(userSettingRepo, projectRepo, projectMemberRepo)
+	adminService := service.NewAdminService(userRepo, projectRepo, projectMemberRepo)
 
 	// Seed admin user if configured
 	if cfg.AdminEmail != "" && cfg.AdminPassword != "" {
@@ -117,6 +118,7 @@ func main() {
 	milestones := handler.NewMilestoneHandler(milestoneService)
 	items := handler.NewWorkItemHandler(workItemService, cfg.MaxUploadSize)
 	userSettings := handler.NewUserSettingHandler(userSettingService)
+	admin := handler.NewAdminHandler(adminService)
 
 	// Set up router
 	r := chi.NewRouter()
@@ -242,6 +244,22 @@ func main() {
 								r.Delete("/{attachmentId}", items.DeleteAttachment)
 							})
 							r.Get("/events", items.ListEvents)
+						})
+					})
+				})
+			})
+
+			// Admin routes (requires admin role)
+			r.Route("/admin", func(r chi.Router) {
+				r.Use(middleware.RequireAdmin)
+				r.Route("/users", func(r chi.Router) {
+					r.Get("/", admin.ListUsers)
+					r.Route("/{userId}", func(r chi.Router) {
+						r.Patch("/", admin.UpdateUser)
+						r.Route("/projects", func(r chi.Router) {
+							r.Get("/", admin.ListUserProjects)
+							r.Post("/", admin.AddUserToProject)
+							r.Delete("/{projectId}", admin.RemoveUserFromProject)
 						})
 					})
 				})
