@@ -1,0 +1,15 @@
+# Development overrides — automatically merged by `docker compose up`.
+# Production deploys should use: docker compose -f docker-compose.yml up -d
+services:
+  api:
+    ports:
+      - "${API_PORT:-8080}:8080"
+      
+  postgres:
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+
+  minio:
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"

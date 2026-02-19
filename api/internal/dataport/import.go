@@ -221,30 +221,34 @@ func (imp *Importer) importAttachments(ctx context.Context, tmpDir, attachDir st
 		return 0, nil
 	}
 
-	entries, err := os.ReadDir(attachDir)
-	if err != nil {
-		return 0, fmt.Errorf("reading attachments dir: %w", err)
-	}
-
 	var count int
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
+	walkErr := filepath.WalkDir(attachDir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
 		}
 
-		key := entry.Name()
-		filePath := filepath.Join(attachDir, key)
+		// Reconstruct the storage key from the relative path under attachDir.
+		key, err := filepath.Rel(attachDir, path)
+		if err != nil {
+			logger.Warn().Err(err).Str("path", path).Msg("skipping attachment: rel path failed")
+			return nil
+		}
+		// Normalize to forward slashes (storage keys use /).
+		key = filepath.ToSlash(key)
 
-		info, err := entry.Info()
+		info, err := d.Info()
 		if err != nil {
 			logger.Warn().Err(err).Str("key", key).Msg("skipping attachment: stat failed")
-			continue
+			return nil
 		}
 
-		f, err := os.Open(filePath)
+		f, err := os.Open(path)
 		if err != nil {
 			logger.Warn().Err(err).Str("key", key).Msg("skipping attachment: open failed")
-			continue
+			return nil
 		}
 
 		ct := contentTypes[key]
@@ -255,10 +259,14 @@ func (imp *Importer) importAttachments(ctx context.Context, tmpDir, attachDir st
 		if _, err := imp.store.Put(ctx, key, f, info.Size(), ct); err != nil {
 			f.Close()
 			logger.Warn().Err(err).Str("key", key).Msg("failed to upload attachment")
-			continue
+			return nil
 		}
 		f.Close()
 		count++
+		return nil
+	})
+	if walkErr != nil {
+		return count, fmt.Errorf("walking attachments dir: %w", walkErr)
 	}
 
 	logger.Info().Int("count", count).Msg("uploaded attachments")

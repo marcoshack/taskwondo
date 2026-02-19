@@ -284,11 +284,11 @@ if [[ -n "$IMPORT_FILE" ]]; then
     # Start database and storage services.
     info "Starting database and storage services..."
     cd "$TARGET_DIR"
-    docker compose up -d postgres minio minio-init
+    docker compose -f docker-compose.yml up -d postgres minio minio-init
 
     info "Waiting for services to be healthy..."
     local_attempts=0
-    while ! docker compose exec -T postgres pg_isready -U "${vars[POSTGRES_USER]:-taskwondo}" &>/dev/null; do
+    while ! docker compose -f docker-compose.yml exec -T postgres pg_isready -U "${vars[POSTGRES_USER]:-taskwondo}" &>/dev/null; do
         local_attempts=$((local_attempts + 1))
         if [[ $local_attempts -ge 30 ]]; then
             error "Timed out waiting for database to be ready."
@@ -298,11 +298,11 @@ if [[ -n "$IMPORT_FILE" ]]; then
 
     # Run import.
     info "Running import..."
-    IMPORT_FILE=taskwondo-import.tar.gz docker compose run --rm import
+    IMPORT_FILE=taskwondo-import.tar.gz docker compose -f docker-compose.yml run --rm import
 
     # Start all services.
     info "Starting all services..."
-    docker compose up -d
+    docker compose -f docker-compose.yml up -d
 
     echo
     ok "=== Taskwondo restored from backup and running ==="
@@ -315,7 +315,7 @@ else
     printf "  Admin password:  %s\n" "${vars[ADMIN_PASSWORD]:-not set}"
     echo
     info "To start Taskwondo:"
-    echo "  docker compose up -d"
+    echo "  docker compose -f docker-compose.yml up -d"
     echo
     info "The API will automatically run database migrations and"
     info "seed the admin user on first start."
