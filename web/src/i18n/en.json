@@ -351,6 +351,9 @@
   "admin.users.active": "Active",
   "admin.users.disabled": "Disabled",
   "admin.users.never": "Never",
+  "admin.users.filterActive": "Active users",
+  "admin.users.filterDisabled": "Disabled users",
+  "admin.users.filterAll": "All users",
   "admin.users.noUsers": "No users found.",
   "admin.users.noProjects": "Not a member of any projects.",
 
