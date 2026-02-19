@@ -31,7 +31,7 @@ check-env: ## Verify .env exists and has all required variables
 
 dev: check-env dev-services ## Start all services for development (API + Web)
 	trap 'kill 0' EXIT; \
-	(set -a && . ./.env && set +a && cd api && air) & \
+	(set -a && . ./.env && set +a && export DISCORD_REDIRECT_URI=http://localhost:5173/auth/discord/callback && cd api && air) & \
 	(cd web && npm run dev) & \
 	wait
 
@@ -41,7 +41,7 @@ dev-services: check-env ## Start PostgreSQL and MinIO
 dev-db: dev-services ## Alias for dev-services (legacy)
 
 dev-api: check-env dev-services ## Start API server with hot reload (requires air: go install github.com/air-verse/air@latest)
-	set -a && . ./.env && set +a && cd api && air
+	set -a && . ./.env && set +a && export DISCORD_REDIRECT_URI=http://localhost:5173/auth/discord/callback && cd api && air
 
 dev-web: ## Start frontend dev server (Vite on :5173, proxies /api to :8080)
 	cd web && npm run dev
