@@ -32,12 +32,12 @@
   "common.description": "설명",
   "common.you": "나",
 
-  "brand.name": "TrackForge",
+  "brand.name": "Taskwondo",
 
   "nav.preferences": "환경설정",
   "nav.signOut": "로그아웃",
 
-  "login.title": "TrackForge 로그인",
+  "login.title": "Taskwondo 로그인",
   "login.email": "이메일",
   "login.password": "비밀번호",
   "login.submit": "로그인",

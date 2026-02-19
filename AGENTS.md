@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-TrackForge is a self-hosted task and ticket management system built with Go (backend API), PostgreSQL (database), and React/TypeScript (frontend). It combines project management with ticketing, incident tracking, and a public-facing customer portal.
+Taskwondo is a self-hosted task and ticket management system built with Go (backend API), PostgreSQL (database), and React/TypeScript (frontend). It combines project management with ticketing, incident tracking, and a public-facing customer portal.
 
 **Read the design docs before implementing anything:**
 - [README.md](README.md) — Project overview and structure
@@ -72,7 +72,7 @@ Build the system in this order. Each phase produces a working, testable incremen
 
 **Goal:** API server boots, connects to database, runs migrations, serves health checks.
 
-1. Initialize Go module (`go mod init github.com/marcoshack/trackforge`) in `api/`
+1. Initialize Go module (`go mod init github.com/marcoshack/taskwondo`) in `api/`
 2. Create `api/cmd/server/main.go` — config loading, DB connection, HTTP server with graceful shutdown
 3. Create `api/internal/config/config.go` — environment variable loading with defaults
 4. Create `api/internal/database/database.go` — PostgreSQL connection pool setup
@@ -282,7 +282,7 @@ docker-compose.yml
 
 ```env
 # Database
-DATABASE_URL=postgres://trackforge:password@postgres:5432/trackforge?sslmode=disable
+DATABASE_URL=postgres://taskwondo:password@postgres:5432/taskwondo?sslmode=disable
 
 # API Server
 API_PORT=8080
@@ -299,12 +299,12 @@ SMTP_HOST=
 SMTP_PORT=587
 SMTP_USERNAME=
 SMTP_PASSWORD=
-SMTP_FROM=TrackForge <noreply@example.com>
+SMTP_FROM=Taskwondo <noreply@example.com>
 
 # OpenTelemetry (optional)
 OTEL_ENABLED=false
 OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
-OTEL_SERVICE_NAME=trackforge
+OTEL_SERVICE_NAME=taskwondo
 
 # Portal
 PORTAL_ENABLED=true

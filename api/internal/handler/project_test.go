@@ -12,8 +12,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
-	"github.com/marcoshack/trackforge/internal/model"
-	"github.com/marcoshack/trackforge/internal/service"
+	"github.com/marcoshack/taskwondo/internal/model"
+	"github.com/marcoshack/taskwondo/internal/service"
 )
 
 // --- Mock repositories for project service ---

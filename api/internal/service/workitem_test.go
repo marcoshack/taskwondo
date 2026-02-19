@@ -10,8 +10,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/marcoshack/trackforge/internal/model"
-	"github.com/marcoshack/trackforge/internal/storage"
+	"github.com/marcoshack/taskwondo/internal/model"
+	"github.com/marcoshack/taskwondo/internal/storage"
 )
 
 // --- Mock workflow repository ---

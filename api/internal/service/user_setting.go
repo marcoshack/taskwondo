@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
-	"github.com/marcoshack/trackforge/internal/model"
+	"github.com/marcoshack/taskwondo/internal/model"
 )
 
 // UserSettingRepository defines persistence operations for user settings.

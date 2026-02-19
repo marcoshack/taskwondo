@@ -10,8 +10,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
-	"github.com/marcoshack/trackforge/internal/model"
-	"github.com/marcoshack/trackforge/internal/service"
+	"github.com/marcoshack/taskwondo/internal/model"
+	"github.com/marcoshack/taskwondo/internal/service"
 )
 
 // QueueHandler handles queue endpoints.

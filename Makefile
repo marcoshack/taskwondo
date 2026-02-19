@@ -77,7 +77,7 @@ migrate-new: ## Create a new migration (usage: make migrate-new name=create_user
 
 # --- Data Export/Import ---
 
-export: check-env ## Export all data to backups/trackforge-export.tar.gz
+export: check-env ## Export all data to backups/taskwondo-export.tar.gz
 	mkdir -p backups
 	docker compose run --rm export
 

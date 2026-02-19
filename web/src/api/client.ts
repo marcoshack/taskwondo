@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const TOKEN_KEY = 'trackforge_token'
+const TOKEN_KEY = 'taskwondo_token'
 
 export const api = axios.create({
   baseURL: '/api/v1',

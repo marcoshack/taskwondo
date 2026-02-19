@@ -32,12 +32,12 @@
   "common.description": "描述",
   "common.you": "你",
 
-  "brand.name": "TrackForge",
+  "brand.name": "Taskwondo",
 
   "nav.preferences": "偏好设置",
   "nav.signOut": "退出登录",
 
-  "login.title": "登录 TrackForge",
+  "login.title": "登录 Taskwondo",
   "login.email": "邮箱",
   "login.password": "密码",
   "login.submit": "登录",

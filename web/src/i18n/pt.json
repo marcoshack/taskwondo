@@ -32,12 +32,12 @@
   "common.description": "Descrição",
   "common.you": "você",
 
-  "brand.name": "TrackForge",
+  "brand.name": "Taskwondo",
 
   "nav.preferences": "Preferências",
   "nav.signOut": "Sair",
 
-  "login.title": "Entrar no TrackForge",
+  "login.title": "Entrar no Taskwondo",
   "login.email": "E-mail",
   "login.password": "Senha",
   "login.submit": "Entrar",

@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/marcoshack/trackforge/internal/model"
+	"github.com/marcoshack/taskwondo/internal/model"
 )
 
 // AttachmentRepository handles attachment metadata persistence.

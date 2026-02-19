@@ -11,7 +11,7 @@ import ko from './ko.json'
 import zh from './zh.json'
 import ar from './ar.json'
 
-export const LANGUAGE_KEY = 'trackforge_language'
+export const LANGUAGE_KEY = 'taskwondo_language'
 
 i18n
   .use(LanguageDetector)

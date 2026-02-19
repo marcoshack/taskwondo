@@ -2,7 +2,7 @@
 
 ## Overview
 
-TrackForge uses a flexible workflow system that defines valid statuses and transitions for work items. Different projects, queues, and work item types can use different workflows, enabling the same system to handle agile task boards, incident response pipelines, and customer support queues.
+Taskwondo uses a flexible workflow system that defines valid statuses and transitions for work items. Different projects, queues, and work item types can use different workflows, enabling the same system to handle agile task boards, incident response pipelines, and customer support queues.
 
 ## Concepts
 
@@ -37,7 +37,7 @@ A named collection of statuses and transitions. Workflows are assigned to:
 
 ## Default Workflows
 
-TrackForge ships with two built-in workflows. These are created during initial setup and can be customized.
+Taskwondo ships with two built-in workflows. These are created during initial setup and can be customized.
 
 ### Task Workflow
 
@@ -161,7 +161,7 @@ Soft delete only. Sets `deleted_at` timestamp. Deleted items:
 
 ## Automation Rules
 
-Automation rules execute actions in response to work item events. They're the backbone of TrackForge's operational automation.
+Automation rules execute actions in response to work item events. They're the backbone of Taskwondo's operational automation.
 
 ### Rule Structure
 
@@ -223,7 +223,7 @@ Action configs support template variables for dynamic values:
 {{item.status}}          → "new"
 {{item.assignee.name}}   → "Marcos"
 {{item.reporter.name}}   → "System (Alertmanager)"
-{{item.url}}             → "https://trackforge.local/app/INFRA/items/42"
+{{item.url}}             → "https://taskwondo.local/app/INFRA/items/42"
 {{event.type}}           → "status_changed"
 {{event.old_value}}      → "open"
 {{event.new_value}}      → "investigating"

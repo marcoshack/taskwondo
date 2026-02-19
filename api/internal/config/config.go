@@ -123,7 +123,7 @@ func Load() (*Config, error) {
 		StorageEndpoint:     envOrDefault("STORAGE_ENDPOINT", "localhost:9000"),
 		StorageAccessKey:    storageAccessKey,
 		StorageSecretKey:    storageSecretKey,
-		StorageBucket:       envOrDefault("STORAGE_BUCKET", "trackforge-attachments"),
+		StorageBucket:       envOrDefault("STORAGE_BUCKET", "taskwondo-attachments"),
 		StorageRegion:       envOrDefault("STORAGE_REGION", "us-east-1"),
 		StorageUseSSL:       envOrDefault("STORAGE_USE_SSL", "false") == "true",
 		MaxUploadSize:       maxUpload,

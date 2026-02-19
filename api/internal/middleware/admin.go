@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/marcoshack/trackforge/internal/model"
+	"github.com/marcoshack/taskwondo/internal/model"
 )
 
 // RequireAdmin returns 403 if the authenticated user is not a global admin.

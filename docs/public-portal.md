@@ -193,7 +193,7 @@ The portal supports basic theming per project:
     "primary_color": "#4F46E5",
     "accent_color": "#10B981",
     "header_text": "Game Server Support",
-    "footer_text": "Powered by TrackForge",
+    "footer_text": "Powered by Taskwondo",
     "custom_css": ""
   }
 }
@@ -240,11 +240,11 @@ The portal can be embedded in external sites:
 
 ```html
 <!-- Full portal embed -->
-<iframe src="https://trackforge.yourdomain.com/portal/q/game-support" 
+<iframe src="https://taskwondo.yourdomain.com/portal/q/game-support" 
         width="100%" height="600"></iframe>
 
 <!-- Submission form only -->
-<iframe src="https://trackforge.yourdomain.com/portal/q/game-support/submit?embed=true" 
+<iframe src="https://taskwondo.yourdomain.com/portal/q/game-support/submit?embed=true" 
         width="100%" height="500"></iframe>
 ```
 

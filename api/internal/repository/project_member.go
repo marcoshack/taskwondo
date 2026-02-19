@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/marcoshack/trackforge/internal/model"
+	"github.com/marcoshack/taskwondo/internal/model"
 )
 
 // ProjectMemberRepository handles project membership persistence.

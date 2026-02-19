@@ -21,7 +21,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/marcoshack/trackforge/internal/model"
+	"github.com/marcoshack/taskwondo/internal/model"
 )
 
 // UserRepository defines the persistence operations the auth service needs for users.
@@ -236,7 +236,7 @@ func (s *AuthService) CreateAPIKey(ctx context.Context, userID uuid.UUID, name s
 		return nil, "", fmt.Errorf("generating random bytes: %w", err)
 	}
 
-	fullKey := "tfk_" + hex.EncodeToString(raw)
+	fullKey := "twk_" + hex.EncodeToString(raw)
 	keyPrefix := fullKey[:8]
 	keyHash := HashAPIKey(fullKey)
 
@@ -468,7 +468,7 @@ func (s *AuthService) findOrCreateOAuthUser(ctx context.Context, provider string
 			email = *discord.Email
 		}
 		if email == "" {
-			email = "discord_" + discord.ID + "@oauth.trackforge.local"
+			email = "discord_" + discord.ID + "@oauth.taskwondo.local"
 		}
 
 		avatarURL := discord.AvatarURL()
@@ -570,7 +570,7 @@ func (s *AuthService) generateJWT(user *model.User) (string, error) {
 			Subject:   user.ID.String(),
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(s.jwtExpiry)),
-			Issuer:    "trackforge",
+			Issuer:    "taskwondo",
 		},
 		Email:      user.Email,
 		GlobalRole: user.GlobalRole,

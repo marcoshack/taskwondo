@@ -2,7 +2,7 @@
 
 ## Overview
 
-TrackForge uses a unified work item model where tasks, tickets, bugs, and feedback are all the same underlying entity with different `type` values. This enables tight cross-referencing between project management and support/incident tracking without data duplication.
+Taskwondo uses a unified work item model where tasks, tickets, bugs, and feedback are all the same underlying entity with different `type` values. This enables tight cross-referencing between project management and support/incident tracking without data duplication.
 
 ## Entity Relationship Diagram
 
