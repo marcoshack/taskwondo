@@ -283,3 +283,202 @@ func TestQueueCreate_NonMemberNotFound(t *testing.T) {
 		t.Fatalf("expected ErrNotFound for non-member, got %v", err)
 	}
 }
+
+func TestQueueUpdate_AllFields(t *testing.T) {
+	svc, queueRepo, projectRepo, memberRepo := newTestQueueService()
+	info := userAuthInfo()
+	project := setupQueueProject(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
+
+	q := &model.Queue{
+		ID:              uuid.New(),
+		ProjectID:       project.ID,
+		Name:            "Original",
+		QueueType:       model.QueueTypeGeneral,
+		DefaultPriority: model.PriorityMedium,
+	}
+	queueRepo.Create(context.Background(), q)
+
+	newName := "Updated"
+	desc := "A description"
+	newType := model.QueueTypeSupport
+	isPublic := true
+	newPriority := model.PriorityHigh
+	assignee := uuid.New()
+	wfID := uuid.New()
+
+	updated, err := svc.Update(context.Background(), info, "TEST", q.ID, UpdateQueueInput{
+		Name:              &newName,
+		Description:       &desc,
+		QueueType:         &newType,
+		IsPublic:          &isPublic,
+		DefaultPriority:   &newPriority,
+		DefaultAssigneeID: &assignee,
+		WorkflowID:        &wfID,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated.Name != "Updated" {
+		t.Fatalf("expected name 'Updated', got %s", updated.Name)
+	}
+	if updated.QueueType != model.QueueTypeSupport {
+		t.Fatalf("expected type support, got %s", updated.QueueType)
+	}
+	if !updated.IsPublic {
+		t.Fatal("expected IsPublic true")
+	}
+	if updated.DefaultPriority != model.PriorityHigh {
+		t.Fatalf("expected priority high, got %s", updated.DefaultPriority)
+	}
+}
+
+func TestQueueUpdate_ClearFields(t *testing.T) {
+	svc, queueRepo, projectRepo, memberRepo := newTestQueueService()
+	info := userAuthInfo()
+	project := setupQueueProject(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
+
+	desc := "some desc"
+	assignee := uuid.New()
+	wfID := uuid.New()
+	q := &model.Queue{
+		ID:                uuid.New(),
+		ProjectID:         project.ID,
+		Name:              "Queue",
+		Description:       &desc,
+		QueueType:         model.QueueTypeGeneral,
+		DefaultPriority:   model.PriorityMedium,
+		DefaultAssigneeID: &assignee,
+		WorkflowID:        &wfID,
+	}
+	queueRepo.Create(context.Background(), q)
+
+	updated, err := svc.Update(context.Background(), info, "TEST", q.ID, UpdateQueueInput{
+		ClearDescription:     true,
+		ClearDefaultAssignee: true,
+		ClearWorkflow:        true,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated.Description != nil {
+		t.Fatal("expected description to be cleared")
+	}
+	if updated.DefaultAssigneeID != nil {
+		t.Fatal("expected default assignee to be cleared")
+	}
+	if updated.WorkflowID != nil {
+		t.Fatal("expected workflow to be cleared")
+	}
+}
+
+func TestQueueUpdate_EmptyName(t *testing.T) {
+	svc, queueRepo, projectRepo, memberRepo := newTestQueueService()
+	info := userAuthInfo()
+	project := setupQueueProject(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
+
+	q := &model.Queue{
+		ID:              uuid.New(),
+		ProjectID:       project.ID,
+		Name:            "Queue",
+		QueueType:       model.QueueTypeGeneral,
+		DefaultPriority: model.PriorityMedium,
+	}
+	queueRepo.Create(context.Background(), q)
+
+	empty := "   "
+	_, err := svc.Update(context.Background(), info, "TEST", q.ID, UpdateQueueInput{
+		Name: &empty,
+	})
+	if err == nil {
+		t.Fatal("expected error for empty name")
+	}
+}
+
+func TestQueueUpdate_InvalidType(t *testing.T) {
+	svc, queueRepo, projectRepo, memberRepo := newTestQueueService()
+	info := userAuthInfo()
+	project := setupQueueProject(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
+
+	q := &model.Queue{
+		ID:              uuid.New(),
+		ProjectID:       project.ID,
+		Name:            "Queue",
+		QueueType:       model.QueueTypeGeneral,
+		DefaultPriority: model.PriorityMedium,
+	}
+	queueRepo.Create(context.Background(), q)
+
+	badType := "invalid"
+	_, err := svc.Update(context.Background(), info, "TEST", q.ID, UpdateQueueInput{
+		QueueType: &badType,
+	})
+	if err == nil {
+		t.Fatal("expected error for invalid queue type")
+	}
+}
+
+func TestQueueUpdate_InvalidPriority(t *testing.T) {
+	svc, queueRepo, projectRepo, memberRepo := newTestQueueService()
+	info := userAuthInfo()
+	project := setupQueueProject(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
+
+	q := &model.Queue{
+		ID:              uuid.New(),
+		ProjectID:       project.ID,
+		Name:            "Queue",
+		QueueType:       model.QueueTypeGeneral,
+		DefaultPriority: model.PriorityMedium,
+	}
+	queueRepo.Create(context.Background(), q)
+
+	badPriority := "urgent"
+	_, err := svc.Update(context.Background(), info, "TEST", q.ID, UpdateQueueInput{
+		DefaultPriority: &badPriority,
+	})
+	if err == nil {
+		t.Fatal("expected error for invalid priority")
+	}
+}
+
+func TestQueueUpdate_WrongProject(t *testing.T) {
+	svc, queueRepo, projectRepo, memberRepo := newTestQueueService()
+	info := userAuthInfo()
+	setupQueueProject(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
+
+	q := &model.Queue{
+		ID:              uuid.New(),
+		ProjectID:       uuid.New(), // different project
+		Name:            "Queue",
+		QueueType:       model.QueueTypeGeneral,
+		DefaultPriority: model.PriorityMedium,
+	}
+	queueRepo.Create(context.Background(), q)
+
+	newName := "Hacked"
+	_, err := svc.Update(context.Background(), info, "TEST", q.ID, UpdateQueueInput{
+		Name: &newName,
+	})
+	if err != model.ErrNotFound {
+		t.Fatalf("expected ErrNotFound, got %v", err)
+	}
+}
+
+func TestQueueList_AdminBypass(t *testing.T) {
+	svc, queueRepo, projectRepo, _ := newTestQueueService()
+	admin := adminAuthInfo()
+
+	project := &model.Project{ID: uuid.New(), Name: "Test", Key: "TEST"}
+	projectRepo.Create(context.Background(), project)
+
+	queueRepo.Create(context.Background(), &model.Queue{
+		ID: uuid.New(), ProjectID: project.ID, Name: "Q1", QueueType: model.QueueTypeGeneral,
+	})
+
+	queues, err := svc.List(context.Background(), admin, "TEST")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(queues) != 1 {
+		t.Fatalf("expected 1 queue, got %d", len(queues))
+	}
+}

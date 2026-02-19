@@ -129,6 +129,8 @@ func main() {
 	r.Use(middleware.Logging(log.Logger))
 	r.Use(middleware.Recovery)
 	r.Use(middleware.CORS(cfg.BaseURL))
+	r.Use(middleware.SecurityHeaders)
+	r.Use(middleware.BodyLimit(1 << 20)) // 1MB limit for non-multipart requests
 
 	// Health checks (unauthenticated)
 	r.Get("/healthz", health.Healthz)

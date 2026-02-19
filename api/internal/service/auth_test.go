@@ -2,6 +2,9 @@ package service
 
 import (
 	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -636,6 +639,301 @@ func TestFindOrCreateOAuthUser_DisabledExistingLink(t *testing.T) {
 	discord := &model.DiscordUser{
 		ID:       "111222333",
 		Username: "disableduser",
+	}
+
+	_, err := svc.findOrCreateOAuthUser(context.Background(), model.OAuthProviderDiscord, discord)
+	if err != model.ErrAccountDisabled {
+		t.Fatalf("expected ErrAccountDisabled, got %v", err)
+	}
+}
+
+func TestGetUser_Success(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	user := createTestUser(t, userRepo, "user@example.com", "password123", model.RoleUser)
+
+	result, err := svc.GetUser(context.Background(), user.ID)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Email != "user@example.com" {
+		t.Fatalf("expected email user@example.com, got %s", result.Email)
+	}
+}
+
+func TestGetUser_NotFound(t *testing.T) {
+	svc, _, _ := newTestAuthService()
+
+	_, err := svc.GetUser(context.Background(), uuid.New())
+	if err == nil {
+		t.Fatal("expected error for nonexistent user")
+	}
+}
+
+func TestSearchUsers_Success(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	createTestUser(t, userRepo, "alice@example.com", "pass", model.RoleUser)
+	createTestUser(t, userRepo, "bob@example.com", "pass", model.RoleUser)
+
+	results, err := svc.SearchUsers(context.Background(), "alice")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(results))
+	}
+	if results[0].Email != "alice@example.com" {
+		t.Fatalf("expected alice@example.com, got %s", results[0].Email)
+	}
+}
+
+func TestSearchUsers_TooShort(t *testing.T) {
+	svc, _, _ := newTestAuthService()
+
+	results, err := svc.SearchUsers(context.Background(), "a")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if results != nil {
+		t.Fatalf("expected nil for short query, got %v", results)
+	}
+}
+
+func TestSearchUsers_NoMatch(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	createTestUser(t, userRepo, "alice@example.com", "pass", model.RoleUser)
+
+	results, err := svc.SearchUsers(context.Background(), "zzzz")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(results) != 0 {
+		t.Fatalf("expected 0 results, got %d", len(results))
+	}
+}
+
+func TestRefresh_DisabledAccount(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	user := createTestUser(t, userRepo, "disabled@example.com", "pass", model.RoleUser)
+	user.IsActive = false
+
+	info := &model.AuthInfo{UserID: user.ID, Email: user.Email, GlobalRole: model.RoleUser}
+	_, err := svc.Refresh(context.Background(), info)
+	if err != model.ErrAccountDisabled {
+		t.Fatalf("expected ErrAccountDisabled, got %v", err)
+	}
+}
+
+func TestRefresh_UserNotFound(t *testing.T) {
+	svc, _, _ := newTestAuthService()
+
+	info := &model.AuthInfo{UserID: uuid.New(), Email: "gone@example.com", GlobalRole: model.RoleUser}
+	_, err := svc.Refresh(context.Background(), info)
+	if err == nil {
+		t.Fatal("expected error for nonexistent user")
+	}
+}
+
+func TestDiscordCallback_NotConfigured(t *testing.T) {
+	svc, _, _ := newTestAuthService() // no discord credentials
+	_, _, err := svc.DiscordCallback(context.Background(), "code", "state")
+	if err == nil {
+		t.Fatal("expected error when discord is not configured")
+	}
+}
+
+func TestDiscordCallback_InvalidState(t *testing.T) {
+	svc, _, _ := newTestAuthServiceWithOAuth()
+	_, _, err := svc.DiscordCallback(context.Background(), "code", "invalid-state")
+	if err == nil {
+		t.Fatal("expected error for invalid state")
+	}
+}
+
+func TestDiscordCallback_FullSuccess(t *testing.T) {
+	svc, _, oauthRepo := newTestAuthServiceWithOAuth()
+
+	discordServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/oauth2/token":
+			json.NewEncoder(w).Encode(map[string]string{
+				"access_token": "mock-access-token",
+				"token_type":   "Bearer",
+			})
+		case "/api/v10/users/@me":
+			email := "discord@example.com"
+			verified := true
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"id":       "999888777",
+				"username": "testuser",
+				"email":    email,
+				"verified": verified,
+			})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer discordServer.Close()
+
+	svc.httpClient = discordServer.Client()
+	svc.discordBaseURL = discordServer.URL
+
+	state, err := svc.generateOAuthState()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	token, user, err := svc.DiscordCallback(context.Background(), "valid-code", state)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if token == "" {
+		t.Fatal("expected non-empty token")
+	}
+	if user.Email != "discord@example.com" {
+		t.Fatalf("expected email discord@example.com, got %s", user.Email)
+	}
+
+	accounts, _ := oauthRepo.ListByUserID(context.Background(), user.ID)
+	if len(accounts) != 1 {
+		t.Fatalf("expected 1 oauth account, got %d", len(accounts))
+	}
+}
+
+func TestDiscordCallback_TokenExchangeFails(t *testing.T) {
+	svc, _, _ := newTestAuthServiceWithOAuth()
+
+	discordServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+	}))
+	defer discordServer.Close()
+
+	svc.httpClient = discordServer.Client()
+	svc.discordBaseURL = discordServer.URL
+
+	state, _ := svc.generateOAuthState()
+	_, _, err := svc.DiscordCallback(context.Background(), "bad-code", state)
+	if err == nil {
+		t.Fatal("expected error for failed token exchange")
+	}
+}
+
+func TestDiscordCallback_UserFetchFails(t *testing.T) {
+	svc, _, _ := newTestAuthServiceWithOAuth()
+
+	discordServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/oauth2/token":
+			json.NewEncoder(w).Encode(map[string]string{
+				"access_token": "mock-access-token",
+				"token_type":   "Bearer",
+			})
+		case "/api/v10/users/@me":
+			w.WriteHeader(http.StatusUnauthorized)
+		}
+	}))
+	defer discordServer.Close()
+
+	svc.httpClient = discordServer.Client()
+	svc.discordBaseURL = discordServer.URL
+
+	state, _ := svc.generateOAuthState()
+	_, _, err := svc.DiscordCallback(context.Background(), "valid-code", state)
+	if err == nil {
+		t.Fatal("expected error for failed user fetch")
+	}
+}
+
+func TestDiscordEnabled(t *testing.T) {
+	svc, _, _ := newTestAuthService()
+	if svc.DiscordEnabled() {
+		t.Fatal("expected discord to be disabled without credentials")
+	}
+
+	svc2, _, _ := newTestAuthServiceWithOAuth()
+	if !svc2.DiscordEnabled() {
+		t.Fatal("expected discord to be enabled with credentials")
+	}
+}
+
+func TestDiscordOAuthURL_NotConfigured(t *testing.T) {
+	svc, _, _ := newTestAuthService()
+	_, err := svc.DiscordOAuthURL()
+	if err == nil {
+		t.Fatal("expected error when discord is not configured")
+	}
+}
+
+func TestLogin_NoPasswordHash(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	user := &model.User{
+		ID:          uuid.New(),
+		Email:       "oauth-only@example.com",
+		DisplayName: "OAuth User",
+		GlobalRole:  model.RoleUser,
+		IsActive:    true,
+	}
+	userRepo.Create(context.Background(), user)
+
+	_, _, err := svc.Login(context.Background(), "oauth-only@example.com", "anypassword")
+	if err != model.ErrInvalidCredentials {
+		t.Fatalf("expected ErrInvalidCredentials, got %v", err)
+	}
+}
+
+func TestValidateAPIKey_DisabledUser(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	user := createTestUser(t, userRepo, "disabled@example.com", "pass", model.RoleUser)
+	_, fullKey, _ := svc.CreateAPIKey(context.Background(), user.ID, "Key", nil, nil)
+	user.IsActive = false
+
+	_, err := svc.ValidateAPIKey(context.Background(), fullKey)
+	if err != model.ErrUnauthorized {
+		t.Fatalf("expected ErrUnauthorized, got %v", err)
+	}
+}
+
+func TestFindOrCreateOAuthUser_NoEmail(t *testing.T) {
+	svc, userRepo, _ := newTestAuthServiceWithOAuth()
+
+	discord := &model.DiscordUser{
+		ID:       "555666777",
+		Username: "noemailuser",
+	}
+
+	user, err := svc.findOrCreateOAuthUser(context.Background(), model.OAuthProviderDiscord, discord)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	expectedEmail := "discord_555666777@oauth.trackforge.local"
+	if user.Email != expectedEmail {
+		t.Fatalf("expected email %s, got %s", expectedEmail, user.Email)
+	}
+
+	_, err = userRepo.GetByEmail(context.Background(), expectedEmail)
+	if err != nil {
+		t.Fatal("expected user to be created in repo")
+	}
+}
+
+func TestFindOrCreateOAuthUser_DisabledEmailMatch(t *testing.T) {
+	svc, userRepo, _ := newTestAuthServiceWithOAuth()
+
+	user := &model.User{
+		ID:          uuid.New(),
+		Email:       "disabled@example.com",
+		DisplayName: "Disabled",
+		GlobalRole:  model.RoleUser,
+		IsActive:    false,
+	}
+	userRepo.Create(context.Background(), user)
+
+	email := "disabled@example.com"
+	verified := true
+	discord := &model.DiscordUser{
+		ID:       "444555666",
+		Username: "disabledmatch",
+		Email:    &email,
+		Verified: &verified,
 	}
 
 	_, err := svc.findOrCreateOAuthUser(context.Background(), model.OAuthProviderDiscord, discord)

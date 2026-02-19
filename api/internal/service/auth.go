@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -71,6 +70,8 @@ type AuthService struct {
 	discordClientID    string
 	discordSecret      string
 	discordRedirectURI string
+	httpClient         *http.Client
+	discordBaseURL     string
 }
 
 // NewAuthService creates a new AuthService.
@@ -91,6 +92,8 @@ func NewAuthService(
 		discordClientID:    discordClientID,
 		discordSecret:      discordSecret,
 		discordRedirectURI: discordRedirectURI,
+		httpClient:         http.DefaultClient,
+		discordBaseURL:     "https://discord.com",
 	}
 }
 
@@ -372,22 +375,21 @@ func (s *AuthService) exchangeDiscordCode(ctx context.Context, code string) (str
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
-		"https://discord.com/api/oauth2/token",
+		s.discordBaseURL+"/api/oauth2/token",
 		strings.NewReader(data.Encode()))
 	if err != nil {
 		return "", err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("token request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("discord token error: status=%d body=%s", resp.StatusCode, string(body))
+		return "", fmt.Errorf("discord token error: status=%d", resp.StatusCode)
 	}
 
 	var tokenResp struct {
@@ -403,21 +405,20 @@ func (s *AuthService) exchangeDiscordCode(ctx context.Context, code string) (str
 
 func (s *AuthService) fetchDiscordUser(ctx context.Context, accessToken string) (*model.DiscordUser, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
-		"https://discord.com/api/v10/users/@me", nil)
+		s.discordBaseURL+"/api/v10/users/@me", nil)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("discord user request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("discord user error: status=%d body=%s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("discord user error: status=%d", resp.StatusCode)
 	}
 
 	var discordUser model.DiscordUser
