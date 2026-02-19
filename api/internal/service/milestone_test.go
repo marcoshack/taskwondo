@@ -294,3 +294,152 @@ func TestMilestoneDelete_MemberForbidden(t *testing.T) {
 		t.Fatalf("expected ErrForbidden, got %v", err)
 	}
 }
+
+func TestMilestoneUpdate_AllFields(t *testing.T) {
+	svc, milestoneRepo, projectRepo, memberRepo := newTestMilestoneService()
+	info := userAuthInfo()
+	project := setupMilestoneProject(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
+
+	m := &model.Milestone{
+		ID:        uuid.New(),
+		ProjectID: project.ID,
+		Name:      "v1.0",
+		Status:    model.MilestoneStatusOpen,
+	}
+	milestoneRepo.Create(context.Background(), m)
+
+	newName := "v2.0"
+	desc := "Release milestone"
+	due := time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC)
+	updated, err := svc.Update(context.Background(), info, "MILE", m.ID, UpdateMilestoneInput{
+		Name:        &newName,
+		Description: &desc,
+		DueDate:     &due,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated.Name != "v2.0" {
+		t.Fatalf("expected name 'v2.0', got %s", updated.Name)
+	}
+	if updated.Description == nil || *updated.Description != "Release milestone" {
+		t.Fatal("expected description to be set")
+	}
+}
+
+func TestMilestoneUpdate_ClearFields(t *testing.T) {
+	svc, milestoneRepo, projectRepo, memberRepo := newTestMilestoneService()
+	info := userAuthInfo()
+	project := setupMilestoneProject(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
+
+	desc := "desc"
+	due := time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC)
+	m := &model.Milestone{
+		ID:          uuid.New(),
+		ProjectID:   project.ID,
+		Name:        "v1.0",
+		Description: &desc,
+		DueDate:     &due,
+		Status:      model.MilestoneStatusOpen,
+	}
+	milestoneRepo.Create(context.Background(), m)
+
+	updated, err := svc.Update(context.Background(), info, "MILE", m.ID, UpdateMilestoneInput{
+		ClearDescription: true,
+		ClearDueDate:     true,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated.Description != nil {
+		t.Fatal("expected description to be cleared")
+	}
+	if updated.DueDate != nil {
+		t.Fatal("expected due date to be cleared")
+	}
+}
+
+func TestMilestoneUpdate_EmptyName(t *testing.T) {
+	svc, milestoneRepo, projectRepo, memberRepo := newTestMilestoneService()
+	info := userAuthInfo()
+	project := setupMilestoneProject(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
+
+	m := &model.Milestone{
+		ID:        uuid.New(),
+		ProjectID: project.ID,
+		Name:      "v1.0",
+		Status:    model.MilestoneStatusOpen,
+	}
+	milestoneRepo.Create(context.Background(), m)
+
+	empty := "   "
+	_, err := svc.Update(context.Background(), info, "MILE", m.ID, UpdateMilestoneInput{
+		Name: &empty,
+	})
+	if err == nil {
+		t.Fatal("expected error for empty name")
+	}
+}
+
+func TestMilestoneUpdate_WrongProject(t *testing.T) {
+	svc, milestoneRepo, projectRepo, memberRepo := newTestMilestoneService()
+	info := userAuthInfo()
+	setupMilestoneProject(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
+
+	m := &model.Milestone{
+		ID:        uuid.New(),
+		ProjectID: uuid.New(), // different project
+		Name:      "v1.0",
+		Status:    model.MilestoneStatusOpen,
+	}
+	milestoneRepo.Create(context.Background(), m)
+
+	newName := "Hacked"
+	_, err := svc.Update(context.Background(), info, "MILE", m.ID, UpdateMilestoneInput{
+		Name: &newName,
+	})
+	if err != model.ErrNotFound {
+		t.Fatalf("expected ErrNotFound, got %v", err)
+	}
+}
+
+func TestMilestoneList_AdminBypass(t *testing.T) {
+	svc, milestoneRepo, projectRepo, _ := newTestMilestoneService()
+	admin := adminAuthInfo()
+
+	project := &model.Project{ID: uuid.New(), Name: "Test", Key: "MILE"}
+	projectRepo.Create(context.Background(), project)
+
+	milestoneRepo.Create(context.Background(), &model.Milestone{
+		ID: uuid.New(), ProjectID: project.ID, Name: "v1", Status: model.MilestoneStatusOpen,
+	})
+
+	milestones, err := svc.List(context.Background(), admin, "MILE")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(milestones) != 1 {
+		t.Fatalf("expected 1 milestone, got %d", len(milestones))
+	}
+}
+
+func TestMilestoneGet_AdminBypass(t *testing.T) {
+	svc, milestoneRepo, projectRepo, _ := newTestMilestoneService()
+	admin := adminAuthInfo()
+
+	project := &model.Project{ID: uuid.New(), Name: "Test", Key: "MILE"}
+	projectRepo.Create(context.Background(), project)
+
+	m := &model.Milestone{
+		ID: uuid.New(), ProjectID: project.ID, Name: "v1", Status: model.MilestoneStatusOpen,
+	}
+	milestoneRepo.Create(context.Background(), m)
+
+	result, err := svc.Get(context.Background(), admin, "MILE", m.ID)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Name != "v1" {
+		t.Fatalf("expected name 'v1', got %s", result.Name)
+	}
+}

@@ -680,3 +680,173 @@ func TestGlobalAdminCanDeleteAnyProject(t *testing.T) {
 		t.Fatalf("expected global admin to delete project, got %v", err)
 	}
 }
+
+func TestUpdateProject_ChangeKey(t *testing.T) {
+	svc, _, _, _ := newTestProjectService()
+	info := userAuthInfo()
+
+	_, err := svc.Create(context.Background(), info, "Test", "TT", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	newKey := "NEWKEY"
+	project, err := svc.Update(context.Background(), info, "TT", nil, &newKey, nil, false, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if project.Key != "NEWKEY" {
+		t.Fatalf("expected key 'NEWKEY', got %s", project.Key)
+	}
+}
+
+func TestUpdateProject_InvalidKey(t *testing.T) {
+	svc, _, _, _ := newTestProjectService()
+	info := userAuthInfo()
+
+	_, err := svc.Create(context.Background(), info, "Test", "TT", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	badKey := "bad-key"
+	_, err = svc.Update(context.Background(), info, "TT", nil, &badKey, nil, false, nil)
+	if err == nil {
+		t.Fatal("expected error for invalid key")
+	}
+}
+
+func TestUpdateProject_DuplicateKey(t *testing.T) {
+	svc, _, _, _ := newTestProjectService()
+	info := userAuthInfo()
+
+	_, err := svc.Create(context.Background(), info, "Project A", "AA", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = svc.Create(context.Background(), info, "Project B", "BB", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dupKey := "AA"
+	_, err = svc.Update(context.Background(), info, "BB", nil, &dupKey, nil, false, nil)
+	if err == nil {
+		t.Fatal("expected error for duplicate key")
+	}
+}
+
+func TestUpdateProject_Description(t *testing.T) {
+	svc, _, _, _ := newTestProjectService()
+	info := userAuthInfo()
+
+	_, err := svc.Create(context.Background(), info, "Test", "TT", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	desc := "New description"
+	project, err := svc.Update(context.Background(), info, "TT", nil, nil, &desc, false, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if project.Description == nil || *project.Description != "New description" {
+		t.Fatal("expected description to be set")
+	}
+
+	// Clear description
+	project, err = svc.Update(context.Background(), info, "TT", nil, nil, nil, true, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if project.Description != nil {
+		t.Fatal("expected description to be cleared")
+	}
+}
+
+func TestUpdateProject_DefaultWorkflow(t *testing.T) {
+	svc, _, _, _ := newTestProjectService()
+	info := userAuthInfo()
+
+	_, err := svc.Create(context.Background(), info, "Test", "TT", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wfID := uuid.New()
+	project, err := svc.Update(context.Background(), info, "TT", nil, nil, nil, false, &wfID)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if project.DefaultWorkflowID == nil || *project.DefaultWorkflowID != wfID {
+		t.Fatal("expected default workflow to be set")
+	}
+}
+
+func TestListProject_AdminSeesAll(t *testing.T) {
+	svc, _, _, _ := newTestProjectService()
+	owner := userAuthInfo()
+	admin := adminAuthInfo()
+
+	_, err := svc.Create(context.Background(), owner, "Test", "TT", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	projects, err := svc.List(context.Background(), admin)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(projects) < 1 {
+		t.Fatal("expected admin to see all projects")
+	}
+}
+
+func TestListMembers_AdminBypass(t *testing.T) {
+	svc, _, _, _ := newTestProjectService()
+	owner := userAuthInfo()
+	admin := adminAuthInfo()
+
+	project, err := svc.Create(context.Background(), owner, "Test", "TT", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = project
+
+	members, err := svc.ListMembers(context.Background(), admin, "TT")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Admin should be able to list even without being a member
+	_ = members
+}
+
+func TestRemoveMember_OwnerRemovesMember(t *testing.T) {
+	svc, _, memberRepo, userRepo := newTestProjectService()
+	owner := userAuthInfo()
+	target := userAuthInfo()
+
+	// Create user record for target
+	userRepo.Create(context.Background(), &model.User{
+		ID:       target.UserID,
+		Email:    "target@example.com",
+		IsActive: true,
+	})
+
+	project, err := svc.Create(context.Background(), owner, "Test", "TT", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	memberRepo.Add(context.Background(), &model.ProjectMember{
+		ID:        uuid.New(),
+		ProjectID: project.ID,
+		UserID:    target.UserID,
+		Role:      model.ProjectRoleMember,
+	})
+
+	err = svc.RemoveMember(context.Background(), owner, "TT", target.UserID)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}

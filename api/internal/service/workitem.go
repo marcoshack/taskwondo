@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -915,7 +916,8 @@ func (s *WorkItemService) UploadAttachment(ctx context.Context, info *model.Auth
 		return nil, err
 	}
 
-	if strings.TrimSpace(input.Filename) == "" {
+	safeFilename := filepath.Base(strings.TrimSpace(input.Filename))
+	if safeFilename == "" || safeFilename == "." || safeFilename == ".." {
 		return nil, fmt.Errorf("filename is required: %w", model.ErrValidation)
 	}
 	if input.Size <= 0 {
@@ -926,7 +928,7 @@ func (s *WorkItemService) UploadAttachment(ctx context.Context, info *model.Auth
 	}
 
 	attachmentID := uuid.Must(uuid.NewV7())
-	storageKey := fmt.Sprintf("%s/%s/%s/%s", project.ID, item.ID, attachmentID, input.Filename)
+	storageKey := fmt.Sprintf("%s/%s/%s/%s", project.ID, item.ID, attachmentID, safeFilename)
 
 	if _, err := s.fileStorage.Put(ctx, storageKey, input.Reader, input.Size, input.ContentType); err != nil {
 		return nil, fmt.Errorf("uploading file to storage: %w", err)
@@ -936,7 +938,7 @@ func (s *WorkItemService) UploadAttachment(ctx context.Context, info *model.Auth
 		ID:          attachmentID,
 		WorkItemID:  item.ID,
 		UploaderID:  info.UserID,
-		Filename:    input.Filename,
+		Filename:    safeFilename,
 		ContentType: input.ContentType,
 		SizeBytes:   input.Size,
 		StorageKey:  storageKey,

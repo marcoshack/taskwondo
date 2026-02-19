@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -992,10 +994,7 @@ func (h *WorkItemHandler) UploadAttachment(w http.ResponseWriter, r *http.Reques
 
 	comment := r.FormValue("comment")
 
-	contentType := header.Header.Get("Content-Type")
-	if contentType == "" {
-		contentType = "application/octet-stream"
-	}
+	contentType := sanitizeContentType(header.Header.Get("Content-Type"))
 
 	attachment, err := h.items.UploadAttachment(r.Context(), info, projectKey, itemNumber, service.CreateAttachmentInput{
 		Filename:    header.Filename,
@@ -1069,8 +1068,8 @@ func (h *WorkItemHandler) DownloadAttachment(w http.ResponseWriter, r *http.Requ
 	}
 	defer reader.Close()
 
-	w.Header().Set("Content-Type", attachment.ContentType)
-	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, attachment.Filename))
+	w.Header().Set("Content-Type", safeDownloadContentType(attachment.ContentType))
+	w.Header().Set("Content-Disposition", safeContentDisposition(attachment.Filename))
 	w.Header().Set("Content-Length", strconv.FormatInt(attachment.SizeBytes, 10))
 	w.WriteHeader(http.StatusOK)
 
@@ -1169,4 +1168,69 @@ func handleWorkItemError(w http.ResponseWriter, r *http.Request, err error, logM
 
 	log.Ctx(r.Context()).Error().Err(err).Msg(logMsg)
 	writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+}
+
+// dangerousContentTypes are MIME types that browsers may execute as code.
+var dangerousContentTypes = []string{
+	"text/html",
+	"text/javascript",
+	"application/javascript",
+	"application/xhtml+xml",
+	"image/svg+xml",
+}
+
+// safeDownloadPrefixes are Content-Type prefixes considered safe for inline display.
+var safeDownloadPrefixes = []string{
+	"image/",
+	"audio/",
+	"video/",
+	"text/plain",
+	"application/pdf",
+}
+
+// sanitizeContentType returns a safe content type for storage.
+// Dangerous types that browsers could execute are replaced with application/octet-stream.
+func sanitizeContentType(ct string) string {
+	if ct == "" {
+		return "application/octet-stream"
+	}
+	mediaType, _, _ := mime.ParseMediaType(ct)
+	if mediaType == "" {
+		return "application/octet-stream"
+	}
+	lower := strings.ToLower(mediaType)
+	for _, dangerous := range dangerousContentTypes {
+		if lower == dangerous {
+			return "application/octet-stream"
+		}
+	}
+	return ct
+}
+
+// safeDownloadContentType returns a content type safe for browser download.
+// Types not in the safe allowlist are forced to application/octet-stream.
+func safeDownloadContentType(ct string) string {
+	lower := strings.ToLower(ct)
+	for _, prefix := range safeDownloadPrefixes {
+		if strings.HasPrefix(lower, prefix) {
+			return ct
+		}
+	}
+	return "application/octet-stream"
+}
+
+// safeContentDisposition builds a sanitized Content-Disposition header value.
+func safeContentDisposition(filename string) string {
+	safe := filepath.Base(filename)
+	safe = strings.Map(func(r rune) rune {
+		switch r {
+		case '"', '\\', '\r', '\n':
+			return '_'
+		}
+		return r
+	}, safe)
+	if safe == "" || safe == "." || safe == ".." {
+		safe = "download"
+	}
+	return mime.FormatMediaType("attachment", map[string]string{"filename": safe})
 }

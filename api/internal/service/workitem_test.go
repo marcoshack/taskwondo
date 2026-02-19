@@ -1623,3 +1623,818 @@ func TestListEvents_VisibilityFilter(t *testing.T) {
 		}
 	}
 }
+
+// --- Update branch tests ---
+
+func TestUpdateWorkItem_Description(t *testing.T) {
+	svc, _, _, projectRepo, memberRepo := newTestWorkItemService()
+	info := userAuthInfo()
+	setupProjectWithMember(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
+
+	created, err := svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	desc := "New description"
+	updated, err := svc.Update(context.Background(), info, "TEST", created.ItemNumber, UpdateWorkItemInput{
+		Description: &desc,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated.Description == nil || *updated.Description != "New description" {
+		t.Fatalf("expected description 'New description', got %v", updated.Description)
+	}
+}
+
+func TestUpdateWorkItem_EmptyTitle(t *testing.T) {
+	svc, _, _, projectRepo, memberRepo := newTestWorkItemService()
+	info := userAuthInfo()
+	setupProjectWithMember(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
+
+	created, err := svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	empty := "   "
+	_, err = svc.Update(context.Background(), info, "TEST", created.ItemNumber, UpdateWorkItemInput{
+		Title: &empty,
+	})
+	if err == nil {
+		t.Fatal("expected error for empty title")
+	}
+}
+
+func TestUpdateWorkItem_InvalidType(t *testing.T) {
+	svc, _, _, projectRepo, memberRepo := newTestWorkItemService()
+	info := userAuthInfo()
+	setupProjectWithMember(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
+
+	created, err := svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	badType := "invalid_type"
+	_, err = svc.Update(context.Background(), info, "TEST", created.ItemNumber, UpdateWorkItemInput{
+		Type: &badType,
+	})
+	if err == nil {
+		t.Fatal("expected error for invalid type")
+	}
+}
+
+func TestUpdateWorkItem_InvalidVisibility(t *testing.T) {
+	svc, _, _, projectRepo, memberRepo := newTestWorkItemService()
+	info := userAuthInfo()
+	setupProjectWithMember(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
+
+	created, err := svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	badVis := "secret"
+	_, err = svc.Update(context.Background(), info, "TEST", created.ItemNumber, UpdateWorkItemInput{
+		Visibility: &badVis,
+	})
+	if err == nil {
+		t.Fatal("expected error for invalid visibility")
+	}
+}
+
+func TestUpdateWorkItem_ChangeType(t *testing.T) {
+	svc, _, _, projectRepo, memberRepo := newTestWorkItemService()
+	info := userAuthInfo()
+	setupProjectWithMember(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
+
+	created, err := svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	newType := model.WorkItemTypeBug
+	updated, err := svc.Update(context.Background(), info, "TEST", created.ItemNumber, UpdateWorkItemInput{
+		Type: &newType,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated.Type != model.WorkItemTypeBug {
+		t.Fatalf("expected type 'bug', got %s", updated.Type)
+	}
+}
+
+func TestUpdateWorkItem_ChangeVisibility(t *testing.T) {
+	svc, _, _, projectRepo, memberRepo := newTestWorkItemService()
+	info := userAuthInfo()
+	setupProjectWithMember(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
+
+	created, err := svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	newVis := model.VisibilityPublic
+	updated, err := svc.Update(context.Background(), info, "TEST", created.ItemNumber, UpdateWorkItemInput{
+		Visibility: &newVis,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated.Visibility != model.VisibilityPublic {
+		t.Fatalf("expected visibility 'public', got %s", updated.Visibility)
+	}
+}
+
+func TestUpdateWorkItem_AssignAndClear(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	assignee := userAuthInfo()
+	project := setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleOwner)
+	s.memberRepo.Add(context.Background(), &model.ProjectMember{
+		ID:        uuid.New(),
+		ProjectID: project.ID,
+		UserID:    assignee.UserID,
+		Role:      model.ProjectRoleMember,
+	})
+
+	created, err := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Assign
+	updated, err := s.svc.Update(context.Background(), info, "TEST", created.ItemNumber, UpdateWorkItemInput{
+		AssigneeID: &assignee.UserID,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated.AssigneeID == nil || *updated.AssigneeID != assignee.UserID {
+		t.Fatal("expected assignee to be set")
+	}
+
+	// Clear
+	updated, err = s.svc.Update(context.Background(), info, "TEST", created.ItemNumber, UpdateWorkItemInput{
+		ClearAssignee: true,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated.AssigneeID != nil {
+		t.Fatal("expected assignee to be cleared")
+	}
+}
+
+func TestUpdateWorkItem_AssignNonMemberDenied(t *testing.T) {
+	svc, _, _, projectRepo, memberRepo := newTestWorkItemService()
+	info := userAuthInfo()
+	setupProjectWithMember(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
+
+	created, err := svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	nonMember := uuid.New()
+	_, err = svc.Update(context.Background(), info, "TEST", created.ItemNumber, UpdateWorkItemInput{
+		AssigneeID: &nonMember,
+	})
+	if err == nil {
+		t.Fatal("expected error for assigning non-member")
+	}
+}
+
+func TestUpdateWorkItem_Labels(t *testing.T) {
+	svc, _, _, projectRepo, memberRepo := newTestWorkItemService()
+	info := userAuthInfo()
+	setupProjectWithMember(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
+
+	created, err := svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	labels := []string{"frontend", "urgent"}
+	updated, err := svc.Update(context.Background(), info, "TEST", created.ItemNumber, UpdateWorkItemInput{
+		Labels: &labels,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(updated.Labels) != 2 {
+		t.Fatalf("expected 2 labels, got %d", len(updated.Labels))
+	}
+}
+
+func TestUpdateWorkItem_DueDateSetAndClear(t *testing.T) {
+	svc, _, _, projectRepo, memberRepo := newTestWorkItemService()
+	info := userAuthInfo()
+	setupProjectWithMember(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
+
+	created, err := svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Set due date
+	due := time.Date(2026, 3, 15, 0, 0, 0, 0, time.UTC)
+	updated, err := svc.Update(context.Background(), info, "TEST", created.ItemNumber, UpdateWorkItemInput{
+		DueDate: &due,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated.DueDate == nil {
+		t.Fatal("expected due date to be set")
+	}
+
+	// Clear due date
+	updated, err = svc.Update(context.Background(), info, "TEST", created.ItemNumber, UpdateWorkItemInput{
+		ClearDueDate: true,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated.DueDate != nil {
+		t.Fatal("expected due date to be cleared")
+	}
+}
+
+func TestUpdateWorkItem_QueueAndMilestone(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	project := setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleOwner)
+
+	queue := &model.Queue{ID: uuid.New(), ProjectID: project.ID, Name: "Support", QueueType: "support"}
+	s.queueRepo.Create(context.Background(), queue)
+
+	milestone := &model.Milestone{ID: uuid.New(), ProjectID: project.ID, Name: "v1.0", Status: "open"}
+	s.milestoneRepo.Create(context.Background(), milestone)
+
+	created, err := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Set queue and milestone
+	updated, err := s.svc.Update(context.Background(), info, "TEST", created.ItemNumber, UpdateWorkItemInput{
+		QueueID:     &queue.ID,
+		MilestoneID: &milestone.ID,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated.QueueID == nil || *updated.QueueID != queue.ID {
+		t.Fatal("expected queue to be set")
+	}
+	if updated.MilestoneID == nil || *updated.MilestoneID != milestone.ID {
+		t.Fatal("expected milestone to be set")
+	}
+
+	// Clear both
+	updated, err = s.svc.Update(context.Background(), info, "TEST", created.ItemNumber, UpdateWorkItemInput{
+		ClearQueue:     true,
+		ClearMilestone: true,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated.QueueID != nil {
+		t.Fatal("expected queue to be cleared")
+	}
+	if updated.MilestoneID != nil {
+		t.Fatal("expected milestone to be cleared")
+	}
+}
+
+func TestUpdateWorkItem_QueueWrongProject(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleOwner)
+
+	otherProjectID := uuid.New()
+	queue := &model.Queue{ID: uuid.New(), ProjectID: otherProjectID, Name: "Other", QueueType: "support"}
+	s.queueRepo.Create(context.Background(), queue)
+
+	created, err := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = s.svc.Update(context.Background(), info, "TEST", created.ItemNumber, UpdateWorkItemInput{
+		QueueID: &queue.ID,
+	})
+	if err == nil {
+		t.Fatal("expected error for queue from wrong project")
+	}
+}
+
+func TestUpdateWorkItem_MilestoneWrongProject(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleOwner)
+
+	otherProjectID := uuid.New()
+	milestone := &model.Milestone{ID: uuid.New(), ProjectID: otherProjectID, Name: "Other", Status: "open"}
+	s.milestoneRepo.Create(context.Background(), milestone)
+
+	created, err := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = s.svc.Update(context.Background(), info, "TEST", created.ItemNumber, UpdateWorkItemInput{
+		MilestoneID: &milestone.ID,
+	})
+	if err == nil {
+		t.Fatal("expected error for milestone from wrong project")
+	}
+}
+
+func TestUpdateWorkItem_CustomFields(t *testing.T) {
+	svc, _, _, projectRepo, memberRepo := newTestWorkItemService()
+	info := userAuthInfo()
+	setupProjectWithMember(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
+
+	created, err := svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fields := map[string]interface{}{"severity": "high", "component": "auth"}
+	updated, err := svc.Update(context.Background(), info, "TEST", created.ItemNumber, UpdateWorkItemInput{
+		CustomFields: fields,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated.CustomFields["severity"] != "high" {
+		t.Fatalf("expected custom field severity=high, got %v", updated.CustomFields["severity"])
+	}
+}
+
+// --- Attachment tests ---
+
+func TestUploadAttachment_Success(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleOwner)
+
+	item, err := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	data := bytes.NewReader([]byte("hello world"))
+	attachment, err := s.svc.UploadAttachment(context.Background(), info, "TEST", item.ItemNumber, CreateAttachmentInput{
+		Filename:    "test.txt",
+		ContentType: "text/plain",
+		Size:        11,
+		Comment:     "test file",
+		Reader:      data,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if attachment.Filename != "test.txt" {
+		t.Fatalf("expected filename 'test.txt', got %s", attachment.Filename)
+	}
+	if attachment.SizeBytes != 11 {
+		t.Fatalf("expected size 11, got %d", attachment.SizeBytes)
+	}
+	if attachment.Comment != "test file" {
+		t.Fatalf("expected comment 'test file', got %s", attachment.Comment)
+	}
+}
+
+func TestUploadAttachment_PathTraversal(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleOwner)
+
+	item, err := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	data := bytes.NewReader([]byte("content"))
+	attachment, err := s.svc.UploadAttachment(context.Background(), info, "TEST", item.ItemNumber, CreateAttachmentInput{
+		Filename:    "../../../etc/passwd",
+		ContentType: "text/plain",
+		Size:        7,
+		Reader:      data,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// filepath.Base should strip traversal
+	if attachment.Filename != "passwd" {
+		t.Fatalf("expected sanitized filename 'passwd', got %s", attachment.Filename)
+	}
+}
+
+func TestUploadAttachment_EmptyFilename(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleOwner)
+
+	item, err := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = s.svc.UploadAttachment(context.Background(), info, "TEST", item.ItemNumber, CreateAttachmentInput{
+		Filename: "",
+		Size:     10,
+		Reader:   bytes.NewReader([]byte("content")),
+	})
+	if err == nil {
+		t.Fatal("expected error for empty filename")
+	}
+}
+
+func TestUploadAttachment_DotDotFilename(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleOwner)
+
+	item, err := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = s.svc.UploadAttachment(context.Background(), info, "TEST", item.ItemNumber, CreateAttachmentInput{
+		Filename: "..",
+		Size:     10,
+		Reader:   bytes.NewReader([]byte("content")),
+	})
+	if err == nil {
+		t.Fatal("expected error for '..' filename")
+	}
+}
+
+func TestUploadAttachment_EmptyFile(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleOwner)
+
+	item, err := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = s.svc.UploadAttachment(context.Background(), info, "TEST", item.ItemNumber, CreateAttachmentInput{
+		Filename: "empty.txt",
+		Size:     0,
+		Reader:   bytes.NewReader(nil),
+	})
+	if err == nil {
+		t.Fatal("expected error for empty file")
+	}
+}
+
+func TestUploadAttachment_TooLarge(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleOwner)
+
+	item, err := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = s.svc.UploadAttachment(context.Background(), info, "TEST", item.ItemNumber, CreateAttachmentInput{
+		Filename: "huge.bin",
+		Size:     100 * 1024 * 1024, // 100MB > 50MB limit
+		Reader:   bytes.NewReader(nil),
+	})
+	if err == nil {
+		t.Fatal("expected error for oversized file")
+	}
+}
+
+func TestListAttachments_Success(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleOwner)
+
+	item, err := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Upload two files
+	for _, name := range []string{"a.txt", "b.txt"} {
+		_, err := s.svc.UploadAttachment(context.Background(), info, "TEST", item.ItemNumber, CreateAttachmentInput{
+			Filename: name, ContentType: "text/plain", Size: 5, Reader: bytes.NewReader([]byte("hello")),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	attachments, err := s.svc.ListAttachments(context.Background(), info, "TEST", item.ItemNumber)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(attachments) != 2 {
+		t.Fatalf("expected 2 attachments, got %d", len(attachments))
+	}
+}
+
+func TestGetAttachmentFile_Success(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleOwner)
+
+	item, err := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fileContent := []byte("file contents here")
+	uploaded, err := s.svc.UploadAttachment(context.Background(), info, "TEST", item.ItemNumber, CreateAttachmentInput{
+		Filename: "doc.txt", ContentType: "text/plain", Size: int64(len(fileContent)), Reader: bytes.NewReader(fileContent),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	attachment, reader, err := s.svc.GetAttachmentFile(context.Background(), info, "TEST", item.ItemNumber, uploaded.ID)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	defer reader.Close()
+
+	if attachment.Filename != "doc.txt" {
+		t.Fatalf("expected filename 'doc.txt', got %s", attachment.Filename)
+	}
+	data, _ := io.ReadAll(reader)
+	if string(data) != "file contents here" {
+		t.Fatalf("expected file content 'file contents here', got %s", string(data))
+	}
+}
+
+func TestGetAttachmentFile_WrongWorkItem(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleOwner)
+
+	item1, _ := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+	item2, _ := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+
+	uploaded, _ := s.svc.UploadAttachment(context.Background(), info, "TEST", item1.ItemNumber, CreateAttachmentInput{
+		Filename: "file.txt", ContentType: "text/plain", Size: 5, Reader: bytes.NewReader([]byte("hello")),
+	})
+
+	// Try to access item1's attachment via item2's URL
+	_, _, err := s.svc.GetAttachmentFile(context.Background(), info, "TEST", item2.ItemNumber, uploaded.ID)
+	if err != model.ErrNotFound {
+		t.Fatalf("expected ErrNotFound, got %v", err)
+	}
+}
+
+func TestDeleteAttachment_UploaderCanDelete(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleOwner)
+
+	item, _ := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+	uploaded, _ := s.svc.UploadAttachment(context.Background(), info, "TEST", item.ItemNumber, CreateAttachmentInput{
+		Filename: "file.txt", ContentType: "text/plain", Size: 5, Reader: bytes.NewReader([]byte("hello")),
+	})
+
+	err := s.svc.DeleteAttachment(context.Background(), info, "TEST", item.ItemNumber, uploaded.ID)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestDeleteAttachment_NonUploaderMemberDenied(t *testing.T) {
+	s := newTestWorkItemSetup()
+	owner := userAuthInfo()
+	member := userAuthInfo()
+	project := setupProjectWithMember(t, s.projectRepo, s.memberRepo, owner, model.ProjectRoleOwner)
+	s.memberRepo.Add(context.Background(), &model.ProjectMember{
+		ID:        uuid.New(),
+		ProjectID: project.ID,
+		UserID:    member.UserID,
+		Role:      model.ProjectRoleMember,
+	})
+
+	item, _ := s.svc.Create(context.Background(), owner, "TEST", validCreateInput())
+	uploaded, _ := s.svc.UploadAttachment(context.Background(), owner, "TEST", item.ItemNumber, CreateAttachmentInput{
+		Filename: "file.txt", ContentType: "text/plain", Size: 5, Reader: bytes.NewReader([]byte("hello")),
+	})
+
+	// Member who didn't upload should be denied
+	err := s.svc.DeleteAttachment(context.Background(), member, "TEST", item.ItemNumber, uploaded.ID)
+	if err != model.ErrForbidden {
+		t.Fatalf("expected ErrForbidden, got %v", err)
+	}
+}
+
+func TestDeleteAttachment_WrongWorkItem(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleOwner)
+
+	item1, _ := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+	item2, _ := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+
+	uploaded, _ := s.svc.UploadAttachment(context.Background(), info, "TEST", item1.ItemNumber, CreateAttachmentInput{
+		Filename: "file.txt", ContentType: "text/plain", Size: 5, Reader: bytes.NewReader([]byte("hello")),
+	})
+
+	err := s.svc.DeleteAttachment(context.Background(), info, "TEST", item2.ItemNumber, uploaded.ID)
+	if err != model.ErrNotFound {
+		t.Fatalf("expected ErrNotFound, got %v", err)
+	}
+}
+
+func TestUpdateAttachmentComment_Success(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleOwner)
+
+	item, _ := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+	uploaded, _ := s.svc.UploadAttachment(context.Background(), info, "TEST", item.ItemNumber, CreateAttachmentInput{
+		Filename: "file.txt", ContentType: "text/plain", Size: 5, Comment: "old", Reader: bytes.NewReader([]byte("hello")),
+	})
+
+	updated, err := s.svc.UpdateAttachmentComment(context.Background(), info, "TEST", item.ItemNumber, uploaded.ID, "new comment")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated.Comment != "new comment" {
+		t.Fatalf("expected comment 'new comment', got %s", updated.Comment)
+	}
+}
+
+func TestUpdateAttachmentComment_NonUploaderMemberDenied(t *testing.T) {
+	s := newTestWorkItemSetup()
+	owner := userAuthInfo()
+	member := userAuthInfo()
+	project := setupProjectWithMember(t, s.projectRepo, s.memberRepo, owner, model.ProjectRoleOwner)
+	s.memberRepo.Add(context.Background(), &model.ProjectMember{
+		ID:        uuid.New(),
+		ProjectID: project.ID,
+		UserID:    member.UserID,
+		Role:      model.ProjectRoleMember,
+	})
+
+	item, _ := s.svc.Create(context.Background(), owner, "TEST", validCreateInput())
+	uploaded, _ := s.svc.UploadAttachment(context.Background(), owner, "TEST", item.ItemNumber, CreateAttachmentInput{
+		Filename: "file.txt", ContentType: "text/plain", Size: 5, Reader: bytes.NewReader([]byte("hello")),
+	})
+
+	_, err := s.svc.UpdateAttachmentComment(context.Background(), member, "TEST", item.ItemNumber, uploaded.ID, "hacked")
+	if err != model.ErrForbidden {
+		t.Fatalf("expected ErrForbidden, got %v", err)
+	}
+}
+
+func TestUpdateAttachmentComment_WrongWorkItem(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleOwner)
+
+	item1, _ := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+	item2, _ := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+
+	uploaded, _ := s.svc.UploadAttachment(context.Background(), info, "TEST", item1.ItemNumber, CreateAttachmentInput{
+		Filename: "file.txt", ContentType: "text/plain", Size: 5, Reader: bytes.NewReader([]byte("hello")),
+	})
+
+	_, err := s.svc.UpdateAttachmentComment(context.Background(), info, "TEST", item2.ItemNumber, uploaded.ID, "wrong")
+	if err != model.ErrNotFound {
+		t.Fatalf("expected ErrNotFound, got %v", err)
+	}
+}
+
+// --- Admin bypass tests ---
+
+func TestListComments_AdminBypass(t *testing.T) {
+	s := newTestWorkItemSetup()
+	owner := userAuthInfo()
+	admin := adminAuthInfo()
+	setupProjectWithMember(t, s.projectRepo, s.memberRepo, owner, model.ProjectRoleOwner)
+
+	item, _ := s.svc.Create(context.Background(), owner, "TEST", validCreateInput())
+	s.svc.CreateComment(context.Background(), owner, "TEST", item.ItemNumber, CreateCommentInput{
+		Body: "a comment", Visibility: model.VisibilityInternal,
+	})
+
+	comments, err := s.svc.ListComments(context.Background(), admin, "TEST", item.ItemNumber, "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(comments) != 1 {
+		t.Fatalf("expected 1 comment, got %d", len(comments))
+	}
+}
+
+func TestListAttachments_AdminBypass(t *testing.T) {
+	s := newTestWorkItemSetup()
+	owner := userAuthInfo()
+	admin := adminAuthInfo()
+	setupProjectWithMember(t, s.projectRepo, s.memberRepo, owner, model.ProjectRoleOwner)
+
+	item, _ := s.svc.Create(context.Background(), owner, "TEST", validCreateInput())
+	s.svc.UploadAttachment(context.Background(), owner, "TEST", item.ItemNumber, CreateAttachmentInput{
+		Filename: "f.txt", ContentType: "text/plain", Size: 5, Reader: bytes.NewReader([]byte("hello")),
+	})
+
+	attachments, err := s.svc.ListAttachments(context.Background(), admin, "TEST", item.ItemNumber)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(attachments) != 1 {
+		t.Fatalf("expected 1 attachment, got %d", len(attachments))
+	}
+}
+
+func TestListEvents_AdminBypass(t *testing.T) {
+	s := newTestWorkItemSetup()
+	owner := userAuthInfo()
+	admin := adminAuthInfo()
+	setupProjectWithMember(t, s.projectRepo, s.memberRepo, owner, model.ProjectRoleOwner)
+
+	item, _ := s.svc.Create(context.Background(), owner, "TEST", validCreateInput())
+
+	events, err := s.svc.ListEvents(context.Background(), admin, "TEST", item.ItemNumber, "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// At least the "created" event
+	if len(events) < 1 {
+		t.Fatal("expected at least 1 event")
+	}
+}
+
+func TestDeleteComment_AdminCanDelete(t *testing.T) {
+	s := newTestWorkItemSetup()
+	owner := userAuthInfo()
+	admin := adminAuthInfo()
+	project := setupProjectWithMember(t, s.projectRepo, s.memberRepo, owner, model.ProjectRoleOwner)
+	s.memberRepo.Add(context.Background(), &model.ProjectMember{
+		ID: uuid.New(), ProjectID: project.ID, UserID: admin.UserID, Role: model.ProjectRoleAdmin,
+	})
+
+	item, _ := s.svc.Create(context.Background(), owner, "TEST", validCreateInput())
+	comment, _ := s.svc.CreateComment(context.Background(), owner, "TEST", item.ItemNumber, CreateCommentInput{
+		Body: "delete me", Visibility: model.VisibilityInternal,
+	})
+
+	err := s.svc.DeleteComment(context.Background(), admin, "TEST", item.ItemNumber, comment.ID)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestDeleteRelation_AdminCanDelete(t *testing.T) {
+	s := newTestWorkItemSetup()
+	owner := userAuthInfo()
+	admin := adminAuthInfo()
+	project := setupProjectWithMember(t, s.projectRepo, s.memberRepo, owner, model.ProjectRoleOwner)
+	s.memberRepo.Add(context.Background(), &model.ProjectMember{
+		ID: uuid.New(), ProjectID: project.ID, UserID: admin.UserID, Role: model.ProjectRoleAdmin,
+	})
+
+	item1, _ := s.svc.Create(context.Background(), owner, "TEST", validCreateInput())
+	item2, _ := s.svc.Create(context.Background(), owner, "TEST", validCreateInput())
+
+	rel, err := s.svc.CreateRelation(context.Background(), owner, "TEST", item1.ItemNumber, CreateRelationInput{
+		TargetDisplayID: fmt.Sprintf("TEST-%d", item2.ItemNumber),
+		RelationType:    model.RelationBlocks,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = s.svc.DeleteRelation(context.Background(), admin, "TEST", item1.ItemNumber, rel.ID)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestWorkItemList_AdminBypass(t *testing.T) {
+	s := newTestWorkItemSetup()
+	owner := userAuthInfo()
+	admin := adminAuthInfo()
+	setupProjectWithMember(t, s.projectRepo, s.memberRepo, owner, model.ProjectRoleOwner)
+
+	s.svc.Create(context.Background(), owner, "TEST", validCreateInput())
+
+	list, err := s.svc.List(context.Background(), admin, "TEST", &model.WorkItemFilter{Limit: 50})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if list.Total < 1 {
+		t.Fatal("expected at least 1 item")
+	}
+}
