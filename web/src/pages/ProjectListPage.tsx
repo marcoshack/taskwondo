@@ -80,7 +80,7 @@ export function ProjectListPage() {
     {
       key: 'key',
       header: t('projects.table.key'),
-      width: '80px',
+      width: '110px',
       render: (p) => (
         <span className="inline-flex items-center justify-center rounded-md bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-2.5 py-0.5 text-sm font-bold min-w-[4.5rem]">
           {p.key}
