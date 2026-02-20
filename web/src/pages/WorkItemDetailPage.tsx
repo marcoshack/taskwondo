@@ -22,8 +22,9 @@ import { useMentionAutocomplete } from '@/hooks/useMentionAutocomplete'
 import { MentionModal } from '@/components/ui/MentionModal'
 import { TypeBadge } from '@/components/workitems/TypeBadge'
 import { StatusBadge } from '@/components/workitems/StatusBadge'
+import { PriorityBadge } from '@/components/workitems/PriorityBadge'
 import { CopyButton } from '@/components/ui/CopyButton'
-import { Settings2 } from 'lucide-react'
+import { Settings2, User, Calendar, Lock, Unlock, Globe } from 'lucide-react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { getMarkdownComponents } from '@/components/ui/markdownComponents'
@@ -207,6 +208,7 @@ export function WorkItemDetailPage() {
               <span className="text-base sm:text-sm font-bold sm:font-normal font-mono text-gray-600 sm:text-gray-400 dark:text-gray-400 dark:sm:text-gray-500">{item.display_id}</span>
               <TypeBadge type={item.type} />
               <StatusBadge status={item.status} statuses={statuses} />
+              <PriorityBadge priority={item.priority} />
               <CopyButton
                 text={[
                   '---',
@@ -230,6 +232,31 @@ export function WorkItemDetailPage() {
                 <Settings2 className="h-5 w-5" />
               </button>
             </div>
+
+            {/* Mobile metadata line */}
+            <button
+              onClick={() => setShowProperties(true)}
+              className="sm:hidden flex items-center gap-4 text-xs text-gray-400 dark:text-gray-500 mb-2 w-full text-left"
+            >
+              <span className="inline-flex items-center gap-1">
+                <User className="h-3.5 w-3.5" />
+                {item.assignee_id
+                  ? members?.find(m => m.user_id === item.assignee_id)?.display_name ?? t('userPicker.unassigned')
+                  : t('userPicker.unassigned')}
+              </span>
+              {item.due_date && (
+                <span className="inline-flex items-center gap-1">
+                  <Calendar className="h-3.5 w-3.5" />
+                  {item.due_date}
+                </span>
+              )}
+              <span className="inline-flex items-center gap-1">
+                {item.visibility === 'internal' && <Lock className="h-3.5 w-3.5" />}
+                {item.visibility === 'portal' && <Unlock className="h-3.5 w-3.5" />}
+                {item.visibility === 'public' && <Globe className="h-3.5 w-3.5" />}
+                {t(`workitems.visibilities.${item.visibility}`)}
+              </span>
+            </button>
 
             {/* Title */}
             {editingTitle ? (
