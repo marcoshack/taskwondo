@@ -332,7 +332,10 @@ export function WorkItemListPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('workitems.title')}</h2>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 shrink-0">
+          <span className="sm:hidden">{t('workitems.titleShort')}</span>
+          <span className="hidden sm:inline">{t('workitems.title')}</span>
+        </h2>
         <div className="flex items-center gap-2">
           <div className="inline-flex rounded-md shadow-sm">
             <button

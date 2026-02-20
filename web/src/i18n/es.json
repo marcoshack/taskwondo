@@ -134,6 +134,7 @@
   "sidebar.menu": "Menú",
 
   "workitems.title": "Ítems de Trabajo",
+  "workitems.titleShort": "Ítems",
   "workitems.new": "Nuevo Ítem",
   "workitems.newTitle": "Nuevo Ítem",
   "workitems.notFound": "Ítem no encontrado.",

@@ -134,6 +134,7 @@
   "sidebar.menu": "القائمة",
 
   "workitems.title": "عناصر العمل",
+  "workitems.titleShort": "عناصر",
   "workitems.new": "عنصر جديد",
   "workitems.newTitle": "عنصر جديد",
   "workitems.notFound": "العنصر غير موجود.",
