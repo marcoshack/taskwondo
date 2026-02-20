@@ -1,5 +1,17 @@
-import { useQuery } from '@tanstack/react-query'
-import { listWorkflows, getWorkflow, getTransitionsMap } from '@/api/workflows'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import {
+  listWorkflows,
+  getWorkflow,
+  getTransitionsMap,
+  listProjectWorkflows,
+  getProjectWorkflow,
+  createProjectWorkflow,
+  updateProjectWorkflow,
+  deleteProjectWorkflow,
+  listAvailableStatuses,
+  type CreateWorkflowInput,
+  type UpdateWorkflowInput,
+} from '@/api/workflows'
 import { useProject, useTypeWorkflows } from './useProjects'
 
 export function useWorkflows() {
@@ -55,4 +67,64 @@ export function useProjectWorkflow(projectKey: string, workItemType?: string) {
     statuses: workflowQuery.data?.statuses ?? [],
     transitionsMap: transitionsQuery.data,
   }
+}
+
+// --- Project workflow hooks ---
+
+export function useProjectWorkflows(projectKey: string) {
+  return useQuery({
+    queryKey: ['projects', projectKey, 'workflows'],
+    queryFn: () => listProjectWorkflows(projectKey),
+    enabled: !!projectKey,
+  })
+}
+
+export function useProjectWorkflowDetail(projectKey: string, workflowId: string) {
+  return useQuery({
+    queryKey: ['projects', projectKey, 'workflows', workflowId],
+    queryFn: () => getProjectWorkflow(projectKey, workflowId),
+    enabled: !!projectKey && !!workflowId,
+  })
+}
+
+export function useCreateProjectWorkflow(projectKey: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: CreateWorkflowInput) => createProjectWorkflow(projectKey, input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['projects', projectKey, 'workflows'] })
+      qc.invalidateQueries({ queryKey: ['workflows'] })
+    },
+  })
+}
+
+export function useUpdateProjectWorkflow(projectKey: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ workflowId, input }: { workflowId: string; input: UpdateWorkflowInput }) =>
+      updateProjectWorkflow(projectKey, workflowId, input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['projects', projectKey, 'workflows'] })
+      qc.invalidateQueries({ queryKey: ['workflows'] })
+    },
+  })
+}
+
+export function useDeleteProjectWorkflow(projectKey: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (workflowId: string) => deleteProjectWorkflow(projectKey, workflowId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['projects', projectKey, 'workflows'] })
+      qc.invalidateQueries({ queryKey: ['workflows'] })
+    },
+  })
+}
+
+export function useAvailableStatuses(projectKey: string) {
+  return useQuery({
+    queryKey: ['projects', projectKey, 'workflows', 'statuses'],
+    queryFn: () => listAvailableStatuses(projectKey),
+    enabled: !!projectKey,
+  })
 }

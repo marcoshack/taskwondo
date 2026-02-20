@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
@@ -15,13 +16,19 @@ type WorkflowRepository interface {
 	Create(ctx context.Context, wf *model.Workflow) error
 	GetByID(ctx context.Context, id uuid.UUID) (*model.Workflow, error)
 	List(ctx context.Context) ([]model.Workflow, error)
+	ListByProject(ctx context.Context, projectID uuid.UUID) ([]model.Workflow, error)
+	ListProjectOnly(ctx context.Context, projectID uuid.UUID) ([]model.Workflow, error)
 	Update(ctx context.Context, wf *model.Workflow) error
+	ReplaceStatusesAndTransitions(ctx context.Context, wf *model.Workflow) error
+	Delete(ctx context.Context, id uuid.UUID) error
 	GetDefaultByName(ctx context.Context, name string) (*model.Workflow, error)
+	ListDefaultNames(ctx context.Context) ([]string, error)
 	ValidateTransition(ctx context.Context, workflowID uuid.UUID, fromStatus, toStatus string) (bool, error)
 	GetInitialStatus(ctx context.Context, workflowID uuid.UUID) (*model.WorkflowStatus, error)
 	GetStatusCategory(ctx context.Context, workflowID uuid.UUID, statusName string) (string, error)
 	ListTransitions(ctx context.Context, workflowID uuid.UUID) ([]model.WorkflowTransition, error)
 	ListStatuses(ctx context.Context, workflowID uuid.UUID) ([]model.WorkflowStatus, error)
+	ListAllStatuses(ctx context.Context) ([]model.WorkflowStatus, error)
 }
 
 // WorkflowService handles workflow business logic.
@@ -34,7 +41,7 @@ func NewWorkflowService(workflows WorkflowRepository) *WorkflowService {
 	return &WorkflowService{workflows: workflows}
 }
 
-// List returns all workflows.
+// List returns all system-wide workflows.
 func (s *WorkflowService) List(ctx context.Context) ([]model.Workflow, error) {
 	workflows, err := s.workflows.List(ctx)
 	if err != nil {
@@ -53,13 +60,37 @@ func (s *WorkflowService) List(ctx context.Context) ([]model.Workflow, error) {
 	return workflows, nil
 }
 
+// ListByProject returns all workflows available to a project (system-wide + project-specific).
+func (s *WorkflowService) ListByProject(ctx context.Context, projectID uuid.UUID) ([]model.Workflow, error) {
+	workflows, err := s.workflows.ListByProject(ctx, projectID)
+	if err != nil {
+		return nil, fmt.Errorf("listing project workflows: %w", err)
+	}
+
+	for i := range workflows {
+		statuses, err := s.workflows.ListStatuses(ctx, workflows[i].ID)
+		if err != nil {
+			return nil, fmt.Errorf("loading statuses for workflow %s: %w", workflows[i].ID, err)
+		}
+		workflows[i].Statuses = statuses
+	}
+
+	return workflows, nil
+}
+
 // GetByID returns a workflow with all statuses and transitions.
 func (s *WorkflowService) GetByID(ctx context.Context, id uuid.UUID) (*model.Workflow, error) {
 	return s.workflows.GetByID(ctx, id)
 }
 
+// ListAllStatuses returns all distinct statuses from system workflows.
+func (s *WorkflowService) ListAllStatuses(ctx context.Context) ([]model.WorkflowStatus, error) {
+	return s.workflows.ListAllStatuses(ctx)
+}
+
 // CreateWorkflowInput holds input for creating a custom workflow.
 type CreateWorkflowInput struct {
+	ProjectID   *uuid.UUID
 	Name        string
 	Description *string
 	Statuses    []model.WorkflowStatus
@@ -73,6 +104,11 @@ func (s *WorkflowService) Create(ctx context.Context, input CreateWorkflowInput)
 	}
 	if len(input.Statuses) == 0 {
 		return nil, fmt.Errorf("at least one status is required: %w", model.ErrValidation)
+	}
+
+	// Validate name does not conflict with default workflow names
+	if err := s.validateNameNotDefault(ctx, input.Name); err != nil {
+		return nil, err
 	}
 
 	// Validate at least one todo-category status at position 0
@@ -105,6 +141,7 @@ func (s *WorkflowService) Create(ctx context.Context, input CreateWorkflowInput)
 
 	wf := &model.Workflow{
 		ID:          uuid.New(),
+		ProjectID:   input.ProjectID,
 		Name:        input.Name,
 		Description: input.Description,
 		IsDefault:   false,
@@ -128,6 +165,8 @@ func (s *WorkflowService) Create(ctx context.Context, input CreateWorkflowInput)
 type UpdateWorkflowInput struct {
 	Name        *string
 	Description *string
+	Statuses    []model.WorkflowStatus
+	Transitions []model.WorkflowTransition
 }
 
 // Update modifies a workflow's name and/or description.
@@ -141,17 +180,50 @@ func (s *WorkflowService) Update(ctx context.Context, id uuid.UUID, input Update
 		if *input.Name == "" {
 			return nil, fmt.Errorf("name cannot be empty: %w", model.ErrValidation)
 		}
+		// Validate name does not conflict with default workflow names (unless it's the same workflow)
+		if !wf.IsDefault {
+			if err := s.validateNameNotDefault(ctx, *input.Name); err != nil {
+				return nil, err
+			}
+		}
 		wf.Name = *input.Name
 	}
 	if input.Description != nil {
 		wf.Description = input.Description
 	}
 
-	if err := s.workflows.Update(ctx, wf); err != nil {
-		return nil, fmt.Errorf("updating workflow: %w", err)
+	// If statuses and transitions are provided, do a full replace
+	if input.Statuses != nil {
+		wf.Statuses = input.Statuses
+		wf.Transitions = input.Transitions
+
+		if err := s.workflows.ReplaceStatusesAndTransitions(ctx, wf); err != nil {
+			return nil, fmt.Errorf("replacing workflow statuses and transitions: %w", err)
+		}
+	} else {
+		if err := s.workflows.Update(ctx, wf); err != nil {
+			return nil, fmt.Errorf("updating workflow: %w", err)
+		}
 	}
 
 	return s.workflows.GetByID(ctx, id)
+}
+
+// DeleteProjectWorkflow deletes a project-scoped workflow.
+func (s *WorkflowService) DeleteProjectWorkflow(ctx context.Context, id uuid.UUID) error {
+	wf, err := s.workflows.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	if wf.IsDefault {
+		return fmt.Errorf("cannot delete a system workflow: %w", model.ErrForbidden)
+	}
+	if wf.ProjectID == nil {
+		return fmt.Errorf("cannot delete a system workflow: %w", model.ErrForbidden)
+	}
+
+	return s.workflows.Delete(ctx, id)
 }
 
 // GetTransitionsMap returns transitions grouped by from_status.
@@ -189,6 +261,20 @@ func (s *WorkflowService) SeedDefaultWorkflows(ctx context.Context) error {
 	}
 	if err := s.seedTicketWorkflow(ctx); err != nil {
 		return fmt.Errorf("seeding ticket workflow: %w", err)
+	}
+	return nil
+}
+
+// validateNameNotDefault checks that the given name doesn't match any default workflow name (case-insensitive).
+func (s *WorkflowService) validateNameNotDefault(ctx context.Context, name string) error {
+	defaultNames, err := s.workflows.ListDefaultNames(ctx)
+	if err != nil {
+		return fmt.Errorf("checking default workflow names: %w", err)
+	}
+	for _, dn := range defaultNames {
+		if strings.EqualFold(name, dn) {
+			return fmt.Errorf("workflow name %q conflicts with a system workflow: %w", name, model.ErrValidation)
+		}
 	}
 	return nil
 }

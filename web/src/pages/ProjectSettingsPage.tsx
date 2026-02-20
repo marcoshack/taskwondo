@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Trans, useTranslation } from 'react-i18next'
 import { useProject, useUpdateProject, useDeleteProject, useMembers, useAddMember, useUpdateMemberRole, useRemoveMember, useTypeWorkflows, useUpdateTypeWorkflow } from '@/hooks/useProjects'
-import { useWorkflows } from '@/hooks/useWorkflows'
+import { useProjectWorkflows } from '@/hooks/useWorkflows'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -35,13 +35,12 @@ export function ProjectSettingsPage() {
   const updateRoleMutation = useUpdateMemberRole(projectKey ?? '')
   const removeMemberMutation = useRemoveMember(projectKey ?? '')
   const { data: typeWorkflows } = useTypeWorkflows(projectKey ?? '')
-  const { data: allWorkflows } = useWorkflows()
+  const { data: allWorkflows } = useProjectWorkflows(projectKey ?? '')
   const updateTypeWorkflowMutation = useUpdateTypeWorkflow(projectKey ?? '')
 
   const [name, setName] = useState<string | null>(null)
   const [description, setDescription] = useState<string | null>(null)
   const [saveError, setSaveError] = useState('')
-  const [saveSuccess, setSaveSuccess] = useState(false)
 
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
@@ -50,13 +49,17 @@ export function ProjectSettingsPage() {
   const [selectedUser, setSelectedUser] = useState<UserSearchResult | null>(null)
   const [newMemberRole, setNewMemberRole] = useState('member')
   const [memberError, setMemberError] = useState('')
-  const [memberSuccess, setMemberSuccess] = useState('')
   const [removeTarget, setRemoveTarget] = useState<{ userId: string; name: string } | null>(null)
-  const [workflowSuccess, setWorkflowSuccess] = useState('')
   const [workflowError, setWorkflowError] = useState('')
   const [complexityInput, setComplexityInput] = useState<string | null>(null)
-  const [complexitySuccess, setComplexitySuccess] = useState('')
   const [complexityError, setComplexityError] = useState('')
+
+  // Inline checkmark indicators (keyed by section/item identifier)
+  const [saved, setSaved] = useState<Record<string, boolean>>({})
+  function showSaved(key: string) {
+    setSaved((prev) => ({ ...prev, [key]: true }))
+    setTimeout(() => setSaved((prev) => ({ ...prev, [key]: false })), 3000)
+  }
 
   if (isLoading || !project) {
     return (
@@ -82,7 +85,6 @@ export function ProjectSettingsPage() {
   function handleSave(e: React.FormEvent) {
     e.preventDefault()
     setSaveError('')
-    setSaveSuccess(false)
 
     if (!currentName.trim()) {
       setSaveError(t('projects.settings.nameRequired'))
@@ -99,10 +101,9 @@ export function ProjectSettingsPage() {
 
     updateMutation.mutate(input, {
       onSuccess: () => {
-        setSaveSuccess(true)
         setName(null)
         setDescription(null)
-        setTimeout(() => setSaveSuccess(false), 3000)
+        showSaved('general')
       },
       onError: (err) => {
         const axiosErr = err as AxiosError<{ error?: { message?: string } }>
@@ -127,16 +128,14 @@ export function ProjectSettingsPage() {
   function handleAddMember() {
     if (!selectedUser) return
     setMemberError('')
-    setMemberSuccess('')
 
     addMemberMutation.mutate(
       { user_id: selectedUser.id, role: newMemberRole },
       {
         onSuccess: () => {
-          setMemberSuccess(t('projects.settings.memberAdded'))
           setSelectedUser(null)
           setNewMemberRole('member')
-          setTimeout(() => setMemberSuccess(''), 3000)
+          showSaved('addMember')
         },
         onError: (err) => {
           const axiosErr = err as AxiosError<{ error?: { message?: string } }>
@@ -148,14 +147,12 @@ export function ProjectSettingsPage() {
 
   function handleRoleChange(userId: string, role: string) {
     setMemberError('')
-    setMemberSuccess('')
 
     updateRoleMutation.mutate(
       { userId, role },
       {
         onSuccess: () => {
-          setMemberSuccess(t('projects.settings.memberRoleUpdated'))
-          setTimeout(() => setMemberSuccess(''), 3000)
+          showSaved(`role:${userId}`)
         },
         onError: (err) => {
           const axiosErr = err as AxiosError<{ error?: { message?: string } }>
@@ -168,13 +165,10 @@ export function ProjectSettingsPage() {
   function handleRemoveMember() {
     if (!removeTarget) return
     setMemberError('')
-    setMemberSuccess('')
 
     removeMemberMutation.mutate(removeTarget.userId, {
       onSuccess: () => {
-        setMemberSuccess(t('projects.settings.memberRemoved'))
         setRemoveTarget(null)
-        setTimeout(() => setMemberSuccess(''), 3000)
         if (removeTarget.userId === user?.id) {
           navigate('/projects', { replace: true })
         }
@@ -221,12 +215,16 @@ export function ProjectSettingsPage() {
         </div>
 
         {saveError && <p className="text-sm text-red-600 dark:text-red-400">{saveError}</p>}
-        {saveSuccess && <p className="text-sm text-green-600 dark:text-green-400">{t('projects.settings.updateSuccess')}</p>}
 
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           <Button type="submit" disabled={!hasChanges || updateMutation.isPending}>
             {updateMutation.isPending ? t('common.saving') : t('projects.settings.saveChanges')}
           </Button>
+          {saved.general && (
+            <svg className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          )}
         </div>
       </form>
 
@@ -237,7 +235,6 @@ export function ProjectSettingsPage() {
       </div>
 
       {memberError && <p className="text-sm text-red-600 dark:text-red-400">{memberError}</p>}
-      {memberSuccess && <p className="text-sm text-green-600 dark:text-green-400">{memberSuccess}</p>}
 
       {/* Add member form */}
       {canManageMembers && (
@@ -279,6 +276,11 @@ export function ProjectSettingsPage() {
             >
               {addMemberMutation.isPending ? t('common.saving') : t('common.add')}
             </Button>
+            {saved.addMember && (
+              <svg className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            )}
           </div>
         </div>
       )}
@@ -304,17 +306,24 @@ export function ProjectSettingsPage() {
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   {canManageMembers && !memberIsOwner ? (
-                    <select
-                      className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      value={member.role}
-                      onChange={(e) => handleRoleChange(member.user_id, e.target.value)}
-                      disabled={updateRoleMutation.isPending}
-                    >
-                      {isOwner && <option value="owner">{t('projects.settings.roles.owner')}</option>}
-                      {ROLE_OPTIONS.map((role) => (
-                        <option key={role} value={role}>{t(`projects.settings.roles.${role}`)}</option>
-                      ))}
-                    </select>
+                    <>
+                      {saved[`role:${member.user_id}`] && (
+                        <svg className="h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                      <select
+                        className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        value={member.role}
+                        onChange={(e) => handleRoleChange(member.user_id, e.target.value)}
+                        disabled={updateRoleMutation.isPending}
+                      >
+                        {isOwner && <option value="owner">{t('projects.settings.roles.owner')}</option>}
+                        {ROLE_OPTIONS.map((role) => (
+                          <option key={role} value={role}>{t(`projects.settings.roles.${role}`)}</option>
+                        ))}
+                      </select>
+                    </>
                   ) : (
                     <Badge color={ROLE_BADGE_COLORS[member.role] ?? 'gray'}>
                       {t(`projects.settings.roles.${member.role}`)}
@@ -345,7 +354,6 @@ export function ProjectSettingsPage() {
           </div>
 
           {workflowError && <p className="text-sm text-red-600 dark:text-red-400">{workflowError}</p>}
-          {workflowSuccess && <p className="text-sm text-green-600 dark:text-green-400">{workflowSuccess}</p>}
 
           <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
             {['task', 'ticket', 'bug', 'feedback', 'epic'].map((itemType) => {
@@ -355,33 +363,38 @@ export function ProjectSettingsPage() {
                   <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                     {t(`workitems.types.${itemType}`)}
                   </span>
-                  <select
-                    className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    value={mapping?.workflow_id ?? ''}
-                    onChange={(e) => {
-                      setWorkflowError('')
-                      setWorkflowSuccess('')
-                      updateTypeWorkflowMutation.mutate(
-                        { workItemType: itemType, workflowId: e.target.value },
-                        {
-                          onSuccess: () => {
-                            setWorkflowSuccess(t('projects.settings.workflowUpdated'))
-                            setTimeout(() => setWorkflowSuccess(''), 3000)
+                  <div className="flex items-center gap-2">
+                    {saved[`wf:${itemType}`] && (
+                      <svg className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                    <select
+                      className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      value={mapping?.workflow_id ?? ''}
+                      onChange={(e) => {
+                        setWorkflowError('')
+                        updateTypeWorkflowMutation.mutate(
+                          { workItemType: itemType, workflowId: e.target.value },
+                          {
+                            onSuccess: () => {
+                              showSaved(`wf:${itemType}`)
+                            },
+                            onError: (err) => {
+                              const axiosErr = err as AxiosError<{ error?: { message?: string } }>
+                              setWorkflowError(axiosErr.response?.data?.error?.message ?? t('projects.settings.workflowUpdateError'))
+                            },
                           },
-                          onError: (err) => {
-                            const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-                            setWorkflowError(axiosErr.response?.data?.error?.message ?? t('projects.settings.workflowUpdateError'))
-                          },
-                        },
-                      )
-                    }}
-                    disabled={updateTypeWorkflowMutation.isPending}
-                  >
-                    {!mapping && <option value="">{t('projects.settings.selectWorkflow')}</option>}
-                    {allWorkflows?.map((wf) => (
-                      <option key={wf.id} value={wf.id}>{wf.name}</option>
-                    ))}
-                  </select>
+                        )
+                      }}
+                      disabled={updateTypeWorkflowMutation.isPending}
+                    >
+                      {!mapping && <option value="">{t('projects.settings.selectWorkflow')}</option>}
+                      {allWorkflows?.map((wf) => (
+                        <option key={wf.id} value={wf.id}>{wf.name}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               )
             })}
@@ -398,7 +411,6 @@ export function ProjectSettingsPage() {
           </div>
 
           {complexityError && <p className="text-sm text-red-600 dark:text-red-400">{complexityError}</p>}
-          {complexitySuccess && <p className="text-sm text-green-600 dark:text-green-400">{complexitySuccess}</p>}
 
           <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3">
             <Input
@@ -407,12 +419,11 @@ export function ProjectSettingsPage() {
               onChange={(e) => setComplexityInput(e.target.value)}
               placeholder={t('projects.settings.complexityPlaceholder')}
             />
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
               <Button
                 disabled={complexityInput === null || updateMutation.isPending}
                 onClick={() => {
                   setComplexityError('')
-                  setComplexitySuccess('')
                   const values = complexityInput
                     ? complexityInput.split(',').map((v) => v.trim()).filter(Boolean).map(Number)
                     : []
@@ -422,9 +433,8 @@ export function ProjectSettingsPage() {
                   }
                   updateMutation.mutate({ allowed_complexity_values: values }, {
                     onSuccess: () => {
-                      setComplexitySuccess(t('projects.settings.complexitySaved'))
                       setComplexityInput(null)
-                      setTimeout(() => setComplexitySuccess(''), 3000)
+                      showSaved('complexity')
                     },
                     onError: (err) => {
                       const axiosErr = err as AxiosError<{ error?: { message?: string } }>
@@ -441,12 +451,10 @@ export function ProjectSettingsPage() {
                   disabled={updateMutation.isPending}
                   onClick={() => {
                     setComplexityError('')
-                    setComplexitySuccess('')
                     updateMutation.mutate({ allowed_complexity_values: [] }, {
                       onSuccess: () => {
-                        setComplexitySuccess(t('projects.settings.complexityCleared'))
                         setComplexityInput(null)
-                        setTimeout(() => setComplexitySuccess(''), 3000)
+                        showSaved('complexity')
                       },
                       onError: (err) => {
                         const axiosErr = err as AxiosError<{ error?: { message?: string } }>
@@ -457,6 +465,11 @@ export function ProjectSettingsPage() {
                 >
                   {t('projects.settings.complexityClear')}
                 </Button>
+              )}
+              {saved.complexity && (
+                <svg className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
               )}
             </div>
           </div>

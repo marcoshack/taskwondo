@@ -17,6 +17,7 @@ const (
 // Workflow defines a set of statuses and transitions for work items.
 type Workflow struct {
 	ID          uuid.UUID            `json:"id"`
+	ProjectID   *uuid.UUID           `json:"project_id,omitempty"`
 	Name        string               `json:"name"`
 	Description *string              `json:"description,omitempty"`
 	IsDefault   bool                 `json:"is_default"`

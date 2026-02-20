@@ -20,6 +20,7 @@ export interface WorkflowTransition {
 
 export interface Workflow {
   id: string
+  project_id?: string | null
   name: string
   description: string | null
   is_default: boolean
@@ -30,6 +31,20 @@ export interface Workflow {
 
 export interface WorkflowDetail extends Workflow {
   transitions: WorkflowTransition[]
+}
+
+export interface CreateWorkflowInput {
+  name: string
+  description?: string | null
+  statuses: Omit<WorkflowStatus, 'id'>[]
+  transitions: Omit<WorkflowTransition, 'id'>[]
+}
+
+export interface UpdateWorkflowInput {
+  name?: string
+  description?: string | null
+  statuses?: Omit<WorkflowStatus, 'id'>[]
+  transitions?: Omit<WorkflowTransition, 'id'>[]
 }
 
 // --- API Functions ---
@@ -50,5 +65,36 @@ export async function getWorkflow(workflowId: string) {
 
 export async function getTransitionsMap(workflowId: string) {
   const res = await api.get<DataResponse<Record<string, WorkflowTransition[]>>>(`/workflows/${workflowId}/transitions`)
+  return res.data.data
+}
+
+// --- Project Workflow API Functions ---
+
+export async function listProjectWorkflows(projectKey: string) {
+  const res = await api.get<DataResponse<Workflow[]>>(`/projects/${projectKey}/workflows`)
+  return res.data.data
+}
+
+export async function getProjectWorkflow(projectKey: string, workflowId: string) {
+  const res = await api.get<DataResponse<WorkflowDetail>>(`/projects/${projectKey}/workflows/${workflowId}`)
+  return res.data.data
+}
+
+export async function createProjectWorkflow(projectKey: string, input: CreateWorkflowInput) {
+  const res = await api.post<DataResponse<WorkflowDetail>>(`/projects/${projectKey}/workflows`, input)
+  return res.data.data
+}
+
+export async function updateProjectWorkflow(projectKey: string, workflowId: string, input: UpdateWorkflowInput) {
+  const res = await api.patch<DataResponse<WorkflowDetail>>(`/projects/${projectKey}/workflows/${workflowId}`, input)
+  return res.data.data
+}
+
+export async function deleteProjectWorkflow(projectKey: string, workflowId: string) {
+  await api.delete(`/projects/${projectKey}/workflows/${workflowId}`)
+}
+
+export async function listAvailableStatuses(projectKey: string) {
+  const res = await api.get<DataResponse<WorkflowStatus[]>>(`/projects/${projectKey}/workflows/statuses`)
   return res.data.data
 }

@@ -626,6 +626,21 @@ func (s *ProjectService) requireRole(ctx context.Context, info *model.AuthInfo, 
 	return model.ErrForbidden
 }
 
+// RequireProjectRole gets a project by key and checks that the user has one of the allowed roles.
+// This is a public method for use by other handlers that need project-level authorization.
+func (s *ProjectService) RequireProjectRole(ctx context.Context, info *model.AuthInfo, projectKey string, allowedRoles ...string) (*model.Project, error) {
+	project, err := s.projects.GetByKey(ctx, projectKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.requireRole(ctx, info, project.ID, allowedRoles...); err != nil {
+		return nil, err
+	}
+
+	return project, nil
+}
+
 func isValidProjectRole(role string) bool {
 	switch role {
 	case model.ProjectRoleOwner, model.ProjectRoleAdmin, model.ProjectRoleMember, model.ProjectRoleViewer:

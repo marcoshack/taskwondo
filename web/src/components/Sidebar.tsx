@@ -8,6 +8,7 @@ import {
   ClipboardList,
   Inbox,
   Target,
+  Route,
   Settings,
   PanelLeftClose,
   PanelLeftOpen,
@@ -35,6 +36,7 @@ export function Sidebar({ projectKey }: SidebarProps) {
     { to: 'items', label: t('sidebar.items'), icon: ClipboardList, end: false },
     { to: 'queues', label: t('sidebar.queues'), icon: Inbox, end: false },
     { to: 'milestones', label: t('sidebar.milestones'), icon: Target, end: false },
+    { to: 'workflows', label: t('sidebar.workflows'), icon: Route, end: false },
     { to: 'settings', label: t('sidebar.settings'), icon: Settings, end: false },
   ]
 
