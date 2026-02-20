@@ -261,7 +261,7 @@ function ProjectSwitcherModal({
                     : 'hover:bg-gray-100 dark:hover:bg-gray-700'
                 }`}
               >
-                <span className="inline-flex items-center rounded-md bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 text-xs font-bold shrink-0">
+                <span className="inline-flex items-center justify-center rounded-md bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 text-xs font-bold shrink-0 min-w-[4rem]">
                   {p.key}
                 </span>
                 <span className="text-gray-900 dark:text-gray-100 font-medium truncate">{p.name}</span>
