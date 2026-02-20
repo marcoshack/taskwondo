@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"testing"
@@ -13,6 +14,43 @@ import (
 	"github.com/marcoshack/taskwondo/internal/model"
 	"github.com/marcoshack/taskwondo/internal/storage"
 )
+
+// --- Mock project type workflow repository ---
+
+type mockTypeWorkflowRepo struct {
+	mappings map[string]*model.ProjectTypeWorkflow // key: "projectID:type"
+}
+
+func newMockTypeWorkflowRepo() *mockTypeWorkflowRepo {
+	return &mockTypeWorkflowRepo{mappings: make(map[string]*model.ProjectTypeWorkflow)}
+}
+
+func (m *mockTypeWorkflowRepo) ListByProject(_ context.Context, projectID uuid.UUID) ([]model.ProjectTypeWorkflow, error) {
+	var result []model.ProjectTypeWorkflow
+	for _, tw := range m.mappings {
+		if tw.ProjectID == projectID {
+			result = append(result, *tw)
+		}
+	}
+	return result, nil
+}
+
+func (m *mockTypeWorkflowRepo) GetByProjectAndType(_ context.Context, projectID uuid.UUID, workItemType string) (*model.ProjectTypeWorkflow, error) {
+	key := projectID.String() + ":" + workItemType
+	if tw, ok := m.mappings[key]; ok {
+		return tw, nil
+	}
+	return nil, model.ErrNotFound
+}
+
+func (m *mockTypeWorkflowRepo) Upsert(_ context.Context, mapping *model.ProjectTypeWorkflow) error {
+	now := time.Now()
+	mapping.CreatedAt = now
+	mapping.UpdatedAt = now
+	key := mapping.ProjectID.String() + ":" + mapping.WorkItemType
+	m.mappings[key] = mapping
+	return nil
+}
 
 // --- Mock workflow repository ---
 
@@ -613,17 +651,19 @@ func (m *mockStorage) Delete(_ context.Context, key string) error {
 // --- Test helpers ---
 
 type testWorkItemSetup struct {
-	svc           *WorkItemService
-	itemRepo      *mockWorkItemRepo
-	eventRepo     *mockWorkItemEventRepo
-	commentRepo   *mockCommentRepo
-	relationRepo  *mockRelationRepo
-	projectRepo   *mockProjectRepo
-	memberRepo    *mockProjectMemberRepo
-	queueRepo     *mockQueueRepo
-	milestoneRepo *mockMilestoneRepo
-	attachRepo    *mockAttachmentRepo
-	storage       *mockStorage
+	svc              *WorkItemService
+	itemRepo         *mockWorkItemRepo
+	eventRepo        *mockWorkItemEventRepo
+	commentRepo      *mockCommentRepo
+	relationRepo     *mockRelationRepo
+	projectRepo      *mockProjectRepo
+	memberRepo       *mockProjectMemberRepo
+	workflowRepo     *mockWorkflowRepo
+	typeWorkflowRepo *mockTypeWorkflowRepo
+	queueRepo        *mockQueueRepo
+	milestoneRepo    *mockMilestoneRepo
+	attachRepo       *mockAttachmentRepo
+	storage          *mockStorage
 }
 
 func newTestWorkItemService() (*WorkItemService, *mockWorkItemRepo, *mockWorkItemEventRepo, *mockProjectRepo, *mockProjectMemberRepo) {
@@ -639,23 +679,26 @@ func newTestWorkItemSetup() *testWorkItemSetup {
 	projectRepo := newMockProjectRepo()
 	memberRepo := newMockProjectMemberRepo()
 	workflowRepo := newMockWorkflowRepo()
+	typeWorkflowRepo := newMockTypeWorkflowRepo()
 	queueRepo := newMockQueueRepo()
 	milestoneRepo := newMockMilestoneRepo()
 	attachRepo := newMockAttachmentRepo()
 	store := newMockStorage()
-	svc := NewWorkItemService(itemRepo, eventRepo, commentRepo, relationRepo, attachRepo, projectRepo, memberRepo, workflowRepo, queueRepo, milestoneRepo, store, 50*1024*1024)
+	svc := NewWorkItemService(itemRepo, eventRepo, commentRepo, relationRepo, attachRepo, projectRepo, memberRepo, workflowRepo, typeWorkflowRepo, queueRepo, milestoneRepo, store, 50*1024*1024)
 	return &testWorkItemSetup{
-		svc:           svc,
-		itemRepo:      itemRepo,
-		eventRepo:     eventRepo,
-		commentRepo:   commentRepo,
-		relationRepo:  relationRepo,
-		projectRepo:   projectRepo,
-		memberRepo:    memberRepo,
-		queueRepo:     queueRepo,
-		milestoneRepo: milestoneRepo,
-		attachRepo:    attachRepo,
-		storage:       store,
+		svc:              svc,
+		itemRepo:         itemRepo,
+		eventRepo:        eventRepo,
+		commentRepo:      commentRepo,
+		relationRepo:     relationRepo,
+		projectRepo:      projectRepo,
+		memberRepo:       memberRepo,
+		workflowRepo:     workflowRepo,
+		typeWorkflowRepo: typeWorkflowRepo,
+		queueRepo:        queueRepo,
+		milestoneRepo:    milestoneRepo,
+		attachRepo:       attachRepo,
+		storage:          store,
 	}
 }
 
@@ -2436,5 +2479,320 @@ func TestWorkItemList_AdminBypass(t *testing.T) {
 	}
 	if list.Total < 1 {
 		t.Fatal("expected at least 1 item")
+	}
+}
+
+// --- Type-Workflow Resolution Tests ---
+
+func createTestWorkflow(name string, statuses []model.WorkflowStatus, transitions []model.WorkflowTransition) *model.Workflow {
+	return &model.Workflow{
+		ID:          uuid.New(),
+		Name:        name,
+		IsDefault:   true,
+		Statuses:    statuses,
+		Transitions: transitions,
+	}
+}
+
+func TestCreate_UsesTypeSpecificWorkflow(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	project := setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleOwner)
+
+	// Create two different workflows
+	taskWf := createTestWorkflow("Task Workflow", []model.WorkflowStatus{
+		{Name: "open", DisplayName: "Open", Category: model.CategoryTodo, Position: 0},
+		{Name: "done", DisplayName: "Done", Category: model.CategoryDone, Position: 1},
+	}, []model.WorkflowTransition{
+		{FromStatus: "open", ToStatus: "done"},
+	})
+	ticketWf := createTestWorkflow("Ticket Workflow", []model.WorkflowStatus{
+		{Name: "new", DisplayName: "New", Category: model.CategoryTodo, Position: 0},
+		{Name: "resolved", DisplayName: "Resolved", Category: model.CategoryDone, Position: 1},
+	}, []model.WorkflowTransition{
+		{FromStatus: "new", ToStatus: "resolved"},
+	})
+
+	s.workflowRepo.Create(context.Background(), taskWf)
+	s.workflowRepo.Create(context.Background(), ticketWf)
+
+	// Map task → taskWf, ticket → ticketWf
+	ctx := context.Background()
+	s.typeWorkflowRepo.Upsert(ctx, &model.ProjectTypeWorkflow{
+		ID: uuid.New(), ProjectID: project.ID,
+		WorkItemType: model.WorkItemTypeTask, WorkflowID: taskWf.ID,
+	})
+	s.typeWorkflowRepo.Upsert(ctx, &model.ProjectTypeWorkflow{
+		ID: uuid.New(), ProjectID: project.ID,
+		WorkItemType: model.WorkItemTypeTicket, WorkflowID: ticketWf.ID,
+	})
+
+	// Create a task — should get "open" as initial status
+	taskItem, err := s.svc.Create(ctx, info, "TEST", CreateWorkItemInput{
+		Type: model.WorkItemTypeTask, Title: "A task", Priority: model.PriorityMedium,
+	})
+	if err != nil {
+		t.Fatalf("expected no error creating task, got %v", err)
+	}
+	if taskItem.Status != "open" {
+		t.Errorf("expected task initial status 'open', got %q", taskItem.Status)
+	}
+
+	// Create a ticket — should get "new" as initial status
+	ticketItem, err := s.svc.Create(ctx, info, "TEST", CreateWorkItemInput{
+		Type: model.WorkItemTypeTicket, Title: "A ticket", Priority: model.PriorityMedium,
+	})
+	if err != nil {
+		t.Fatalf("expected no error creating ticket, got %v", err)
+	}
+	if ticketItem.Status != "new" {
+		t.Errorf("expected ticket initial status 'new', got %q", ticketItem.Status)
+	}
+}
+
+func TestCreate_FallsBackToDefaultWorkflow(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	project := setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleOwner)
+
+	// Create a workflow and set it as project default, but don't add type mappings
+	wf := createTestWorkflow("Default Workflow", []model.WorkflowStatus{
+		{Name: "pending", DisplayName: "Pending", Category: model.CategoryTodo, Position: 0},
+		{Name: "closed", DisplayName: "Closed", Category: model.CategoryDone, Position: 1},
+	}, nil)
+	s.workflowRepo.Create(context.Background(), wf)
+	project.DefaultWorkflowID = &wf.ID
+	s.projectRepo.Update(context.Background(), project)
+
+	// Create an item — no type mapping exists, should fall back to project default
+	item, err := s.svc.Create(context.Background(), info, "TEST", CreateWorkItemInput{
+		Type: model.WorkItemTypeTask, Title: "Fallback test", Priority: model.PriorityMedium,
+	})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if item.Status != "pending" {
+		t.Errorf("expected fallback initial status 'pending', got %q", item.Status)
+	}
+}
+
+func TestUpdate_TypeChange_StatusCompatible(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	project := setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleOwner)
+	ctx := context.Background()
+
+	// Both workflows share "open" status
+	taskWf := createTestWorkflow("Task Workflow", []model.WorkflowStatus{
+		{Name: "open", DisplayName: "Open", Category: model.CategoryTodo, Position: 0},
+		{Name: "done", DisplayName: "Done", Category: model.CategoryDone, Position: 1},
+	}, []model.WorkflowTransition{{FromStatus: "open", ToStatus: "done"}})
+	bugWf := createTestWorkflow("Bug Workflow", []model.WorkflowStatus{
+		{Name: "open", DisplayName: "Open", Category: model.CategoryTodo, Position: 0},
+		{Name: "fixed", DisplayName: "Fixed", Category: model.CategoryDone, Position: 1},
+	}, []model.WorkflowTransition{{FromStatus: "open", ToStatus: "fixed"}})
+
+	s.workflowRepo.Create(ctx, taskWf)
+	s.workflowRepo.Create(ctx, bugWf)
+	s.typeWorkflowRepo.Upsert(ctx, &model.ProjectTypeWorkflow{
+		ID: uuid.New(), ProjectID: project.ID,
+		WorkItemType: model.WorkItemTypeTask, WorkflowID: taskWf.ID,
+	})
+	s.typeWorkflowRepo.Upsert(ctx, &model.ProjectTypeWorkflow{
+		ID: uuid.New(), ProjectID: project.ID,
+		WorkItemType: model.WorkItemTypeBug, WorkflowID: bugWf.ID,
+	})
+
+	// Create as task with "open"
+	item, _ := s.svc.Create(ctx, info, "TEST", CreateWorkItemInput{
+		Type: model.WorkItemTypeTask, Title: "Type change test", Priority: model.PriorityMedium,
+	})
+
+	// Change type to bug — "open" exists in both, should succeed
+	newType := model.WorkItemTypeBug
+	updated, err := s.svc.Update(ctx, info, "TEST", item.ItemNumber, UpdateWorkItemInput{Type: &newType})
+	if err != nil {
+		t.Fatalf("expected no error for compatible type change, got %v", err)
+	}
+	if updated.Type != model.WorkItemTypeBug {
+		t.Errorf("expected type 'bug', got %q", updated.Type)
+	}
+}
+
+func TestUpdate_TypeChange_StatusIncompatible(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	project := setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleOwner)
+	ctx := context.Background()
+
+	// Task workflow has "open", ticket workflow does NOT
+	taskWf := createTestWorkflow("Task Workflow", []model.WorkflowStatus{
+		{Name: "open", DisplayName: "Open", Category: model.CategoryTodo, Position: 0},
+		{Name: "done", DisplayName: "Done", Category: model.CategoryDone, Position: 1},
+	}, []model.WorkflowTransition{{FromStatus: "open", ToStatus: "done"}})
+	ticketWf := createTestWorkflow("Ticket Workflow", []model.WorkflowStatus{
+		{Name: "new", DisplayName: "New", Category: model.CategoryTodo, Position: 0},
+		{Name: "resolved", DisplayName: "Resolved", Category: model.CategoryDone, Position: 1},
+	}, []model.WorkflowTransition{{FromStatus: "new", ToStatus: "resolved"}})
+
+	s.workflowRepo.Create(ctx, taskWf)
+	s.workflowRepo.Create(ctx, ticketWf)
+	s.typeWorkflowRepo.Upsert(ctx, &model.ProjectTypeWorkflow{
+		ID: uuid.New(), ProjectID: project.ID,
+		WorkItemType: model.WorkItemTypeTask, WorkflowID: taskWf.ID,
+	})
+	s.typeWorkflowRepo.Upsert(ctx, &model.ProjectTypeWorkflow{
+		ID: uuid.New(), ProjectID: project.ID,
+		WorkItemType: model.WorkItemTypeTicket, WorkflowID: ticketWf.ID,
+	})
+
+	// Create as task with "open"
+	item, _ := s.svc.Create(ctx, info, "TEST", CreateWorkItemInput{
+		Type: model.WorkItemTypeTask, Title: "Incompatible test", Priority: model.PriorityMedium,
+	})
+
+	// Change type to ticket — "open" doesn't exist in ticket workflow → ErrStatusIncompatible
+	newType := model.WorkItemTypeTicket
+	_, err := s.svc.Update(ctx, info, "TEST", item.ItemNumber, UpdateWorkItemInput{Type: &newType})
+	if err == nil {
+		t.Fatal("expected ErrStatusIncompatible, got nil")
+	}
+	if !errors.Is(err, model.ErrStatusIncompatible) {
+		t.Errorf("expected ErrStatusIncompatible, got %v", err)
+	}
+}
+
+func TestUpdate_TypeChange_WithNewStatus(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	project := setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleOwner)
+	ctx := context.Background()
+
+	taskWf := createTestWorkflow("Task Workflow", []model.WorkflowStatus{
+		{Name: "open", DisplayName: "Open", Category: model.CategoryTodo, Position: 0},
+		{Name: "done", DisplayName: "Done", Category: model.CategoryDone, Position: 1},
+	}, []model.WorkflowTransition{{FromStatus: "open", ToStatus: "done"}})
+	ticketWf := createTestWorkflow("Ticket Workflow", []model.WorkflowStatus{
+		{Name: "new", DisplayName: "New", Category: model.CategoryTodo, Position: 0},
+		{Name: "resolved", DisplayName: "Resolved", Category: model.CategoryDone, Position: 1},
+	}, []model.WorkflowTransition{{FromStatus: "new", ToStatus: "resolved"}})
+
+	s.workflowRepo.Create(ctx, taskWf)
+	s.workflowRepo.Create(ctx, ticketWf)
+	s.typeWorkflowRepo.Upsert(ctx, &model.ProjectTypeWorkflow{
+		ID: uuid.New(), ProjectID: project.ID,
+		WorkItemType: model.WorkItemTypeTask, WorkflowID: taskWf.ID,
+	})
+	s.typeWorkflowRepo.Upsert(ctx, &model.ProjectTypeWorkflow{
+		ID: uuid.New(), ProjectID: project.ID,
+		WorkItemType: model.WorkItemTypeTicket, WorkflowID: ticketWf.ID,
+	})
+
+	// Create as task with "open"
+	item, _ := s.svc.Create(ctx, info, "TEST", CreateWorkItemInput{
+		Type: model.WorkItemTypeTask, Title: "Type+status test", Priority: model.PriorityMedium,
+	})
+
+	// Change type to ticket AND provide a valid new status — should succeed
+	newType := model.WorkItemTypeTicket
+	newStatus := "new"
+	updated, err := s.svc.Update(ctx, info, "TEST", item.ItemNumber, UpdateWorkItemInput{
+		Type:   &newType,
+		Status: &newStatus,
+	})
+	if err != nil {
+		t.Fatalf("expected no error for type+status change, got %v", err)
+	}
+	if updated.Type != model.WorkItemTypeTicket {
+		t.Errorf("expected type 'ticket', got %q", updated.Type)
+	}
+	if updated.Status != "new" {
+		t.Errorf("expected status 'new', got %q", updated.Status)
+	}
+}
+
+func TestUpdate_StatusValidatedAgainstTypeWorkflow(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	project := setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleOwner)
+	ctx := context.Background()
+
+	wf := createTestWorkflow("Task Workflow", []model.WorkflowStatus{
+		{Name: "open", DisplayName: "Open", Category: model.CategoryTodo, Position: 0},
+		{Name: "done", DisplayName: "Done", Category: model.CategoryDone, Position: 1},
+	}, []model.WorkflowTransition{
+		{FromStatus: "open", ToStatus: "done"},
+	})
+
+	s.workflowRepo.Create(ctx, wf)
+	s.typeWorkflowRepo.Upsert(ctx, &model.ProjectTypeWorkflow{
+		ID: uuid.New(), ProjectID: project.ID,
+		WorkItemType: model.WorkItemTypeTask, WorkflowID: wf.ID,
+	})
+
+	item, _ := s.svc.Create(ctx, info, "TEST", CreateWorkItemInput{
+		Type: model.WorkItemTypeTask, Title: "Transition test", Priority: model.PriorityMedium,
+	})
+
+	// Valid transition: open → done
+	status := "done"
+	updated, err := s.svc.Update(ctx, info, "TEST", item.ItemNumber, UpdateWorkItemInput{Status: &status})
+	if err != nil {
+		t.Fatalf("expected no error for valid transition, got %v", err)
+	}
+	if updated.Status != "done" {
+		t.Errorf("expected status 'done', got %q", updated.Status)
+	}
+	if updated.ResolvedAt == nil {
+		t.Error("expected resolved_at to be set when transitioning to done")
+	}
+
+	// Invalid transition: done → open (not defined)
+	invalidStatus := "open"
+	_, err = s.svc.Update(ctx, info, "TEST", item.ItemNumber, UpdateWorkItemInput{Status: &invalidStatus})
+	if err == nil {
+		t.Fatal("expected error for invalid transition, got nil")
+	}
+	if !errors.Is(err, model.ErrInvalidTransition) {
+		t.Errorf("expected ErrInvalidTransition, got %v", err)
+	}
+}
+
+func TestResolveWorkflowID_Priority(t *testing.T) {
+	s := newTestWorkItemSetup()
+	ctx := context.Background()
+
+	projectID := uuid.New()
+	typeWfID := uuid.New()
+	fallbackID := uuid.New()
+
+	// Add a type-specific mapping
+	s.typeWorkflowRepo.Upsert(ctx, &model.ProjectTypeWorkflow{
+		ID: uuid.New(), ProjectID: projectID,
+		WorkItemType: model.WorkItemTypeTask, WorkflowID: typeWfID,
+	})
+
+	// Type-specific mapping should take priority
+	result, err := s.svc.resolveWorkflowID(ctx, projectID, model.WorkItemTypeTask, &fallbackID)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result != typeWfID {
+		t.Errorf("expected type-specific workflow %s, got %s", typeWfID, result)
+	}
+
+	// No mapping for bug → should fall back
+	result, err = s.svc.resolveWorkflowID(ctx, projectID, model.WorkItemTypeBug, &fallbackID)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result != fallbackID {
+		t.Errorf("expected fallback workflow %s, got %s", fallbackID, result)
+	}
+
+	// No mapping, no fallback → should return error
+	_, err = s.svc.resolveWorkflowID(ctx, projectID, model.WorkItemTypeBug, nil)
+	if err == nil {
+		t.Fatal("expected error when no mapping and no fallback")
 	}
 }

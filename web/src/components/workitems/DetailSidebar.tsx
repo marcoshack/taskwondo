@@ -1,16 +1,19 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Select } from '@/components/ui/Select'
 import { Input } from '@/components/ui/Input'
 import { UserPicker } from '@/components/ui/UserPicker'
 import type { WorkItem, UpdateWorkItemInput } from '@/api/workitems'
-import type { WorkflowStatus } from '@/api/workflows'
-import type { ProjectMember } from '@/api/projects'
+import type { WorkflowStatus, Workflow } from '@/api/workflows'
+import type { ProjectMember, ProjectTypeWorkflow } from '@/api/projects'
 
 interface DetailSidebarProps {
   item: WorkItem
   statuses: WorkflowStatus[]
   allowedTransitions: string[]
   members: ProjectMember[]
+  typeWorkflows?: ProjectTypeWorkflow[]
+  allWorkflows?: Workflow[]
   onUpdate: (input: UpdateWorkItemInput) => void
 }
 
@@ -18,26 +21,85 @@ const PRIORITIES = ['low', 'medium', 'high', 'critical']
 const TYPES = ['task', 'ticket', 'bug', 'feedback', 'epic']
 const VISIBILITIES = ['internal', 'portal', 'public']
 
-export function DetailSidebar({ item, statuses, allowedTransitions, members, onUpdate }: DetailSidebarProps) {
+export function DetailSidebar({ item, statuses, allowedTransitions, members, typeWorkflows, allWorkflows, onUpdate }: DetailSidebarProps) {
   const { t } = useTranslation()
-  const currentWs = statuses.find((s) => s.name === item.status)
-  const currentStatusDisplay = t(`workitems.statuses.${item.status}`, { defaultValue: currentWs?.display_name ?? item.status })
+  const [pendingType, setPendingType] = useState<string | null>(null)
+  const [statusWarning, setStatusWarning] = useState(false)
+
+  // Resolve statuses to show: either from pending type's workflow or current workflow
+  let displayStatuses = statuses
+  if (pendingType && typeWorkflows && allWorkflows) {
+    const mapping = typeWorkflows.find((tw) => tw.work_item_type === pendingType)
+    if (mapping) {
+      const wf = allWorkflows.find((w) => w.id === mapping.workflow_id)
+      if (wf) displayStatuses = wf.statuses
+    }
+  }
+
+  const currentWs = displayStatuses.find((s) => s.name === item.status)
+
+  function handleTypeChange(newType: string) {
+    if (newType === item.type) return
+
+    // Check if current status exists in the new type's workflow
+    if (typeWorkflows && allWorkflows) {
+      const mapping = typeWorkflows.find((tw) => tw.work_item_type === newType)
+      if (mapping) {
+        const wf = allWorkflows.find((w) => w.id === mapping.workflow_id)
+        if (wf) {
+          const statusExists = wf.statuses.some((s) => s.name === item.status)
+          if (!statusExists) {
+            setPendingType(newType)
+            setStatusWarning(true)
+            return
+          }
+        }
+      }
+    }
+
+    // Status is compatible — submit immediately
+    onUpdate({ type: newType })
+  }
+
+  function handleStatusChange(newStatus: string) {
+    if (!newStatus) return
+    if (pendingType) {
+      // Submit both type and status together
+      onUpdate({ type: pendingType, status: newStatus })
+      setPendingType(null)
+      setStatusWarning(false)
+    } else {
+      onUpdate({ status: newStatus })
+    }
+  }
+
+  // Build status options
+  const statusOptions = pendingType
+    ? [...displayStatuses].sort((a, b) => a.position - b.position)
+    : [
+        // Current status first, then allowed transitions
+        ...(currentWs ? [currentWs] : []),
+        ...displayStatuses.filter((s) => allowedTransitions.includes(s.name) && s.name !== item.status),
+      ]
 
   return (
     <div className="space-y-4">
       <Field label={t('workitems.form.status')}>
         <Select
-          value={item.status}
-          onChange={(e) => onUpdate({ status: e.target.value })}
+          value={pendingType ? '' : item.status}
+          onChange={(e) => handleStatusChange(e.target.value)}
+          className={statusWarning ? 'ring-2 ring-red-500 border-red-500' : ''}
         >
-          <option value={item.status}>{currentStatusDisplay}</option>
-          {allowedTransitions
-            .filter((tr) => tr !== item.status)
-            .map((tr) => {
-              const ws = statuses.find((s) => s.name === tr)
-              return <option key={tr} value={tr}>{t(`workitems.statuses.${tr}`, { defaultValue: ws?.display_name ?? tr })}</option>
-            })}
+          {pendingType && <option value="">{t('workitems.detail.selectStatus')}</option>}
+          {statusOptions.map((ws) => (
+            <option key={ws.name} value={ws.name}>
+              {t(`workitems.statuses.${ws.name}`, { defaultValue: ws.display_name ?? ws.name })}
+            </option>
+          ))}
         </Select>
+        {statusWarning && (
+          <p className="text-xs text-red-500 mt-1">{t('workitems.detail.statusIncompatible')}</p>
+        )}
       </Field>
 
       <Field label={t('workitems.form.priority')}>
@@ -47,7 +109,7 @@ export function DetailSidebar({ item, statuses, allowedTransitions, members, onU
       </Field>
 
       <Field label={t('workitems.form.type')}>
-        <Select value={item.type} onChange={(e) => onUpdate({ type: e.target.value })}>
+        <Select value={pendingType ?? item.type} onChange={(e) => handleTypeChange(e.target.value)}>
           {TYPES.map((tp) => <option key={tp} value={tp}>{t(`workitems.types.${tp}`)}</option>)}
         </Select>
       </Field>

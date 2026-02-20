@@ -119,6 +119,7 @@ func main() {
 	userSettingRepo := repository.NewUserSettingRepository(db)
 	attachmentRepo := repository.NewAttachmentRepository(db)
 	oauthAccountRepo := repository.NewOAuthAccountRepository(db)
+	typeWorkflowRepo := repository.NewProjectTypeWorkflowRepository(db)
 
 	// Initialize storage
 	store, err := storage.NewMinIOStorage(
@@ -135,11 +136,11 @@ func main() {
 		cfg.JWTSecret, cfg.JWTExpiry,
 		cfg.DiscordClientID, cfg.DiscordClientSecret, cfg.DiscordRedirectURI,
 	)
-	projectService := service.NewProjectService(projectRepo, projectMemberRepo, userRepo, workflowRepo)
+	projectService := service.NewProjectService(projectRepo, projectMemberRepo, userRepo, workflowRepo, typeWorkflowRepo)
 	workflowService := service.NewWorkflowService(workflowRepo)
 	queueService := service.NewQueueService(queueRepo, projectRepo, projectMemberRepo)
 	milestoneService := service.NewMilestoneService(milestoneRepo, projectRepo, projectMemberRepo)
-	workItemService := service.NewWorkItemService(workItemRepo, workItemEventRepo, commentRepo, relationRepo, attachmentRepo, projectRepo, projectMemberRepo, workflowRepo, queueRepo, milestoneRepo, store, cfg.MaxUploadSize)
+	workItemService := service.NewWorkItemService(workItemRepo, workItemEventRepo, commentRepo, relationRepo, attachmentRepo, projectRepo, projectMemberRepo, workflowRepo, typeWorkflowRepo, queueRepo, milestoneRepo, store, cfg.MaxUploadSize)
 	userSettingService := service.NewUserSettingService(userSettingRepo, projectRepo, projectMemberRepo)
 	adminService := service.NewAdminService(userRepo, projectRepo, projectMemberRepo)
 
@@ -153,6 +154,11 @@ func main() {
 	// Seed default workflows
 	if err := workflowService.SeedDefaultWorkflows(ctx); err != nil {
 		log.Fatal().Err(err).Msg("failed to seed default workflows")
+	}
+
+	// Backfill type-workflow mappings for existing projects
+	if err := projectService.SeedExistingProjectTypeWorkflows(ctx); err != nil {
+		log.Fatal().Err(err).Msg("failed to seed existing project type workflows")
 	}
 
 	// Initialize handlers
@@ -244,6 +250,10 @@ func main() {
 						r.Post("/", projects.AddMember)
 						r.Patch("/{userId}", projects.UpdateMemberRole)
 						r.Delete("/{userId}", projects.RemoveMember)
+					})
+					r.Route("/type-workflows", func(r chi.Router) {
+						r.Get("/", projects.ListTypeWorkflows)
+						r.Put("/{type}", projects.UpdateTypeWorkflow)
 					})
 					r.Route("/queues", func(r chi.Router) {
 						r.Get("/", queues.List)

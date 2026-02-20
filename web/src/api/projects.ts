@@ -85,3 +85,20 @@ export async function updateProject(projectKey: string, input: UpdateProjectInpu
 export async function deleteProject(projectKey: string) {
   await api.delete(`/projects/${projectKey}`)
 }
+
+// --- Type Workflow Mappings ---
+
+export interface ProjectTypeWorkflow {
+  work_item_type: string
+  workflow_id: string
+}
+
+export async function getTypeWorkflows(projectKey: string) {
+  const res = await api.get<{ data: ProjectTypeWorkflow[] }>(`/projects/${projectKey}/type-workflows`)
+  return res.data.data
+}
+
+export async function updateTypeWorkflow(projectKey: string, workItemType: string, workflowId: string) {
+  const res = await api.put<{ data: ProjectTypeWorkflow }>(`/projects/${projectKey}/type-workflows/${workItemType}`, { workflow_id: workflowId })
+  return res.data.data
+}

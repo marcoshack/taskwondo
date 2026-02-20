@@ -9,6 +9,8 @@ import {
   removeMember,
   updateProject,
   deleteProject,
+  getTypeWorkflows,
+  updateTypeWorkflow,
   type CreateProjectInput,
   type UpdateProjectInput,
   type AddMemberInput,
@@ -94,6 +96,25 @@ export function useDeleteProject(projectKey: string) {
     mutationFn: () => deleteProject(projectKey),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['projects'] })
+    },
+  })
+}
+
+export function useTypeWorkflows(projectKey: string) {
+  return useQuery({
+    queryKey: ['projects', projectKey, 'type-workflows'],
+    queryFn: () => getTypeWorkflows(projectKey),
+    enabled: !!projectKey,
+  })
+}
+
+export function useUpdateTypeWorkflow(projectKey: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ workItemType, workflowId }: { workItemType: string; workflowId: string }) =>
+      updateTypeWorkflow(projectKey, workItemType, workflowId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['projects', projectKey, 'type-workflows'] })
     },
   })
 }

@@ -80,6 +80,12 @@
   "projects.settings.updateSuccess": "Project updated successfully.",
   "projects.settings.updateError": "Failed to update project.",
   "projects.settings.deleteError": "Failed to delete project.",
+  "projects.settings.workflows": "Workflows",
+  "projects.settings.workflowsDescription": "Configure which workflow is used for each work item type.",
+  "projects.settings.workflowUpdated": "Workflow mapping updated.",
+  "projects.settings.workflowUpdateError": "Failed to update workflow mapping.",
+  "projects.settings.selectWorkflow": "Select a workflow...",
+
   "projects.settings.dangerZone": "Danger Zone",
   "projects.settings.deleteProject": "Delete project",
   "projects.settings.deleteWarning": "All work items, comments, and relations in this project will be permanently deleted.",
@@ -186,6 +192,8 @@
   "workitems.detail.created": "Created",
   "workitems.detail.updated": "Updated",
   "workitems.detail.resolved": "Resolved",
+  "workitems.detail.statusIncompatible": "Status must be updated for the new type's workflow.",
+  "workitems.detail.selectStatus": "Select a status...",
 
   "workitems.filters.title": "Filters",
   "workitems.filters.search": "Search items... ( / )",

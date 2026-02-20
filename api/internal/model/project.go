@@ -44,6 +44,16 @@ type ProjectMemberWithUser struct {
 	AvatarURL   *string `json:"avatar_url,omitempty"`
 }
 
+// ProjectTypeWorkflow maps a work item type to a specific workflow within a project.
+type ProjectTypeWorkflow struct {
+	ID           uuid.UUID `json:"id"`
+	ProjectID    uuid.UUID `json:"project_id"`
+	WorkItemType string    `json:"work_item_type"`
+	WorkflowID   uuid.UUID `json:"workflow_id"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
 // ProjectMemberWithProject includes project details alongside the membership.
 type ProjectMemberWithProject struct {
 	ProjectMember

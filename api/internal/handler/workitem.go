@@ -1157,6 +1157,10 @@ func handleWorkItemError(w http.ResponseWriter, r *http.Request, err error, logM
 		writeError(w, http.StatusConflict, "INVALID_TRANSITION", err.Error())
 		return
 	}
+	if errors.Is(err, model.ErrStatusIncompatible) {
+		writeError(w, http.StatusConflict, "STATUS_INCOMPATIBLE", err.Error())
+		return
+	}
 	if errors.Is(err, model.ErrValidation) {
 		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
 		return

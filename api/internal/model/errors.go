@@ -12,5 +12,6 @@ var (
 	ErrAlreadyExists      = errors.New("already exists")
 	ErrValidation         = errors.New("validation error")
 	ErrInvalidTransition  = errors.New("invalid transition")
-	ErrOAuthAccountLinked = errors.New("oauth account already linked to another user")
+	ErrOAuthAccountLinked    = errors.New("oauth account already linked to another user")
+	ErrStatusIncompatible    = errors.New("status incompatible with target workflow")
 )

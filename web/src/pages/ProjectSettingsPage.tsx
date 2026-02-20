@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Trans, useTranslation } from 'react-i18next'
-import { useProject, useUpdateProject, useDeleteProject, useMembers, useAddMember, useUpdateMemberRole, useRemoveMember } from '@/hooks/useProjects'
+import { useProject, useUpdateProject, useDeleteProject, useMembers, useAddMember, useUpdateMemberRole, useRemoveMember, useTypeWorkflows, useUpdateTypeWorkflow } from '@/hooks/useProjects'
+import { useWorkflows } from '@/hooks/useWorkflows'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -33,6 +34,9 @@ export function ProjectSettingsPage() {
   const addMemberMutation = useAddMember(projectKey ?? '')
   const updateRoleMutation = useUpdateMemberRole(projectKey ?? '')
   const removeMemberMutation = useRemoveMember(projectKey ?? '')
+  const { data: typeWorkflows } = useTypeWorkflows(projectKey ?? '')
+  const { data: allWorkflows } = useWorkflows()
+  const updateTypeWorkflowMutation = useUpdateTypeWorkflow(projectKey ?? '')
 
   const [name, setName] = useState<string | null>(null)
   const [description, setDescription] = useState<string | null>(null)
@@ -48,6 +52,8 @@ export function ProjectSettingsPage() {
   const [memberError, setMemberError] = useState('')
   const [memberSuccess, setMemberSuccess] = useState('')
   const [removeTarget, setRemoveTarget] = useState<{ userId: string; name: string } | null>(null)
+  const [workflowSuccess, setWorkflowSuccess] = useState('')
+  const [workflowError, setWorkflowError] = useState('')
 
   if (isLoading || !project) {
     return (
@@ -325,6 +331,59 @@ export function ProjectSettingsPage() {
             )
           })}
         </div>
+      )}
+
+      {/* Workflows section */}
+      {canManageMembers && (
+        <>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('projects.settings.workflows')}</h2>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('projects.settings.workflowsDescription')}</p>
+          </div>
+
+          {workflowError && <p className="text-sm text-red-600 dark:text-red-400">{workflowError}</p>}
+          {workflowSuccess && <p className="text-sm text-green-600 dark:text-green-400">{workflowSuccess}</p>}
+
+          <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
+            {['task', 'ticket', 'bug', 'feedback', 'epic'].map((itemType) => {
+              const mapping = typeWorkflows?.find((tw) => tw.work_item_type === itemType)
+              return (
+                <div key={itemType} className="flex items-center justify-between p-3">
+                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    {t(`workitems.types.${itemType}`)}
+                  </span>
+                  <select
+                    className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    value={mapping?.workflow_id ?? ''}
+                    onChange={(e) => {
+                      setWorkflowError('')
+                      setWorkflowSuccess('')
+                      updateTypeWorkflowMutation.mutate(
+                        { workItemType: itemType, workflowId: e.target.value },
+                        {
+                          onSuccess: () => {
+                            setWorkflowSuccess(t('projects.settings.workflowUpdated'))
+                            setTimeout(() => setWorkflowSuccess(''), 3000)
+                          },
+                          onError: (err) => {
+                            const axiosErr = err as AxiosError<{ error?: { message?: string } }>
+                            setWorkflowError(axiosErr.response?.data?.error?.message ?? t('projects.settings.workflowUpdateError'))
+                          },
+                        },
+                      )
+                    }}
+                    disabled={updateTypeWorkflowMutation.isPending}
+                  >
+                    {!mapping && <option value="">{t('projects.settings.selectWorkflow')}</option>}
+                    {allWorkflows?.map((wf) => (
+                      <option key={wf.id} value={wf.id}>{wf.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )
+            })}
+          </div>
+        </>
       )}
 
       {/* Danger Zone */}
