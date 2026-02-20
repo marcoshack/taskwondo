@@ -27,6 +27,19 @@ type Project struct {
 	DeletedAt         *time.Time `json:"-"`
 }
 
+// ProjectSummary holds aggregate counts for a project list view.
+type ProjectSummary struct {
+	MemberCount     int `json:"member_count"`
+	OpenCount       int `json:"open_count"`
+	InProgressCount int `json:"in_progress_count"`
+}
+
+// ProjectWithSummary combines a project with its summary counts.
+type ProjectWithSummary struct {
+	Project
+	ProjectSummary
+}
+
 // ProjectMember associates a user with a project and their role within it.
 type ProjectMember struct {
 	ID        uuid.UUID `json:"id"`

@@ -118,6 +118,61 @@ func (r *ProjectRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
+// GetSummaries returns aggregate counts (members, open, in_progress) for the given project IDs.
+// Open counts items whose status belongs to the "todo" category; in_progress counts the "in_progress" category.
+func (r *ProjectRepository) GetSummaries(ctx context.Context, projectIDs []uuid.UUID) (map[uuid.UUID]model.ProjectSummary, error) {
+	if len(projectIDs) == 0 {
+		return map[uuid.UUID]model.ProjectSummary{}, nil
+	}
+
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT
+			p.id,
+			COALESCE(pm_counts.member_count, 0),
+			COALESCE(wi_counts.open_count, 0),
+			COALESCE(wi_counts.in_progress_count, 0)
+		 FROM unnest($1::uuid[]) AS p(id)
+		 LEFT JOIN LATERAL (
+			SELECT COUNT(*) AS member_count
+			FROM project_members WHERE project_id = p.id
+		 ) pm_counts ON true
+		 LEFT JOIN LATERAL (
+			SELECT
+				COUNT(*) FILTER (WHERE wi.status IN (SELECT DISTINCT ws.name FROM workflow_statuses ws WHERE ws.category = 'todo')) AS open_count,
+				COUNT(*) FILTER (WHERE wi.status IN (SELECT DISTINCT ws.name FROM workflow_statuses ws WHERE ws.category = 'in_progress')) AS in_progress_count
+			FROM work_items wi WHERE wi.project_id = p.id AND wi.deleted_at IS NULL
+		 ) wi_counts ON true`,
+		uuidArray(projectIDs))
+	if err != nil {
+		return nil, fmt.Errorf("querying project summaries: %w", err)
+	}
+	defer rows.Close()
+
+	result := make(map[uuid.UUID]model.ProjectSummary, len(projectIDs))
+	for rows.Next() {
+		var id uuid.UUID
+		var s model.ProjectSummary
+		if err := rows.Scan(&id, &s.MemberCount, &s.OpenCount, &s.InProgressCount); err != nil {
+			return nil, fmt.Errorf("scanning project summary: %w", err)
+		}
+		result[id] = s
+	}
+	return result, rows.Err()
+}
+
+// uuidArray converts a slice of UUIDs to a PostgreSQL-compatible array literal.
+func uuidArray(ids []uuid.UUID) string {
+	s := "{"
+	for i, id := range ids {
+		if i > 0 {
+			s += ","
+		}
+		s += id.String()
+	}
+	s += "}"
+	return s
+}
+
 func scanProject(row *sql.Row) (*model.Project, error) {
 	var p model.Project
 	var description sql.NullString

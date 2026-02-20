@@ -100,6 +100,14 @@ func (m *mockProjectRepo) Delete(_ context.Context, id uuid.UUID) error {
 	return nil
 }
 
+func (m *mockProjectRepo) GetSummaries(_ context.Context, projectIDs []uuid.UUID) (map[uuid.UUID]model.ProjectSummary, error) {
+	result := make(map[uuid.UUID]model.ProjectSummary, len(projectIDs))
+	for _, id := range projectIDs {
+		result[id] = model.ProjectSummary{}
+	}
+	return result, nil
+}
+
 type mockProjectMemberRepo struct {
 	members map[string]*model.ProjectMember
 }

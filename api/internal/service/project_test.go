@@ -97,6 +97,14 @@ func (m *mockProjectRepo) Delete(_ context.Context, id uuid.UUID) error {
 	return nil
 }
 
+func (m *mockProjectRepo) GetSummaries(_ context.Context, projectIDs []uuid.UUID) (map[uuid.UUID]model.ProjectSummary, error) {
+	result := make(map[uuid.UUID]model.ProjectSummary, len(projectIDs))
+	for _, id := range projectIDs {
+		result[id] = model.ProjectSummary{}
+	}
+	return result, nil
+}
+
 type mockProjectMemberRepo struct {
 	members map[string]*model.ProjectMember // key: "projectID:userID"
 }
@@ -254,6 +262,7 @@ func TestCreateProject_InvalidKey(t *testing.T) {
 		{"starts with digit", "1TEST"},
 		{"has spaces", "TE ST"},
 		{"has special chars", "TE-ST"},
+		{"six chars", "ABCDEF"},
 		{"too long", "TOOLONGKEYNAME"},
 	}
 
@@ -712,13 +721,13 @@ func TestUpdateProject_ChangeKey(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	newKey := "NEWKEY"
+	newKey := "NKEY"
 	project, err := svc.Update(context.Background(), info, "TT", nil, &newKey, nil, false, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if project.Key != "NEWKEY" {
-		t.Fatalf("expected key 'NEWKEY', got %s", project.Key)
+	if project.Key != "NKEY" {
+		t.Fatalf("expected key 'NKEY', got %s", project.Key)
 	}
 }
 
