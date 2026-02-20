@@ -59,8 +59,8 @@ export function DataTable<T>({
   }, [activeRowIndex])
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full sm:divide-y sm:divide-gray-200 sm:dark:divide-gray-700">
+    <div className="overflow-hidden">
+      <table className="w-full table-fixed sm:divide-y sm:divide-gray-200 sm:dark:divide-gray-700">
         <colgroup>
           {columns.map((col) => (
             <col key={col.key} className={col.className ?? ''} style={col.width ? { width: col.width } : undefined} />
