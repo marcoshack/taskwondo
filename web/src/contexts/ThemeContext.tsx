@@ -50,7 +50,7 @@ function isValidTheme(v: unknown): v is Theme {
 function getStoredTheme(): Theme {
   const stored = localStorage.getItem(THEME_KEY)
   if (isValidTheme(stored)) return stored
-  return 'light'
+  return 'system'
 }
 
 function isValidFontSize(v: unknown): v is FontSize {
