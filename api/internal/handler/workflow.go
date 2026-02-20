@@ -366,7 +366,8 @@ func (h *WorkflowHandler) GetProjectWorkflow(w http.ResponseWriter, r *http.Requ
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
-	if _, err := h.projects.Get(r.Context(), info, projectKey); err != nil {
+	project, err := h.projects.Get(r.Context(), info, projectKey)
+	if err != nil {
 		handleProjectError(w, r, err, "failed to get project")
 		return
 	}
@@ -380,6 +381,12 @@ func (h *WorkflowHandler) GetProjectWorkflow(w http.ResponseWriter, r *http.Requ
 	wf, err := h.workflows.GetByID(r.Context(), workflowID)
 	if err != nil {
 		handleWorkflowError(w, r, err, "failed to get workflow")
+		return
+	}
+
+	// Verify the workflow is either a system workflow or belongs to this project
+	if wf.ProjectID != nil && *wf.ProjectID != project.ID {
+		writeError(w, http.StatusNotFound, "NOT_FOUND", "workflow not found")
 		return
 	}
 
@@ -456,7 +463,8 @@ func (h *WorkflowHandler) UpdateProjectWorkflow(w http.ResponseWriter, r *http.R
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
-	if _, err := h.projects.RequireProjectRole(r.Context(), info, projectKey, model.ProjectRoleOwner, model.ProjectRoleAdmin); err != nil {
+	project, err := h.projects.RequireProjectRole(r.Context(), info, projectKey, model.ProjectRoleOwner, model.ProjectRoleAdmin)
+	if err != nil {
 		handleProjectError(w, r, err, "failed to check project role")
 		return
 	}
@@ -467,7 +475,7 @@ func (h *WorkflowHandler) UpdateProjectWorkflow(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	// Verify the workflow is a project workflow (not system)
+	// Verify the workflow is a project workflow (not system) and belongs to this project
 	existing, err := h.workflows.GetByID(r.Context(), workflowID)
 	if err != nil {
 		handleWorkflowError(w, r, err, "failed to get workflow")
@@ -475,6 +483,10 @@ func (h *WorkflowHandler) UpdateProjectWorkflow(w http.ResponseWriter, r *http.R
 	}
 	if existing.IsDefault || existing.ProjectID == nil {
 		writeError(w, http.StatusForbidden, "FORBIDDEN", "system workflows cannot be edited from project settings")
+		return
+	}
+	if *existing.ProjectID != project.ID {
+		writeError(w, http.StatusNotFound, "NOT_FOUND", "workflow not found")
 		return
 	}
 
@@ -531,7 +543,8 @@ func (h *WorkflowHandler) DeleteProjectWorkflow(w http.ResponseWriter, r *http.R
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
-	if _, err := h.projects.RequireProjectRole(r.Context(), info, projectKey, model.ProjectRoleOwner, model.ProjectRoleAdmin); err != nil {
+	project, err := h.projects.RequireProjectRole(r.Context(), info, projectKey, model.ProjectRoleOwner, model.ProjectRoleAdmin)
+	if err != nil {
 		handleProjectError(w, r, err, "failed to check project role")
 		return
 	}
@@ -539,6 +552,17 @@ func (h *WorkflowHandler) DeleteProjectWorkflow(w http.ResponseWriter, r *http.R
 	workflowID, err := uuid.Parse(chi.URLParam(r, "workflowId"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid workflow ID")
+		return
+	}
+
+	// Verify the workflow belongs to this project before deleting
+	existing, err := h.workflows.GetByID(r.Context(), workflowID)
+	if err != nil {
+		handleWorkflowError(w, r, err, "failed to get workflow")
+		return
+	}
+	if existing.ProjectID == nil || *existing.ProjectID != project.ID {
+		writeError(w, http.StatusNotFound, "NOT_FOUND", "workflow not found")
 		return
 	}
 

@@ -105,6 +105,12 @@ func (s *WorkflowService) Create(ctx context.Context, input CreateWorkflowInput)
 	if len(input.Statuses) == 0 {
 		return nil, fmt.Errorf("at least one status is required: %w", model.ErrValidation)
 	}
+	if len(input.Statuses) > 50 {
+		return nil, fmt.Errorf("workflow cannot have more than 50 statuses: %w", model.ErrValidation)
+	}
+	if len(input.Transitions) > 500 {
+		return nil, fmt.Errorf("workflow cannot have more than 500 transitions: %w", model.ErrValidation)
+	}
 
 	// Validate name does not conflict with default workflow names
 	if err := s.validateNameNotDefault(ctx, input.Name); err != nil {
@@ -194,6 +200,12 @@ func (s *WorkflowService) Update(ctx context.Context, id uuid.UUID, input Update
 
 	// If statuses and transitions are provided, do a full replace
 	if input.Statuses != nil {
+		if len(input.Statuses) > 50 {
+			return nil, fmt.Errorf("workflow cannot have more than 50 statuses: %w", model.ErrValidation)
+		}
+		if len(input.Transitions) > 500 {
+			return nil, fmt.Errorf("workflow cannot have more than 500 transitions: %w", model.ErrValidation)
+		}
 		wf.Statuses = input.Statuses
 		wf.Transitions = input.Transitions
 
