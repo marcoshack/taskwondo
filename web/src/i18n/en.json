@@ -429,5 +429,7 @@
 
   "admin.users.removeFromProjectTitle": "Remove from Project",
   "admin.users.removeFromProjectBody": "Are you sure you want to remove <bold>{{name}}</bold> from <bold>{{project}}</bold>?",
-  "admin.users.removeFromProjectButton": "Remove"
+  "admin.users.removeFromProjectButton": "Remove",
+
+  "footer.poweredBy": "Powered by <brand>Taskwondo</brand>"
 }

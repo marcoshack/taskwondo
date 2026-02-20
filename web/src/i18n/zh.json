@@ -419,5 +419,7 @@
   "admin.users.disableConfirmButton": "禁用",
   "admin.users.removeFromProjectTitle": "从项目中移除",
   "admin.users.removeFromProjectBody": "确定要将<bold>{{name}}</bold>从<bold>{{project}}</bold>中移除吗？",
-  "admin.users.removeFromProjectButton": "移除"
+  "admin.users.removeFromProjectButton": "移除",
+
+  "footer.poweredBy": "由 <brand>Taskwondo</brand> 驱动"
 }

@@ -419,5 +419,7 @@
   "admin.users.disableConfirmButton": "비활성화",
   "admin.users.removeFromProjectTitle": "프로젝트에서 제거",
   "admin.users.removeFromProjectBody": "<bold>{{name}}</bold>을(를) <bold>{{project}}</bold>에서 제거하시겠습니까?",
-  "admin.users.removeFromProjectButton": "제거"
+  "admin.users.removeFromProjectButton": "제거",
+
+  "footer.poweredBy": "<brand>Taskwondo</brand> 제공"
 }
