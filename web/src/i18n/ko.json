@@ -134,6 +134,7 @@
   "sidebar.menu": "메뉴",
 
   "workitems.title": "작업 항목",
+  "workitems.titleShort": "항목",
   "workitems.new": "새 항목",
   "workitems.newTitle": "새 항목",
   "workitems.notFound": "항목을 찾을 수 없습니다.",

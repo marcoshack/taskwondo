@@ -134,6 +134,7 @@
   "sidebar.menu": "Menü",
 
   "workitems.title": "Arbeitselemente",
+  "workitems.titleShort": "Elemente",
   "workitems.new": "Neues Element",
   "workitems.newTitle": "Neues Element",
   "workitems.notFound": "Element nicht gefunden.",

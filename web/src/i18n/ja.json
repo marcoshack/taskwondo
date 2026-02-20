@@ -134,6 +134,7 @@
   "sidebar.menu": "メニュー",
 
   "workitems.title": "アイテム一覧",
+  "workitems.titleShort": "アイテム",
   "workitems.new": "新規作成",
   "workitems.newTitle": "新規アイテム",
   "workitems.notFound": "アイテムが見つかりません。",
