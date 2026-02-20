@@ -82,7 +82,7 @@ export function ProjectListPage() {
       header: t('projects.table.key'),
       width: '80px',
       render: (p) => (
-        <span className="inline-flex items-center justify-center rounded-md bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 text-xs font-bold min-w-[4rem]">
+        <span className="inline-flex items-center justify-center rounded-md bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-2.5 py-0.5 text-sm font-bold min-w-[4.5rem]">
           {p.key}
         </span>
       ),
@@ -183,7 +183,7 @@ export function ProjectListPage() {
               className="w-full text-left bg-white dark:bg-gray-800 rounded-lg shadow p-4 active:bg-gray-50 dark:active:bg-gray-700 transition-colors"
             >
               <div className="flex items-center gap-3">
-                <span className="inline-flex items-center justify-center rounded-md bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 text-xs font-bold min-w-[4rem]">
+                <span className="inline-flex items-center justify-center rounded-md bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-2.5 py-0.5 text-sm font-bold min-w-[4.5rem]">
                   {p.key}
                 </span>
                 <span className="font-medium text-gray-900 dark:text-gray-100 truncate">{p.name}</span>
