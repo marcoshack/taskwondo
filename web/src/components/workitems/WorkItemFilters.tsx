@@ -155,7 +155,7 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, search, onSe
               return (
                 <div key={opt.key} className="flex items-center gap-1">
                   <button
-                    onClick={() => { onSort(opt.key); setSortOpen(false) }}
+                    onClick={() => onSort(opt.key)}
                     className={`flex-1 text-left px-3 py-2.5 rounded-md text-sm ${
                       isActive
                         ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 font-medium'
@@ -167,8 +167,8 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, search, onSe
                   {isActive && (
                     <div className="flex shrink-0">
                       <button
-                        onClick={() => { onOrderChange('asc'); setSortOpen(false) }}
-                        className={`px-2 py-1.5 rounded-l-md text-xs font-medium border ${
+                        onClick={() => onOrderChange('asc')}
+                        className={`px-3 py-2.5 rounded-l-md text-base font-medium border ${
                           order === 'asc'
                             ? 'bg-indigo-100 text-indigo-700 border-indigo-300 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-700'
                             : 'bg-white text-gray-500 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:bg-gray-700'
@@ -178,8 +178,8 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, search, onSe
                         {'\u2191'}
                       </button>
                       <button
-                        onClick={() => { onOrderChange('desc'); setSortOpen(false) }}
-                        className={`px-2 py-1.5 rounded-r-md text-xs font-medium border-t border-r border-b ${
+                        onClick={() => onOrderChange('desc')}
+                        className={`px-3 py-2.5 rounded-r-md text-base font-medium border-t border-r border-b ${
                           order === 'desc'
                             ? 'bg-indigo-100 text-indigo-700 border-indigo-300 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-700'
                             : 'bg-white text-gray-500 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:bg-gray-700'
