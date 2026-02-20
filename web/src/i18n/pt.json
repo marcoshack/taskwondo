@@ -136,6 +136,7 @@
   "workitems.title": "Itens de Trabalho",
   "workitems.titleShort": "Itens",
   "workitems.new": "Novo",
+  "workitems.newShort": "Novo",
   "workitems.newTitle": "Novo Item",
   "workitems.notFound": "Item não encontrado.",
   "workitems.empty": "Nenhum item encontrado",

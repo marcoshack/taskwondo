@@ -355,7 +355,10 @@ export function WorkItemListPage() {
               {t('workitems.view.board')}
             </button>
           </div>
-          <Button onClick={() => setShowCreate(true)}>{t('workitems.new')}</Button>
+          <Button onClick={() => setShowCreate(true)}>
+            <span className="sm:hidden">{t('workitems.newShort')}</span>
+            <span className="hidden sm:inline">{t('workitems.new')}</span>
+          </Button>
         </div>
       </div>
 
