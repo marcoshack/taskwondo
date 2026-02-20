@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useSidebar } from '@/contexts/SidebarContext'
 import { useNavigationGuard } from '@/contexts/NavigationGuardContext'
 import {
+  Settings,
   Users,
   PanelLeftClose,
   PanelLeftOpen,
@@ -23,6 +24,7 @@ export function SystemSettingsSidebar() {
   }, [location.pathname, closeMobile])
 
   const navItems: { to: string; label: string; icon: LucideIcon; end: boolean }[] = [
+    { to: 'general', label: t('admin.sidebar.general'), icon: Settings, end: false },
     { to: 'users', label: t('admin.sidebar.users'), icon: Users, end: false },
   ]
 

@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { useSidebar } from '@/contexts/SidebarContext'
 import { SystemSettingsSidebar } from '@/components/SystemSettingsSidebar'
 import { AdminUsersPage } from './AdminUsersPage'
+import { SystemGeneralPage } from './SystemGeneralPage'
 
 export function SystemSettingsPage() {
   const { collapsed } = useSidebar()
@@ -12,7 +13,8 @@ export function SystemSettingsPage() {
         <SystemSettingsSidebar />
         <div className="flex-1 min-w-0">
           <Routes>
-            <Route index element={<Navigate to="users" replace />} />
+            <Route index element={<Navigate to="general" replace />} />
+            <Route path="general" element={<SystemGeneralPage />} />
             <Route path="users" element={<AdminUsersPage />} />
           </Routes>
         </div>

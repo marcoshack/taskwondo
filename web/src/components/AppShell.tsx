@@ -13,9 +13,11 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useKeyboardShortcutContext } from '@/contexts/KeyboardShortcutContext'
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
 import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal'
+import { useBrand } from '@/contexts/BrandContext'
 
 export function AppShell() {
   const { t } = useTranslation()
+  const { brandName } = useBrand()
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const { guardedNavigate } = useNavigationGuard()
@@ -73,7 +75,7 @@ export function AppShell() {
           <div className="flex justify-between h-14 relative">
             <div className="flex items-center gap-6 min-w-0">
               <button onClick={() => guardedNavigate('/projects')} className="text-lg font-bold text-indigo-600 dark:text-indigo-400 shrink-0">
-                {t('brand.name')}
+                {brandName}
               </button>
               {adminMatch ? (
                 <div className="flex items-center gap-2.5 min-w-0">

@@ -37,7 +37,7 @@
   "nav.preferences": "Preferencias",
   "nav.signOut": "Cerrar sesión",
 
-  "login.title": "Iniciar sesión en Taskwondo",
+  "login.title": "Iniciar sesión en {{brandName}}",
   "login.email": "Correo",
   "login.password": "Contraseña",
   "login.submit": "Iniciar sesión",
@@ -80,6 +80,11 @@
   "projects.settings.updateSuccess": "Proyecto actualizado.",
   "projects.settings.updateError": "Error al actualizar proyecto.",
   "projects.settings.deleteError": "Error al eliminar proyecto.",
+  "projects.settings.workflows": "Flujos de trabajo",
+  "projects.settings.workflowsDescription": "Configure qué flujo de trabajo se usa para cada tipo de ítem.",
+  "projects.settings.workflowUpdated": "Asignación de flujo de trabajo actualizada.",
+  "projects.settings.workflowUpdateError": "Error al actualizar la asignación de flujo de trabajo.",
+  "projects.settings.selectWorkflow": "Seleccionar un flujo de trabajo...",
   "projects.settings.dangerZone": "Zona de Peligro",
   "projects.settings.deleteProject": "Eliminar proyecto",
   "projects.settings.deleteWarning": "Todos los ítems, comentarios y relaciones de este proyecto se eliminarán permanentemente.",
@@ -177,11 +182,16 @@
   "workitems.detail.deleteItem": "Eliminar Ítem",
   "workitems.detail.deleteTitle": "Eliminar Ítem",
   "workitems.detail.deleteConfirmBody": "¿Está seguro de eliminar <bold>{{displayId}}</bold>? Esta acción no se puede deshacer.",
+  "workitems.deleteSelectedTitle": "Eliminar Ítems",
+  "workitems.deleteSelectedBody_one": "¿Está seguro de eliminar {{count}} ítem? Esta acción no se puede deshacer.",
+  "workitems.deleteSelectedBody_other": "¿Está seguro de eliminar {{count}} ítems? Esta acción no se puede deshacer.",
 
   "workitems.detail.reporter": "Reportador",
   "workitems.detail.created": "Creado",
   "workitems.detail.updated": "Actualizado",
   "workitems.detail.resolved": "Resuelto",
+  "workitems.detail.statusIncompatible": "El estado debe actualizarse para el flujo de trabajo del nuevo tipo.",
+  "workitems.detail.selectStatus": "Seleccionar un estado...",
 
   "workitems.filters.title": "Filtros",
   "workitems.filters.search": "Buscar ítems... ( / )",
@@ -246,6 +256,10 @@
   "comments.deleteBody": "Este comentario será eliminado permanentemente. Esta acción no se puede deshacer.",
   "comments.editCount_one": "(editado {{count}} vez)",
   "comments.editCount_other": "(editado {{count}} veces)",
+  "comments.unsavedTitle": "Comentario sin guardar",
+  "comments.unsavedBody": "Tiene un comentario sin guardar. Si sale, se perderá su comentario.",
+  "comments.discard": "Descartar",
+  "comments.keepEditing": "Seguir editando",
 
   "activity.noActivity": "Sin actividad.",
   "activity.createdItem": "creó este ítem",
@@ -281,7 +295,9 @@
   "attachments.noAttachments": "Sin adjuntos.",
   "attachments.uploadFailed": "Error al subir. Intente de nuevo.",
   "attachments.commentPlaceholder": "Comentario/descripción opcional...",
+  "attachments.deleteTitle": "Eliminar Adjunto",
   "attachments.deleteConfirm": "¿Eliminar este adjunto?",
+  "attachments.editDescription": "Editar descripción",
 
   "preview.download": "Descargar",
   "preview.close": "Cerrar",
@@ -347,8 +363,14 @@
 
   "admin.title": "Configuración del Sistema",
   "admin.titleShort": "Sistema",
+  "admin.sidebar.general": "General",
   "admin.sidebar.users": "Usuarios",
-
+  "admin.general.title": "General",
+  "admin.general.description": "Configurar los ajustes generales del sistema.",
+  "admin.general.brand.title": "Marca",
+  "admin.general.brand.name": "Nombre de marca",
+  "admin.general.brand.nameHelp": "El nombre que se muestra en la barra de navegación y la página de inicio de sesión. Déjelo vacío para usar el predeterminado.",
+  "admin.general.brand.saved": "Nombre de marca guardado.",
   "admin.users.title": "Usuarios",
   "admin.users.description": "Administrar cuentas de usuario, roles y acceso a proyectos.",
   "admin.users.name": "Nombre",
@@ -365,10 +387,8 @@
   "admin.users.filterAll": "Todos los usuarios",
   "admin.users.noUsers": "No se encontraron usuarios.",
   "admin.users.noProjects": "No es miembro de ningún proyecto.",
-
   "admin.users.roles.admin": "Administrador",
   "admin.users.roles.user": "Usuario",
-
   "admin.users.addToProject": "Añadir a proyecto",
   "admin.users.selectProject": "Seleccionar un proyecto...",
   "admin.users.projectRole": "Rol",
@@ -380,11 +400,9 @@
   "admin.users.removeFromProjectError": "Error al eliminar usuario del proyecto.",
   "admin.users.updateError": "Error al actualizar usuario.",
   "admin.users.alreadyMember": "El usuario ya es miembro de este proyecto.",
-
   "admin.users.disableConfirmTitle": "Deshabilitar Usuario",
   "admin.users.disableConfirmBody": "¿Estás seguro de que deseas deshabilitar a <bold>{{name}}</bold>? No podrá iniciar sesión.",
   "admin.users.disableConfirmButton": "Deshabilitar",
-
   "admin.users.removeFromProjectTitle": "Eliminar del Proyecto",
   "admin.users.removeFromProjectBody": "¿Estás seguro de que deseas eliminar a <bold>{{name}}</bold> de <bold>{{project}}</bold>?",
   "admin.users.removeFromProjectButton": "Eliminar"

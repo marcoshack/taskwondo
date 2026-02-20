@@ -8,6 +8,7 @@ import { LanguageProvider } from '@/contexts/LanguageContext'
 import { SidebarProvider } from '@/contexts/SidebarContext'
 import { KeyboardShortcutProvider } from '@/contexts/KeyboardShortcutContext'
 import { NavigationGuardProvider } from '@/contexts/NavigationGuardContext'
+import { BrandProvider } from '@/contexts/BrandContext'
 import '@/i18n'
 import App from '@/App'
 import '@/index.css'
@@ -24,21 +25,23 @@ const queryClient = new QueryClient({
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <AuthProvider>
-          <ThemeProvider>
-            <LanguageProvider>
-              <KeyboardShortcutProvider>
-                <NavigationGuardProvider>
-                  <SidebarProvider>
-                    <App />
-                  </SidebarProvider>
-                </NavigationGuardProvider>
-              </KeyboardShortcutProvider>
-            </LanguageProvider>
-          </ThemeProvider>
-        </AuthProvider>
-      </BrowserRouter>
+      <BrandProvider>
+        <BrowserRouter>
+          <AuthProvider>
+            <ThemeProvider>
+              <LanguageProvider>
+                <KeyboardShortcutProvider>
+                  <NavigationGuardProvider>
+                    <SidebarProvider>
+                      <App />
+                    </SidebarProvider>
+                  </NavigationGuardProvider>
+                </KeyboardShortcutProvider>
+              </LanguageProvider>
+            </ThemeProvider>
+          </AuthProvider>
+        </BrowserRouter>
+      </BrandProvider>
     </QueryClientProvider>
   </StrictMode>,
 )

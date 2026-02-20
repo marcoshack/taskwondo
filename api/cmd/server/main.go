@@ -117,6 +117,7 @@ func main() {
 	queueRepo := repository.NewQueueRepository(db)
 	milestoneRepo := repository.NewMilestoneRepository(db)
 	userSettingRepo := repository.NewUserSettingRepository(db)
+	systemSettingRepo := repository.NewSystemSettingRepository(db)
 	attachmentRepo := repository.NewAttachmentRepository(db)
 	oauthAccountRepo := repository.NewOAuthAccountRepository(db)
 	typeWorkflowRepo := repository.NewProjectTypeWorkflowRepository(db)
@@ -142,6 +143,7 @@ func main() {
 	milestoneService := service.NewMilestoneService(milestoneRepo, projectRepo, projectMemberRepo)
 	workItemService := service.NewWorkItemService(workItemRepo, workItemEventRepo, commentRepo, relationRepo, attachmentRepo, projectRepo, projectMemberRepo, workflowRepo, typeWorkflowRepo, queueRepo, milestoneRepo, store, cfg.MaxUploadSize)
 	userSettingService := service.NewUserSettingService(userSettingRepo, projectRepo, projectMemberRepo)
+	systemSettingService := service.NewSystemSettingService(systemSettingRepo)
 	adminService := service.NewAdminService(userRepo, projectRepo, projectMemberRepo)
 
 	// Seed admin user if configured
@@ -170,6 +172,7 @@ func main() {
 	milestones := handler.NewMilestoneHandler(milestoneService)
 	items := handler.NewWorkItemHandler(workItemService, cfg.MaxUploadSize)
 	userSettings := handler.NewUserSettingHandler(userSettingService)
+	systemSettings := handler.NewSystemSettingHandler(systemSettingService)
 	admin := handler.NewAdminHandler(adminService)
 
 	// Set up router
@@ -195,6 +198,9 @@ func main() {
 		r.Get("/auth/providers", auth.AuthProviders)
 		r.Get("/auth/discord", auth.DiscordAuth)
 		r.With(authLimiter).Post("/auth/discord/callback", auth.DiscordCallback)
+
+		// Public settings (unauthenticated)
+		r.Get("/settings/public", systemSettings.GetPublic)
 
 		// Authenticated routes
 		r.Group(func(r chi.Router) {
@@ -324,6 +330,14 @@ func main() {
 							r.Post("/", admin.AddUserToProject)
 							r.Delete("/{projectId}", admin.RemoveUserFromProject)
 						})
+					})
+				})
+				r.Route("/settings", func(r chi.Router) {
+					r.Get("/", systemSettings.List)
+					r.Route("/{key}", func(r chi.Router) {
+						r.Get("/", systemSettings.Get)
+						r.Put("/", systemSettings.Set)
+						r.Delete("/", systemSettings.Delete)
 					})
 				})
 			})

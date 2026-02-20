@@ -37,7 +37,7 @@
   "nav.preferences": "Einstellungen",
   "nav.signOut": "Abmelden",
 
-  "login.title": "Bei Taskwondo anmelden",
+  "login.title": "Bei {{brandName}} anmelden",
   "login.email": "E-Mail",
   "login.password": "Passwort",
   "login.submit": "Anmelden",
@@ -80,6 +80,11 @@
   "projects.settings.updateSuccess": "Projekt aktualisiert.",
   "projects.settings.updateError": "Projekt konnte nicht aktualisiert werden.",
   "projects.settings.deleteError": "Projekt konnte nicht gelöscht werden.",
+  "projects.settings.workflows": "Workflows",
+  "projects.settings.workflowsDescription": "Konfigurieren Sie, welcher Workflow für jeden Elementtyp verwendet wird.",
+  "projects.settings.workflowUpdated": "Workflow-Zuordnung aktualisiert.",
+  "projects.settings.workflowUpdateError": "Workflow-Zuordnung konnte nicht aktualisiert werden.",
+  "projects.settings.selectWorkflow": "Workflow auswählen...",
   "projects.settings.dangerZone": "Gefahrenzone",
   "projects.settings.deleteProject": "Projekt löschen",
   "projects.settings.deleteWarning": "Alle Elemente, Kommentare und Verknüpfungen in diesem Projekt werden dauerhaft gelöscht.",
@@ -177,11 +182,16 @@
   "workitems.detail.deleteItem": "Element löschen",
   "workitems.detail.deleteTitle": "Element löschen",
   "workitems.detail.deleteConfirmBody": "Möchten Sie <bold>{{displayId}}</bold> wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+  "workitems.deleteSelectedTitle": "Elemente löschen",
+  "workitems.deleteSelectedBody_one": "Möchten Sie wirklich {{count}} Element löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+  "workitems.deleteSelectedBody_other": "Möchten Sie wirklich {{count}} Elemente löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
 
   "workitems.detail.reporter": "Ersteller",
   "workitems.detail.created": "Erstellt",
   "workitems.detail.updated": "Aktualisiert",
   "workitems.detail.resolved": "Gelöst",
+  "workitems.detail.statusIncompatible": "Der Status muss für den Workflow des neuen Typs aktualisiert werden.",
+  "workitems.detail.selectStatus": "Status auswählen...",
 
   "workitems.filters.title": "Filter",
   "workitems.filters.search": "Elemente suchen... ( / )",
@@ -246,6 +256,10 @@
   "comments.deleteBody": "Dieser Kommentar wird dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
   "comments.editCount_one": "({{count}} Mal bearbeitet)",
   "comments.editCount_other": "({{count}} Mal bearbeitet)",
+  "comments.unsavedTitle": "Ungespeicherter Kommentar",
+  "comments.unsavedBody": "Sie haben einen ungespeicherten Kommentar. Wenn Sie die Seite verlassen, geht Ihr Kommentar verloren.",
+  "comments.discard": "Verwerfen",
+  "comments.keepEditing": "Weiter bearbeiten",
 
   "activity.noActivity": "Keine Aktivität.",
   "activity.createdItem": "hat dieses Element erstellt",
@@ -281,7 +295,9 @@
   "attachments.noAttachments": "Keine Anhänge.",
   "attachments.uploadFailed": "Upload fehlgeschlagen. Bitte erneut versuchen.",
   "attachments.commentPlaceholder": "Kommentar/Beschreibung (optional)...",
+  "attachments.deleteTitle": "Anhang löschen",
   "attachments.deleteConfirm": "Diesen Anhang löschen?",
+  "attachments.editDescription": "Beschreibung bearbeiten",
 
   "preview.download": "Herunterladen",
   "preview.close": "Schließen",
@@ -347,8 +363,14 @@
 
   "admin.title": "Systemeinstellungen",
   "admin.titleShort": "System",
+  "admin.sidebar.general": "Allgemein",
   "admin.sidebar.users": "Benutzer",
-
+  "admin.general.title": "Allgemein",
+  "admin.general.description": "Allgemeine Systemeinstellungen konfigurieren.",
+  "admin.general.brand.title": "Marke",
+  "admin.general.brand.name": "Markenname",
+  "admin.general.brand.nameHelp": "Der Name, der in der Navigationsleiste und auf der Anmeldeseite angezeigt wird. Leer lassen für den Standardwert.",
+  "admin.general.brand.saved": "Markenname gespeichert.",
   "admin.users.title": "Benutzer",
   "admin.users.description": "Benutzerkonten, Rollen und Projektzugriff verwalten.",
   "admin.users.name": "Name",
@@ -365,10 +387,8 @@
   "admin.users.filterAll": "Alle Benutzer",
   "admin.users.noUsers": "Keine Benutzer gefunden.",
   "admin.users.noProjects": "Kein Mitglied in Projekten.",
-
   "admin.users.roles.admin": "Administrator",
   "admin.users.roles.user": "Benutzer",
-
   "admin.users.addToProject": "Zum Projekt hinzufügen",
   "admin.users.selectProject": "Projekt auswählen...",
   "admin.users.projectRole": "Rolle",
@@ -380,11 +400,9 @@
   "admin.users.removeFromProjectError": "Fehler beim Entfernen des Benutzers aus dem Projekt.",
   "admin.users.updateError": "Fehler beim Aktualisieren des Benutzers.",
   "admin.users.alreadyMember": "Der Benutzer ist bereits Mitglied dieses Projekts.",
-
   "admin.users.disableConfirmTitle": "Benutzer Deaktivieren",
   "admin.users.disableConfirmBody": "Möchten Sie <bold>{{name}}</bold> wirklich deaktivieren? Die Person kann sich dann nicht mehr anmelden.",
   "admin.users.disableConfirmButton": "Deaktivieren",
-
   "admin.users.removeFromProjectTitle": "Aus Projekt Entfernen",
   "admin.users.removeFromProjectBody": "Möchten Sie <bold>{{name}}</bold> wirklich aus <bold>{{project}}</bold> entfernen?",
   "admin.users.removeFromProjectButton": "Entfernen"
