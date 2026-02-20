@@ -185,7 +185,8 @@ func projectTestSetup(t *testing.T) (*ProjectHandler, *model.AuthInfo) {
 	memberRepo := newMockProjectMemberRepo()
 	userRepo := newMockUserRepo()
 	workflowRepo := newMockWorkflowRepo()
-	projectSvc := service.NewProjectService(projectRepo, memberRepo, userRepo, workflowRepo)
+	typeWorkflowRepo := newMockTypeWorkflowRepo()
+	projectSvc := service.NewProjectService(projectRepo, memberRepo, userRepo, workflowRepo, typeWorkflowRepo)
 	h := NewProjectHandler(projectSvc)
 
 	info := &model.AuthInfo{
@@ -479,5 +480,138 @@ func TestAddMember_Handler_MissingUserID(t *testing.T) {
 
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d", w.Code)
+	}
+}
+
+// --- Type Workflow Handler Tests ---
+
+func TestListTypeWorkflows_Handler(t *testing.T) {
+	h, info := projectTestSetup(t)
+	createTestProject(t, h, info)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/projects/TEST/type-workflows", nil)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", "TEST")
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	h.ListTypeWorkflows(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	// data should be an array (may be empty if no workflows seeded)
+	if _, ok := resp["data"]; !ok {
+		t.Fatal("expected 'data' field in response")
+	}
+}
+
+func TestListTypeWorkflows_Handler_Unauthenticated(t *testing.T) {
+	h, info := projectTestSetup(t)
+	createTestProject(t, h, info)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/projects/TEST/type-workflows", nil)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", "TEST")
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	h.ListTypeWorkflows(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", w.Code)
+	}
+}
+
+func TestUpdateTypeWorkflow_Handler(t *testing.T) {
+	h, info := projectTestSetup(t)
+	createTestProject(t, h, info)
+
+	wfID := uuid.New()
+	body := `{"workflow_id":"` + wfID.String() + `"}`
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/projects/TEST/type-workflows/task", bytes.NewBufferString(body))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", "TEST")
+	rctx.URLParams.Add("type", "task")
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	h.UpdateTypeWorkflow(w, req)
+
+	// The workflow doesn't exist in the mock, so this should fail with a service error
+	// mapped to 404 (workflow not found wraps ErrNotFound)
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 for non-existent workflow, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestUpdateTypeWorkflow_Handler_MissingWorkflowID(t *testing.T) {
+	h, info := projectTestSetup(t)
+	createTestProject(t, h, info)
+
+	body := `{}`
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/projects/TEST/type-workflows/task", bytes.NewBufferString(body))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", "TEST")
+	rctx.URLParams.Add("type", "task")
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	h.UpdateTypeWorkflow(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestUpdateTypeWorkflow_Handler_InvalidWorkflowID(t *testing.T) {
+	h, info := projectTestSetup(t)
+	createTestProject(t, h, info)
+
+	body := `{"workflow_id":"not-a-uuid"}`
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/projects/TEST/type-workflows/task", bytes.NewBufferString(body))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", "TEST")
+	rctx.URLParams.Add("type", "task")
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	h.UpdateTypeWorkflow(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestUpdateTypeWorkflow_Handler_Unauthenticated(t *testing.T) {
+	h, info := projectTestSetup(t)
+	createTestProject(t, h, info)
+
+	wfID := uuid.New()
+	body := `{"workflow_id":"` + wfID.String() + `"}`
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/projects/TEST/type-workflows/task", bytes.NewBufferString(body))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", "TEST")
+	rctx.URLParams.Add("type", "task")
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	h.UpdateTypeWorkflow(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", w.Code)
 	}
 }

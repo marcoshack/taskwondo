@@ -137,6 +137,7 @@ type WorkItemService struct {
 	projects      ProjectRepository
 	members       ProjectMemberRepository
 	workflows     WorkflowRepository
+	typeWorkflows ProjectTypeWorkflowRepository
 	queues        QueueRepository
 	milestones    MilestoneRepository
 	fileStorage   storage.Storage
@@ -153,6 +154,7 @@ func NewWorkItemService(
 	projects ProjectRepository,
 	members ProjectMemberRepository,
 	workflows WorkflowRepository,
+	typeWorkflows ProjectTypeWorkflowRepository,
 	queues QueueRepository,
 	milestones MilestoneRepository,
 	fileStorage storage.Storage,
@@ -167,6 +169,7 @@ func NewWorkItemService(
 		projects:      projects,
 		members:       members,
 		workflows:     workflows,
+		typeWorkflows: typeWorkflows,
 		queues:        queues,
 		milestones:    milestones,
 		fileStorage:   fileStorage,
@@ -251,11 +254,10 @@ func (s *WorkItemService) Create(ctx context.Context, info *model.AuthInfo, proj
 		customFields = map[string]interface{}{}
 	}
 
-	// Determine initial status from project's workflow
+	// Determine initial status from the type-specific workflow
 	initialStatus := "open"
-	if project.DefaultWorkflowID != nil {
-		status, err := s.workflows.GetInitialStatus(ctx, *project.DefaultWorkflowID)
-		if err == nil {
+	if wfID, err := s.resolveWorkflowID(ctx, project.ID, input.Type, project.DefaultWorkflowID); err == nil {
+		if status, err := s.workflows.GetInitialStatus(ctx, wfID); err == nil {
 			initialStatus = status.Name
 		}
 	}
@@ -391,21 +393,58 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 		}
 	}
 
-	if input.Status != nil && *input.Status != item.Status {
-		// Validate transition if project has a workflow
-		if project.DefaultWorkflowID != nil {
-			valid, err := s.workflows.ValidateTransition(ctx, *project.DefaultWorkflowID, item.Status, *input.Status)
-			if err != nil {
-				return nil, fmt.Errorf("validating transition: %w", err)
+	// Process type change BEFORE status change so workflow resolution uses the new type
+	typeChanged := false
+	if input.Type != nil && *input.Type != item.Type {
+		if !isValidWorkItemType(*input.Type) {
+			return nil, fmt.Errorf("invalid work item type %q: %w", *input.Type, model.ErrValidation)
+		}
+
+		// Check if current status is valid in the new type's workflow
+		if newWfID, err := s.resolveWorkflowID(ctx, project.ID, *input.Type, project.DefaultWorkflowID); err == nil {
+			statuses, _ := s.workflows.ListStatuses(ctx, newWfID)
+			statusExists := false
+			effectiveStatus := item.Status
+			if input.Status != nil {
+				effectiveStatus = *input.Status
 			}
-			if !valid {
-				return nil, fmt.Errorf("transition from %q to %q is not allowed in this workflow: %w",
-					item.Status, *input.Status, model.ErrInvalidTransition)
+			for _, st := range statuses {
+				if st.Name == effectiveStatus {
+					statusExists = true
+					break
+				}
+			}
+			if !statusExists {
+				return nil, fmt.Errorf("status %q does not exist in the workflow for type %q: %w",
+					effectiveStatus, *input.Type, model.ErrStatusIncompatible)
+			}
+		}
+
+		s.recordFieldChange(ctx, item.ID, &info.UserID, "type", item.Type, *input.Type)
+		item.Type = *input.Type
+		typeChanged = true
+	}
+
+	if input.Status != nil && *input.Status != item.Status {
+		// Resolve workflow for the item's (potentially updated) type
+		if wfID, err := s.resolveWorkflowID(ctx, project.ID, item.Type, project.DefaultWorkflowID); err == nil {
+			// Skip transition validation when type changed — the type-change block
+			// already verified the new status exists in the target workflow.
+			// Normal transition rules don't apply across workflow boundaries.
+			if !typeChanged {
+				valid, err := s.workflows.ValidateTransition(ctx, wfID, item.Status, *input.Status)
+				if err != nil {
+					return nil, fmt.Errorf("validating transition: %w", err)
+				}
+				if !valid {
+					return nil, fmt.Errorf("transition from %q to %q is not allowed in this workflow: %w",
+						item.Status, *input.Status, model.ErrInvalidTransition)
+				}
 			}
 
 			// Manage resolved_at based on status category
-			newCategory, _ := s.workflows.GetStatusCategory(ctx, *project.DefaultWorkflowID, *input.Status)
-			oldCategory, _ := s.workflows.GetStatusCategory(ctx, *project.DefaultWorkflowID, item.Status)
+			newCategory, _ := s.workflows.GetStatusCategory(ctx, wfID, *input.Status)
+			oldCategory, _ := s.workflows.GetStatusCategory(ctx, wfID, item.Status)
 
 			if (newCategory == model.CategoryDone || newCategory == model.CategoryCancelled) &&
 				oldCategory != model.CategoryDone && oldCategory != model.CategoryCancelled {
@@ -427,14 +466,6 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 		}
 		s.recordFieldChange(ctx, item.ID, &info.UserID, "priority", item.Priority, *input.Priority)
 		item.Priority = *input.Priority
-	}
-
-	if input.Type != nil && *input.Type != item.Type {
-		if !isValidWorkItemType(*input.Type) {
-			return nil, fmt.Errorf("invalid work item type %q: %w", *input.Type, model.ErrValidation)
-		}
-		s.recordFieldChange(ctx, item.ID, &info.UserID, "type", item.Type, *input.Type)
-		item.Type = *input.Type
 	}
 
 	if input.ClearAssignee {
@@ -1209,6 +1240,19 @@ func (s *WorkItemService) recordFieldChange(ctx context.Context, workItemID uuid
 		eventType = "priority_changed"
 	}
 	s.recordEvent(ctx, workItemID, actorID, eventType, &fieldName, &oldValue, &newValue)
+}
+
+// resolveWorkflowID returns the workflow ID for a given project and item type.
+// It checks the type-workflow mapping first, then falls back to the project's default.
+func (s *WorkItemService) resolveWorkflowID(ctx context.Context, projectID uuid.UUID, itemType string, fallback *uuid.UUID) (uuid.UUID, error) {
+	mapping, err := s.typeWorkflows.GetByProjectAndType(ctx, projectID, itemType)
+	if err == nil {
+		return mapping.WorkflowID, nil
+	}
+	if fallback != nil {
+		return *fallback, nil
+	}
+	return uuid.Nil, model.ErrNotFound
 }
 
 // --- Validation helpers ---

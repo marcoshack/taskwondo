@@ -20,6 +20,43 @@ import (
 	"github.com/marcoshack/taskwondo/internal/storage"
 )
 
+// --- Mock project type workflow repository ---
+
+type mockTypeWorkflowRepo struct {
+	mappings map[string]*model.ProjectTypeWorkflow
+}
+
+func newMockTypeWorkflowRepo() *mockTypeWorkflowRepo {
+	return &mockTypeWorkflowRepo{mappings: make(map[string]*model.ProjectTypeWorkflow)}
+}
+
+func (m *mockTypeWorkflowRepo) ListByProject(_ context.Context, projectID uuid.UUID) ([]model.ProjectTypeWorkflow, error) {
+	var result []model.ProjectTypeWorkflow
+	for _, tw := range m.mappings {
+		if tw.ProjectID == projectID {
+			result = append(result, *tw)
+		}
+	}
+	return result, nil
+}
+
+func (m *mockTypeWorkflowRepo) GetByProjectAndType(_ context.Context, projectID uuid.UUID, workItemType string) (*model.ProjectTypeWorkflow, error) {
+	key := projectID.String() + ":" + workItemType
+	if tw, ok := m.mappings[key]; ok {
+		return tw, nil
+	}
+	return nil, model.ErrNotFound
+}
+
+func (m *mockTypeWorkflowRepo) Upsert(_ context.Context, mapping *model.ProjectTypeWorkflow) error {
+	now := time.Now()
+	mapping.CreatedAt = now
+	mapping.UpdatedAt = now
+	key := mapping.ProjectID.String() + ":" + mapping.WorkItemType
+	m.mappings[key] = mapping
+	return nil
+}
+
 // --- Mock workflow repository ---
 
 type mockWorkflowRepo struct {
@@ -606,11 +643,12 @@ func workItemTestSetup(t *testing.T) (*WorkItemHandler, *model.AuthInfo, string)
 	relationRepo := newMockRelationRepo()
 
 	workflowRepo := newMockWorkflowRepo()
+	typeWorkflowRepo := newMockTypeWorkflowRepo()
 	queueRepo := newMockQueueRepo()
 	milestoneRepo := newMockMilestoneRepo()
 	attachRepo := newMockAttachmentRepo()
 	store := newMockStorage()
-	svc := service.NewWorkItemService(itemRepo, eventRepo, commentRepo, relationRepo, attachRepo, projectRepo, memberRepo, workflowRepo, queueRepo, milestoneRepo, store, 50*1024*1024)
+	svc := service.NewWorkItemService(itemRepo, eventRepo, commentRepo, relationRepo, attachRepo, projectRepo, memberRepo, workflowRepo, typeWorkflowRepo, queueRepo, milestoneRepo, store, 50*1024*1024)
 	h := NewWorkItemHandler(svc, 50*1024*1024)
 
 	info := &model.AuthInfo{

@@ -5,8 +5,8 @@ import { ConfirmCheck } from '@/components/ui/ConfirmCheck'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Trans, useTranslation } from 'react-i18next'
 import { useWorkItem, useUpdateWorkItem, useDeleteWorkItem, useUploadAttachment, useAttachments } from '@/hooks/useWorkItems'
-import { useMembers } from '@/hooks/useProjects'
-import { useProjectWorkflow } from '@/hooks/useWorkflows'
+import { useMembers, useTypeWorkflows } from '@/hooks/useProjects'
+import { useProjectWorkflow, useWorkflows } from '@/hooks/useWorkflows'
 import { Spinner } from '@/components/ui/Spinner'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
@@ -39,8 +39,10 @@ export function WorkItemDetailPage() {
   const itemNumber = Number(itemNumberParam)
 
   const { data: item, isLoading } = useWorkItem(projectKey ?? '', itemNumber)
-  const { statuses, transitionsMap } = useProjectWorkflow(projectKey ?? '')
+  const { statuses, transitionsMap } = useProjectWorkflow(projectKey ?? '', item?.type)
   const { data: members } = useMembers(projectKey ?? '')
+  const { data: typeWorkflows } = useTypeWorkflows(projectKey ?? '')
+  const { data: allWorkflows } = useWorkflows()
   const updateMutation = useUpdateWorkItem(projectKey ?? '')
   const deleteMutation = useDeleteWorkItem(projectKey ?? '')
 
@@ -405,6 +407,8 @@ export function WorkItemDetailPage() {
             statuses={statuses}
             allowedTransitions={allowed}
             members={members ?? []}
+            typeWorkflows={typeWorkflows}
+            allWorkflows={allWorkflows}
             onUpdate={(input) => updateMutation.mutate({ itemNumber, input })}
           />
           <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
@@ -428,6 +432,8 @@ export function WorkItemDetailPage() {
           statuses={statuses}
           allowedTransitions={allowed}
           members={members ?? []}
+          typeWorkflows={typeWorkflows}
+          allWorkflows={allWorkflows}
           onUpdate={(input) => updateMutation.mutate({ itemNumber, input })}
         />
         <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">

@@ -175,13 +175,35 @@ func (m *mockProjectMemberRepo) CountByRole(_ context.Context, projectID uuid.UU
 
 // --- Test helpers ---
 
-func newTestProjectService() (*ProjectService, *mockProjectRepo, *mockProjectMemberRepo, *mockUserRepo) {
+type testProjectSetup struct {
+	svc              *ProjectService
+	projectRepo      *mockProjectRepo
+	memberRepo       *mockProjectMemberRepo
+	userRepo         *mockUserRepo
+	workflowRepo     *mockWorkflowRepo
+	typeWorkflowRepo *mockTypeWorkflowRepo
+}
+
+func newTestProjectSetup() *testProjectSetup {
 	projectRepo := newMockProjectRepo()
 	memberRepo := newMockProjectMemberRepo()
 	userRepo := newMockUserRepo()
 	workflowRepo := newMockWorkflowRepo()
-	svc := NewProjectService(projectRepo, memberRepo, userRepo, workflowRepo)
-	return svc, projectRepo, memberRepo, userRepo
+	typeWorkflowRepo := newMockTypeWorkflowRepo()
+	svc := NewProjectService(projectRepo, memberRepo, userRepo, workflowRepo, typeWorkflowRepo)
+	return &testProjectSetup{
+		svc:              svc,
+		projectRepo:      projectRepo,
+		memberRepo:       memberRepo,
+		userRepo:         userRepo,
+		workflowRepo:     workflowRepo,
+		typeWorkflowRepo: typeWorkflowRepo,
+	}
+}
+
+func newTestProjectService() (*ProjectService, *mockProjectRepo, *mockProjectMemberRepo, *mockUserRepo) {
+	s := newTestProjectSetup()
+	return s.svc, s.projectRepo, s.memberRepo, s.userRepo
 }
 
 func adminAuthInfo() *model.AuthInfo {
@@ -848,5 +870,267 @@ func TestRemoveMember_OwnerRemovesMember(t *testing.T) {
 	err = svc.RemoveMember(context.Background(), owner, "TT", target.UserID)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// --- Type Workflow Tests ---
+
+func TestCreateProject_SeedsTypeWorkflows(t *testing.T) {
+	s := newTestProjectSetup()
+	info := userAuthInfo()
+
+	// Seed two default workflows matching the expected names
+	taskWf := &model.Workflow{ID: uuid.New(), Name: "Task Workflow", IsDefault: true}
+	ticketWf := &model.Workflow{ID: uuid.New(), Name: "Ticket Workflow", IsDefault: true}
+	s.workflowRepo.Create(context.Background(), taskWf)
+	s.workflowRepo.Create(context.Background(), ticketWf)
+
+	project, err := s.svc.Create(context.Background(), info, "Test", "TT", nil, nil)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	// Verify 5 mappings were created
+	mappings, err := s.typeWorkflowRepo.ListByProject(context.Background(), project.ID)
+	if err != nil {
+		t.Fatalf("expected no error listing mappings, got %v", err)
+	}
+	if len(mappings) != 5 {
+		t.Fatalf("expected 5 type-workflow mappings, got %d", len(mappings))
+	}
+
+	// Check specific mappings
+	byType := make(map[string]uuid.UUID)
+	for _, m := range mappings {
+		byType[m.WorkItemType] = m.WorkflowID
+	}
+	if byType[model.WorkItemTypeTask] != taskWf.ID {
+		t.Errorf("expected task→Task Workflow, got %v", byType[model.WorkItemTypeTask])
+	}
+	if byType[model.WorkItemTypeBug] != taskWf.ID {
+		t.Errorf("expected bug→Task Workflow, got %v", byType[model.WorkItemTypeBug])
+	}
+	if byType[model.WorkItemTypeEpic] != taskWf.ID {
+		t.Errorf("expected epic→Task Workflow, got %v", byType[model.WorkItemTypeEpic])
+	}
+	if byType[model.WorkItemTypeTicket] != ticketWf.ID {
+		t.Errorf("expected ticket→Ticket Workflow, got %v", byType[model.WorkItemTypeTicket])
+	}
+	if byType[model.WorkItemTypeFeedback] != ticketWf.ID {
+		t.Errorf("expected feedback→Ticket Workflow, got %v", byType[model.WorkItemTypeFeedback])
+	}
+}
+
+func TestCreateProject_SeedsWithSingleWorkflow(t *testing.T) {
+	s := newTestProjectSetup()
+	info := userAuthInfo()
+
+	// Only one workflow — all types should map to it
+	wf := &model.Workflow{ID: uuid.New(), Name: "Custom Workflow", IsDefault: true}
+	s.workflowRepo.Create(context.Background(), wf)
+
+	project, err := s.svc.Create(context.Background(), info, "Test", "TT", nil, nil)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	mappings, err := s.typeWorkflowRepo.ListByProject(context.Background(), project.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(mappings) != 5 {
+		t.Fatalf("expected 5 mappings, got %d", len(mappings))
+	}
+	for _, m := range mappings {
+		if m.WorkflowID != wf.ID {
+			t.Errorf("expected all types to map to single workflow, type %s maps to %v", m.WorkItemType, m.WorkflowID)
+		}
+	}
+}
+
+func TestGetTypeWorkflows_Success(t *testing.T) {
+	s := newTestProjectSetup()
+	info := userAuthInfo()
+
+	project, err := s.svc.Create(context.Background(), info, "Test", "TT", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Manually add a mapping
+	wfID := uuid.New()
+	s.typeWorkflowRepo.Upsert(context.Background(), &model.ProjectTypeWorkflow{
+		ID: uuid.New(), ProjectID: project.ID,
+		WorkItemType: model.WorkItemTypeTask, WorkflowID: wfID,
+	})
+
+	mappings, err := s.svc.GetTypeWorkflows(context.Background(), info, "TT")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(mappings) < 1 {
+		t.Fatal("expected at least 1 mapping")
+	}
+}
+
+func TestGetTypeWorkflows_NonMemberDenied(t *testing.T) {
+	s := newTestProjectSetup()
+	owner := userAuthInfo()
+	other := userAuthInfo()
+
+	_, err := s.svc.Create(context.Background(), owner, "Test", "TT", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = s.svc.GetTypeWorkflows(context.Background(), other, "TT")
+	if err != model.ErrNotFound {
+		t.Fatalf("expected ErrNotFound for non-member, got %v", err)
+	}
+}
+
+func TestUpdateTypeWorkflow_Success(t *testing.T) {
+	s := newTestProjectSetup()
+	info := userAuthInfo()
+
+	_, err := s.svc.Create(context.Background(), info, "Test", "TT", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a workflow to assign
+	wf := &model.Workflow{ID: uuid.New(), Name: "New Workflow"}
+	s.workflowRepo.Create(context.Background(), wf)
+
+	mapping, err := s.svc.UpdateTypeWorkflow(context.Background(), info, "TT", model.WorkItemTypeTask, wf.ID)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if mapping.WorkflowID != wf.ID {
+		t.Errorf("expected workflow ID %v, got %v", wf.ID, mapping.WorkflowID)
+	}
+	if mapping.WorkItemType != model.WorkItemTypeTask {
+		t.Errorf("expected type 'task', got %s", mapping.WorkItemType)
+	}
+}
+
+func TestUpdateTypeWorkflow_MemberDenied(t *testing.T) {
+	s := newTestProjectSetup()
+	owner := userAuthInfo()
+	member := userAuthInfo()
+
+	project, err := s.svc.Create(context.Background(), owner, "Test", "TT", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Add as regular member
+	s.memberRepo.Add(context.Background(), &model.ProjectMember{
+		ID: uuid.New(), ProjectID: project.ID,
+		UserID: member.UserID, Role: model.ProjectRoleMember,
+	})
+
+	wf := &model.Workflow{ID: uuid.New(), Name: "Wf"}
+	s.workflowRepo.Create(context.Background(), wf)
+
+	_, err = s.svc.UpdateTypeWorkflow(context.Background(), member, "TT", model.WorkItemTypeTask, wf.ID)
+	if err != model.ErrForbidden {
+		t.Fatalf("expected ErrForbidden, got %v", err)
+	}
+}
+
+func TestSeedExistingProjectTypeWorkflows_BackfillsMissing(t *testing.T) {
+	s := newTestProjectSetup()
+	info := userAuthInfo()
+	ctx := context.Background()
+
+	// Create project without workflows available (so no seeding happens during Create)
+	project, err := s.svc.Create(ctx, info, "Legacy", "LEG", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify no mappings exist
+	mappings, _ := s.typeWorkflowRepo.ListByProject(ctx, project.ID)
+	if len(mappings) != 0 {
+		t.Fatalf("expected 0 mappings before backfill, got %d", len(mappings))
+	}
+
+	// Now add workflows and run backfill
+	taskWf := &model.Workflow{ID: uuid.New(), Name: "Task Workflow", IsDefault: true}
+	ticketWf := &model.Workflow{ID: uuid.New(), Name: "Ticket Workflow", IsDefault: true}
+	s.workflowRepo.Create(ctx, taskWf)
+	s.workflowRepo.Create(ctx, ticketWf)
+
+	err = s.svc.SeedExistingProjectTypeWorkflows(ctx)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	// Verify mappings were backfilled
+	mappings, _ = s.typeWorkflowRepo.ListByProject(ctx, project.ID)
+	if len(mappings) != 5 {
+		t.Fatalf("expected 5 mappings after backfill, got %d", len(mappings))
+	}
+}
+
+func TestSeedExistingProjectTypeWorkflows_SkipsExisting(t *testing.T) {
+	s := newTestProjectSetup()
+	info := userAuthInfo()
+	ctx := context.Background()
+
+	// Seed workflows first so Create() auto-seeds mappings
+	taskWf := &model.Workflow{ID: uuid.New(), Name: "Task Workflow", IsDefault: true}
+	s.workflowRepo.Create(ctx, taskWf)
+
+	project, err := s.svc.Create(ctx, info, "Modern", "MOD", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Should already have mappings
+	before, _ := s.typeWorkflowRepo.ListByProject(ctx, project.ID)
+	if len(before) != 5 {
+		t.Fatalf("expected 5 pre-existing mappings, got %d", len(before))
+	}
+
+	// Now change one mapping to a custom workflow
+	customWf := &model.Workflow{ID: uuid.New(), Name: "Custom", IsDefault: false}
+	s.workflowRepo.Create(ctx, customWf)
+	s.typeWorkflowRepo.Upsert(ctx, &model.ProjectTypeWorkflow{
+		ID: uuid.New(), ProjectID: project.ID,
+		WorkItemType: model.WorkItemTypeTask, WorkflowID: customWf.ID,
+	})
+
+	// Run backfill — should NOT overwrite existing mappings
+	err = s.svc.SeedExistingProjectTypeWorkflows(ctx)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	after, _ := s.typeWorkflowRepo.ListByProject(ctx, project.ID)
+	byType := make(map[string]uuid.UUID)
+	for _, m := range after {
+		byType[m.WorkItemType] = m.WorkflowID
+	}
+
+	// Task should still have the custom workflow, not overwritten
+	if byType[model.WorkItemTypeTask] != customWf.ID {
+		t.Errorf("expected task mapping preserved as custom workflow, got %v", byType[model.WorkItemTypeTask])
+	}
+}
+
+func TestUpdateTypeWorkflow_WorkflowNotFound(t *testing.T) {
+	s := newTestProjectSetup()
+	info := userAuthInfo()
+
+	_, err := s.svc.Create(context.Background(), info, "Test", "TT", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = s.svc.UpdateTypeWorkflow(context.Background(), info, "TT", model.WorkItemTypeTask, uuid.New())
+	if err == nil {
+		t.Fatal("expected error for non-existent workflow")
 	}
 }

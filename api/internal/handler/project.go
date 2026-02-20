@@ -375,6 +375,84 @@ func (h *ProjectHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// --- Type Workflow Handlers ---
+
+type typeWorkflowResponse struct {
+	WorkItemType string    `json:"work_item_type"`
+	WorkflowID   uuid.UUID `json:"workflow_id"`
+}
+
+type updateTypeWorkflowRequest struct {
+	WorkflowID string `json:"workflow_id"`
+}
+
+// ListTypeWorkflows handles GET /api/v1/projects/{projectKey}/type-workflows
+func (h *ProjectHandler) ListTypeWorkflows(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	projectKey := chi.URLParam(r, "projectKey")
+
+	mappings, err := h.projects.GetTypeWorkflows(r.Context(), info, projectKey)
+	if err != nil {
+		handleProjectError(w, r, err, "failed to list type workflows")
+		return
+	}
+
+	resp := make([]typeWorkflowResponse, len(mappings))
+	for i, m := range mappings {
+		resp[i] = typeWorkflowResponse{
+			WorkItemType: m.WorkItemType,
+			WorkflowID:   m.WorkflowID,
+		}
+	}
+
+	writeData(w, http.StatusOK, resp)
+}
+
+// UpdateTypeWorkflow handles PUT /api/v1/projects/{projectKey}/type-workflows/{type}
+func (h *ProjectHandler) UpdateTypeWorkflow(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	projectKey := chi.URLParam(r, "projectKey")
+	workItemType := chi.URLParam(r, "type")
+
+	var req updateTypeWorkflowRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		return
+	}
+
+	if req.WorkflowID == "" {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "workflow_id is required")
+		return
+	}
+
+	workflowID, err := uuid.Parse(req.WorkflowID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid workflow_id format")
+		return
+	}
+
+	mapping, err := h.projects.UpdateTypeWorkflow(r.Context(), info, projectKey, workItemType, workflowID)
+	if err != nil {
+		handleProjectError(w, r, err, "failed to update type workflow")
+		return
+	}
+
+	writeData(w, http.StatusOK, typeWorkflowResponse{
+		WorkItemType: mapping.WorkItemType,
+		WorkflowID:   mapping.WorkflowID,
+	})
+}
+
 // handleProjectError maps service errors to HTTP responses.
 func handleProjectError(w http.ResponseWriter, r *http.Request, err error, logMsg string) {
 	if errors.Is(err, model.ErrNotFound) {

@@ -34,21 +34,30 @@ type ProjectMemberRepository interface {
 	CountByRole(ctx context.Context, projectID uuid.UUID, role string) (int, error)
 }
 
+// ProjectTypeWorkflowRepository defines persistence operations for project type-workflow mappings.
+type ProjectTypeWorkflowRepository interface {
+	ListByProject(ctx context.Context, projectID uuid.UUID) ([]model.ProjectTypeWorkflow, error)
+	GetByProjectAndType(ctx context.Context, projectID uuid.UUID, workItemType string) (*model.ProjectTypeWorkflow, error)
+	Upsert(ctx context.Context, mapping *model.ProjectTypeWorkflow) error
+}
+
 // ProjectService handles project business logic and authorization.
 type ProjectService struct {
-	projects  ProjectRepository
-	members   ProjectMemberRepository
-	users     UserRepository
-	workflows WorkflowRepository
+	projects      ProjectRepository
+	members       ProjectMemberRepository
+	users         UserRepository
+	workflows     WorkflowRepository
+	typeWorkflows ProjectTypeWorkflowRepository
 }
 
 // NewProjectService creates a new ProjectService.
-func NewProjectService(projects ProjectRepository, members ProjectMemberRepository, users UserRepository, workflows WorkflowRepository) *ProjectService {
+func NewProjectService(projects ProjectRepository, members ProjectMemberRepository, users UserRepository, workflows WorkflowRepository, typeWorkflows ProjectTypeWorkflowRepository) *ProjectService {
 	return &ProjectService{
-		projects:  projects,
-		members:   members,
-		users:     users,
-		workflows: workflows,
+		projects:      projects,
+		members:       members,
+		users:         users,
+		workflows:     workflows,
+		typeWorkflows: typeWorkflows,
 	}
 }
 
@@ -67,12 +76,14 @@ func (s *ProjectService) Create(ctx context.Context, info *model.AuthInfo, name,
 		return nil, fmt.Errorf("checking project key: %w", err)
 	}
 
+	// Fetch all workflows for default assignment and type-workflow seeding
+	workflows, err := s.workflows.List(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("listing workflows: %w", err)
+	}
+
 	// Auto-assign the first default workflow if none specified
 	if defaultWorkflowID == nil {
-		workflows, err := s.workflows.List(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("listing workflows for default: %w", err)
-		}
 		for i := range workflows {
 			if workflows[i].IsDefault {
 				defaultWorkflowID = &workflows[i].ID
@@ -109,6 +120,9 @@ func (s *ProjectService) Create(ctx context.Context, info *model.AuthInfo, name,
 		Str("project_key", project.Key).
 		Str("user_id", info.UserID.String()).
 		Msg("project created")
+
+	// Auto-populate type-workflow mappings
+	s.seedTypeWorkflows(ctx, project.ID, workflows)
 
 	// Re-fetch to get timestamps set by the database
 	created, err := s.projects.GetByID(ctx, project.ID)
@@ -377,6 +391,155 @@ func (s *ProjectService) RemoveMember(ctx context.Context, info *model.AuthInfo,
 		Msg("member removed from project")
 
 	return nil
+}
+
+// GetTypeWorkflows returns all type-workflow mappings for a project. Requires membership.
+func (s *ProjectService) GetTypeWorkflows(ctx context.Context, info *model.AuthInfo, projectKey string) ([]model.ProjectTypeWorkflow, error) {
+	project, err := s.projects.GetByKey(ctx, projectKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.requireMembership(ctx, info, project.ID); err != nil {
+		return nil, err
+	}
+
+	return s.typeWorkflows.ListByProject(ctx, project.ID)
+}
+
+// UpdateTypeWorkflow updates the workflow for a specific work item type in a project. Requires owner or admin role.
+func (s *ProjectService) UpdateTypeWorkflow(ctx context.Context, info *model.AuthInfo, projectKey string, workItemType string, workflowID uuid.UUID) (*model.ProjectTypeWorkflow, error) {
+	project, err := s.projects.GetByKey(ctx, projectKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.requireRole(ctx, info, project.ID, model.ProjectRoleOwner, model.ProjectRoleAdmin); err != nil {
+		return nil, err
+	}
+
+	// Validate work item type
+	if !isValidWorkItemType(workItemType) {
+		return nil, fmt.Errorf("invalid work item type %q: %w", workItemType, model.ErrValidation)
+	}
+
+	// Verify workflow exists
+	if _, err := s.workflows.GetByID(ctx, workflowID); err != nil {
+		return nil, fmt.Errorf("workflow not found: %w", err)
+	}
+
+	mapping := &model.ProjectTypeWorkflow{
+		ID:           uuid.New(),
+		ProjectID:    project.ID,
+		WorkItemType: workItemType,
+		WorkflowID:   workflowID,
+	}
+
+	if err := s.typeWorkflows.Upsert(ctx, mapping); err != nil {
+		return nil, fmt.Errorf("upserting type workflow: %w", err)
+	}
+
+	log.Ctx(ctx).Info().
+		Str("project_key", projectKey).
+		Str("work_item_type", workItemType).
+		Str("workflow_id", workflowID.String()).
+		Msg("type workflow mapping updated")
+
+	return mapping, nil
+}
+
+// SeedExistingProjectTypeWorkflows backfills type-workflow mappings for projects
+// created before the per-type workflow feature. Projects that already have mappings
+// are skipped. This is idempotent and safe to call on every startup.
+func (s *ProjectService) SeedExistingProjectTypeWorkflows(ctx context.Context) error {
+	workflows, err := s.workflows.List(ctx)
+	if err != nil {
+		return fmt.Errorf("listing workflows: %w", err)
+	}
+	if len(workflows) == 0 {
+		return nil
+	}
+
+	projects, err := s.projects.ListAll(ctx)
+	if err != nil {
+		return fmt.Errorf("listing projects: %w", err)
+	}
+
+	seeded := 0
+	for _, p := range projects {
+		existing, err := s.typeWorkflows.ListByProject(ctx, p.ID)
+		if err != nil {
+			log.Ctx(ctx).Warn().Err(err).Str("project_id", p.ID.String()).Msg("failed to check type workflows")
+			continue
+		}
+		if len(existing) > 0 {
+			continue
+		}
+		s.seedTypeWorkflows(ctx, p.ID, workflows)
+		seeded++
+	}
+
+	if seeded > 0 {
+		log.Ctx(ctx).Info().Int("count", seeded).Msg("backfilled type-workflow mappings for existing projects")
+	}
+	return nil
+}
+
+// seedTypeWorkflows populates default type-workflow mappings for a new project.
+func (s *ProjectService) seedTypeWorkflows(ctx context.Context, projectID uuid.UUID, workflows []model.Workflow) {
+	if len(workflows) == 0 {
+		return
+	}
+
+	// Find Task Workflow and Ticket Workflow by name
+	var taskWfID, ticketWfID uuid.UUID
+	for _, wf := range workflows {
+		switch wf.Name {
+		case "Task Workflow":
+			taskWfID = wf.ID
+		case "Ticket Workflow":
+			ticketWfID = wf.ID
+		}
+	}
+
+	// Fallback: use the first default workflow for all types
+	if taskWfID == uuid.Nil {
+		for _, wf := range workflows {
+			if wf.IsDefault {
+				taskWfID = wf.ID
+				break
+			}
+		}
+	}
+	if ticketWfID == uuid.Nil {
+		ticketWfID = taskWfID
+	}
+	if taskWfID == uuid.Nil {
+		return
+	}
+
+	// Map types to workflows
+	typeMapping := map[string]uuid.UUID{
+		model.WorkItemTypeTask:     taskWfID,
+		model.WorkItemTypeBug:      taskWfID,
+		model.WorkItemTypeEpic:     taskWfID,
+		model.WorkItemTypeTicket:   ticketWfID,
+		model.WorkItemTypeFeedback: ticketWfID,
+	}
+
+	for itemType, wfID := range typeMapping {
+		mapping := &model.ProjectTypeWorkflow{
+			ID:           uuid.New(),
+			ProjectID:    projectID,
+			WorkItemType: itemType,
+			WorkflowID:   wfID,
+		}
+		if err := s.typeWorkflows.Upsert(ctx, mapping); err != nil {
+			log.Ctx(ctx).Warn().Err(err).
+				Str("work_item_type", itemType).
+				Msg("failed to seed type workflow mapping")
+		}
+	}
 }
 
 // requireMembership checks that the user is a member of the project or a global admin.
