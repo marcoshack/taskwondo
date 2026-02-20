@@ -2796,3 +2796,129 @@ func TestResolveWorkflowID_Priority(t *testing.T) {
 		t.Fatal("expected error when no mapping and no fallback")
 	}
 }
+
+// --- Complexity tests ---
+
+func TestCreateWorkItem_WithComplexity(t *testing.T) {
+	svc, _, _, projectRepo, memberRepo := newTestWorkItemService()
+	info := userAuthInfo()
+	setupProjectWithMember(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
+
+	complexity := 5
+	input := validCreateInput()
+	input.Complexity = &complexity
+
+	item, err := svc.Create(context.Background(), info, "TEST", input)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if item.Complexity == nil || *item.Complexity != 5 {
+		t.Fatalf("expected complexity 5, got %v", item.Complexity)
+	}
+}
+
+func TestCreateWorkItem_ComplexityValidatedAgainstProject(t *testing.T) {
+	svc, _, _, projectRepo, memberRepo := newTestWorkItemService()
+	info := userAuthInfo()
+	project := setupProjectWithMember(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
+
+	// Set allowed values on the project
+	project.AllowedComplexityValues = []int{1, 2, 3, 5, 8}
+	projectRepo.Update(context.Background(), project)
+
+	// Valid value should succeed
+	complexity := 3
+	input := validCreateInput()
+	input.Complexity = &complexity
+	item, err := svc.Create(context.Background(), info, "TEST", input)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if item.Complexity == nil || *item.Complexity != 3 {
+		t.Fatalf("expected complexity 3, got %v", item.Complexity)
+	}
+
+	// Invalid value should fail
+	invalidComplexity := 4
+	input2 := validCreateInput()
+	input2.Complexity = &invalidComplexity
+	_, err = svc.Create(context.Background(), info, "TEST", input2)
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation for disallowed complexity, got %v", err)
+	}
+}
+
+func TestCreateWorkItem_ComplexityMustBePositive(t *testing.T) {
+	svc, _, _, projectRepo, memberRepo := newTestWorkItemService()
+	info := userAuthInfo()
+	setupProjectWithMember(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
+
+	zero := 0
+	input := validCreateInput()
+	input.Complexity = &zero
+	_, err := svc.Create(context.Background(), info, "TEST", input)
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation for zero complexity, got %v", err)
+	}
+}
+
+func TestUpdateWorkItem_SetAndClearComplexity(t *testing.T) {
+	svc, _, _, projectRepo, memberRepo := newTestWorkItemService()
+	info := userAuthInfo()
+	setupProjectWithMember(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
+
+	item, err := svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if item.Complexity != nil {
+		t.Fatal("expected nil complexity on creation")
+	}
+
+	// Set complexity
+	complexity := 8
+	updated, err := svc.Update(context.Background(), info, "TEST", item.ItemNumber, UpdateWorkItemInput{Complexity: &complexity})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if updated.Complexity == nil || *updated.Complexity != 8 {
+		t.Fatalf("expected complexity 8, got %v", updated.Complexity)
+	}
+
+	// Clear complexity
+	updated, err = svc.Update(context.Background(), info, "TEST", item.ItemNumber, UpdateWorkItemInput{ClearComplexity: true})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if updated.Complexity != nil {
+		t.Fatalf("expected nil complexity after clear, got %v", updated.Complexity)
+	}
+}
+
+func TestUpdateWorkItem_ComplexityValidatedAgainstProject(t *testing.T) {
+	svc, _, _, projectRepo, memberRepo := newTestWorkItemService()
+	info := userAuthInfo()
+	project := setupProjectWithMember(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
+
+	project.AllowedComplexityValues = []int{1, 2, 3, 5, 8}
+	projectRepo.Update(context.Background(), project)
+
+	item, err := svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Valid value should succeed
+	complexity := 5
+	_, err = svc.Update(context.Background(), info, "TEST", item.ItemNumber, UpdateWorkItemInput{Complexity: &complexity})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	// Invalid value should fail
+	badComplexity := 4
+	_, err = svc.Update(context.Background(), info, "TEST", item.ItemNumber, UpdateWorkItemInput{Complexity: &badComplexity})
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation for disallowed complexity, got %v", err)
+	}
+}

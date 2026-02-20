@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -66,6 +67,7 @@ type CreateWorkItemInput struct {
 	Priority     string
 	AssigneeID   *uuid.UUID
 	Labels       []string
+	Complexity   *int
 	ParentID     *uuid.UUID
 	QueueID      *uuid.UUID
 	MilestoneID  *uuid.UUID
@@ -76,25 +78,27 @@ type CreateWorkItemInput struct {
 
 // UpdateWorkItemInput holds the input for updating a work item.
 type UpdateWorkItemInput struct {
-	Title         *string
-	Description   *string
+	Title            *string
+	Description      *string
 	ClearDescription bool
-	Status        *string
-	Priority      *string
-	Type          *string
-	AssigneeID    *uuid.UUID
-	ClearAssignee bool
-	Labels        *[]string
-	Visibility    *string
-	DueDate       *time.Time
-	ClearDueDate  bool
-	ParentID      *uuid.UUID
-	ClearParent   bool
-	QueueID        *uuid.UUID
-	ClearQueue     bool
-	MilestoneID    *uuid.UUID
-	ClearMilestone bool
-	CustomFields   map[string]interface{}
+	Status           *string
+	Priority         *string
+	Type             *string
+	AssigneeID       *uuid.UUID
+	ClearAssignee    bool
+	Labels           *[]string
+	Complexity       *int
+	ClearComplexity  bool
+	Visibility       *string
+	DueDate          *time.Time
+	ClearDueDate     bool
+	ParentID         *uuid.UUID
+	ClearParent      bool
+	QueueID          *uuid.UUID
+	ClearQueue       bool
+	MilestoneID      *uuid.UUID
+	ClearMilestone   bool
+	CustomFields     map[string]interface{}
 }
 
 // CreateCommentInput holds the input for creating a comment.
@@ -245,6 +249,13 @@ func (s *WorkItemService) Create(ctx context.Context, info *model.AuthInfo, proj
 		}
 	}
 
+	// Validate complexity against project settings
+	if input.Complexity != nil {
+		if err := validateComplexity(*input.Complexity, project.AllowedComplexityValues); err != nil {
+			return nil, err
+		}
+	}
+
 	labels := input.Labels
 	if labels == nil {
 		labels = []string{}
@@ -277,6 +288,7 @@ func (s *WorkItemService) Create(ctx context.Context, info *model.AuthInfo, proj
 		ReporterID:   info.UserID,
 		Visibility:   input.Visibility,
 		Labels:       labels,
+		Complexity:   input.Complexity,
 		CustomFields: customFields,
 		DueDate:      input.DueDate,
 	}
@@ -496,6 +508,26 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 		if oldLabels != newLabels {
 			s.recordFieldChange(ctx, item.ID, &info.UserID, "labels", oldLabels, newLabels)
 			item.Labels = *input.Labels
+		}
+	}
+
+	if input.ClearComplexity {
+		if item.Complexity != nil {
+			s.recordEvent(ctx, item.ID, &info.UserID, "complexity_cleared", strPtr("complexity"), strPtr(strconv.Itoa(*item.Complexity)), nil)
+			item.Complexity = nil
+		}
+	} else if input.Complexity != nil {
+		oldVal := ""
+		if item.Complexity != nil {
+			oldVal = strconv.Itoa(*item.Complexity)
+		}
+		newVal := strconv.Itoa(*input.Complexity)
+		if oldVal != newVal {
+			if err := validateComplexity(*input.Complexity, project.AllowedComplexityValues); err != nil {
+				return nil, err
+			}
+			s.recordFieldChange(ctx, item.ID, &info.UserID, "complexity", oldVal, newVal)
+			item.Complexity = input.Complexity
 		}
 	}
 
@@ -1313,6 +1345,21 @@ func parseDisplayID(displayID string) (string, int, error) {
 		return "", 0, fmt.Errorf("invalid item number in display ID")
 	}
 	return key, num, nil
+}
+
+func validateComplexity(value int, allowed []int) error {
+	if value <= 0 {
+		return fmt.Errorf("complexity must be a positive integer: %w", model.ErrValidation)
+	}
+	if len(allowed) > 0 {
+		for _, a := range allowed {
+			if a == value {
+				return nil
+			}
+		}
+		return fmt.Errorf("complexity value %d is not in the allowed values for this project: %w", value, model.ErrValidation)
+	}
+	return nil
 }
 
 func strPtr(s string) *string {

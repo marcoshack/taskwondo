@@ -16,15 +16,16 @@ const (
 
 // Project represents a top-level organizational unit.
 type Project struct {
-	ID          uuid.UUID  `json:"id"`
-	Name        string     `json:"name"`
-	Key         string     `json:"key"`
-	Description *string    `json:"description,omitempty"`
-	DefaultWorkflowID *uuid.UUID `json:"default_workflow_id,omitempty"`
-	ItemCounter       int        `json:"item_counter"`
-	CreatedAt         time.Time  `json:"created_at"`
-	UpdatedAt         time.Time  `json:"updated_at"`
-	DeletedAt         *time.Time `json:"-"`
+	ID                      uuid.UUID  `json:"id"`
+	Name                    string     `json:"name"`
+	Key                     string     `json:"key"`
+	Description             *string    `json:"description,omitempty"`
+	DefaultWorkflowID       *uuid.UUID `json:"default_workflow_id,omitempty"`
+	AllowedComplexityValues []int      `json:"allowed_complexity_values"`
+	ItemCounter             int        `json:"item_counter"`
+	CreatedAt               time.Time  `json:"created_at"`
+	UpdatedAt               time.Time  `json:"updated_at"`
+	DeletedAt               *time.Time `json:"-"`
 }
 
 // ProjectSummary holds aggregate counts for a project list view.

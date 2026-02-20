@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -372,7 +373,7 @@ func TestUpdateProject_OwnerCanUpdate(t *testing.T) {
 	}
 
 	newName := "Updated Name"
-	project, err := svc.Update(context.Background(), info, "TT", &newName, nil, nil, false, nil)
+	project, err := svc.Update(context.Background(), info, "TT", &newName, nil, nil, false, nil, nil, false)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -400,7 +401,7 @@ func TestUpdateProject_MemberCannotUpdate(t *testing.T) {
 	})
 
 	newName := "Hacked"
-	_, err = svc.Update(context.Background(), memberInfo, "TT", &newName, nil, nil, false, nil)
+	_, err = svc.Update(context.Background(), memberInfo, "TT", &newName, nil, nil, false, nil, nil, false)
 	if err != model.ErrForbidden {
 		t.Fatalf("expected ErrForbidden, got %v", err)
 	}
@@ -722,7 +723,7 @@ func TestUpdateProject_ChangeKey(t *testing.T) {
 	}
 
 	newKey := "NKEY"
-	project, err := svc.Update(context.Background(), info, "TT", nil, &newKey, nil, false, nil)
+	project, err := svc.Update(context.Background(), info, "TT", nil, &newKey, nil, false, nil, nil, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -741,7 +742,7 @@ func TestUpdateProject_InvalidKey(t *testing.T) {
 	}
 
 	badKey := "bad-key"
-	_, err = svc.Update(context.Background(), info, "TT", nil, &badKey, nil, false, nil)
+	_, err = svc.Update(context.Background(), info, "TT", nil, &badKey, nil, false, nil, nil, false)
 	if err == nil {
 		t.Fatal("expected error for invalid key")
 	}
@@ -761,7 +762,7 @@ func TestUpdateProject_DuplicateKey(t *testing.T) {
 	}
 
 	dupKey := "AA"
-	_, err = svc.Update(context.Background(), info, "BB", nil, &dupKey, nil, false, nil)
+	_, err = svc.Update(context.Background(), info, "BB", nil, &dupKey, nil, false, nil, nil, false)
 	if err == nil {
 		t.Fatal("expected error for duplicate key")
 	}
@@ -777,7 +778,7 @@ func TestUpdateProject_Description(t *testing.T) {
 	}
 
 	desc := "New description"
-	project, err := svc.Update(context.Background(), info, "TT", nil, nil, &desc, false, nil)
+	project, err := svc.Update(context.Background(), info, "TT", nil, nil, &desc, false, nil, nil, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -786,7 +787,7 @@ func TestUpdateProject_Description(t *testing.T) {
 	}
 
 	// Clear description
-	project, err = svc.Update(context.Background(), info, "TT", nil, nil, nil, true, nil)
+	project, err = svc.Update(context.Background(), info, "TT", nil, nil, nil, true, nil, nil, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -805,7 +806,7 @@ func TestUpdateProject_DefaultWorkflow(t *testing.T) {
 	}
 
 	wfID := uuid.New()
-	project, err := svc.Update(context.Background(), info, "TT", nil, nil, nil, false, &wfID)
+	project, err := svc.Update(context.Background(), info, "TT", nil, nil, nil, false, &wfID, nil, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1141,5 +1142,62 @@ func TestUpdateTypeWorkflow_WorkflowNotFound(t *testing.T) {
 	_, err = s.svc.UpdateTypeWorkflow(context.Background(), info, "TT", model.WorkItemTypeTask, uuid.New())
 	if err == nil {
 		t.Fatal("expected error for non-existent workflow")
+	}
+}
+
+func TestUpdateProject_AllowedComplexityValues(t *testing.T) {
+	svc, _, _, _ := newTestProjectService()
+	info := userAuthInfo()
+
+	_, err := svc.Create(context.Background(), info, "Test", "TT", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Set allowed complexity values
+	vals := []int{1, 2, 3, 5, 8, 13}
+	project, err := svc.Update(context.Background(), info, "TT", nil, nil, nil, false, nil, vals, false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(project.AllowedComplexityValues) != 6 {
+		t.Fatalf("expected 6 allowed values, got %d", len(project.AllowedComplexityValues))
+	}
+
+	// Clear allowed complexity values
+	project, err = svc.Update(context.Background(), info, "TT", nil, nil, nil, false, nil, nil, true)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(project.AllowedComplexityValues) != 0 {
+		t.Fatalf("expected empty allowed values, got %d", len(project.AllowedComplexityValues))
+	}
+}
+
+func TestUpdateProject_AllowedComplexityValues_InvalidValues(t *testing.T) {
+	svc, _, _, _ := newTestProjectService()
+	info := userAuthInfo()
+
+	_, err := svc.Create(context.Background(), info, "Test", "TT", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Zero value should fail
+	_, err = svc.Update(context.Background(), info, "TT", nil, nil, nil, false, nil, []int{0, 1, 2}, false)
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation for zero value, got %v", err)
+	}
+
+	// Negative value should fail
+	_, err = svc.Update(context.Background(), info, "TT", nil, nil, nil, false, nil, []int{-1, 3}, false)
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation for negative value, got %v", err)
+	}
+
+	// Duplicates should fail
+	_, err = svc.Update(context.Background(), info, "TT", nil, nil, nil, false, nil, []int{1, 3, 3}, false)
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation for duplicate values, got %v", err)
 	}
 }

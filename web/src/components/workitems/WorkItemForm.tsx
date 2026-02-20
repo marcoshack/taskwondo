@@ -17,6 +17,7 @@ interface WorkItemFormProps {
   projectKey: string
   mode: 'create' | 'edit'
   members: ProjectMember[]
+  allowedComplexityValues?: number[]
   initialValues?: {
     type?: string
     title?: string
@@ -24,6 +25,7 @@ interface WorkItemFormProps {
     priority?: string
     assignee_id?: string
     labels?: string[]
+    complexity?: number | null
     visibility?: string
     due_date?: string
     status?: string
@@ -39,6 +41,7 @@ export function WorkItemForm({
   projectKey,
   mode,
   members,
+  allowedComplexityValues = [],
   initialValues = {},
   statuses,
   allowedTransitions,
@@ -54,6 +57,7 @@ export function WorkItemForm({
   const [assigneeId, setAssigneeId] = useState<string | null>(initialValues.assignee_id ?? null)
   const [labels, setLabels] = useState(initialValues.labels?.join(', ') ?? '')
   const [visibility, setVisibility] = useState(initialValues.visibility ?? 'internal')
+  const [complexity, setComplexity] = useState(initialValues.complexity != null ? String(initialValues.complexity) : '')
   const [dueDate, setDueDate] = useState(initialValues.due_date ?? '')
   const [status, setStatus] = useState(initialValues.status ?? '')
 
@@ -74,6 +78,7 @@ export function WorkItemForm({
         priority,
         assignee_id: assigneeId || undefined,
         labels: labels ? labels.split(',').map((l) => l.trim()).filter(Boolean) : undefined,
+        complexity: complexity ? Number(complexity) : undefined,
         visibility,
         due_date: dueDate || undefined,
       })
@@ -88,6 +93,8 @@ export function WorkItemForm({
       const newLabels = labels ? labels.split(',').map((l) => l.trim()).filter(Boolean) : []
       if (JSON.stringify(newLabels) !== JSON.stringify(initialValues.labels ?? [])) values.labels = newLabels
       if (assigneeId !== (initialValues.assignee_id ?? null)) values.assignee_id = assigneeId
+      const oldComplexity = initialValues.complexity != null ? String(initialValues.complexity) : ''
+      if (complexity !== oldComplexity) values.complexity = complexity ? Number(complexity) : null
       onSubmit(values)
     }
   }
@@ -137,6 +144,16 @@ export function WorkItemForm({
               return <option key={tr} value={tr}>{t(`workitems.statuses.${tr}`, { defaultValue: ws?.display_name ?? tr })}</option>
             })}
         </Select>
+      )}
+      {allowedComplexityValues.length > 0 ? (
+        <Select label={t('workitems.form.complexity')} value={complexity} onChange={(e) => setComplexity(e.target.value)}>
+          <option value="">{t('workitems.form.complexityPlaceholder')}</option>
+          {allowedComplexityValues.map((v) => (
+            <option key={v} value={String(v)}>{v}</option>
+          ))}
+        </Select>
+      ) : (
+        <Input label={t('workitems.form.complexity')} type="number" min="1" value={complexity} onChange={(e) => setComplexity(e.target.value)} placeholder={t('workitems.form.complexityPlaceholder')} />
       )}
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('workitems.form.assignee')}</label>

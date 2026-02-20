@@ -40,6 +40,7 @@ type createWorkItemRequest struct {
 	Priority     string                 `json:"priority,omitempty"`
 	AssigneeID   *string                `json:"assignee_id,omitempty"`
 	Labels       []string               `json:"labels,omitempty"`
+	Complexity   *int                   `json:"complexity,omitempty"`
 	ParentID     *string                `json:"parent_id,omitempty"`
 	QueueID      *string                `json:"queue_id,omitempty"`
 	MilestoneID  *string                `json:"milestone_id,omitempty"`
@@ -66,6 +67,7 @@ type workItemResponse struct {
 	MilestoneID  *uuid.UUID             `json:"milestone_id,omitempty"`
 	Visibility   string                 `json:"visibility"`
 	Labels       []string               `json:"labels"`
+	Complexity   *int                   `json:"complexity,omitempty"`
 	CustomFields map[string]interface{} `json:"custom_fields"`
 	DueDate      *string                `json:"due_date,omitempty"`
 	SLADeadline  *time.Time             `json:"sla_deadline,omitempty"`
@@ -91,6 +93,7 @@ func toWorkItemResponse(item *model.WorkItem, projectKey string) workItemRespons
 		MilestoneID:  item.MilestoneID,
 		Visibility:   item.Visibility,
 		Labels:       item.Labels,
+		Complexity:   item.Complexity,
 		CustomFields: item.CustomFields,
 		SLADeadline:  item.SLADeadline,
 		ResolvedAt:   item.ResolvedAt,
@@ -143,6 +146,7 @@ func (h *WorkItemHandler) Create(w http.ResponseWriter, r *http.Request) {
 		Description:  req.Description,
 		Priority:     req.Priority,
 		Labels:       req.Labels,
+		Complexity:   req.Complexity,
 		Visibility:   req.Visibility,
 		CustomFields: req.CustomFields,
 	}
@@ -505,6 +509,19 @@ func (h *WorkItemHandler) Update(w http.ResponseWriter, r *http.Request) {
 				}
 				input.MilestoneID = &id
 			}
+		}
+	}
+
+	if v, ok := raw["complexity"]; ok {
+		if string(v) == "null" {
+			input.ClearComplexity = true
+		} else {
+			var complexity int
+			if err := json.Unmarshal(v, &complexity); err != nil {
+				writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "complexity must be an integer")
+				return
+			}
+			input.Complexity = &complexity
 		}
 	}
 

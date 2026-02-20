@@ -54,6 +54,9 @@ export function ProjectSettingsPage() {
   const [removeTarget, setRemoveTarget] = useState<{ userId: string; name: string } | null>(null)
   const [workflowSuccess, setWorkflowSuccess] = useState('')
   const [workflowError, setWorkflowError] = useState('')
+  const [complexityInput, setComplexityInput] = useState<string | null>(null)
+  const [complexitySuccess, setComplexitySuccess] = useState('')
+  const [complexityError, setComplexityError] = useState('')
 
   if (isLoading || !project) {
     return (
@@ -382,6 +385,80 @@ export function ProjectSettingsPage() {
                 </div>
               )
             })}
+          </div>
+        </>
+      )}
+
+      {/* Complexity section */}
+      {canManageMembers && (
+        <>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('projects.settings.complexity')}</h2>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('projects.settings.complexityDescription')}</p>
+          </div>
+
+          {complexityError && <p className="text-sm text-red-600 dark:text-red-400">{complexityError}</p>}
+          {complexitySuccess && <p className="text-sm text-green-600 dark:text-green-400">{complexitySuccess}</p>}
+
+          <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3">
+            <Input
+              label={t('projects.settings.complexityValues')}
+              value={complexityInput ?? project.allowed_complexity_values.join(', ')}
+              onChange={(e) => setComplexityInput(e.target.value)}
+              placeholder={t('projects.settings.complexityPlaceholder')}
+            />
+            <div className="flex gap-2">
+              <Button
+                disabled={complexityInput === null || updateMutation.isPending}
+                onClick={() => {
+                  setComplexityError('')
+                  setComplexitySuccess('')
+                  const values = complexityInput
+                    ? complexityInput.split(',').map((v) => v.trim()).filter(Boolean).map(Number)
+                    : []
+                  if (values.some((v) => isNaN(v) || v <= 0 || !Number.isInteger(v))) {
+                    setComplexityError(t('projects.settings.complexityInvalid'))
+                    return
+                  }
+                  updateMutation.mutate({ allowed_complexity_values: values }, {
+                    onSuccess: () => {
+                      setComplexitySuccess(t('projects.settings.complexitySaved'))
+                      setComplexityInput(null)
+                      setTimeout(() => setComplexitySuccess(''), 3000)
+                    },
+                    onError: (err) => {
+                      const axiosErr = err as AxiosError<{ error?: { message?: string } }>
+                      setComplexityError(axiosErr.response?.data?.error?.message ?? t('projects.settings.updateError'))
+                    },
+                  })
+                }}
+              >
+                {t('common.save')}
+              </Button>
+              {project.allowed_complexity_values.length > 0 && (
+                <Button
+                  variant="secondary"
+                  disabled={updateMutation.isPending}
+                  onClick={() => {
+                    setComplexityError('')
+                    setComplexitySuccess('')
+                    updateMutation.mutate({ allowed_complexity_values: [] }, {
+                      onSuccess: () => {
+                        setComplexitySuccess(t('projects.settings.complexityCleared'))
+                        setComplexityInput(null)
+                        setTimeout(() => setComplexitySuccess(''), 3000)
+                      },
+                      onError: (err) => {
+                        const axiosErr = err as AxiosError<{ error?: { message?: string } }>
+                        setComplexityError(axiosErr.response?.data?.error?.message ?? t('projects.settings.updateError'))
+                      },
+                    })
+                  }}
+                >
+                  {t('projects.settings.complexityClear')}
+                </Button>
+              )}
+            </div>
           </div>
         </>
       )}
