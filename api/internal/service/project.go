@@ -11,7 +11,7 @@ import (
 	"github.com/marcoshack/taskwondo/internal/model"
 )
 
-var projectKeyRegexp = regexp.MustCompile(`^[A-Z][A-Z0-9]{1,9}$`)
+var projectKeyRegexp = regexp.MustCompile(`^[A-Z][A-Z0-9]{1,4}$`)
 
 // ProjectRepository defines the persistence operations for projects.
 type ProjectRepository interface {
@@ -20,6 +20,7 @@ type ProjectRepository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*model.Project, error)
 	ListByUser(ctx context.Context, userID uuid.UUID) ([]model.Project, error)
 	ListAll(ctx context.Context) ([]model.Project, error)
+	GetSummaries(ctx context.Context, projectIDs []uuid.UUID) (map[uuid.UUID]model.ProjectSummary, error)
 	Update(ctx context.Context, project *model.Project) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }
@@ -64,7 +65,7 @@ func NewProjectService(projects ProjectRepository, members ProjectMemberReposito
 // Create creates a new project and adds the creator as owner.
 func (s *ProjectService) Create(ctx context.Context, info *model.AuthInfo, name, key string, description *string, defaultWorkflowID *uuid.UUID) (*model.Project, error) {
 	if !projectKeyRegexp.MatchString(key) {
-		return nil, fmt.Errorf("project key must be 2-10 uppercase alphanumeric characters starting with a letter: %w", model.ErrConflict)
+		return nil, fmt.Errorf("project key must be 2-5 uppercase alphanumeric characters starting with a letter: %w", model.ErrConflict)
 	}
 
 	// Check for duplicate key
@@ -155,6 +156,33 @@ func (s *ProjectService) List(ctx context.Context, info *model.AuthInfo) ([]mode
 	return s.projects.ListByUser(ctx, info.UserID)
 }
 
+// ListWithSummary returns projects with aggregate counts.
+func (s *ProjectService) ListWithSummary(ctx context.Context, info *model.AuthInfo) ([]model.ProjectWithSummary, error) {
+	projects, err := s.List(ctx, info)
+	if err != nil {
+		return nil, err
+	}
+
+	ids := make([]uuid.UUID, len(projects))
+	for i := range projects {
+		ids[i] = projects[i].ID
+	}
+
+	summaries, err := s.projects.GetSummaries(ctx, ids)
+	if err != nil {
+		return nil, fmt.Errorf("fetching project summaries: %w", err)
+	}
+
+	result := make([]model.ProjectWithSummary, len(projects))
+	for i := range projects {
+		result[i] = model.ProjectWithSummary{
+			Project:        projects[i],
+			ProjectSummary: summaries[projects[i].ID],
+		}
+	}
+	return result, nil
+}
+
 // Update modifies a project. Requires owner or admin role.
 func (s *ProjectService) Update(ctx context.Context, info *model.AuthInfo, projectKey string, name, key *string, description *string, clearDescription bool, defaultWorkflowID *uuid.UUID) (*model.Project, error) {
 	project, err := s.projects.GetByKey(ctx, projectKey)
@@ -171,7 +199,7 @@ func (s *ProjectService) Update(ctx context.Context, info *model.AuthInfo, proje
 	}
 	if key != nil {
 		if !projectKeyRegexp.MatchString(*key) {
-			return nil, fmt.Errorf("project key must be 2-10 uppercase alphanumeric characters starting with a letter: %w", model.ErrConflict)
+			return nil, fmt.Errorf("project key must be 2-5 uppercase alphanumeric characters starting with a letter: %w", model.ErrConflict)
 		}
 		// Check for duplicate key if changing
 		if *key != project.Key {

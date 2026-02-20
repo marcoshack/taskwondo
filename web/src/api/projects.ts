@@ -7,6 +7,9 @@ export interface Project {
   description?: string
   default_workflow_id?: string
   item_counter: number
+  member_count: number
+  open_count: number
+  in_progress_count: number
   created_at: string
   updated_at: string
 }

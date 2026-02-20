@@ -4,13 +4,51 @@ import { useTranslation } from 'react-i18next'
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
 import { useProjects, useCreateProject } from '@/hooks/useProjects'
 import { DataTable } from '@/components/ui/DataTable'
-import { Badge } from '@/components/ui/Badge'
 import { Spinner } from '@/components/ui/Spinner'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import type { Column } from '@/components/ui/DataTable'
 import type { Project } from '@/api/projects'
+
+function IconOpen({ className }: { className?: string }) {
+  // Inbox/tray icon — items waiting to be picked up
+  return (
+    <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 9h3.5l1.5 2h2l1.5-2H14" />
+      <path d="M3.5 3h9l1.5 6v4H2V9z" />
+    </svg>
+  )
+}
+
+function IconInProgress({ className }: { className?: string }) {
+  // Wrench icon — work in progress
+  return (
+    <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10.5 2.5a4 4 0 0 0-4.2 6.4L2.5 12.7a1 1 0 0 0 0 1.4l.4.4a1 1 0 0 0 1.4 0l3.8-3.8A4 4 0 0 0 14.5 6.5l-2.5 2.5-1.5-1.5L13 5a4 4 0 0 0-2.5-2.5z" />
+    </svg>
+  )
+}
+
+function IconTotal({ className }: { className?: string }) {
+  // Sigma/sum icon
+  return (
+    <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3H4.5l4 5-4 5H12" />
+    </svg>
+  )
+}
+
+function IconMembers({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="6" cy="5.5" r="2.5" />
+      <path d="M1.5 14c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4" />
+      <circle cx="11.5" cy="5.5" r="2" />
+      <path d="M14.5 14c0-2 -1.5-3.5-3-3.5" />
+    </svg>
+  )
+}
 
 export function ProjectListPage() {
   const { t } = useTranslation()
@@ -43,7 +81,11 @@ export function ProjectListPage() {
       key: 'key',
       header: t('projects.table.key'),
       width: '80px',
-      render: (p) => <Badge color="indigo">{p.key}</Badge>,
+      render: (p) => (
+        <span className="inline-flex items-center justify-center rounded-md bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 text-xs font-bold min-w-[4rem]">
+          {p.key}
+        </span>
+      ),
     },
     {
       key: 'name',
@@ -51,19 +93,32 @@ export function ProjectListPage() {
       render: (p) => <span className="font-medium text-gray-900 dark:text-gray-100 truncate block">{p.name}</span>,
     },
     {
-      key: 'items',
-      header: t('projects.table.items'),
-      width: '70px',
-      className: 'text-right sm:text-left',
+      key: 'open',
+      header: t('projects.table.open'),
+      width: '12%',
+      className: 'text-right',
+      render: (p) => <span className="text-gray-500 dark:text-gray-400">{p.open_count}</span>,
+    },
+    {
+      key: 'in_progress',
+      header: t('projects.table.inProgress'),
+      width: '12%',
+      className: 'text-right',
+      render: (p) => <span className="text-gray-500 dark:text-gray-400">{p.in_progress_count}</span>,
+    },
+    {
+      key: 'total',
+      header: t('projects.table.total'),
+      width: '12%',
+      className: 'text-right',
       render: (p) => <span className="text-gray-500 dark:text-gray-400">{p.item_counter}</span>,
     },
     {
-      key: 'updated',
-      header: t('projects.table.updated'),
-      className: 'hidden sm:table-cell',
-      render: (p) => (
-        <span className="text-gray-500 dark:text-gray-400">{new Date(p.updated_at).toLocaleDateString()}</span>
-      ),
+      key: 'members',
+      header: t('projects.table.members'),
+      width: '12%',
+      className: 'text-right',
+      render: (p) => <span className="text-gray-500 dark:text-gray-400">{p.member_count}</span>,
     },
   ]
 
@@ -115,7 +170,49 @@ export function ProjectListPage() {
         <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{t('projects.title')}</h1>
         <Button onClick={() => setShowCreate(true)}>{t('projects.new')}</Button>
       </div>
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+
+      {/* Mobile card view */}
+      <div className="sm:hidden space-y-3">
+        {projectList.length === 0 ? (
+          <p className="text-center text-sm text-gray-500 dark:text-gray-400 py-12">{t('projects.empty')}</p>
+        ) : (
+          projectList.map((p) => (
+            <button
+              key={p.key}
+              onClick={() => navigate(`/projects/${p.key}`)}
+              className="w-full text-left bg-white dark:bg-gray-800 rounded-lg shadow p-4 active:bg-gray-50 dark:active:bg-gray-700 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <span className="inline-flex items-center justify-center rounded-md bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 text-xs font-bold min-w-[4rem]">
+                  {p.key}
+                </span>
+                <span className="font-medium text-gray-900 dark:text-gray-100 truncate">{p.name}</span>
+              </div>
+              <div className="flex items-center gap-4 mt-2.5 ml-1 text-xs text-gray-500 dark:text-gray-400">
+                <span className="inline-flex items-center gap-1" title={t('projects.table.open')}>
+                  <IconOpen className="w-3.5 h-3.5" />
+                  {p.open_count}
+                </span>
+                <span className="inline-flex items-center gap-1" title={t('projects.table.inProgress')}>
+                  <IconInProgress className="w-3.5 h-3.5" />
+                  {p.in_progress_count}
+                </span>
+                <span className="inline-flex items-center gap-1" title={t('projects.table.total')}>
+                  <IconTotal className="w-3.5 h-3.5" />
+                  {p.item_counter}
+                </span>
+                <span className="inline-flex items-center gap-1" title={t('projects.table.members')}>
+                  <IconMembers className="w-3.5 h-3.5" />
+                  {p.member_count}
+                </span>
+              </div>
+            </button>
+          ))
+        )}
+      </div>
+
+      {/* Desktop table view */}
+      <div className="hidden sm:block bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
         <DataTable
           columns={columns}
           data={projectList}
@@ -139,7 +236,7 @@ export function ProjectListPage() {
             value={key}
             onChange={(e) => setKey(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
             placeholder={t('projects.create.keyPlaceholder')}
-            maxLength={10}
+            maxLength={5}
             required
           />
           <p className="text-xs text-gray-400 dark:text-gray-500 -mt-3">{t('projects.create.keyHint')}</p>
