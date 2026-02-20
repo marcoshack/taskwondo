@@ -1,10 +1,15 @@
-import { useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useUpdateWorkItem } from '@/hooks/useWorkItems'
 import { PriorityBadge } from './PriorityBadge'
 import { TypeBadge } from './TypeBadge'
 import type { WorkItem } from '@/api/workitems'
 import type { WorkflowStatus, WorkflowTransition } from '@/api/workflows'
+
+interface DraggedItem {
+  itemNumber: number
+  fromStatus: string
+}
 
 interface BoardViewProps {
   projectKey: string
@@ -17,6 +22,9 @@ interface BoardViewProps {
 export function BoardView({ projectKey, items, statuses, transitionsMap, onItemClick }: BoardViewProps) {
   const { t } = useTranslation()
   const updateMutation = useUpdateWorkItem(projectKey)
+  const [draggedItem, setDraggedItem] = useState<DraggedItem | null>(null)
+  const [hoveredColumn, setHoveredColumn] = useState<string | null>(null)
+  const dragCounterRef = useRef(new Map<string, number>())
 
   const sortedStatuses = [...statuses].sort((a, b) => a.position - b.position)
 
@@ -36,31 +44,99 @@ export function BoardView({ projectKey, items, statuses, transitionsMap, onItemC
     cancelled: 'bg-red-400',
   }
 
+  const canDropOnStatus = useCallback((targetStatus: string) => {
+    if (!draggedItem || !transitionsMap) return false
+    if (draggedItem.fromStatus === targetStatus) return false
+    const allowed = transitionsMap[draggedItem.fromStatus]?.map((tr) => tr.to_status) ?? []
+    return allowed.includes(targetStatus)
+  }, [draggedItem, transitionsMap])
+
+  const handleColumnDragOver = useCallback((e: React.DragEvent, statusName: string) => {
+    if (canDropOnStatus(statusName)) {
+      e.preventDefault()
+      e.dataTransfer.dropEffect = 'move'
+    }
+  }, [canDropOnStatus])
+
+  const handleColumnDragEnter = useCallback((e: React.DragEvent, statusName: string) => {
+    e.preventDefault()
+    const counters = dragCounterRef.current
+    counters.set(statusName, (counters.get(statusName) ?? 0) + 1)
+    if (canDropOnStatus(statusName)) {
+      setHoveredColumn(statusName)
+    }
+  }, [canDropOnStatus])
+
+  const handleColumnDragLeave = useCallback((_e: React.DragEvent, statusName: string) => {
+    const counters = dragCounterRef.current
+    const next = (counters.get(statusName) ?? 1) - 1
+    counters.set(statusName, next)
+    if (next <= 0) {
+      counters.delete(statusName)
+      if (hoveredColumn === statusName) setHoveredColumn(null)
+    }
+  }, [hoveredColumn])
+
+  const handleColumnDrop = useCallback((e: React.DragEvent, statusName: string) => {
+    e.preventDefault()
+    dragCounterRef.current.clear()
+    setHoveredColumn(null)
+    if (!draggedItem || !canDropOnStatus(statusName)) return
+    updateMutation.mutate({ itemNumber: draggedItem.itemNumber, input: { status: statusName } })
+    setDraggedItem(null)
+  }, [draggedItem, canDropOnStatus, updateMutation])
+
   return (
     <div className="flex gap-4 overflow-x-auto pb-4">
-      {sortedStatuses.map((status) => (
-        <div key={status.name} className="min-w-[280px] w-72 shrink-0">
-          <div className="flex items-center gap-2 mb-3 px-1">
-            <span className={`w-2.5 h-2.5 rounded-full ${categoryDot[status.category] ?? 'bg-gray-400'}`} />
-            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">{t(`workitems.statuses.${status.name}`, { defaultValue: status.display_name })}</h3>
-            <span className="text-xs text-gray-400 dark:text-gray-500">{itemsByStatus.get(status.name)?.length ?? 0}</span>
+      {sortedStatuses.map((status) => {
+        const isValidTarget = draggedItem !== null && canDropOnStatus(status.name)
+        const isHovered = hoveredColumn === status.name
+        const columnClasses = isHovered
+          ? 'border-2 border-dashed border-indigo-400 dark:border-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/20 rounded-lg'
+          : isValidTarget
+            ? 'border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg'
+            : draggedItem !== null
+              ? 'border-2 border-transparent rounded-lg opacity-60'
+              : ''
+
+        return (
+          <div
+            key={status.name}
+            className={`min-w-[280px] w-72 shrink-0 p-2 transition-colors ${columnClasses}`}
+            onDragOver={(e) => handleColumnDragOver(e, status.name)}
+            onDragEnter={(e) => handleColumnDragEnter(e, status.name)}
+            onDragLeave={(e) => handleColumnDragLeave(e, status.name)}
+            onDrop={(e) => handleColumnDrop(e, status.name)}
+          >
+            <div className="flex items-center gap-2 mb-3 px-1">
+              <span className={`w-2.5 h-2.5 rounded-full ${categoryDot[status.category] ?? 'bg-gray-400'}`} />
+              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">{t(`workitems.statuses.${status.name}`, { defaultValue: status.display_name })}</h3>
+              <span className="text-xs text-gray-400 dark:text-gray-500">{itemsByStatus.get(status.name)?.length ?? 0}</span>
+            </div>
+            <div className="space-y-2">
+              {(itemsByStatus.get(status.name) ?? []).map((item) => (
+                <BoardCard
+                  key={item.id}
+                  item={item}
+                  transitionsMap={transitionsMap}
+                  statuses={statuses}
+                  isDragging={draggedItem?.itemNumber === item.item_number}
+                  onClick={() => onItemClick(item)}
+                  onStatusChange={(newStatus) => {
+                    updateMutation.mutate({ itemNumber: item.item_number, input: { status: newStatus } })
+                  }}
+                  onDragStart={() => setDraggedItem({ itemNumber: item.item_number, fromStatus: item.status })}
+                  onDragEnd={() => {
+                    setDraggedItem(null)
+                    setHoveredColumn(null)
+                    dragCounterRef.current.clear()
+                  }}
+                />
+              ))}
+            </div>
           </div>
-          <div className="space-y-2">
-            {(itemsByStatus.get(status.name) ?? []).map((item) => (
-              <BoardCard
-                key={item.id}
-                item={item}
-                transitionsMap={transitionsMap}
-                statuses={statuses}
-                onClick={() => onItemClick(item)}
-                onStatusChange={(newStatus) => {
-                  updateMutation.mutate({ itemNumber: item.item_number, input: { status: newStatus } })
-                }}
-              />
-            ))}
-          </div>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }
@@ -69,14 +145,20 @@ function BoardCard({
   item,
   transitionsMap,
   statuses,
+  isDragging,
   onClick,
   onStatusChange,
+  onDragStart,
+  onDragEnd,
 }: {
   item: WorkItem
   transitionsMap?: Record<string, { to_status: string }[]>
   statuses: WorkflowStatus[]
+  isDragging?: boolean
   onClick: () => void
   onStatusChange: (status: string) => void
+  onDragStart: () => void
+  onDragEnd: () => void
 }) {
   const { t } = useTranslation()
   const [showMenu, setShowMenu] = useState(false)
@@ -84,8 +166,15 @@ function BoardCard({
 
   return (
     <div
-      className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 shadow-sm hover:shadow-md cursor-pointer relative"
+      className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 shadow-sm hover:shadow-md cursor-pointer relative ${isDragging ? 'opacity-50' : ''}`}
+      draggable
       onClick={onClick}
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = 'move'
+        e.dataTransfer.setData('text/plain', String(item.item_number))
+        onDragStart()
+      }}
+      onDragEnd={onDragEnd}
     >
       <div className="flex items-center gap-1.5 mb-1">
         <span className="text-xs font-bold font-mono text-gray-600 dark:text-gray-400">{item.display_id}</span>
