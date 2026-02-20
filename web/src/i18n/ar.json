@@ -419,5 +419,7 @@
   "admin.users.disableConfirmButton": "تعطيل",
   "admin.users.removeFromProjectTitle": "إزالة من المشروع",
   "admin.users.removeFromProjectBody": "هل أنت متأكد من إزالة <bold>{{name}}</bold> من <bold>{{project}}</bold>؟",
-  "admin.users.removeFromProjectButton": "إزالة"
+  "admin.users.removeFromProjectButton": "إزالة",
+
+  "footer.poweredBy": "مدعوم بواسطة <brand>Taskwondo</brand>"
 }

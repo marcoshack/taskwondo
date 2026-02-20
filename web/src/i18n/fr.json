@@ -420,5 +420,7 @@
   "admin.users.disableConfirmButton": "Désactiver",
   "admin.users.removeFromProjectTitle": "Retirer du Projet",
   "admin.users.removeFromProjectBody": "Êtes-vous sûr de vouloir retirer <bold>{{name}}</bold> de <bold>{{project}}</bold> ?",
-  "admin.users.removeFromProjectButton": "Retirer"
+  "admin.users.removeFromProjectButton": "Retirer",
+
+  "footer.poweredBy": "Propulsé par <brand>Taskwondo</brand>"
 }

@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/Input'
 import { isAxiosError } from 'axios'
 import * as authApi from '@/api/auth'
 import { useBrand } from '@/contexts/BrandContext'
+import { PoweredByFooter } from '@/components/PoweredByFooter'
 import type { AuthProviders } from '@/api/auth'
 
 export function LoginPage() {
@@ -55,7 +56,8 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
+    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 px-4">
+      <div className="flex-1 flex items-center justify-center">
       <div className="max-w-sm w-full">
         <h1 className="text-2xl font-bold text-center text-gray-900 dark:text-gray-100 mb-8">
           {t('login.title', { brandName })}
@@ -112,6 +114,8 @@ export function LoginPage() {
           </>
         )}
       </div>
+      </div>
+      <PoweredByFooter />
     </div>
   )
 }

@@ -419,5 +419,7 @@
   "admin.users.disableConfirmButton": "無効にする",
   "admin.users.removeFromProjectTitle": "プロジェクトから削除",
   "admin.users.removeFromProjectBody": "<bold>{{name}}</bold>を<bold>{{project}}</bold>から削除してもよろしいですか？",
-  "admin.users.removeFromProjectButton": "削除"
+  "admin.users.removeFromProjectButton": "削除",
+
+  "footer.poweredBy": "<brand>Taskwondo</brand> が提供"
 }

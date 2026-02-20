@@ -14,6 +14,7 @@ import { useKeyboardShortcutContext } from '@/contexts/KeyboardShortcutContext'
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
 import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal'
 import { useBrand } from '@/contexts/BrandContext'
+import { PoweredByFooter } from '@/components/PoweredByFooter'
 
 export function AppShell() {
   const { t } = useTranslation()
@@ -69,7 +70,7 @@ export function AppShell() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
       <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-14 relative">
@@ -156,9 +157,10 @@ export function AppShell() {
           </div>
         </div>
       </nav>
-      <main>
+      <main className="flex-1">
         <Outlet />
       </main>
+      <PoweredByFooter />
       <ProjectSwitcherModal
         open={switcherOpen}
         onClose={() => setSwitcherOpen(false)}
