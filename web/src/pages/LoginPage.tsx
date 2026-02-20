@@ -7,10 +7,12 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { isAxiosError } from 'axios'
 import * as authApi from '@/api/auth'
+import { useBrand } from '@/contexts/BrandContext'
 import type { AuthProviders } from '@/api/auth'
 
 export function LoginPage() {
   const { t } = useTranslation()
+  const { brandName } = useBrand()
   const { user, login } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -56,7 +58,7 @@ export function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
       <div className="max-w-sm w-full">
         <h1 className="text-2xl font-bold text-center text-gray-900 dark:text-gray-100 mb-8">
-          {t('login.title')}
+          {t('login.title', { brandName })}
         </h1>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input

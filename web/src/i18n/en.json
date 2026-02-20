@@ -37,7 +37,7 @@
   "nav.preferences": "Preferences",
   "nav.signOut": "Sign out",
 
-  "login.title": "Sign in to Taskwondo",
+  "login.title": "Sign in to {{brandName}}",
   "login.email": "Email",
   "login.password": "Password",
   "login.submit": "Sign in",
@@ -365,7 +365,15 @@
 
   "admin.title": "System Settings",
   "admin.titleShort": "System",
+  "admin.sidebar.general": "General",
   "admin.sidebar.users": "Users",
+
+  "admin.general.title": "General",
+  "admin.general.description": "Configure general system settings.",
+  "admin.general.brand.title": "Brand",
+  "admin.general.brand.name": "Brand name",
+  "admin.general.brand.nameHelp": "The name displayed in the navigation bar and login page. Leave empty to use the default.",
+  "admin.general.brand.saved": "Brand name saved.",
 
   "admin.users.title": "Users",
   "admin.users.description": "Manage user accounts, roles, and project access.",

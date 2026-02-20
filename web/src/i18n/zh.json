@@ -37,7 +37,7 @@
   "nav.preferences": "偏好设置",
   "nav.signOut": "退出登录",
 
-  "login.title": "登录 Taskwondo",
+  "login.title": "登录 {{brandName}}",
   "login.email": "邮箱",
   "login.password": "密码",
   "login.submit": "登录",
@@ -80,6 +80,11 @@
   "projects.settings.updateSuccess": "项目已更新。",
   "projects.settings.updateError": "更新项目失败。",
   "projects.settings.deleteError": "删除项目失败。",
+  "projects.settings.workflows": "工作流",
+  "projects.settings.workflowsDescription": "配置每种工作条目类型使用的工作流。",
+  "projects.settings.workflowUpdated": "工作流映射已更新。",
+  "projects.settings.workflowUpdateError": "工作流映射更新失败。",
+  "projects.settings.selectWorkflow": "选择工作流...",
   "projects.settings.dangerZone": "危险操作",
   "projects.settings.deleteProject": "删除项目",
   "projects.settings.deleteWarning": "该项目的所有条目、评论和关联将被永久删除。",
@@ -177,11 +182,16 @@
   "workitems.detail.deleteItem": "删除条目",
   "workitems.detail.deleteTitle": "删除条目",
   "workitems.detail.deleteConfirmBody": "确定要删除<bold>{{displayId}}</bold>吗？此操作不可撤销。",
+  "workitems.deleteSelectedTitle": "删除工作条目",
+  "workitems.deleteSelectedBody_one": "确定要删除{{count}}个工作条目吗？此操作不可撤销。",
+  "workitems.deleteSelectedBody_other": "确定要删除{{count}}个工作条目吗？此操作不可撤销。",
 
   "workitems.detail.reporter": "报告人",
   "workitems.detail.created": "创建时间",
   "workitems.detail.updated": "更新时间",
   "workitems.detail.resolved": "解决时间",
+  "workitems.detail.statusIncompatible": "状态必须更新以适配新类型的工作流。",
+  "workitems.detail.selectStatus": "选择状态...",
 
   "workitems.filters.title": "筛选",
   "workitems.filters.search": "搜索条目... ( / )",
@@ -246,6 +256,10 @@
   "comments.deleteBody": "此评论将被永久删除。此操作不可撤销。",
   "comments.editCount_one": "（已编辑{{count}}次）",
   "comments.editCount_other": "（已编辑{{count}}次）",
+  "comments.unsavedTitle": "未保存的评论",
+  "comments.unsavedBody": "您有未保存的评论。如果离开，评论将丢失。",
+  "comments.discard": "丢弃",
+  "comments.keepEditing": "继续编辑",
 
   "activity.noActivity": "暂无动态。",
   "activity.createdItem": "创建了此条目",
@@ -281,7 +295,9 @@
   "attachments.noAttachments": "暂无附件。",
   "attachments.uploadFailed": "上传失败，请重试。",
   "attachments.commentPlaceholder": "备注/描述（可选）...",
+  "attachments.deleteTitle": "删除附件",
   "attachments.deleteConfirm": "确定删除此附件？",
+  "attachments.editDescription": "编辑描述",
 
   "preview.download": "下载",
   "preview.close": "关闭",
@@ -347,8 +363,14 @@
 
   "admin.title": "系统设置",
   "admin.titleShort": "系统",
+  "admin.sidebar.general": "常规",
   "admin.sidebar.users": "用户",
-
+  "admin.general.title": "常规",
+  "admin.general.description": "配置常规系统设置。",
+  "admin.general.brand.title": "品牌",
+  "admin.general.brand.name": "品牌名称",
+  "admin.general.brand.nameHelp": "显示在导航栏和登录页面的名称。留空则使用默认值。",
+  "admin.general.brand.saved": "品牌名称已保存。",
   "admin.users.title": "用户",
   "admin.users.description": "管理用户账户、角色和项目访问权限。",
   "admin.users.name": "姓名",
@@ -365,10 +387,8 @@
   "admin.users.filterAll": "所有用户",
   "admin.users.noUsers": "未找到用户。",
   "admin.users.noProjects": "未加入任何项目。",
-
   "admin.users.roles.admin": "管理员",
   "admin.users.roles.user": "用户",
-
   "admin.users.addToProject": "添加到项目",
   "admin.users.selectProject": "选择项目...",
   "admin.users.projectRole": "角色",
@@ -380,11 +400,9 @@
   "admin.users.removeFromProjectError": "从项目中移除用户失败。",
   "admin.users.updateError": "更新用户失败。",
   "admin.users.alreadyMember": "用户已是此项目的成员。",
-
   "admin.users.disableConfirmTitle": "禁用用户",
   "admin.users.disableConfirmBody": "确定要禁用<bold>{{name}}</bold>吗？该用户将无法登录。",
   "admin.users.disableConfirmButton": "禁用",
-
   "admin.users.removeFromProjectTitle": "从项目中移除",
   "admin.users.removeFromProjectBody": "确定要将<bold>{{name}}</bold>从<bold>{{project}}</bold>中移除吗？",
   "admin.users.removeFromProjectButton": "移除"

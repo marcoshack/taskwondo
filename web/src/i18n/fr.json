@@ -37,7 +37,7 @@
   "nav.preferences": "Préférences",
   "nav.signOut": "Se déconnecter",
 
-  "login.title": "Se connecter à Taskwondo",
+  "login.title": "Se connecter à {{brandName}}",
   "login.email": "E-mail",
   "login.password": "Mot de passe",
   "login.submit": "Se connecter",
@@ -80,6 +80,11 @@
   "projects.settings.updateSuccess": "Projet mis à jour.",
   "projects.settings.updateError": "Échec de la mise à jour du projet.",
   "projects.settings.deleteError": "Échec de la suppression du projet.",
+  "projects.settings.workflows": "Workflows",
+  "projects.settings.workflowsDescription": "Configurez le workflow utilisé pour chaque type d'élément.",
+  "projects.settings.workflowUpdated": "Association de workflow mise à jour.",
+  "projects.settings.workflowUpdateError": "Échec de la mise à jour de l'association de workflow.",
+  "projects.settings.selectWorkflow": "Sélectionner un workflow...",
   "projects.settings.dangerZone": "Zone de Danger",
   "projects.settings.deleteProject": "Supprimer le projet",
   "projects.settings.deleteWarning": "Tous les éléments, commentaires et relations de ce projet seront supprimés définitivement.",
@@ -177,11 +182,16 @@
   "workitems.detail.deleteItem": "Supprimer",
   "workitems.detail.deleteTitle": "Supprimer l'élément",
   "workitems.detail.deleteConfirmBody": "Voulez-vous vraiment supprimer <bold>{{displayId}}</bold> ? Cette action est irréversible.",
+  "workitems.deleteSelectedTitle": "Supprimer les éléments",
+  "workitems.deleteSelectedBody_one": "Voulez-vous vraiment supprimer {{count}} élément ? Cette action est irréversible.",
+  "workitems.deleteSelectedBody_other": "Voulez-vous vraiment supprimer {{count}} éléments ? Cette action est irréversible.",
 
   "workitems.detail.reporter": "Rapporteur",
   "workitems.detail.created": "Créé",
   "workitems.detail.updated": "Mis à jour",
   "workitems.detail.resolved": "Résolu",
+  "workitems.detail.statusIncompatible": "Le statut doit être mis à jour pour le workflow du nouveau type.",
+  "workitems.detail.selectStatus": "Sélectionner un statut...",
 
   "workitems.filters.title": "Filtres",
   "workitems.filters.search": "Rechercher... ( / )",
@@ -246,6 +256,10 @@
   "comments.deleteBody": "Ce commentaire sera définitivement supprimé. Cette action est irréversible.",
   "comments.editCount_one": "(modifié {{count}} fois)",
   "comments.editCount_other": "(modifié {{count}} fois)",
+  "comments.unsavedTitle": "Commentaire non enregistré",
+  "comments.unsavedBody": "Vous avez un commentaire non enregistré. Si vous quittez, votre commentaire sera perdu.",
+  "comments.discard": "Abandonner",
+  "comments.keepEditing": "Continuer l'édition",
 
   "activity.noActivity": "Aucune activité.",
   "activity.createdItem": "a créé cet élément",
@@ -281,7 +295,9 @@
   "attachments.noAttachments": "Aucune pièce jointe.",
   "attachments.uploadFailed": "Échec de l'envoi. Veuillez réessayer.",
   "attachments.commentPlaceholder": "Commentaire/description optionnel...",
+  "attachments.deleteTitle": "Supprimer la pièce jointe",
   "attachments.deleteConfirm": "Supprimer cette pièce jointe ?",
+  "attachments.editDescription": "Modifier la description",
 
   "preview.download": "Télécharger",
   "preview.close": "Fermer",
@@ -347,8 +363,14 @@
 
   "admin.title": "Paramètres Système",
   "admin.titleShort": "Système",
+  "admin.sidebar.general": "Général",
   "admin.sidebar.users": "Utilisateurs",
-
+  "admin.general.title": "Général",
+  "admin.general.description": "Configurer les paramètres généraux du système.",
+  "admin.general.brand.title": "Marque",
+  "admin.general.brand.name": "Nom de la marque",
+  "admin.general.brand.nameHelp": "Le nom affiché dans la barre de navigation et la page de connexion. Laissez vide pour utiliser la valeur par défaut.",
+  "admin.general.brand.saved": "Nom de la marque enregistré.",
   "admin.users.title": "Utilisateurs",
   "admin.users.description": "Gérer les comptes utilisateur, les rôles et l'accès aux projets.",
   "admin.users.name": "Nom",
@@ -365,10 +387,8 @@
   "admin.users.filterAll": "Tous les utilisateurs",
   "admin.users.noUsers": "Aucun utilisateur trouvé.",
   "admin.users.noProjects": "Membre d'aucun projet.",
-
   "admin.users.roles.admin": "Administrateur",
   "admin.users.roles.user": "Utilisateur",
-
   "admin.users.addToProject": "Ajouter au projet",
   "admin.users.selectProject": "Sélectionner un projet...",
   "admin.users.projectRole": "Rôle",
@@ -380,11 +400,9 @@
   "admin.users.removeFromProjectError": "Échec du retrait de l'utilisateur du projet.",
   "admin.users.updateError": "Échec de la mise à jour de l'utilisateur.",
   "admin.users.alreadyMember": "L'utilisateur est déjà membre de ce projet.",
-
   "admin.users.disableConfirmTitle": "Désactiver l'Utilisateur",
   "admin.users.disableConfirmBody": "Êtes-vous sûr de vouloir désactiver <bold>{{name}}</bold> ? Il ne pourra plus se connecter.",
   "admin.users.disableConfirmButton": "Désactiver",
-
   "admin.users.removeFromProjectTitle": "Retirer du Projet",
   "admin.users.removeFromProjectBody": "Êtes-vous sûr de vouloir retirer <bold>{{name}}</bold> de <bold>{{project}}</bold> ?",
   "admin.users.removeFromProjectButton": "Retirer"

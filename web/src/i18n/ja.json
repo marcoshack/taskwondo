@@ -37,7 +37,7 @@
   "nav.preferences": "設定",
   "nav.signOut": "ログアウト",
 
-  "login.title": "Taskwondoにログイン",
+  "login.title": "{{brandName}}にサインイン",
   "login.email": "メール",
   "login.password": "パスワード",
   "login.submit": "ログイン",
@@ -80,6 +80,11 @@
   "projects.settings.updateSuccess": "プロジェクトを更新しました。",
   "projects.settings.updateError": "プロジェクトの更新に失敗しました。",
   "projects.settings.deleteError": "プロジェクトの削除に失敗しました。",
+  "projects.settings.workflows": "ワークフロー",
+  "projects.settings.workflowsDescription": "各アイテムの種別に使用するワークフローを設定します。",
+  "projects.settings.workflowUpdated": "ワークフローの割り当てを更新しました。",
+  "projects.settings.workflowUpdateError": "ワークフローの割り当て更新に失敗しました。",
+  "projects.settings.selectWorkflow": "ワークフローを選択...",
   "projects.settings.dangerZone": "危険な操作",
   "projects.settings.deleteProject": "プロジェクトを削除",
   "projects.settings.deleteWarning": "このプロジェクトのすべてのアイテム、コメント、関連が完全に削除されます。",
@@ -177,11 +182,16 @@
   "workitems.detail.deleteItem": "アイテム削除",
   "workitems.detail.deleteTitle": "アイテム削除",
   "workitems.detail.deleteConfirmBody": "<bold>{{displayId}}</bold>を削除しますか？この操作は元に戻せません。",
+  "workitems.deleteSelectedTitle": "アイテムを削除",
+  "workitems.deleteSelectedBody_one": "{{count}}件のアイテムを削除しますか？この操作は元に戻せません。",
+  "workitems.deleteSelectedBody_other": "{{count}}件のアイテムを削除しますか？この操作は元に戻せません。",
 
   "workitems.detail.reporter": "報告者",
   "workitems.detail.created": "作成日",
   "workitems.detail.updated": "更新日",
   "workitems.detail.resolved": "解決日",
+  "workitems.detail.statusIncompatible": "新しい種別のワークフローに合わせてステータスを更新する必要があります。",
+  "workitems.detail.selectStatus": "ステータスを選択...",
 
   "workitems.filters.title": "フィルター",
   "workitems.filters.search": "アイテムを検索... ( / )",
@@ -246,6 +256,10 @@
   "comments.deleteBody": "このコメントは完全に削除されます。この操作は元に戻せません。",
   "comments.editCount_one": "（{{count}}回編集済み）",
   "comments.editCount_other": "（{{count}}回編集済み）",
+  "comments.unsavedTitle": "未保存のコメント",
+  "comments.unsavedBody": "未保存のコメントがあります。ページを離れるとコメントは失われます。",
+  "comments.discard": "破棄",
+  "comments.keepEditing": "編集を続ける",
 
   "activity.noActivity": "アクティビティなし。",
   "activity.createdItem": "このアイテムを作成",
@@ -281,7 +295,9 @@
   "attachments.noAttachments": "添付ファイルなし。",
   "attachments.uploadFailed": "アップロードに失敗しました。再度お試しください。",
   "attachments.commentPlaceholder": "コメント/説明（任意）...",
+  "attachments.deleteTitle": "添付ファイルを削除",
   "attachments.deleteConfirm": "この添付ファイルを削除しますか？",
+  "attachments.editDescription": "説明を編集",
 
   "preview.download": "ダウンロード",
   "preview.close": "閉じる",
@@ -347,8 +363,14 @@
 
   "admin.title": "システム設定",
   "admin.titleShort": "システム",
+  "admin.sidebar.general": "一般",
   "admin.sidebar.users": "ユーザー",
-
+  "admin.general.title": "一般",
+  "admin.general.description": "一般的なシステム設定を構成します。",
+  "admin.general.brand.title": "ブランド",
+  "admin.general.brand.name": "ブランド名",
+  "admin.general.brand.nameHelp": "ナビゲーションバーとログインページに表示される名前です。空欄にするとデフォルトが使用されます。",
+  "admin.general.brand.saved": "ブランド名を保存しました。",
   "admin.users.title": "ユーザー",
   "admin.users.description": "ユーザーアカウント、ロール、プロジェクトアクセスを管理します。",
   "admin.users.name": "名前",
@@ -365,10 +387,8 @@
   "admin.users.filterAll": "すべてのユーザー",
   "admin.users.noUsers": "ユーザーが見つかりません。",
   "admin.users.noProjects": "プロジェクトに参加していません。",
-
   "admin.users.roles.admin": "管理者",
   "admin.users.roles.user": "ユーザー",
-
   "admin.users.addToProject": "プロジェクトに追加",
   "admin.users.selectProject": "プロジェクトを選択...",
   "admin.users.projectRole": "ロール",
@@ -380,11 +400,9 @@
   "admin.users.removeFromProjectError": "ユーザーのプロジェクト削除に失敗しました。",
   "admin.users.updateError": "ユーザーの更新に失敗しました。",
   "admin.users.alreadyMember": "ユーザーは既にこのプロジェクトのメンバーです。",
-
   "admin.users.disableConfirmTitle": "ユーザーを無効化",
   "admin.users.disableConfirmBody": "<bold>{{name}}</bold>を無効にしてもよろしいですか？ログインできなくなります。",
   "admin.users.disableConfirmButton": "無効にする",
-
   "admin.users.removeFromProjectTitle": "プロジェクトから削除",
   "admin.users.removeFromProjectBody": "<bold>{{name}}</bold>を<bold>{{project}}</bold>から削除してもよろしいですか？",
   "admin.users.removeFromProjectButton": "削除"

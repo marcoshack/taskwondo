@@ -37,7 +37,7 @@
   "nav.preferences": "환경설정",
   "nav.signOut": "로그아웃",
 
-  "login.title": "Taskwondo 로그인",
+  "login.title": "{{brandName}} 로그인",
   "login.email": "이메일",
   "login.password": "비밀번호",
   "login.submit": "로그인",
@@ -80,6 +80,11 @@
   "projects.settings.updateSuccess": "프로젝트가 업데이트되었습니다.",
   "projects.settings.updateError": "프로젝트 업데이트에 실패했습니다.",
   "projects.settings.deleteError": "프로젝트 삭제에 실패했습니다.",
+  "projects.settings.workflows": "워크플로",
+  "projects.settings.workflowsDescription": "각 작업 항목 유형에 사용할 워크플로를 구성합니다.",
+  "projects.settings.workflowUpdated": "워크플로 매핑이 업데이트되었습니다.",
+  "projects.settings.workflowUpdateError": "워크플로 매핑 업데이트에 실패했습니다.",
+  "projects.settings.selectWorkflow": "워크플로 선택...",
   "projects.settings.dangerZone": "위험 영역",
   "projects.settings.deleteProject": "프로젝트 삭제",
   "projects.settings.deleteWarning": "이 프로젝트의 모든 항목, 댓글, 관계가 영구 삭제됩니다.",
@@ -177,11 +182,16 @@
   "workitems.detail.deleteItem": "항목 삭제",
   "workitems.detail.deleteTitle": "항목 삭제",
   "workitems.detail.deleteConfirmBody": "<bold>{{displayId}}</bold>을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+  "workitems.deleteSelectedTitle": "항목 삭제",
+  "workitems.deleteSelectedBody_one": "{{count}}개 항목을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+  "workitems.deleteSelectedBody_other": "{{count}}개 항목을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
 
   "workitems.detail.reporter": "보고자",
   "workitems.detail.created": "생성일",
   "workitems.detail.updated": "수정일",
   "workitems.detail.resolved": "해결일",
+  "workitems.detail.statusIncompatible": "새 유형의 워크플로에 맞게 상태를 업데이트해야 합니다.",
+  "workitems.detail.selectStatus": "상태 선택...",
 
   "workitems.filters.title": "필터",
   "workitems.filters.search": "항목 검색... ( / )",
@@ -246,6 +256,10 @@
   "comments.deleteBody": "이 댓글은 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.",
   "comments.editCount_one": "({{count}}회 수정됨)",
   "comments.editCount_other": "({{count}}회 수정됨)",
+  "comments.unsavedTitle": "저장되지 않은 댓글",
+  "comments.unsavedBody": "저장되지 않은 댓글이 있습니다. 나가면 댓글이 사라집니다.",
+  "comments.discard": "삭제",
+  "comments.keepEditing": "계속 편집",
 
   "activity.noActivity": "활동이 없습니다.",
   "activity.createdItem": "이 항목을 생성함",
@@ -281,7 +295,9 @@
   "attachments.noAttachments": "첨부파일이 없습니다.",
   "attachments.uploadFailed": "업로드에 실패했습니다. 다시 시도해 주세요.",
   "attachments.commentPlaceholder": "설명 (선택)...",
+  "attachments.deleteTitle": "첨부파일 삭제",
   "attachments.deleteConfirm": "이 첨부파일을 삭제하시겠습니까?",
+  "attachments.editDescription": "설명 편집",
 
   "preview.download": "다운로드",
   "preview.close": "닫기",
@@ -347,8 +363,14 @@
 
   "admin.title": "시스템 설정",
   "admin.titleShort": "시스템",
+  "admin.sidebar.general": "일반",
   "admin.sidebar.users": "사용자",
-
+  "admin.general.title": "일반",
+  "admin.general.description": "일반 시스템 설정을 구성합니다.",
+  "admin.general.brand.title": "브랜드",
+  "admin.general.brand.name": "브랜드 이름",
+  "admin.general.brand.nameHelp": "탐색 바와 로그인 페이지에 표시되는 이름입니다. 기본값을 사용하려면 비워 두세요.",
+  "admin.general.brand.saved": "브랜드 이름이 저장되었습니다.",
   "admin.users.title": "사용자",
   "admin.users.description": "사용자 계정, 역할 및 프로젝트 접근을 관리합니다.",
   "admin.users.name": "이름",
@@ -365,10 +387,8 @@
   "admin.users.filterAll": "모든 사용자",
   "admin.users.noUsers": "사용자를 찾을 수 없습니다.",
   "admin.users.noProjects": "참여 중인 프로젝트가 없습니다.",
-
   "admin.users.roles.admin": "관리자",
   "admin.users.roles.user": "사용자",
-
   "admin.users.addToProject": "프로젝트에 추가",
   "admin.users.selectProject": "프로젝트 선택...",
   "admin.users.projectRole": "역할",
@@ -380,11 +400,9 @@
   "admin.users.removeFromProjectError": "사용자를 프로젝트에서 제거하지 못했습니다.",
   "admin.users.updateError": "사용자를 업데이트하지 못했습니다.",
   "admin.users.alreadyMember": "사용자가 이미 이 프로젝트의 멤버입니다.",
-
   "admin.users.disableConfirmTitle": "사용자 비활성화",
   "admin.users.disableConfirmBody": "<bold>{{name}}</bold>을(를) 비활성화하시겠습니까? 로그인할 수 없게 됩니다.",
   "admin.users.disableConfirmButton": "비활성화",
-
   "admin.users.removeFromProjectTitle": "프로젝트에서 제거",
   "admin.users.removeFromProjectBody": "<bold>{{name}}</bold>을(를) <bold>{{project}}</bold>에서 제거하시겠습니까?",
   "admin.users.removeFromProjectButton": "제거"
