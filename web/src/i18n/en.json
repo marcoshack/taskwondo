@@ -137,6 +137,7 @@
   "workitems.title": "Work Items",
   "workitems.titleShort": "Items",
   "workitems.new": "New Item",
+  "workitems.newShort": "New",
   "workitems.newTitle": "New Work Item",
   "workitems.notFound": "Work item not found.",
   "workitems.empty": "No work items found",
