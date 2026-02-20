@@ -9,6 +9,7 @@ import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
+import { MultiSelect } from '@/components/ui/MultiSelect'
 import { Spinner } from '@/components/ui/Spinner'
 import type { AdminUser } from '@/api/admin'
 import type { AxiosError } from 'axios'
@@ -20,12 +21,14 @@ const ROLE_BADGE_COLORS: Record<string, 'indigo' | 'blue' | 'green' | 'gray'> = 
   viewer: 'gray',
 }
 
-type UserStatusFilter = 'active' | 'disabled' | 'all'
-
 const PREFERENCE_KEY = 'admin_users_status_filter'
 
-function isValidStatusFilter(v: unknown): v is UserStatusFilter {
-  return v === 'active' || v === 'disabled' || v === 'all'
+function parseStatusFilter(v: unknown): string[] {
+  if (typeof v === 'string') {
+    try { const arr = JSON.parse(v); if (Array.isArray(arr)) return arr } catch { /* ignore */ }
+    if (v === 'active' || v === 'disabled') return [v]
+  }
+  return ['active']
 }
 
 export function AdminUsersPage() {
@@ -36,17 +39,18 @@ export function AdminUsersPage() {
 
   const { data: savedFilter } = usePreference<string>(PREFERENCE_KEY)
   const setPref = useSetPreference()
-  const statusFilter: UserStatusFilter = isValidStatusFilter(savedFilter) ? savedFilter : 'active'
+  const statusFilter = parseStatusFilter(savedFilter)
 
-  function handleStatusFilterChange(value: string) {
-    if (!isValidStatusFilter(value)) return
-    setPref.mutate({ key: PREFERENCE_KEY, value })
+  function handleStatusFilterChange(selected: string[]) {
+    setPref.mutate({ key: PREFERENCE_KEY, value: JSON.stringify(selected) })
   }
 
   const filteredUsers = useMemo(() => {
     if (!users) return []
-    if (statusFilter === 'all') return users
-    return users.filter((u) => (statusFilter === 'active' ? u.is_active : !u.is_active))
+    if (statusFilter.length === 0 || statusFilter.length === 2) return users
+    if (statusFilter.includes('active')) return users.filter((u) => u.is_active)
+    if (statusFilter.includes('disabled')) return users.filter((u) => !u.is_active)
+    return users
   }, [users, statusFilter])
 
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null)
@@ -129,15 +133,16 @@ export function AdminUsersPage() {
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('admin.users.title')}</h2>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('admin.users.description')}</p>
         </div>
-        <select
-          className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          value={statusFilter}
-          onChange={(e) => handleStatusFilterChange(e.target.value)}
-        >
-          <option value="active">{t('admin.users.filterActive')}</option>
-          <option value="disabled">{t('admin.users.filterDisabled')}</option>
-          <option value="all">{t('admin.users.filterAll')}</option>
-        </select>
+        <MultiSelect
+          options={[
+            { value: 'active', label: t('admin.users.filterActive') },
+            { value: 'disabled', label: t('admin.users.filterDisabled') },
+          ]}
+          selected={statusFilter}
+          onChange={handleStatusFilterChange}
+          placeholder={t('admin.users.title')}
+          className="w-44 shrink-0"
+        />
       </div>
 
       {feedback && (
