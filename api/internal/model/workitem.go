@@ -49,6 +49,7 @@ type WorkItem struct {
 	PortalContactID *uuid.UUID             `json:"portal_contact_id,omitempty"`
 	Visibility      string                 `json:"visibility"`
 	Labels          []string               `json:"labels"`
+	Complexity      *int                   `json:"complexity,omitempty"`
 	CustomFields    map[string]interface{} `json:"custom_fields"`
 	DueDate         *time.Time             `json:"due_date,omitempty"`
 	SLADeadline     *time.Time             `json:"sla_deadline,omitempty"`

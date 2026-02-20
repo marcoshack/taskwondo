@@ -34,10 +34,11 @@ type createProjectRequest struct {
 }
 
 type updateProjectRequest struct {
-	Name              *string `json:"name,omitempty"`
-	Key               *string `json:"key,omitempty"`
-	Description       *string `json:"description"`
-	DefaultWorkflowID *string `json:"default_workflow_id,omitempty"`
+	Name                    *string `json:"name,omitempty"`
+	Key                     *string `json:"key,omitempty"`
+	Description             *string `json:"description"`
+	DefaultWorkflowID       *string `json:"default_workflow_id,omitempty"`
+	AllowedComplexityValues *[]int  `json:"allowed_complexity_values"`
 }
 
 type addMemberRequest struct {
@@ -52,14 +53,15 @@ type updateMemberRoleRequest struct {
 // --- Response DTOs ---
 
 type projectResponse struct {
-	ID                uuid.UUID  `json:"id"`
-	Name              string     `json:"name"`
-	Key               string     `json:"key"`
-	Description       *string    `json:"description,omitempty"`
-	DefaultWorkflowID *uuid.UUID `json:"default_workflow_id,omitempty"`
-	ItemCounter       int        `json:"item_counter"`
-	CreatedAt         time.Time  `json:"created_at"`
-	UpdatedAt         time.Time  `json:"updated_at"`
+	ID                      uuid.UUID  `json:"id"`
+	Name                    string     `json:"name"`
+	Key                     string     `json:"key"`
+	Description             *string    `json:"description,omitempty"`
+	DefaultWorkflowID       *uuid.UUID `json:"default_workflow_id,omitempty"`
+	AllowedComplexityValues []int      `json:"allowed_complexity_values"`
+	ItemCounter             int        `json:"item_counter"`
+	CreatedAt               time.Time  `json:"created_at"`
+	UpdatedAt               time.Time  `json:"updated_at"`
 }
 
 type projectListItemResponse struct {
@@ -79,15 +81,20 @@ type memberResponse struct {
 }
 
 func toProjectResponse(p *model.Project) projectResponse {
+	acv := p.AllowedComplexityValues
+	if acv == nil {
+		acv = []int{}
+	}
 	return projectResponse{
-		ID:                p.ID,
-		Name:              p.Name,
-		Key:               p.Key,
-		Description:       p.Description,
-		DefaultWorkflowID: p.DefaultWorkflowID,
-		ItemCounter:       p.ItemCounter,
-		CreatedAt:         p.CreatedAt,
-		UpdatedAt:         p.UpdatedAt,
+		ID:                      p.ID,
+		Name:                    p.Name,
+		Key:                     p.Key,
+		Description:             p.Description,
+		DefaultWorkflowID:       p.DefaultWorkflowID,
+		AllowedComplexityValues: acv,
+		ItemCounter:             p.ItemCounter,
+		CreatedAt:               p.CreatedAt,
+		UpdatedAt:               p.UpdatedAt,
 	}
 }
 
@@ -229,7 +236,18 @@ func (h *ProjectHandler) Update(w http.ResponseWriter, r *http.Request) {
 		workflowID = &id
 	}
 
-	project, err := h.projects.Update(r.Context(), info, projectKey, req.Name, req.Key, req.Description, clearDescription, workflowID)
+	// Handle allowed_complexity_values: nil pointer means not provided, empty slice means clear
+	var allowedComplexityValues []int
+	clearAllowedComplexityValues := false
+	if req.AllowedComplexityValues != nil {
+		if len(*req.AllowedComplexityValues) == 0 {
+			clearAllowedComplexityValues = true
+		} else {
+			allowedComplexityValues = *req.AllowedComplexityValues
+		}
+	}
+
+	project, err := h.projects.Update(r.Context(), info, projectKey, req.Name, req.Key, req.Description, clearDescription, workflowID, allowedComplexityValues, clearAllowedComplexityValues)
 	if err != nil {
 		handleProjectError(w, r, err, "failed to update project")
 		return
@@ -477,6 +495,10 @@ func handleProjectError(w http.ResponseWriter, r *http.Request, err error, logMs
 	}
 	if errors.Is(err, model.ErrAlreadyExists) {
 		writeError(w, http.StatusConflict, "CONFLICT", err.Error())
+		return
+	}
+	if errors.Is(err, model.ErrValidation) {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
 		return
 	}
 	if errors.Is(err, model.ErrConflict) {

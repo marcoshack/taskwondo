@@ -184,7 +184,7 @@ func (s *ProjectService) ListWithSummary(ctx context.Context, info *model.AuthIn
 }
 
 // Update modifies a project. Requires owner or admin role.
-func (s *ProjectService) Update(ctx context.Context, info *model.AuthInfo, projectKey string, name, key *string, description *string, clearDescription bool, defaultWorkflowID *uuid.UUID) (*model.Project, error) {
+func (s *ProjectService) Update(ctx context.Context, info *model.AuthInfo, projectKey string, name, key *string, description *string, clearDescription bool, defaultWorkflowID *uuid.UUID, allowedComplexityValues []int, clearAllowedComplexityValues bool) (*model.Project, error) {
 	project, err := s.projects.GetByKey(ctx, projectKey)
 	if err != nil {
 		return nil, err
@@ -221,6 +221,22 @@ func (s *ProjectService) Update(ctx context.Context, info *model.AuthInfo, proje
 	}
 	if defaultWorkflowID != nil {
 		project.DefaultWorkflowID = defaultWorkflowID
+	}
+	if clearAllowedComplexityValues {
+		project.AllowedComplexityValues = []int{}
+	} else if allowedComplexityValues != nil {
+		// Validate: all values must be positive, no duplicates
+		seen := make(map[int]bool, len(allowedComplexityValues))
+		for _, v := range allowedComplexityValues {
+			if v <= 0 {
+				return nil, fmt.Errorf("allowed complexity values must be positive integers: %w", model.ErrValidation)
+			}
+			if seen[v] {
+				return nil, fmt.Errorf("duplicate complexity value %d: %w", v, model.ErrValidation)
+			}
+			seen[v] = true
+		}
+		project.AllowedComplexityValues = allowedComplexityValues
 	}
 
 	if err := s.projects.Update(ctx, project); err != nil {

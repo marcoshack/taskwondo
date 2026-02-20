@@ -5,7 +5,7 @@ import { ConfirmCheck } from '@/components/ui/ConfirmCheck'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Trans, useTranslation } from 'react-i18next'
 import { useWorkItem, useUpdateWorkItem, useDeleteWorkItem, useUploadAttachment, useAttachments } from '@/hooks/useWorkItems'
-import { useMembers, useTypeWorkflows } from '@/hooks/useProjects'
+import { useProject, useMembers, useTypeWorkflows } from '@/hooks/useProjects'
 import { useProjectWorkflow, useWorkflows } from '@/hooks/useWorkflows'
 import { Spinner } from '@/components/ui/Spinner'
 import { Button } from '@/components/ui/Button'
@@ -40,6 +40,7 @@ export function WorkItemDetailPage() {
 
   const { data: item, isLoading } = useWorkItem(projectKey ?? '', itemNumber)
   const { statuses, transitionsMap } = useProjectWorkflow(projectKey ?? '', item?.type)
+  const { data: project } = useProject(projectKey ?? '')
   const { data: members } = useMembers(projectKey ?? '')
   const { data: typeWorkflows } = useTypeWorkflows(projectKey ?? '')
   const { data: allWorkflows } = useWorkflows()
@@ -206,11 +207,33 @@ export function WorkItemDetailPage() {
         <div className="flex-1 min-w-0 space-y-6">
           {/* Header */}
           <div>
-            <div className="flex items-center gap-2 mb-1 group/header">
+            <div className="flex items-center gap-2 mb-1 group/header flex-wrap">
               <span className="text-base sm:text-sm font-bold sm:font-normal font-mono text-gray-600 sm:text-gray-400 dark:text-gray-400 dark:sm:text-gray-500">{item.display_id}</span>
               <TypeBadge type={item.type} />
               <StatusBadge status={item.status} statuses={statuses} />
               <PriorityBadge priority={item.priority} />
+              <span className="hidden sm:inline-flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
+                <User className="h-3.5 w-3.5" />
+                {item.assignee_id
+                  ? members?.find(m => m.user_id === item.assignee_id)?.display_name ?? t('userPicker.unassigned')
+                  : t('userPicker.unassigned')}
+              </span>
+              {item.due_date && (
+                <span className="hidden sm:inline-flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
+                  <Calendar className="h-3.5 w-3.5" />
+                  {item.due_date}
+                </span>
+              )}
+              <span className={`hidden sm:inline-flex items-center gap-1 text-xs ${
+                item.visibility === 'portal' ? 'text-yellow-500 dark:text-yellow-400' :
+                item.visibility === 'public' ? 'text-red-500 dark:text-red-400' :
+                'text-gray-400 dark:text-gray-500'
+              }`}>
+                {item.visibility === 'internal' && <Lock className="h-3.5 w-3.5" />}
+                {item.visibility === 'portal' && <Unlock className="h-3.5 w-3.5" />}
+                {item.visibility === 'public' && <Globe className="h-3.5 w-3.5" />}
+                {t(`workitems.visibilities.${item.visibility}`)}
+              </span>
               <CopyButton
                 text={[
                   '---',
@@ -254,7 +277,11 @@ export function WorkItemDetailPage() {
                   {item.due_date}
                 </span>
               )}
-              <span className="inline-flex items-center gap-1">
+              <span className={`inline-flex items-center gap-1 ${
+                item.visibility === 'portal' ? 'text-yellow-500 dark:text-yellow-400' :
+                item.visibility === 'public' ? 'text-red-500 dark:text-red-400' :
+                ''
+              }`}>
                 {item.visibility === 'internal' && <Lock className="h-3.5 w-3.5" />}
                 {item.visibility === 'portal' && <Unlock className="h-3.5 w-3.5" />}
                 {item.visibility === 'public' && <Globe className="h-3.5 w-3.5" />}
@@ -409,6 +436,7 @@ export function WorkItemDetailPage() {
             statuses={statuses}
             allowedTransitions={allowed}
             members={members ?? []}
+            allowedComplexityValues={project?.allowed_complexity_values}
             typeWorkflows={typeWorkflows}
             allWorkflows={allWorkflows}
             onUpdate={(input) => updateMutation.mutate({ itemNumber, input })}
@@ -434,6 +462,7 @@ export function WorkItemDetailPage() {
           statuses={statuses}
           allowedTransitions={allowed}
           members={members ?? []}
+          allowedComplexityValues={project?.allowed_complexity_values}
           typeWorkflows={typeWorkflows}
           allWorkflows={allWorkflows}
           onUpdate={(input) => updateMutation.mutate({ itemNumber, input })}

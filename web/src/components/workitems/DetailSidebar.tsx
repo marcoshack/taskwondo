@@ -12,6 +12,7 @@ interface DetailSidebarProps {
   statuses: WorkflowStatus[]
   allowedTransitions: string[]
   members: ProjectMember[]
+  allowedComplexityValues?: number[]
   typeWorkflows?: ProjectTypeWorkflow[]
   allWorkflows?: Workflow[]
   onUpdate: (input: UpdateWorkItemInput) => void
@@ -21,7 +22,7 @@ const PRIORITIES = ['low', 'medium', 'high', 'critical']
 const TYPES = ['task', 'ticket', 'bug', 'feedback', 'epic']
 const VISIBILITIES = ['internal', 'portal', 'public']
 
-export function DetailSidebar({ item, statuses, allowedTransitions, members, typeWorkflows, allWorkflows, onUpdate }: DetailSidebarProps) {
+export function DetailSidebar({ item, statuses, allowedTransitions, members, allowedComplexityValues = [], typeWorkflows, allWorkflows, onUpdate }: DetailSidebarProps) {
   const { t } = useTranslation()
   const [pendingType, setPendingType] = useState<string | null>(null)
   const [statusWarning, setStatusWarning] = useState(false)
@@ -84,6 +85,12 @@ export function DetailSidebar({ item, statuses, allowedTransitions, members, typ
 
   return (
     <div className="space-y-4">
+      <Field label={t('workitems.form.type')}>
+        <Select value={pendingType ?? item.type} onChange={(e) => handleTypeChange(e.target.value)}>
+          {TYPES.map((tp) => <option key={tp} value={tp}>{t(`workitems.types.${tp}`)}</option>)}
+        </Select>
+      </Field>
+
       <Field label={t('workitems.form.status')}>
         <Select
           value={pendingType ? '' : item.status}
@@ -108,10 +115,38 @@ export function DetailSidebar({ item, statuses, allowedTransitions, members, typ
         </Select>
       </Field>
 
-      <Field label={t('workitems.form.type')}>
-        <Select value={pendingType ?? item.type} onChange={(e) => handleTypeChange(e.target.value)}>
-          {TYPES.map((tp) => <option key={tp} value={tp}>{t(`workitems.types.${tp}`)}</option>)}
-        </Select>
+      <Field label={t('workitems.form.complexity')}>
+        {allowedComplexityValues.length > 0 ? (
+          <Select
+            value={item.complexity != null ? String(item.complexity) : ''}
+            onChange={(e) => onUpdate({ complexity: e.target.value ? Number(e.target.value) : null })}
+          >
+            <option value="">{t('workitems.form.complexityPlaceholder')}</option>
+            {allowedComplexityValues.map((v) => (
+              <option key={v} value={String(v)}>{v}</option>
+            ))}
+          </Select>
+        ) : (
+          <Input
+            type="number"
+            min="1"
+            defaultValue={item.complexity != null ? String(item.complexity) : ''}
+            placeholder={t('workitems.form.complexityPlaceholder')}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+              if (e.key === 'Escape') {
+                (e.target as HTMLInputElement).value = item.complexity != null ? String(item.complexity) : ''
+                ;(e.target as HTMLInputElement).blur()
+              }
+            }}
+            onBlur={(e) => {
+              const newVal = e.target.value ? Number(e.target.value) : null
+              if (newVal !== item.complexity) {
+                onUpdate({ complexity: newVal })
+              }
+            }}
+          />
+        )}
       </Field>
 
       <Field label={t('workitems.form.assignee')}>

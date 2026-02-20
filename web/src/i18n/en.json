@@ -27,7 +27,7 @@
   "common.noData": "No data",
   "common.loadMore": "Load more",
   "common.copyToClipboard": "Copy to clipboard",
-  "common.copyAsMarkdown": "Copy as Markdown",
+  "common.copyAsMarkdown": "Copy work item as Markdown",
   "common.copied": "Copied!",
   "common.description": "Description",
   "common.you": "you",
@@ -87,6 +87,15 @@
   "projects.settings.workflowUpdated": "Workflow mapping updated.",
   "projects.settings.workflowUpdateError": "Failed to update workflow mapping.",
   "projects.settings.selectWorkflow": "Select a workflow...",
+
+  "projects.settings.complexity": "Complexity",
+  "projects.settings.complexityDescription": "Define allowed complexity values for work items. Leave empty for free-form numeric input.",
+  "projects.settings.complexityValues": "Allowed values",
+  "projects.settings.complexityPlaceholder": "e.g. 1, 2, 3, 5, 8, 13, 21",
+  "projects.settings.complexityClear": "Clear (free-form)",
+  "projects.settings.complexitySaved": "Complexity values updated.",
+  "projects.settings.complexityCleared": "Complexity values cleared. Free-form input enabled.",
+  "projects.settings.complexityInvalid": "All values must be positive integers.",
 
   "projects.settings.dangerZone": "Danger Zone",
   "projects.settings.deleteProject": "Delete project",
@@ -179,6 +188,10 @@
   "workitems.form.labelsPlaceholder": "Comma-separated",
   "workitems.form.visibility": "Visibility",
   "workitems.form.dueDate": "Due Date",
+  "workitems.form.complexity": "Complexity",
+  "workitems.form.complexityPlaceholder": "None",
+
+  "workitems.detail.complexity": "Complexity",
 
   "workitems.detail.description": "Description",
   "workitems.detail.noDescription": "No description. Click to add.",
@@ -285,6 +298,7 @@
   "activity.fields.due_date": "Due date",
   "activity.fields.milestone_id": "Milestone",
   "activity.fields.queue_id": "Queue",
+  "activity.fields.complexity": "Complexity",
 
   "relations.types.blocks": "blocks",
   "relations.types.blocked_by": "blocked by",

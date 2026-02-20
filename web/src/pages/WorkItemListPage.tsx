@@ -3,7 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
 import { useWorkItems, useCreateWorkItem, useBulkUpdateWorkItems, useDeleteWorkItem } from '@/hooks/useWorkItems'
-import { useMembers } from '@/hooks/useProjects'
+import { useProject, useMembers } from '@/hooks/useProjects'
 import { useProjectWorkflow } from '@/hooks/useWorkflows'
 import { useUserSetting, useSetUserSetting } from '@/hooks/useUserSettings'
 import { useDebounce } from '@/hooks/useDebounce'
@@ -76,6 +76,7 @@ export function WorkItemListPage() {
   const [searchParams, setSearchParams] = useSearchParams()
 
   const { statuses, transitionsMap } = useProjectWorkflow(projectKey ?? '')
+  const { data: project } = useProject(projectKey ?? '')
   const { data: members } = useMembers(projectKey ?? '')
 
   // Load saved filter from user settings
@@ -488,6 +489,7 @@ export function WorkItemListPage() {
           projectKey={projectKey ?? ''}
           mode="create"
           members={members ?? []}
+          allowedComplexityValues={project?.allowed_complexity_values}
           onSubmit={(values) => {
             createMutation.mutate(values as { type: string; title: string }, {
               onSuccess: () => setShowCreate(false),

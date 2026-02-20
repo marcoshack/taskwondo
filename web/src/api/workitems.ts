@@ -18,6 +18,7 @@ export interface WorkItem {
   milestone_id: string | null
   visibility: string
   labels: string[]
+  complexity: number | null
   custom_fields: Record<string, unknown>
   due_date: string | null
   sla_deadline: string | null
@@ -54,6 +55,7 @@ export interface CreateWorkItemInput {
   priority?: string
   assignee_id?: string
   labels?: string[]
+  complexity?: number
   parent_id?: string
   queue_id?: string
   milestone_id?: string
@@ -69,6 +71,7 @@ export interface UpdateWorkItemInput {
   type?: string
   assignee_id?: string | null
   labels?: string[]
+  complexity?: number | null
   visibility?: string
   due_date?: string | null
   parent_id?: string | null

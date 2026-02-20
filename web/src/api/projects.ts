@@ -6,6 +6,7 @@ export interface Project {
   key: string
   description?: string
   default_workflow_id?: string
+  allowed_complexity_values: number[]
   item_counter: number
   member_count: number
   open_count: number
@@ -78,6 +79,7 @@ export async function removeMember(projectKey: string, userId: string) {
 export interface UpdateProjectInput {
   name?: string
   description?: string | null
+  allowed_complexity_values?: number[]
 }
 
 export async function updateProject(projectKey: string, input: UpdateProjectInput) {
