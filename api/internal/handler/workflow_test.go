@@ -20,7 +20,7 @@ func workflowTestSetup(t *testing.T) (*WorkflowHandler, *service.WorkflowService
 	t.Helper()
 	repo := newMockWorkflowRepo()
 	svc := service.NewWorkflowService(repo)
-	h := NewWorkflowHandler(svc)
+	h := NewWorkflowHandler(svc, nil)
 
 	info := &model.AuthInfo{
 		UserID:     uuid.New(),

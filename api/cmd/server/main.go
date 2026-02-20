@@ -167,7 +167,7 @@ func main() {
 	health := handler.NewHealthHandler(db)
 	auth := handler.NewAuthHandler(authService)
 	projects := handler.NewProjectHandler(projectService)
-	workflows := handler.NewWorkflowHandler(workflowService)
+	workflows := handler.NewWorkflowHandler(workflowService, projectService)
 	queues := handler.NewQueueHandler(queueService)
 	milestones := handler.NewMilestoneHandler(milestoneService)
 	items := handler.NewWorkItemHandler(workItemService, cfg.MaxUploadSize)
@@ -260,6 +260,16 @@ func main() {
 					r.Route("/type-workflows", func(r chi.Router) {
 						r.Get("/", projects.ListTypeWorkflows)
 						r.Put("/{type}", projects.UpdateTypeWorkflow)
+					})
+					r.Route("/workflows", func(r chi.Router) {
+						r.Get("/", workflows.ListProjectWorkflows)
+						r.Get("/statuses", workflows.ListAvailableStatuses)
+						r.Post("/", workflows.CreateProjectWorkflow)
+						r.Route("/{workflowId}", func(r chi.Router) {
+							r.Get("/", workflows.GetProjectWorkflow)
+							r.Patch("/", workflows.UpdateProjectWorkflow)
+							r.Delete("/", workflows.DeleteProjectWorkflow)
+						})
 					})
 					r.Route("/queues", func(r chi.Router) {
 						r.Get("/", queues.List)

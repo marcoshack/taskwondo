@@ -160,6 +160,68 @@ func (m *mockWorkflowRepo) ListStatuses(_ context.Context, workflowID uuid.UUID)
 	return wf.Statuses, nil
 }
 
+func (m *mockWorkflowRepo) ListByProject(_ context.Context, projectID uuid.UUID) ([]model.Workflow, error) {
+	var result []model.Workflow
+	for _, wf := range m.workflows {
+		if wf.ProjectID == nil || *wf.ProjectID == projectID {
+			result = append(result, *wf)
+		}
+	}
+	return result, nil
+}
+
+func (m *mockWorkflowRepo) ListProjectOnly(_ context.Context, projectID uuid.UUID) ([]model.Workflow, error) {
+	var result []model.Workflow
+	for _, wf := range m.workflows {
+		if wf.ProjectID != nil && *wf.ProjectID == projectID {
+			result = append(result, *wf)
+		}
+	}
+	return result, nil
+}
+
+func (m *mockWorkflowRepo) ReplaceStatusesAndTransitions(_ context.Context, wf *model.Workflow) error {
+	if _, ok := m.workflows[wf.ID]; !ok {
+		return model.ErrNotFound
+	}
+	m.workflows[wf.ID] = wf
+	return nil
+}
+
+func (m *mockWorkflowRepo) Delete(_ context.Context, id uuid.UUID) error {
+	if _, ok := m.workflows[id]; !ok {
+		return model.ErrNotFound
+	}
+	delete(m.workflows, id)
+	return nil
+}
+
+func (m *mockWorkflowRepo) ListDefaultNames(_ context.Context) ([]string, error) {
+	var names []string
+	for _, wf := range m.workflows {
+		if wf.IsDefault {
+			names = append(names, wf.Name)
+		}
+	}
+	return names, nil
+}
+
+func (m *mockWorkflowRepo) ListAllStatuses(_ context.Context) ([]model.WorkflowStatus, error) {
+	seen := make(map[string]bool)
+	var result []model.WorkflowStatus
+	for _, wf := range m.workflows {
+		if wf.IsDefault {
+			for _, s := range wf.Statuses {
+				if !seen[s.Name] {
+					seen[s.Name] = true
+					result = append(result, s)
+				}
+			}
+		}
+	}
+	return result, nil
+}
+
 // --- Mock work item repository ---
 
 type mockWorkItemRepo struct {
