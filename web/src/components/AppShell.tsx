@@ -70,7 +70,7 @@ export function AppShell() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-14">
+          <div className="flex justify-between h-14 relative">
             <div className="flex items-center gap-6 min-w-0">
               <button onClick={() => guardedNavigate('/projects')} className="text-lg font-bold text-indigo-600 dark:text-indigo-400 shrink-0">
                 {t('brand.name')}
@@ -84,7 +84,7 @@ export function AppShell() {
               ) : activeProject ? (
                 <button
                   onClick={() => setSwitcherOpen(true)}
-                  className="flex items-center gap-2.5 hover:opacity-80 transition-opacity min-w-0"
+                  className="hidden sm:flex items-center gap-2.5 hover:opacity-80 transition-opacity min-w-0"
                 >
                   <span className="inline-flex items-center rounded-md bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-2.5 py-1 text-sm font-bold shrink-0">
                     {activeProject.key}
@@ -95,6 +95,16 @@ export function AppShell() {
                 </button>
               ) : null}
             </div>
+            {activeProject && (
+              <button
+                onClick={() => setSwitcherOpen(true)}
+                className="sm:hidden absolute left-1/2 -translate-x-1/2 top-0 h-full flex items-center hover:opacity-80 transition-opacity"
+              >
+                <span className="inline-flex items-center rounded-md bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-2.5 py-1 text-base font-bold">
+                  {activeProject.key}
+                </span>
+              </button>
+            )}
             <div className="relative flex items-center gap-2" ref={menuRef}>
               {(activeProjectKey || adminMatch) && (
                 <button
