@@ -214,9 +214,11 @@ export function WorkItemDetailPage() {
               <CopyButton
                 text={[
                   '---',
-                  `display_id: ${item.display_id}`,
+                  `id: ${item.display_id}`,
+                  `title: ${item.title}`,
                   `type: ${item.type}`,
                   `status: ${item.status}`,
+                  `assignee: ${item.assignee_id ? (members?.find(m => m.user_id === item.assignee_id)?.display_name ?? '') : ''}`,
                   '---',
                   '',
                   `# ${item.display_id} - ${item.title}`,
