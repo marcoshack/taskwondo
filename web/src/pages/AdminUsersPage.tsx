@@ -7,6 +7,7 @@ import { usePreference, useSetPreference } from '@/hooks/usePreferences'
 import { useProjects } from '@/hooks/useProjects'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
+import { ProjectKeyBadge } from '@/components/ui/ProjectKeyBadge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { MultiSelect } from '@/components/ui/MultiSelect'
@@ -331,10 +332,8 @@ function UserProjectsPanel({
             {userProjects.map((p) => (
               <div key={p.project_id} className="flex items-center justify-between py-1.5">
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="inline-flex items-center rounded-md bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 text-xs font-bold shrink-0">
-                    {p.project_key}
-                  </span>
-                  <span className="text-sm text-gray-900 dark:text-gray-100 truncate">{p.project_name}</span>
+                  <ProjectKeyBadge>{p.project_key}</ProjectKeyBadge>
+                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{p.project_name}</span>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <Badge color={ROLE_BADGE_COLORS[p.role] ?? 'gray'}>

@@ -8,6 +8,7 @@ import { useNavigationGuard } from '@/contexts/NavigationGuardContext'
 import { useProject, useProjects } from '@/hooks/useProjects'
 import { Avatar } from '@/components/ui/Avatar'
 import { Modal } from '@/components/ui/Modal'
+import { ProjectKeyBadge } from '@/components/ui/ProjectKeyBadge'
 import { Spinner } from '@/components/ui/Spinner'
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useKeyboardShortcutContext } from '@/contexts/KeyboardShortcutContext'
@@ -89,9 +90,7 @@ export function AppShell() {
                   onClick={() => setSwitcherOpen(true)}
                   className="hidden sm:flex items-center gap-2.5 hover:opacity-80 transition-opacity min-w-0"
                 >
-                  <span className="inline-flex items-center rounded-md bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-2.5 py-1 text-sm font-bold shrink-0">
-                    {activeProject.key}
-                  </span>
+                  <ProjectKeyBadge size="nav">{activeProject.key}</ProjectKeyBadge>
                   <span className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">
                     {activeProject.name}
                   </span>
@@ -103,9 +102,7 @@ export function AppShell() {
                 onClick={() => setSwitcherOpen(true)}
                 className="sm:hidden absolute left-1/2 -translate-x-1/2 top-0 h-full flex items-center hover:opacity-80 transition-opacity"
               >
-                <span className="inline-flex items-center rounded-md bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-2.5 py-1 text-base font-bold">
-                  {activeProject.key}
-                </span>
+                <ProjectKeyBadge size="nav-mobile">{activeProject.key}</ProjectKeyBadge>
               </button>
             )}
             <div className="relative flex items-center gap-2" ref={menuRef}>
@@ -265,9 +262,7 @@ function ProjectSwitcherModal({
                     : 'hover:bg-gray-100 dark:hover:bg-gray-700'
                 }`}
               >
-                <span className="inline-flex items-center justify-center rounded-md bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 text-xs font-bold shrink-0 min-w-[4rem]">
-                  {p.key}
-                </span>
+                <ProjectKeyBadge>{p.key}</ProjectKeyBadge>
                 <span className="text-gray-900 dark:text-gray-100 font-medium truncate">{p.name}</span>
                 {p.key === activeProjectKey && (
                   <span className="ml-auto text-xs text-indigo-600 dark:text-indigo-400 shrink-0">{t('common.current')}</span>
