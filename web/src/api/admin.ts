@@ -16,6 +16,7 @@ export interface UserProject {
   project_name: string
   project_key: string
   role: string
+  owner_count: number
   created_at: string
 }
 
@@ -36,6 +37,10 @@ export async function listUserProjects(userId: string) {
 
 export async function addUserToProject(userId: string, input: { project_id: string; role: string }) {
   await api.post(`/admin/users/${userId}/projects`, input)
+}
+
+export async function updateUserProjectRole(userId: string, projectId: string, role: string) {
+  await api.patch(`/admin/users/${userId}/projects/${projectId}`, { role })
 }
 
 export async function removeUserFromProject(userId: string, projectId: string) {

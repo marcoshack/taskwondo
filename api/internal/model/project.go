@@ -73,4 +73,5 @@ type ProjectMemberWithProject struct {
 	ProjectMember
 	ProjectName string `json:"project_name"`
 	ProjectKey  string `json:"project_key"`
+	OwnerCount  int    `json:"owner_count"`
 }

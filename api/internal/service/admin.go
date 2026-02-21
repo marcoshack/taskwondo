@@ -29,6 +29,8 @@ type AdminMemberRepository interface {
 	Add(ctx context.Context, member *model.ProjectMember) error
 	GetByProjectAndUser(ctx context.Context, projectID, userID uuid.UUID) (*model.ProjectMember, error)
 	ListByUser(ctx context.Context, userID uuid.UUID) ([]model.ProjectMemberWithProject, error)
+	CountByRole(ctx context.Context, projectID uuid.UUID, role string) (int, error)
+	UpdateRole(ctx context.Context, projectID, userID uuid.UUID, role string) error
 	Remove(ctx context.Context, projectID, userID uuid.UUID) error
 }
 
@@ -136,7 +138,51 @@ func (s *AdminService) AddUserToProject(ctx context.Context, userID, projectID u
 	return s.members.Add(ctx, member)
 }
 
+// UpdateUserProjectRole updates a user's role in a project.
+func (s *AdminService) UpdateUserProjectRole(ctx context.Context, userID, projectID uuid.UUID, role string) error {
+	switch role {
+	case model.ProjectRoleOwner, model.ProjectRoleAdmin, model.ProjectRoleMember, model.ProjectRoleViewer:
+	default:
+		return fmt.Errorf("%w: invalid project role %q", model.ErrValidation, role)
+	}
+
+	// Check membership exists
+	target, err := s.members.GetByProjectAndUser(ctx, projectID, userID)
+	if err != nil {
+		return err
+	}
+
+	// Protect last owner
+	if target.Role == model.ProjectRoleOwner && role != model.ProjectRoleOwner {
+		count, err := s.members.CountByRole(ctx, projectID, model.ProjectRoleOwner)
+		if err != nil {
+			return fmt.Errorf("counting owners: %w", err)
+		}
+		if count <= 1 {
+			return fmt.Errorf("cannot remove the last owner: %w", model.ErrConflict)
+		}
+	}
+
+	return s.members.UpdateRole(ctx, projectID, userID, role)
+}
+
 // RemoveUserFromProject removes a user from a project.
 func (s *AdminService) RemoveUserFromProject(ctx context.Context, userID, projectID uuid.UUID) error {
+	// Check membership exists and protect last owner
+	target, err := s.members.GetByProjectAndUser(ctx, projectID, userID)
+	if err != nil {
+		return err
+	}
+
+	if target.Role == model.ProjectRoleOwner {
+		count, err := s.members.CountByRole(ctx, projectID, model.ProjectRoleOwner)
+		if err != nil {
+			return fmt.Errorf("counting owners: %w", err)
+		}
+		if count <= 1 {
+			return fmt.Errorf("cannot remove the last owner: %w", model.ErrConflict)
+		}
+	}
+
 	return s.members.Remove(ctx, projectID, userID)
 }

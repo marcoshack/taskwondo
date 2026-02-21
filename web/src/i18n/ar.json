@@ -118,6 +118,7 @@
   "projects.settings.removeMemberConfirmBody": "هل أنت متأكد أنك تريد إزالة <bold>{{name}}</bold> من هذا المشروع؟",
   "projects.settings.removeSelfConfirmBody": "أنت على وشك إزالة نفسك من هذا المشروع. ستفقد حق الوصول.",
   "projects.settings.removeMemberConfirmButton": "إزالة",
+  "projects.settings.lastOwnerTooltip": "يجب أن يكون للمشروع مالك واحد على الأقل.",
   "projects.settings.roles.owner": "مالك",
   "projects.settings.roles.admin": "مسؤول",
   "projects.settings.roles.member": "عضو",

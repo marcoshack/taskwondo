@@ -10,7 +10,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Spinner } from '@/components/ui/Spinner'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
-import { Check } from 'lucide-react'
+import { Check, Trash2 } from 'lucide-react'
 import { UserSearchInput } from '@/components/UserSearchInput'
 import type { AxiosError } from 'axios'
 import type { UserSearchResult } from '@/api/auth'
@@ -290,6 +290,9 @@ export function ProjectSettingsPage() {
           {members.map((member) => {
             const isSelf = member.user_id === user?.id
             const memberIsOwner = member.role === 'owner'
+            const ownerCount = members.filter((m) => m.role === 'owner').length
+            const isLastOwner = memberIsOwner && ownerCount <= 1
+            const canEditRole = canManageMembers && (!memberIsOwner || isOwner)
 
             return (
               <div key={member.user_id} className="flex items-center justify-between p-3">
@@ -304,36 +307,36 @@ export function ProjectSettingsPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  {canManageMembers && !memberIsOwner ? (
+                  {canEditRole ? (
                     <>
                       {saved[`role:${member.user_id}`] && (
                         <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
                       )}
                       <select
-                        className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
                         value={member.role}
                         onChange={(e) => handleRoleChange(member.user_id, e.target.value)}
-                        disabled={updateRoleMutation.isPending}
+                        disabled={updateRoleMutation.isPending || isLastOwner}
+                        title={isLastOwner ? t('projects.settings.lastOwnerTooltip') : undefined}
                       >
                         {isOwner && <option value="owner">{t('projects.settings.roles.owner')}</option>}
                         {ROLE_OPTIONS.map((role) => (
                           <option key={role} value={role}>{t(`projects.settings.roles.${role}`)}</option>
                         ))}
                       </select>
+                      <button
+                        className={`p-1 ${isLastOwner ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' : 'text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300'}`}
+                        onClick={() => !isLastOwner && setRemoveTarget({ userId: member.user_id, name: member.display_name })}
+                        disabled={isLastOwner}
+                        title={isLastOwner ? t('projects.settings.lastOwnerTooltip') : undefined}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     </>
                   ) : (
                     <Badge color={ROLE_BADGE_COLORS[member.role] ?? 'gray'}>
                       {t(`projects.settings.roles.${member.role}`)}
                     </Badge>
-                  )}
-                  {canManageMembers && (!memberIsOwner || isOwner) && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setRemoveTarget({ userId: member.user_id, name: member.display_name })}
-                    >
-                      {t('common.remove')}
-                    </Button>
                   )}
                 </div>
               </div>

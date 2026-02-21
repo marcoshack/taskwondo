@@ -127,7 +127,8 @@ func (r *ProjectMemberRepository) Remove(ctx context.Context, projectID, userID 
 func (r *ProjectMemberRepository) ListByUser(ctx context.Context, userID uuid.UUID) ([]model.ProjectMemberWithProject, error) {
 	rows, err := r.db.QueryContext(ctx,
 		`SELECT pm.id, pm.project_id, pm.user_id, pm.role, pm.created_at,
-		        p.name, p.key
+		        p.name, p.key,
+		        (SELECT COUNT(*) FROM project_members pm2 WHERE pm2.project_id = pm.project_id AND pm2.role = 'owner') AS owner_count
 		 FROM project_members pm
 		 INNER JOIN projects p ON p.id = pm.project_id
 		 WHERE pm.user_id = $1 AND p.deleted_at IS NULL
@@ -141,7 +142,7 @@ func (r *ProjectMemberRepository) ListByUser(ctx context.Context, userID uuid.UU
 	for rows.Next() {
 		var m model.ProjectMemberWithProject
 		if err := rows.Scan(&m.ID, &m.ProjectID, &m.UserID, &m.Role, &m.CreatedAt,
-			&m.ProjectName, &m.ProjectKey); err != nil {
+			&m.ProjectName, &m.ProjectKey, &m.OwnerCount); err != nil {
 			return nil, fmt.Errorf("scanning user project membership row: %w", err)
 		}
 		members = append(members, m)

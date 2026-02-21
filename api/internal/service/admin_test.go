@@ -144,14 +144,41 @@ func (m *mockAdminMemberRepo) ListByUser(_ context.Context, userID uuid.UUID) ([
 	var result []model.ProjectMemberWithProject
 	for _, member := range m.members {
 		if member.UserID == userID {
+			ownerCount := 0
+			for _, m2 := range m.members {
+				if m2.ProjectID == member.ProjectID && m2.Role == "owner" {
+					ownerCount++
+				}
+			}
 			result = append(result, model.ProjectMemberWithProject{
 				ProjectMember: *member,
 				ProjectName:   "Test Project",
 				ProjectKey:    "TEST",
+				OwnerCount:    ownerCount,
 			})
 		}
 	}
 	return result, nil
+}
+
+func (m *mockAdminMemberRepo) CountByRole(_ context.Context, projectID uuid.UUID, role string) (int, error) {
+	count := 0
+	for _, member := range m.members {
+		if member.ProjectID == projectID && member.Role == role {
+			count++
+		}
+	}
+	return count, nil
+}
+
+func (m *mockAdminMemberRepo) UpdateRole(_ context.Context, projectID, userID uuid.UUID, role string) error {
+	key := adminMemberKey(projectID, userID)
+	member, ok := m.members[key]
+	if !ok {
+		return model.ErrNotFound
+	}
+	member.Role = role
+	return nil
 }
 
 func (m *mockAdminMemberRepo) Remove(_ context.Context, projectID, userID uuid.UUID) error {

@@ -338,6 +338,7 @@ func main() {
 						r.Route("/projects", func(r chi.Router) {
 							r.Get("/", admin.ListUserProjects)
 							r.Post("/", admin.AddUserToProject)
+							r.Patch("/{projectId}", admin.UpdateUserProjectRole)
 							r.Delete("/{projectId}", admin.RemoveUserFromProject)
 						})
 					})

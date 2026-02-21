@@ -53,6 +53,7 @@ type userProjectResponse struct {
 	ProjectName string    `json:"project_name"`
 	ProjectKey  string    `json:"project_key"`
 	Role        string    `json:"role"`
+	OwnerCount  int       `json:"owner_count"`
 	CreatedAt   time.Time `json:"created_at"`
 }
 
@@ -138,6 +139,7 @@ func (h *AdminHandler) ListUserProjects(w http.ResponseWriter, r *http.Request) 
 			ProjectName: m.ProjectName,
 			ProjectKey:  m.ProjectKey,
 			Role:        m.Role,
+			OwnerCount:  m.OwnerCount,
 			CreatedAt:   m.CreatedAt,
 		}
 	}
@@ -188,6 +190,52 @@ func (h *AdminHandler) AddUserToProject(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to add user to project")
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+type updateUserProjectRoleRequest struct {
+	Role string `json:"role"`
+}
+
+// UpdateUserProjectRole handles PATCH /api/v1/admin/users/{userId}/projects/{projectId}.
+func (h *AdminHandler) UpdateUserProjectRole(w http.ResponseWriter, r *http.Request) {
+	userID, err := uuid.Parse(chi.URLParam(r, "userId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid user ID")
+		return
+	}
+
+	projectID, err := uuid.Parse(chi.URLParam(r, "projectId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid project ID")
+		return
+	}
+
+	var req updateUserProjectRoleRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		return
+	}
+
+	if req.Role == "" {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "role is required")
+		return
+	}
+
+	if err := h.admin.UpdateUserProjectRole(r.Context(), userID, projectID, req.Role); err != nil {
+		if errors.Is(err, model.ErrNotFound) {
+			writeError(w, http.StatusNotFound, "NOT_FOUND", "membership not found")
+			return
+		}
+		if errors.Is(err, model.ErrValidation) {
+			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+			return
+		}
+		log.Ctx(r.Context()).Error().Err(err).Msg("failed to update user project role")
 		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
 		return
 	}

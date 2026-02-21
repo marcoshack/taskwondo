@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { ChevronDown, ChevronRight, Trash2 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { useAdminUsers, useUpdateUser, useUserProjects, useAddUserToProject, useRemoveUserFromProject } from '@/hooks/useAdmin'
+import { useAdminUsers, useUpdateUser, useUserProjects, useAddUserToProject, useUpdateUserProjectRole, useRemoveUserFromProject } from '@/hooks/useAdmin'
 import { usePreference, useSetPreference } from '@/hooks/usePreferences'
 import { useProjects } from '@/hooks/useProjects'
 import { Avatar } from '@/components/ui/Avatar'
@@ -14,13 +14,6 @@ import { MultiSelect } from '@/components/ui/MultiSelect'
 import { Spinner } from '@/components/ui/Spinner'
 import type { AdminUser } from '@/api/admin'
 import type { AxiosError } from 'axios'
-
-const ROLE_BADGE_COLORS: Record<string, 'indigo' | 'blue' | 'green' | 'gray'> = {
-  owner: 'indigo',
-  admin: 'blue',
-  member: 'green',
-  viewer: 'gray',
-}
 
 const PREFERENCE_KEY = 'admin_users_status_filter'
 
@@ -270,6 +263,7 @@ function UserProjectsPanel({
   const { data: userProjects, isLoading } = useUserProjects(userId)
   const { data: allProjects } = useProjects()
   const addMutation = useAddUserToProject(userId)
+  const updateRoleMutation = useUpdateUserProjectRole(userId)
   const removeMutation = useRemoveUserFromProject(userId)
 
   const [selectedProjectId, setSelectedProjectId] = useState('')
@@ -329,26 +323,50 @@ function UserProjectsPanel({
           <p className="text-xs text-gray-400">{t('admin.users.noProjects')}</p>
         ) : (
           <div className="space-y-1">
-            {userProjects.map((p) => (
-              <div key={p.project_id} className="flex items-center justify-between py-1.5">
-                <div className="flex items-center gap-2 min-w-0">
-                  <ProjectKeyBadge>{p.project_key}</ProjectKeyBadge>
-                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{p.project_name}</span>
+            {userProjects.map((p) => {
+              const isLastOwner = p.role === 'owner' && p.owner_count <= 1
+              return (
+                <div key={p.project_id} className="flex items-center justify-between py-1.5">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <ProjectKeyBadge>{p.project_key}</ProjectKeyBadge>
+                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{p.project_name}</span>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <select
+                      className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      value={p.role}
+                      onChange={(e) => {
+                        updateRoleMutation.mutate(
+                          { projectId: p.project_id, role: e.target.value },
+                          {
+                            onSuccess: () => onFeedback('success', t('admin.users.roleUpdated')),
+                            onError: (err) => {
+                              const axiosErr = err as AxiosError<{ error?: { message?: string } }>
+                              onFeedback('error', axiosErr.response?.data?.error?.message ?? t('admin.users.updateError'))
+                            },
+                          },
+                        )
+                      }}
+                      disabled={updateRoleMutation.isPending || isLastOwner}
+                      title={isLastOwner ? t('projects.settings.lastOwnerTooltip') : undefined}
+                    >
+                      <option value="owner">{t('projects.settings.roles.owner')}</option>
+                      <option value="admin">{t('projects.settings.roles.admin')}</option>
+                      <option value="member">{t('projects.settings.roles.member')}</option>
+                      <option value="viewer">{t('projects.settings.roles.viewer')}</option>
+                    </select>
+                    <button
+                      className={`p-1 ${isLastOwner ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' : 'text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300'}`}
+                      onClick={() => !isLastOwner && setRemoveTarget({ projectId: p.project_id, projectName: p.project_name })}
+                      disabled={isLastOwner}
+                      title={isLastOwner ? t('projects.settings.lastOwnerTooltip') : undefined}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <Badge color={ROLE_BADGE_COLORS[p.role] ?? 'gray'}>
-                    {t(`projects.settings.roles.${p.role}`)}
-                  </Badge>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setRemoveTarget({ projectId: p.project_id, projectName: p.project_name })}
-                  >
-                    {t('common.remove')}
-                  </Button>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
 

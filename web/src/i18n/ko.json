@@ -118,6 +118,7 @@
   "projects.settings.removeMemberConfirmBody": "이 프로젝트에서 <bold>{{name}}</bold>을(를) 제거하시겠습니까?",
   "projects.settings.removeSelfConfirmBody": "이 프로젝트에서 자신을 제거하려고 합니다. 접근 권한을 잃게 됩니다.",
   "projects.settings.removeMemberConfirmButton": "제거",
+  "projects.settings.lastOwnerTooltip": "프로젝트에는 최소 한 명의 소유자가 있어야 합니다.",
   "projects.settings.roles.owner": "소유자",
   "projects.settings.roles.admin": "관리자",
   "projects.settings.roles.member": "멤버",

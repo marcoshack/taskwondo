@@ -118,6 +118,7 @@
   "projects.settings.removeMemberConfirmBody": "确定要将<bold>{{name}}</bold>从此项目中移除吗？",
   "projects.settings.removeSelfConfirmBody": "您即将将自己从此项目中移除。您将失去访问权限。",
   "projects.settings.removeMemberConfirmButton": "移除",
+  "projects.settings.lastOwnerTooltip": "项目必须至少有一个所有者。",
   "projects.settings.roles.owner": "所有者",
   "projects.settings.roles.admin": "管理员",
   "projects.settings.roles.member": "成员",

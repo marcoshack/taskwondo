@@ -118,6 +118,7 @@
   "projects.settings.removeMemberConfirmBody": "<bold>{{name}}</bold>をこのプロジェクトから削除してもよろしいですか？",
   "projects.settings.removeSelfConfirmBody": "自分自身をこのプロジェクトから削除しようとしています。アクセス権が失われます。",
   "projects.settings.removeMemberConfirmButton": "削除",
+  "projects.settings.lastOwnerTooltip": "プロジェクトには少なくとも1人のオーナーが必要です。",
   "projects.settings.roles.owner": "オーナー",
   "projects.settings.roles.admin": "管理者",
   "projects.settings.roles.member": "メンバー",
