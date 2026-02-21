@@ -7,6 +7,7 @@ import { Trans, useTranslation } from 'react-i18next'
 import { useWorkItem, useUpdateWorkItem, useDeleteWorkItem, useUploadAttachment, useAttachments } from '@/hooks/useWorkItems'
 import { useProject, useMembers, useTypeWorkflows } from '@/hooks/useProjects'
 import { useProjectWorkflow, useWorkflows } from '@/hooks/useWorkflows'
+import { useMilestones } from '@/hooks/useMilestones'
 import { Spinner } from '@/components/ui/Spinner'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
@@ -44,6 +45,7 @@ export function WorkItemDetailPage() {
   const { data: members } = useMembers(projectKey ?? '')
   const { data: typeWorkflows } = useTypeWorkflows(projectKey ?? '')
   const { data: allWorkflows } = useWorkflows()
+  const { data: milestones } = useMilestones(projectKey ?? '')
   const updateMutation = useUpdateWorkItem(projectKey ?? '')
   const deleteMutation = useDeleteWorkItem(projectKey ?? '')
 
@@ -436,6 +438,7 @@ export function WorkItemDetailPage() {
             statuses={statuses}
             allowedTransitions={allowed}
             members={members ?? []}
+            milestones={milestones}
             allowedComplexityValues={project?.allowed_complexity_values}
             typeWorkflows={typeWorkflows}
             allWorkflows={allWorkflows}

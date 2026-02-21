@@ -120,11 +120,21 @@ func (r *MilestoneRepository) attachProgress(ctx context.Context, m *model.Miles
 
 	err := r.db.QueryRowContext(ctx,
 		`SELECT
-			COUNT(*) FILTER (WHERE resolved_at IS NULL) AS open_count,
-			COUNT(*) FILTER (WHERE resolved_at IS NOT NULL) AS closed_count,
+			COUNT(*) FILTER (WHERE ws.category IS NULL OR ws.category NOT IN ('done', 'cancelled')) AS open_count,
+			COUNT(*) FILTER (WHERE ws.category IN ('done', 'cancelled')) AS closed_count,
 			COUNT(*) AS total_count
-		 FROM work_items
-		 WHERE milestone_id = $1 AND deleted_at IS NULL`, m.ID).
+		 FROM work_items wi
+		 LEFT JOIN LATERAL (
+			SELECT ws2.category FROM workflow_statuses ws2
+			WHERE ws2.name = wi.status
+			  AND ws2.workflow_id = COALESCE(
+				(SELECT ptw.workflow_id FROM project_type_workflows ptw
+				 WHERE ptw.project_id = wi.project_id AND ptw.work_item_type = wi.type),
+				(SELECT p.default_workflow_id FROM projects p WHERE p.id = wi.project_id)
+			  )
+			LIMIT 1
+		 ) ws ON true
+		 WHERE wi.milestone_id = $1 AND wi.deleted_at IS NULL`, m.ID).
 		Scan(&mp.OpenCount, &mp.ClosedCount, &mp.TotalCount)
 	if err != nil {
 		return nil, fmt.Errorf("counting milestone progress: %w", err)

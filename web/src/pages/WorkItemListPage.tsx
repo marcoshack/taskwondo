@@ -5,6 +5,7 @@ import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
 import { useWorkItems, useCreateWorkItem, useBulkUpdateWorkItems, useDeleteWorkItem } from '@/hooks/useWorkItems'
 import { useProject, useMembers } from '@/hooks/useProjects'
 import { useProjectWorkflow } from '@/hooks/useWorkflows'
+import { useMilestones } from '@/hooks/useMilestones'
 import { useUserSetting, useSetUserSetting } from '@/hooks/useUserSettings'
 import { useDebounce } from '@/hooks/useDebounce'
 import { DataTable, type Column } from '@/components/ui/DataTable'
@@ -78,6 +79,7 @@ export function WorkItemListPage() {
   const { statuses, transitionsMap } = useProjectWorkflow(projectKey ?? '')
   const { data: project } = useProject(projectKey ?? '')
   const { data: members } = useMembers(projectKey ?? '')
+  const { data: milestones } = useMilestones(projectKey ?? '')
 
   // Load saved filter from user settings
   const { data: savedFilter, isLoading: settingsLoading } = useUserSetting<SavedFilter>(projectKey ?? '', SETTINGS_KEY)
@@ -239,6 +241,13 @@ export function WorkItemListPage() {
     bulkMutation.mutate(updates, { onSuccess: () => setSelected(new Set()) })
   }
 
+  function handleBulkMilestone(value: string) {
+    if (!value) return
+    const input = value === 'none' ? { milestone_id: null } : { milestone_id: value }
+    const updates = Array.from(selected).map((itemNumber) => ({ itemNumber, input }))
+    bulkMutation.mutate(updates, { onSuccess: () => setSelected(new Set()) })
+  }
+
   const [loadedPages, setLoadedPages] = useState<WorkItem[][]>([])
 
   const allItems = useMemo(() => {
@@ -367,6 +376,7 @@ export function WorkItemListPage() {
         filter={filter}
         onFilterChange={handleFilterChange}
         statuses={statuses}
+        milestones={milestones ?? []}
         search={search}
         onSearchChange={handleSearchChange}
         sort={sort}
@@ -396,6 +406,17 @@ export function WorkItemListPage() {
               ))}
             </Select>
           </div>
+          {milestones && milestones.length > 0 && (
+            <div className="w-44">
+              <Select onChange={(e) => handleBulkMilestone(e.target.value)} value="">
+                <option value="">{t('workitems.bulk.milestone')}</option>
+                <option value="none">{t('milestones.noMilestone')}</option>
+                {milestones.filter((m) => m.status === 'open').map((m) => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
+                ))}
+              </Select>
+            </div>
+          )}
           <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>{t('common.clear')}</Button>
           {bulkMutation.isPending && <Spinner size="sm" />}
         </div>
@@ -489,6 +510,7 @@ export function WorkItemListPage() {
           projectKey={projectKey ?? ''}
           mode="create"
           members={members ?? []}
+          milestones={milestones}
           allowedComplexityValues={project?.allowed_complexity_values}
           onSubmit={(values) => {
             createMutation.mutate(values as { type: string; title: string }, {

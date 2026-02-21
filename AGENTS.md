@@ -37,6 +37,7 @@ Taskwondo is a self-hosted task and ticket management system built with Go (back
 - **API client:** Centralized in `web/src/api/`. TanStack Query hooks for all data fetching.
 - **State:** TanStack Query for server state. Zustand only for client state (auth, UI prefs).
 - **Confirmations:** Use `<Modal>` for destructive actions. Never `window.confirm()`.
+- **Success feedback:** Never use banner messages that shift layout. Instead, show a temporary green checkmark (`<Check>` from lucide-react) inline on the affected card/row, to the left of the action icons. Use a `savedId` state + `setTimeout` (~2s) to auto-clear.
 
 ## Important Rules
 

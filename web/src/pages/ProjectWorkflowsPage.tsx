@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { Spinner } from '@/components/ui/Spinner'
 import { Badge } from '@/components/ui/Badge'
-import { Lock, Plus, Pencil, Trash2, ArrowRight } from 'lucide-react'
+import { Lock, Plus, Pencil, Trash2, ArrowRight, Check } from 'lucide-react'
 import type { WorkflowStatus } from '@/api/workflows'
 import type { AxiosError } from 'axios'
 
@@ -39,7 +39,7 @@ export function ProjectWorkflowsPage() {
   const [viewingWorkflowId, setViewingWorkflowId] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+  const [savedId, setSavedId] = useState<string | null>(null)
 
   const deleteMutation = useDeleteProjectWorkflow(projectKey ?? '')
 
@@ -59,14 +59,17 @@ export function ProjectWorkflowsPage() {
   const systemWorkflows = workflows?.filter((w) => w.is_default || !w.project_id) ?? []
   const projectWorkflows = workflows?.filter((w) => !w.is_default && w.project_id) ?? []
 
+  function flashSaved(id: string) {
+    setSavedId(id)
+    setTimeout(() => setSavedId(null), 2000)
+  }
+
   function handleDelete() {
     if (!deleteTarget) return
     setError('')
     deleteMutation.mutate(deleteTarget.id, {
       onSuccess: () => {
-        setSuccess(t('workflows.deleteSuccess'))
         setDeleteTarget(null)
-        setTimeout(() => setSuccess(''), 3000)
       },
       onError: (err) => {
         const axiosErr = err as AxiosError<{ error?: { message?: string } }>
@@ -97,7 +100,6 @@ export function ProjectWorkflowsPage() {
       </div>
 
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
-      {success && <p className="text-sm text-green-600 dark:text-green-400">{success}</p>}
 
       {/* System Workflows */}
       {systemWorkflows.length > 0 && (
@@ -161,6 +163,7 @@ export function ProjectWorkflowsPage() {
                     )}
                   </div>
                   <div className="flex items-center gap-1">
+                    {savedId === wf.id && <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />}
                     <Button variant="ghost" size="sm" onClick={() => setViewingWorkflowId(wf.id)}>
                       {t('workflows.viewDetails')}
                     </Button>
@@ -198,9 +201,8 @@ export function ProjectWorkflowsPage() {
             setEditorOpen(false)
             setEditingWorkflowId(null)
           }}
-          onSuccess={(msg) => {
-            setSuccess(msg)
-            setTimeout(() => setSuccess(''), 3000)
+          onSuccess={(id) => {
+            flashSaved(id)
           }}
           onError={setError}
         />
@@ -451,8 +453,8 @@ function WorkflowEditorModal({
       updateMutation.mutate(
         { workflowId, input },
         {
-          onSuccess: () => {
-            onSuccess(t('workflows.updateSuccess'))
+          onSuccess: (data) => {
+            onSuccess(data.id)
             onClose()
           },
           onError: (err) => {
@@ -463,8 +465,8 @@ function WorkflowEditorModal({
       )
     } else {
       createMutation.mutate(input, {
-        onSuccess: () => {
-          onSuccess(t('workflows.createSuccess'))
+        onSuccess: (data) => {
+          onSuccess(data.id)
           onClose()
         },
         onError: (err) => {

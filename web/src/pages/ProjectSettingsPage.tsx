@@ -10,6 +10,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Spinner } from '@/components/ui/Spinner'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
+import { Check } from 'lucide-react'
 import { UserSearchInput } from '@/components/UserSearchInput'
 import type { AxiosError } from 'axios'
 import type { UserSearchResult } from '@/api/auth'
@@ -58,7 +59,7 @@ export function ProjectSettingsPage() {
   const [saved, setSaved] = useState<Record<string, boolean>>({})
   function showSaved(key: string) {
     setSaved((prev) => ({ ...prev, [key]: true }))
-    setTimeout(() => setSaved((prev) => ({ ...prev, [key]: false })), 3000)
+    setTimeout(() => setSaved((prev) => ({ ...prev, [key]: false })), 2000)
   }
 
   if (isLoading || !project) {
@@ -221,9 +222,7 @@ export function ProjectSettingsPage() {
             {updateMutation.isPending ? t('common.saving') : t('projects.settings.saveChanges')}
           </Button>
           {saved.general && (
-            <svg className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
+            <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
           )}
         </div>
       </form>
@@ -308,9 +307,7 @@ export function ProjectSettingsPage() {
                   {canManageMembers && !memberIsOwner ? (
                     <>
                       {saved[`role:${member.user_id}`] && (
-                        <svg className="h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
+                        <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
                       )}
                       <select
                         className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"

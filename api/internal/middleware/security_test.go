@@ -22,6 +22,8 @@ func TestSecurityHeaders(t *testing.T) {
 		{"X-Content-Type-Options", "nosniff"},
 		{"X-Frame-Options", "DENY"},
 		{"Referrer-Policy", "strict-origin-when-cross-origin"},
+		{"Strict-Transport-Security", "max-age=63072000; includeSubDomains"},
+		{"Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self'; object-src 'none'; frame-ancestors 'none'"},
 	}
 	for _, tt := range tests {
 		if got := w.Header().Get(tt.header); got != tt.want {

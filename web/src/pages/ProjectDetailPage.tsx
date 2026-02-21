@@ -9,6 +9,7 @@ import { WorkItemDetailPage } from './WorkItemDetailPage'
 import { ProjectSettingsPage } from './ProjectSettingsPage'
 import { ProjectOverviewPage } from './ProjectOverviewPage'
 import { ProjectWorkflowsPage } from './ProjectWorkflowsPage'
+import { MilestonesPage } from './MilestonesPage'
 
 function PlaceholderPage({ title }: { title: string }) {
   const { t } = useTranslation()
@@ -47,7 +48,7 @@ export function ProjectDetailPage() {
             <Route path="items" element={<WorkItemListPage />} />
             <Route path="items/:itemNumber" element={<WorkItemDetailPage />} />
             <Route path="queues" element={<PlaceholderPage title={t('sidebar.queues')} />} />
-            <Route path="milestones" element={<PlaceholderPage title={t('sidebar.milestones')} />} />
+            <Route path="milestones" element={<MilestonesPage />} />
             <Route path="workflows" element={<ProjectWorkflowsPage />} />
             <Route path="settings" element={<ProjectSettingsPage />} />
           </Routes>

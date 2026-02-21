@@ -8,6 +8,7 @@ import { MentionModal } from '@/components/ui/MentionModal'
 import { useMentionAutocomplete } from '@/hooks/useMentionAutocomplete'
 import type { WorkflowStatus } from '@/api/workflows'
 import type { ProjectMember } from '@/api/projects'
+import type { Milestone } from '@/api/milestones'
 
 const TYPES = ['task', 'ticket', 'bug', 'feedback', 'epic']
 const PRIORITIES = ['low', 'medium', 'high', 'critical']
@@ -17,6 +18,7 @@ interface WorkItemFormProps {
   projectKey: string
   mode: 'create' | 'edit'
   members: ProjectMember[]
+  milestones?: Milestone[]
   allowedComplexityValues?: number[]
   initialValues?: {
     type?: string
@@ -29,6 +31,7 @@ interface WorkItemFormProps {
     visibility?: string
     due_date?: string
     status?: string
+    milestone_id?: string | null
   }
   statuses?: WorkflowStatus[]
   allowedTransitions?: string[]
@@ -41,6 +44,7 @@ export function WorkItemForm({
   projectKey,
   mode,
   members,
+  milestones = [],
   allowedComplexityValues = [],
   initialValues = {},
   statuses,
@@ -59,6 +63,7 @@ export function WorkItemForm({
   const [visibility, setVisibility] = useState(initialValues.visibility ?? 'internal')
   const [complexity, setComplexity] = useState(initialValues.complexity != null ? String(initialValues.complexity) : '')
   const [dueDate, setDueDate] = useState(initialValues.due_date ?? '')
+  const [milestoneId, setMilestoneId] = useState(initialValues.milestone_id ?? '')
   const [status, setStatus] = useState(initialValues.status ?? '')
 
   const descRef = useRef<HTMLTextAreaElement>(null)
@@ -79,6 +84,7 @@ export function WorkItemForm({
         assignee_id: assigneeId || undefined,
         labels: labels ? labels.split(',').map((l) => l.trim()).filter(Boolean) : undefined,
         complexity: complexity ? Number(complexity) : undefined,
+        milestone_id: milestoneId || undefined,
         visibility,
         due_date: dueDate || undefined,
       })
@@ -95,6 +101,8 @@ export function WorkItemForm({
       if (assigneeId !== (initialValues.assignee_id ?? null)) values.assignee_id = assigneeId
       const oldComplexity = initialValues.complexity != null ? String(initialValues.complexity) : ''
       if (complexity !== oldComplexity) values.complexity = complexity ? Number(complexity) : null
+      const oldMilestoneId = initialValues.milestone_id ?? ''
+      if (milestoneId !== oldMilestoneId) values.milestone_id = milestoneId || null
       onSubmit(values)
     }
   }
@@ -166,6 +174,14 @@ export function WorkItemForm({
         ))}
       </Select>
       <Input label={t('workitems.form.dueDate')} type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+      {milestones.length > 0 && (
+        <Select label={t('workitems.form.milestone')} value={milestoneId} onChange={(e) => setMilestoneId(e.target.value)}>
+          <option value="">{t('milestones.noMilestone')}</option>
+          {milestones.filter((m) => m.status === 'open').map((m) => (
+            <option key={m.id} value={m.id}>{m.name}</option>
+          ))}
+        </Select>
+      )}
       <div className="flex justify-end gap-3 pt-2">
         <Button type="button" variant="secondary" onClick={onCancel}>{t('common.cancel')}</Button>
         <Button type="submit" disabled={isSubmitting || !title.trim()}>

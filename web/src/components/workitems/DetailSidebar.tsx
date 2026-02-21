@@ -6,12 +6,14 @@ import { UserPicker } from '@/components/ui/UserPicker'
 import type { WorkItem, UpdateWorkItemInput } from '@/api/workitems'
 import type { WorkflowStatus, Workflow } from '@/api/workflows'
 import type { ProjectMember, ProjectTypeWorkflow } from '@/api/projects'
+import type { Milestone } from '@/api/milestones'
 
 interface DetailSidebarProps {
   item: WorkItem
   statuses: WorkflowStatus[]
   allowedTransitions: string[]
   members: ProjectMember[]
+  milestones?: Milestone[]
   allowedComplexityValues?: number[]
   typeWorkflows?: ProjectTypeWorkflow[]
   allWorkflows?: Workflow[]
@@ -22,7 +24,7 @@ const PRIORITIES = ['low', 'medium', 'high', 'critical']
 const TYPES = ['task', 'ticket', 'bug', 'feedback', 'epic']
 const VISIBILITIES = ['internal', 'portal', 'public']
 
-export function DetailSidebar({ item, statuses, allowedTransitions, members, allowedComplexityValues = [], typeWorkflows, allWorkflows, onUpdate }: DetailSidebarProps) {
+export function DetailSidebar({ item, statuses, allowedTransitions, members, milestones = [], allowedComplexityValues = [], typeWorkflows, allWorkflows, onUpdate }: DetailSidebarProps) {
   const { t } = useTranslation()
   const [pendingType, setPendingType] = useState<string | null>(null)
   const [statusWarning, setStatusWarning] = useState(false)
@@ -155,6 +157,18 @@ export function DetailSidebar({ item, statuses, allowedTransitions, members, all
           value={item.assignee_id}
           onChange={(userId) => onUpdate({ assignee_id: userId })}
         />
+      </Field>
+
+      <Field label={t('workitems.form.milestone')}>
+        <Select
+          value={item.milestone_id ?? ''}
+          onChange={(e) => onUpdate({ milestone_id: e.target.value || null })}
+        >
+          <option value="">{t('milestones.noMilestone')}</option>
+          {milestones
+            .filter((m) => m.status === 'open' || m.id === item.milestone_id)
+            .map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+        </Select>
       </Field>
 
       <Field label={t('workitems.form.visibility')}>
