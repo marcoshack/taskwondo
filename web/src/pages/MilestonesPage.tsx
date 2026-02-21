@@ -364,18 +364,24 @@ function MilestoneForm({
           onChange={(e) => setDescription(e.target.value)}
         />
       </div>
-      <Input
-        label={t('milestones.dueDate')}
-        type="date"
-        value={dueDate}
-        onChange={(e) => setDueDate(e.target.value)}
-      />
-      {milestone && (
-        <Select label={t('workitems.form.status')} value={status} onChange={(e) => setStatus(e.target.value as 'open' | 'closed')}>
-          <option value="open">{t('milestones.statusOpen')}</option>
-          <option value="closed">{t('milestones.statusClosed')}</option>
-        </Select>
-      )}
+      <div className="flex gap-4">
+        <div className="w-48">
+          <Input
+            label={t('milestones.dueDate')}
+            type="date"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+          />
+        </div>
+        {milestone && (
+          <div className="w-48">
+            <Select label={t('workitems.form.status')} value={status} onChange={(e) => setStatus(e.target.value as 'open' | 'closed')}>
+              <option value="open">{t('milestones.statusOpen')}</option>
+              <option value="closed">{t('milestones.statusClosed')}</option>
+            </Select>
+          </div>
+        )}
+      </div>
       <div className="flex justify-end gap-3 pt-2">
         <Button type="button" variant="secondary" onClick={onCancel}>{t('common.cancel')}</Button>
         <Button type="submit" disabled={isPending}>

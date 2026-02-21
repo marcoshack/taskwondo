@@ -12,6 +12,7 @@ html {
 html:where(.dark) {
   scrollbar-color: #374151 #111827;
   background-color: #111827;
+  color-scheme: dark;
 }
 
 @keyframes confirm-fade {
