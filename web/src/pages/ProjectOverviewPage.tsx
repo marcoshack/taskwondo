@@ -74,7 +74,7 @@ export function ProjectOverviewPage() {
   const loading = itemsLoading || !statuses.length
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-3xl space-y-6">
       <div>
         <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
           {t('projects.overview.openWorkItems')}
@@ -84,67 +84,65 @@ export function ProjectOverviewPage() {
             <Spinner />
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
             {panels.map((panel) => (
               <button
                 key={panel.key}
                 onClick={() => navigateToItems(panel.key)}
-                className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 shadow-sm text-left hover:border-indigo-300 dark:hover:border-indigo-600 hover:shadow-md transition-all cursor-pointer"
+                className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 text-left hover:border-indigo-300 dark:hover:border-indigo-600 hover:shadow-md transition-all cursor-pointer"
               >
-                <div className="flex items-center gap-2 mb-2">
-                  <span className={`inline-block h-2.5 w-2.5 rounded-full ${panel.iconBg}`} />
-                  <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className={`inline-block h-2 w-2 rounded-full ${panel.iconBg}`} />
+                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
                     {panel.label}
                   </span>
                 </div>
-                <p className={`text-3xl font-bold ${panel.color}`}>{counts.byKey[panel.key]}</p>
+                <p className={`text-2xl font-bold ${panel.color}`}>{counts.byKey[panel.key]}</p>
               </button>
             ))}
           </div>
         )}
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-6">
-        <div className="sm:w-4/5 min-w-0">
-          <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
-            {t('projects.overview.about')}
-          </h2>
-          <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm">
-            {project?.description ? (
-              <div className="prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 break-words">
-                <Markdown remarkPlugins={[remarkGfm]}>{project.description}</Markdown>
-              </div>
-            ) : (
-              <p className="text-sm text-gray-400 dark:text-gray-500 italic">{t('projects.overview.noDescription')}</p>
-            )}
-          </div>
+      <div>
+        <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
+          {t('projects.overview.about')}
+        </h2>
+        <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-5">
+          {project?.description ? (
+            <div className="prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 break-words">
+              <Markdown remarkPlugins={[remarkGfm]}>{project.description}</Markdown>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400 dark:text-gray-500 italic">{t('projects.overview.noDescription')}</p>
+          )}
         </div>
+      </div>
 
-        <div className="sm:w-1/5 sm:min-w-[160px]">
-          <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
-            {t('projects.overview.members')}
-          </h2>
-          <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 shadow-sm">
-            {membersLoading ? (
-              <Spinner />
-            ) : !members || members.length === 0 ? (
-              <p className="text-sm text-gray-400 dark:text-gray-500">{t('projects.overview.noMembers')}</p>
-            ) : (
-              <ul className="space-y-3">
-                {members.map((member) => (
-                  <li key={member.user_id} className="flex items-center gap-2">
-                    <Avatar name={member.display_name} size="sm" />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                        {member.display_name}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{member.role}</p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+      <div>
+        <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
+          {t('projects.overview.members')}
+        </h2>
+        <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+          {membersLoading ? (
+            <Spinner />
+          ) : !members || members.length === 0 ? (
+            <p className="text-sm text-gray-400 dark:text-gray-500">{t('projects.overview.noMembers')}</p>
+          ) : (
+            <div className="flex flex-wrap gap-3">
+              {members.map((member) => (
+                <div key={member.user_id} className="flex items-center gap-2">
+                  <Avatar name={member.display_name} size="sm" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                      {member.display_name}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{member.role}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

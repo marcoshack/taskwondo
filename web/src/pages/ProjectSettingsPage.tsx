@@ -10,6 +10,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Spinner } from '@/components/ui/Spinner'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
+import { Tooltip } from '@/components/ui/Tooltip'
 import { Check, Trash2 } from 'lucide-react'
 import { UserSearchInput } from '@/components/UserSearchInput'
 import type { AxiosError } from 'axios'
@@ -185,7 +186,7 @@ export function ProjectSettingsPage() {
   const memberIds = members?.map((m) => m.user_id) ?? []
 
   return (
-    <div className="max-w-2xl space-y-8">
+    <div className="max-w-3xl space-y-8">
       {/* General section */}
       <div>
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('projects.settings.general')}</h2>
@@ -276,9 +277,7 @@ export function ProjectSettingsPage() {
               {addMemberMutation.isPending ? t('common.saving') : t('common.add')}
             </Button>
             {saved.addMember && (
-              <svg className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
+              <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
             )}
           </div>
         </div>
@@ -312,26 +311,28 @@ export function ProjectSettingsPage() {
                       {saved[`role:${member.user_id}`] && (
                         <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
                       )}
-                      <select
-                        className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                        value={member.role}
-                        onChange={(e) => handleRoleChange(member.user_id, e.target.value)}
-                        disabled={updateRoleMutation.isPending || isLastOwner}
-                        title={isLastOwner ? t('projects.settings.lastOwnerTooltip') : undefined}
-                      >
-                        {isOwner && <option value="owner">{t('projects.settings.roles.owner')}</option>}
-                        {ROLE_OPTIONS.map((role) => (
-                          <option key={role} value={role}>{t(`projects.settings.roles.${role}`)}</option>
-                        ))}
-                      </select>
-                      <button
-                        className={`p-1 ${isLastOwner ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' : 'text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300'}`}
-                        onClick={() => !isLastOwner && setRemoveTarget({ userId: member.user_id, name: member.display_name })}
-                        disabled={isLastOwner}
-                        title={isLastOwner ? t('projects.settings.lastOwnerTooltip') : undefined}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      <Tooltip content={isLastOwner ? t('projects.settings.lastOwnerTooltip') : undefined}>
+                        <select
+                          className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                          value={member.role}
+                          onChange={(e) => handleRoleChange(member.user_id, e.target.value)}
+                          disabled={updateRoleMutation.isPending || isLastOwner}
+                        >
+                          {isOwner && <option value="owner">{t('projects.settings.roles.owner')}</option>}
+                          {ROLE_OPTIONS.map((role) => (
+                            <option key={role} value={role}>{t(`projects.settings.roles.${role}`)}</option>
+                          ))}
+                        </select>
+                      </Tooltip>
+                      <Tooltip content={isLastOwner ? t('projects.settings.lastOwnerTooltip') : undefined}>
+                        <button
+                          className={`p-1 ${isLastOwner ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' : 'text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300'}`}
+                          onClick={() => !isLastOwner && setRemoveTarget({ userId: member.user_id, name: member.display_name })}
+                          disabled={isLastOwner}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </Tooltip>
                     </>
                   ) : (
                     <Badge color={ROLE_BADGE_COLORS[member.role] ?? 'gray'}>
@@ -365,9 +366,7 @@ export function ProjectSettingsPage() {
                   </span>
                   <div className="flex items-center gap-2">
                     {saved[`wf:${itemType}`] && (
-                      <svg className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
+                      <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
                     )}
                     <select
                       className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -467,9 +466,7 @@ export function ProjectSettingsPage() {
                 </Button>
               )}
               {saved.complexity && (
-                <svg className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
+                <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
               )}
             </div>
           </div>

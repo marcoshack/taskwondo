@@ -1,3 +1,5 @@
+import { Tooltip } from './Tooltip'
+
 const sizeClasses = {
   xs: 'h-4.5 w-4.5 text-[0.6rem]',
   sm: 'h-6 w-6 text-xs',
@@ -22,11 +24,12 @@ function getInitials(name: string): string {
 
 export function Avatar({ name, size = 'md' }: AvatarProps) {
   return (
-    <span
-      className={`inline-flex items-center justify-center rounded-full bg-indigo-600 text-white font-medium ${sizeClasses[size]}`}
-      title={name}
-    >
-      {getInitials(name)}
-    </span>
+    <Tooltip content={name}>
+      <span
+        className={`inline-flex items-center justify-center rounded-full bg-indigo-600 text-white font-medium ${sizeClasses[size]}`}
+      >
+        {getInitials(name)}
+      </span>
+    </Tooltip>
   )
 }

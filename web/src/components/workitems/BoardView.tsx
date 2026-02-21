@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useUpdateWorkItem } from '@/hooks/useWorkItems'
 import { PriorityBadge } from './PriorityBadge'
 import { TypeBadge } from './TypeBadge'
+import { Tooltip } from '@/components/ui/Tooltip'
 import type { WorkItem } from '@/api/workitems'
 import type { WorkflowStatus, WorkflowTransition } from '@/api/workflows'
 
@@ -182,13 +183,14 @@ function BoardCard({
         <PriorityBadge priority={item.priority} />
         {allowed.length > 0 && (
           <div className="relative ml-auto">
-            <button
-              className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-xs px-1"
-              onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu) }}
-              title={t('workitems.view.moveTo')}
-            >
+            <Tooltip content={t('workitems.view.moveTo')}>
+              <button
+                className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-xs px-1"
+                onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu) }}
+              >
               &hellip;
-            </button>
+              </button>
+            </Tooltip>
             {showMenu && (
               <div className="absolute right-0 top-5 z-10 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg py-1 min-w-[140px]">
                 {allowed.map((toStatus) => {

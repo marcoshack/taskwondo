@@ -16,7 +16,8 @@ import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { Spinner } from '@/components/ui/Spinner'
 import { Badge } from '@/components/ui/Badge'
-import { Lock, Plus, Pencil, Trash2, ArrowRight, Check } from 'lucide-react'
+import { Lock, Plus, Pencil, Trash2, ArrowRight, Check, Eye } from 'lucide-react'
+import { Tooltip } from '@/components/ui/Tooltip'
 import type { WorkflowStatus } from '@/api/workflows'
 import type { AxiosError } from 'axios'
 
@@ -116,9 +117,11 @@ export function ProjectWorkflowsPage() {
                     <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{wf.name}</span>
                     <Badge color="gray">{t('common.system')}</Badge>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={() => setViewingWorkflowId(wf.id)}>
-                    {t('workflows.viewDetails')}
-                  </Button>
+                  <Tooltip content={t('workflows.viewDetails')}>
+                    <Button variant="ghost" size="sm" onClick={() => setViewingWorkflowId(wf.id)}>
+                      <Eye className="h-3.5 w-3.5" />
+                    </Button>
+                  </Tooltip>
                 </div>
                 {wf.description && (
                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{wf.description}</p>
@@ -164,17 +167,23 @@ export function ProjectWorkflowsPage() {
                   </div>
                   <div className="flex items-center gap-1">
                     {savedId === wf.id && <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />}
-                    <Button variant="ghost" size="sm" onClick={() => setViewingWorkflowId(wf.id)}>
-                      {t('workflows.viewDetails')}
-                    </Button>
+                    <Tooltip content={t('workflows.viewDetails')}>
+                      <Button variant="ghost" size="sm" onClick={() => setViewingWorkflowId(wf.id)}>
+                        <Eye className="h-3.5 w-3.5" />
+                      </Button>
+                    </Tooltip>
                     {canManage && (
                       <>
-                        <Button variant="ghost" size="sm" onClick={() => openEditor(wf.id)}>
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => setDeleteTarget({ id: wf.id, name: wf.name })}>
-                          <Trash2 className="h-3.5 w-3.5 text-red-500" />
-                        </Button>
+                        <Tooltip content={t('common.edit')}>
+                          <Button variant="ghost" size="sm" onClick={() => openEditor(wf.id)}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        </Tooltip>
+                        <Tooltip content={t('common.delete')}>
+                          <Button variant="ghost" size="sm" onClick={() => setDeleteTarget({ id: wf.id, name: wf.name })}>
+                            <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                          </Button>
+                        </Tooltip>
                       </>
                     )}
                   </div>

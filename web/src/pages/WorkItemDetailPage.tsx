@@ -21,6 +21,7 @@ import type { PreviewTarget } from '@/components/workitems/FilePreviewModal'
 import { usePasteUpload } from '@/hooks/usePasteUpload'
 import { useMentionAutocomplete } from '@/hooks/useMentionAutocomplete'
 import { MentionModal } from '@/components/ui/MentionModal'
+import { Tooltip } from '@/components/ui/Tooltip'
 import { TypeBadge } from '@/components/workitems/TypeBadge'
 import { StatusBadge } from '@/components/workitems/StatusBadge'
 import { PriorityBadge } from '@/components/workitems/PriorityBadge'
@@ -59,7 +60,6 @@ export function WorkItemDetailPage() {
   const [showDelete, setShowDelete] = useState(false)
   const [showProperties, setShowProperties] = useState(false)
   const [draggingOver, setDraggingOver] = useState(false)
-  const [toast, setToast] = useState<string | null>(null)
   const [highlightedAttachmentId, setHighlightedAttachmentId] = useState<string | null>(null)
   const [highlightedCommentId, setHighlightedCommentId] = useState<string | null>(null)
   const [previewTarget, setPreviewTarget] = useState<PreviewTarget | null>(null)
@@ -132,13 +132,13 @@ export function WorkItemDetailPage() {
     if (!files?.length) return
     for (const file of files) {
       uploadMut.mutate({ file }, {
-        onSuccess: () => {
-          setToast(t('workitems.attached', { filename: file.name }))
-          setTimeout(() => setToast(null), 3000)
+        onSuccess: (attachment) => {
+          setActiveTab('attachments')
+          setHighlightedAttachmentId(attachment.id)
         },
       })
     }
-  }, [uploadMut, t])
+  }, [uploadMut])
 
   const { handlePaste: handleDescPaste, handleDrop: handleDescDrop, handleDragOver: handleDescDragOver } = usePasteUpload({
     projectKey: projectKey ?? '',
@@ -187,12 +187,6 @@ export function WorkItemDetailPage() {
           <span className="text-lg font-medium text-indigo-600 dark:text-indigo-400 bg-white dark:bg-gray-900 px-6 py-3 rounded-lg shadow-lg">
             {t('workitems.dropToAttach')}
           </span>
-        </div>
-      )}
-
-      {toast && (
-        <div className="fixed bottom-6 right-6 z-50 bg-green-600 text-white text-sm px-4 py-2 rounded-lg shadow-lg animate-fade-in">
-          {toast}
         </div>
       )}
 
@@ -413,14 +407,15 @@ export function WorkItemDetailPage() {
                 ))}
               </nav>
               {(activeTab === 'comments' || activeTab === 'activity' || activeTab === 'attachments') && (
-                <button
-                  className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 pb-2 flex items-center gap-1"
-                  onClick={() => setSortOrder((s) => (s === 'desc' ? 'asc' : 'desc'))}
-                  title={sortOrder === 'desc' ? t('common.showingNewestFirst') : t('common.showingOldestFirst')}
-                >
+                <Tooltip content={sortOrder === 'desc' ? t('common.showingNewestFirst') : t('common.showingOldestFirst')}>
+                  <button
+                    className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 pb-2 flex items-center gap-1"
+                    onClick={() => setSortOrder((s) => (s === 'desc' ? 'asc' : 'desc'))}
+                  >
                   <span className="text-base sm:text-xs">{sortOrder === 'desc' ? '\u2193' : '\u2191'}</span>
                   <span className="hidden sm:inline">{sortOrder === 'desc' ? t('common.newestFirst') : t('common.oldestFirst')}</span>
-                </button>
+                  </button>
+                </Tooltip>
               )}
             </div>
 

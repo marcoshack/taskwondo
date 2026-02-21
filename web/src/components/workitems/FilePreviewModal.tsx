@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Modal } from '@/components/ui/Modal'
 import { Spinner } from '@/components/ui/Spinner'
+import { Tooltip } from '@/components/ui/Tooltip'
 import { getToken } from '@/api/client'
 import { getAttachmentDownloadURL } from '@/api/workitems'
 import type { Attachment } from '@/api/workitems'
@@ -140,30 +141,34 @@ export function FilePreviewModal({ target, onClose }: FilePreviewModalProps) {
             {info?.filename}
           </span>
           {info?.comment && (
-            <span className="text-sm text-gray-500 dark:text-gray-400 truncate" title={info.comment}>
-              &mdash; {info.comment}
-            </span>
+            <Tooltip content={info.comment}>
+              <span className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                &mdash; {info.comment}
+              </span>
+            </Tooltip>
           )}
         </div>
         <div className="flex items-center gap-2">
-          <button
-            className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
-            onClick={handleDownload}
-            title={t('preview.download')}
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M8 2v8m0 0l-3-3m3 3l3-3M3 12h10" />
-            </svg>
-          </button>
-          <button
-            className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
-            onClick={onClose}
-            title={t('preview.close')}
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4l8 8M12 4l-8 8" />
-            </svg>
-          </button>
+          <Tooltip content={t('preview.download')}>
+            <button
+              className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+              onClick={handleDownload}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 2v8m0 0l-3-3m3 3l3-3M3 12h10" />
+              </svg>
+            </button>
+          </Tooltip>
+          <Tooltip content={t('preview.close')}>
+            <button
+              className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+              onClick={onClose}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4l8 8M12 4l-8 8" />
+              </svg>
+            </button>
+          </Tooltip>
         </div>
       </div>
 

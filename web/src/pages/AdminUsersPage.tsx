@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
-import { ChevronDown, ChevronRight, Trash2 } from 'lucide-react'
+import { Check, ChevronDown, ChevronRight, Trash2 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAdminUsers, useUpdateUser, useUserProjects, useAddUserToProject, useUpdateUserProjectRole, useRemoveUserFromProject } from '@/hooks/useAdmin'
 import { usePreference, useSetPreference } from '@/hooks/usePreferences'
@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { MultiSelect } from '@/components/ui/MultiSelect'
 import { Spinner } from '@/components/ui/Spinner'
+import { Tooltip } from '@/components/ui/Tooltip'
 import type { AdminUser } from '@/api/admin'
 import type { AxiosError } from 'axios'
 
@@ -48,22 +49,24 @@ export function AdminUsersPage() {
   }, [users, statusFilter])
 
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null)
-  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [saved, setSaved] = useState<Record<string, boolean>>({})
+  const [error, setError] = useState<string | null>(null)
   const [disableTarget, setDisableTarget] = useState<AdminUser | null>(null)
 
-  function showFeedback(type: 'success' | 'error', message: string) {
-    setFeedback({ type, message })
-    if (type === 'success') setTimeout(() => setFeedback(null), 3000)
+  function showSaved(key: string) {
+    setSaved((prev) => ({ ...prev, [key]: true }))
+    setTimeout(() => setSaved((prev) => ({ ...prev, [key]: false })), 2000)
   }
 
   function handleRoleChange(userId: string, role: string) {
+    setError(null)
     updateUserMutation.mutate(
       { userId, input: { global_role: role } },
       {
-        onSuccess: () => showFeedback('success', t('admin.users.roleUpdated')),
+        onSuccess: () => showSaved(`role:${userId}`),
         onError: (err) => {
           const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-          showFeedback('error', axiosErr.response?.data?.error?.message ?? t('admin.users.updateError'))
+          setError(axiosErr.response?.data?.error?.message ?? t('admin.users.updateError'))
         },
       },
     )
@@ -71,16 +74,17 @@ export function AdminUsersPage() {
 
   function handleDisable() {
     if (!disableTarget) return
+    setError(null)
     updateUserMutation.mutate(
       { userId: disableTarget.id, input: { is_active: false } },
       {
         onSuccess: () => {
-          showFeedback('success', t('admin.users.statusUpdated'))
+          showSaved(`status:${disableTarget.id}`)
           setDisableTarget(null)
         },
         onError: (err) => {
           const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-          showFeedback('error', axiosErr.response?.data?.error?.message ?? t('admin.users.updateError'))
+          setError(axiosErr.response?.data?.error?.message ?? t('admin.users.updateError'))
           setDisableTarget(null)
         },
       },
@@ -88,13 +92,14 @@ export function AdminUsersPage() {
   }
 
   function handleEnable(userId: string) {
+    setError(null)
     updateUserMutation.mutate(
       { userId, input: { is_active: true } },
       {
-        onSuccess: () => showFeedback('success', t('admin.users.statusUpdated')),
+        onSuccess: () => showSaved(`status:${userId}`),
         onError: (err) => {
           const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-          showFeedback('error', axiosErr.response?.data?.error?.message ?? t('admin.users.updateError'))
+          setError(axiosErr.response?.data?.error?.message ?? t('admin.users.updateError'))
         },
       },
     )
@@ -121,7 +126,7 @@ export function AdminUsersPage() {
   }
 
   return (
-    <div className="max-w-4xl space-y-6">
+    <div className="max-w-3xl space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('admin.users.title')}</h2>
@@ -139,10 +144,8 @@ export function AdminUsersPage() {
         />
       </div>
 
-      {feedback && (
-        <p className={`text-sm ${feedback.type === 'success' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-          {feedback.message}
-        </p>
+      {error && (
+        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
       )}
 
       {filteredUsers.length === 0 ? (
@@ -173,6 +176,9 @@ export function AdminUsersPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                    {(saved[`role:${u.id}`] || saved[`status:${u.id}`]) && (
+                      <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
+                    )}
                     {!isSelf ? (
                       <select
                         className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -216,7 +222,7 @@ export function AdminUsersPage() {
                 </div>
 
                 {isExpanded && (
-                  <UserProjectsPanel userId={u.id} userName={u.display_name} onFeedback={showFeedback} />
+                  <UserProjectsPanel userId={u.id} userName={u.display_name} />
                 )}
               </div>
             )
@@ -253,11 +259,9 @@ export function AdminUsersPage() {
 function UserProjectsPanel({
   userId,
   userName,
-  onFeedback,
 }: {
   userId: string
   userName: string
-  onFeedback: (type: 'success' | 'error', message: string) => void
 }) {
   const { t } = useTranslation()
   const { data: userProjects, isLoading } = useUserProjects(userId)
@@ -269,6 +273,13 @@ function UserProjectsPanel({
   const [selectedProjectId, setSelectedProjectId] = useState('')
   const [selectedRole, setSelectedRole] = useState('member')
   const [removeTarget, setRemoveTarget] = useState<{ projectId: string; projectName: string } | null>(null)
+  const [saved, setSaved] = useState<Record<string, boolean>>({})
+  const [error, setError] = useState<string | null>(null)
+
+  function showSaved(key: string) {
+    setSaved((prev) => ({ ...prev, [key]: true }))
+    setTimeout(() => setSaved((prev) => ({ ...prev, [key]: false })), 2000)
+  }
 
   // Filter out projects the user is already a member of
   const memberProjectIds = new Set(userProjects?.map((p) => p.project_id) ?? [])
@@ -276,11 +287,12 @@ function UserProjectsPanel({
 
   function handleAdd() {
     if (!selectedProjectId) return
+    setError(null)
     addMutation.mutate(
       { project_id: selectedProjectId, role: selectedRole },
       {
         onSuccess: () => {
-          onFeedback('success', t('admin.users.addedToProject'))
+          showSaved('addProject')
           setSelectedProjectId('')
           setSelectedRole('member')
         },
@@ -289,7 +301,7 @@ function UserProjectsPanel({
           const msg = axiosErr.response?.status === 409
             ? t('admin.users.alreadyMember')
             : axiosErr.response?.data?.error?.message ?? t('admin.users.addToProjectError')
-          onFeedback('error', msg)
+          setError(msg)
         },
       },
     )
@@ -297,14 +309,14 @@ function UserProjectsPanel({
 
   function handleRemove() {
     if (!removeTarget) return
+    setError(null)
     removeMutation.mutate(removeTarget.projectId, {
       onSuccess: () => {
-        onFeedback('success', t('admin.users.removedFromProject'))
         setRemoveTarget(null)
       },
       onError: (err) => {
         const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-        onFeedback('error', axiosErr.response?.data?.error?.message ?? t('admin.users.removeFromProjectError'))
+        setError(axiosErr.response?.data?.error?.message ?? t('admin.users.removeFromProjectError'))
         setRemoveTarget(null)
       },
     })
@@ -316,6 +328,8 @@ function UserProjectsPanel({
         <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
           {t('admin.users.projects')}
         </h4>
+
+        {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
 
         {isLoading ? (
           <div className="flex justify-center py-2"><Spinner /></div>
@@ -332,37 +346,43 @@ function UserProjectsPanel({
                     <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{p.project_name}</span>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <select
-                      className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                      value={p.role}
-                      onChange={(e) => {
-                        updateRoleMutation.mutate(
-                          { projectId: p.project_id, role: e.target.value },
-                          {
-                            onSuccess: () => onFeedback('success', t('admin.users.roleUpdated')),
-                            onError: (err) => {
-                              const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-                              onFeedback('error', axiosErr.response?.data?.error?.message ?? t('admin.users.updateError'))
+                    {saved[`role:${p.project_id}`] && (
+                      <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
+                    )}
+                    <Tooltip content={isLastOwner ? t('projects.settings.lastOwnerTooltip') : undefined}>
+                      <select
+                        className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        value={p.role}
+                        onChange={(e) => {
+                          setError(null)
+                          updateRoleMutation.mutate(
+                            { projectId: p.project_id, role: e.target.value },
+                            {
+                              onSuccess: () => showSaved(`role:${p.project_id}`),
+                              onError: (err) => {
+                                const axiosErr = err as AxiosError<{ error?: { message?: string } }>
+                                setError(axiosErr.response?.data?.error?.message ?? t('admin.users.updateError'))
+                              },
                             },
-                          },
-                        )
-                      }}
-                      disabled={updateRoleMutation.isPending || isLastOwner}
-                      title={isLastOwner ? t('projects.settings.lastOwnerTooltip') : undefined}
-                    >
-                      <option value="owner">{t('projects.settings.roles.owner')}</option>
-                      <option value="admin">{t('projects.settings.roles.admin')}</option>
-                      <option value="member">{t('projects.settings.roles.member')}</option>
-                      <option value="viewer">{t('projects.settings.roles.viewer')}</option>
-                    </select>
-                    <button
-                      className={`p-1 ${isLastOwner ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' : 'text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300'}`}
-                      onClick={() => !isLastOwner && setRemoveTarget({ projectId: p.project_id, projectName: p.project_name })}
-                      disabled={isLastOwner}
-                      title={isLastOwner ? t('projects.settings.lastOwnerTooltip') : undefined}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                          )
+                        }}
+                        disabled={updateRoleMutation.isPending || isLastOwner}
+                      >
+                        <option value="owner">{t('projects.settings.roles.owner')}</option>
+                        <option value="admin">{t('projects.settings.roles.admin')}</option>
+                        <option value="member">{t('projects.settings.roles.member')}</option>
+                        <option value="viewer">{t('projects.settings.roles.viewer')}</option>
+                      </select>
+                    </Tooltip>
+                    <Tooltip content={isLastOwner ? t('projects.settings.lastOwnerTooltip') : undefined}>
+                      <button
+                        className={`p-1 ${isLastOwner ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' : 'text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300'}`}
+                        onClick={() => !isLastOwner && setRemoveTarget({ projectId: p.project_id, projectName: p.project_name })}
+                        disabled={isLastOwner}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </Tooltip>
                   </div>
                 </div>
               )
@@ -396,6 +416,9 @@ function UserProjectsPanel({
             <Button size="sm" disabled={!selectedProjectId || addMutation.isPending} onClick={handleAdd}>
               {addMutation.isPending ? t('common.saving') : t('common.add')}
             </Button>
+            {saved.addProject && (
+              <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
+            )}
           </div>
         )}
       </div>

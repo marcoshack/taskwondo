@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { ProjectKeyBadge } from '@/components/ui/ProjectKeyBadge'
+import { Tooltip } from '@/components/ui/Tooltip'
 import type { Column } from '@/components/ui/DataTable'
 import type { Project } from '@/api/projects'
 
@@ -186,22 +187,30 @@ export function ProjectListPage() {
                 <span className="font-medium text-gray-900 dark:text-gray-100 truncate">{p.name}</span>
               </div>
               <div className="flex items-center gap-4 mt-2.5 ml-1 text-xs text-gray-500 dark:text-gray-400">
-                <span className="inline-flex items-center gap-1" title={t('projects.table.open')}>
-                  <IconOpen className="w-3.5 h-3.5" />
-                  {p.open_count}
-                </span>
-                <span className="inline-flex items-center gap-1" title={t('projects.table.inProgress')}>
-                  <IconInProgress className="w-3.5 h-3.5" />
-                  {p.in_progress_count}
-                </span>
-                <span className="inline-flex items-center gap-1" title={t('projects.table.total')}>
-                  <IconTotal className="w-3.5 h-3.5" />
-                  {p.item_counter}
-                </span>
-                <span className="inline-flex items-center gap-1" title={t('projects.table.members')}>
-                  <IconMembers className="w-3.5 h-3.5" />
-                  {p.member_count}
-                </span>
+                <Tooltip content={t('projects.table.open')}>
+                  <span className="inline-flex items-center gap-1">
+                    <IconOpen className="w-3.5 h-3.5" />
+                    {p.open_count}
+                  </span>
+                </Tooltip>
+                <Tooltip content={t('projects.table.inProgress')}>
+                  <span className="inline-flex items-center gap-1">
+                    <IconInProgress className="w-3.5 h-3.5" />
+                    {p.in_progress_count}
+                  </span>
+                </Tooltip>
+                <Tooltip content={t('projects.table.total')}>
+                  <span className="inline-flex items-center gap-1">
+                    <IconTotal className="w-3.5 h-3.5" />
+                    {p.item_counter}
+                  </span>
+                </Tooltip>
+                <Tooltip content={t('projects.table.members')}>
+                  <span className="inline-flex items-center gap-1">
+                    <IconMembers className="w-3.5 h-3.5" />
+                    {p.member_count}
+                  </span>
+                </Tooltip>
               </div>
             </button>
           ))

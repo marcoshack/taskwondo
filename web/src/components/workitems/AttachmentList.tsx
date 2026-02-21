@@ -7,6 +7,7 @@ import { getAttachmentDownloadURL } from '@/api/workitems'
 import type { Attachment } from '@/api/workitems'
 import { getToken } from '@/api/client'
 import { Spinner } from '@/components/ui/Spinner'
+import { Tooltip } from '@/components/ui/Tooltip'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { isPreviewable } from './FilePreviewModal'
@@ -181,38 +182,41 @@ export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc', hig
           </div>
           <div className="flex items-center gap-1 shrink-0">
             {user && a.uploader_id === user.id && (
+              <Tooltip content={t('attachments.editDescription')}>
+                <button
+                  className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                  onClick={() => {
+                    setEditingCommentId(a.id)
+                    setEditCommentDraft(a.comment ?? '')
+                  }}
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M11.5 2.5a1.5 1.5 0 012.121 2.121L6.5 11.743l-2.5.757.757-2.5L11.5 2.5z" />
+                  </svg>
+                </button>
+              </Tooltip>
+            )}
+            <Tooltip content={t('preview.download')}>
               <button
                 className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
-                onClick={() => {
-                  setEditingCommentId(a.id)
-                  setEditCommentDraft(a.comment ?? '')
-                }}
-                title={t('attachments.editDescription')}
+                onClick={() => handleDownload(a.id, a.filename)}
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M11.5 2.5a1.5 1.5 0 012.121 2.121L6.5 11.743l-2.5.757.757-2.5L11.5 2.5z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 2v8m0 0l-3-3m3 3l3-3M3 12h10" />
                 </svg>
               </button>
-            )}
-            <button
-              className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
-              onClick={() => handleDownload(a.id, a.filename)}
-              title={t('preview.download')}
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8 2v8m0 0l-3-3m3 3l3-3M3 12h10" />
-              </svg>
-            </button>
+            </Tooltip>
             {user && a.uploader_id === user.id && (
-              <button
-                className="p-1 text-red-400 hover:text-red-600 dark:hover:text-red-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
-                onClick={() => setDeleteTarget(a)}
-                title={t('common.delete')}
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h10M6 4V3a1 1 0 011-1h2a1 1 0 011 1v1m2 0v9a1 1 0 01-1 1H5a1 1 0 01-1-1V4h8zM7 7v4M9 7v4" />
-                </svg>
-              </button>
+              <Tooltip content={t('common.delete')}>
+                <button
+                  className="p-1 text-red-400 hover:text-red-600 dark:hover:text-red-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                  onClick={() => setDeleteTarget(a)}
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h10M6 4V3a1 1 0 011-1h2a1 1 0 011 1v1m2 0v9a1 1 0 01-1 1H5a1 1 0 01-1-1V4h8zM7 7v4M9 7v4" />
+                  </svg>
+                </button>
+              </Tooltip>
             )}
           </div>
         </div>

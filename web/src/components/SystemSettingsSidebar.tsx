@@ -36,7 +36,6 @@ export function SystemSettingsSidebar() {
             <NavLink
               to={`${base}/${item.to}`}
               end={item.end}
-              title={!showLabels ? item.label : undefined}
               onClick={(e) => {
                 if (guardRef.current?.()) {
                   e.preventDefault()

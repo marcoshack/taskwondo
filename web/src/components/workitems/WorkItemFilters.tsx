@@ -3,6 +3,7 @@ import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
 import { useTranslation } from 'react-i18next'
 import { SlidersHorizontal, ArrowUpDown } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
+import { Tooltip } from '@/components/ui/Tooltip'
 import { Modal } from '@/components/ui/Modal'
 import { MultiSelect, type MultiSelectOption } from '@/components/ui/MultiSelect'
 import { Select } from '@/components/ui/Select'
@@ -190,28 +191,30 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
                   </button>
                   {isActive && (
                     <div className="flex shrink-0">
-                      <button
-                        onClick={() => onOrderChange('asc')}
-                        className={`px-3 py-2.5 rounded-l-md text-base font-medium border ${
-                          order === 'asc'
-                            ? 'bg-indigo-100 text-indigo-700 border-indigo-300 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-700'
-                            : 'bg-white text-gray-500 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:bg-gray-700'
-                        }`}
-                        title={t('workitems.sort.asc')}
-                      >
-                        {'\u2191'}
-                      </button>
-                      <button
-                        onClick={() => onOrderChange('desc')}
-                        className={`px-3 py-2.5 rounded-r-md text-base font-medium border-t border-r border-b ${
-                          order === 'desc'
-                            ? 'bg-indigo-100 text-indigo-700 border-indigo-300 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-700'
-                            : 'bg-white text-gray-500 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:bg-gray-700'
-                        }`}
-                        title={t('workitems.sort.desc')}
-                      >
-                        {'\u2193'}
-                      </button>
+                      <Tooltip content={t('workitems.sort.asc')}>
+                        <button
+                          onClick={() => onOrderChange('asc')}
+                          className={`px-3 py-2.5 rounded-l-md text-base font-medium border ${
+                            order === 'asc'
+                              ? 'bg-indigo-100 text-indigo-700 border-indigo-300 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-700'
+                              : 'bg-white text-gray-500 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:bg-gray-700'
+                          }`}
+                        >
+                          {'\u2191'}
+                        </button>
+                      </Tooltip>
+                      <Tooltip content={t('workitems.sort.desc')}>
+                        <button
+                          onClick={() => onOrderChange('desc')}
+                          className={`px-3 py-2.5 rounded-r-md text-base font-medium border-t border-r border-b ${
+                            order === 'desc'
+                              ? 'bg-indigo-100 text-indigo-700 border-indigo-300 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-700'
+                              : 'bg-white text-gray-500 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:bg-gray-700'
+                          }`}
+                        >
+                          {'\u2193'}
+                        </button>
+                      </Tooltip>
                     </div>
                   )}
                 </div>
