@@ -245,7 +245,7 @@ export function WorkItemDetailPage() {
                   item.description ?? '',
                 ].join('\n')}
                 tooltip={t('common.copyAsMarkdown')}
-                className="opacity-0 group-hover/header:opacity-100"
+                className=""
               />
               <button
                 onClick={() => setShowProperties(true)}
