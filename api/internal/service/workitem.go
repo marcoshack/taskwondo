@@ -144,6 +144,8 @@ type WorkItemService struct {
 	typeWorkflows ProjectTypeWorkflowRepository
 	queues        QueueRepository
 	milestones    MilestoneRepository
+	sla           SLARepository
+	slaService    *SLAService
 	fileStorage   storage.Storage
 	maxUploadSize int64
 }
@@ -161,6 +163,8 @@ func NewWorkItemService(
 	typeWorkflows ProjectTypeWorkflowRepository,
 	queues QueueRepository,
 	milestones MilestoneRepository,
+	sla SLARepository,
+	slaService *SLAService,
 	fileStorage storage.Storage,
 	maxUploadSize int64,
 ) *WorkItemService {
@@ -176,6 +180,8 @@ func NewWorkItemService(
 		typeWorkflows: typeWorkflows,
 		queues:        queues,
 		milestones:    milestones,
+		sla:           sla,
+		slaService:    slaService,
 		fileStorage:   fileStorage,
 		maxUploadSize: maxUploadSize,
 	}
@@ -267,9 +273,14 @@ func (s *WorkItemService) Create(ctx context.Context, info *model.AuthInfo, proj
 
 	// Determine initial status from the type-specific workflow
 	initialStatus := "open"
+	var slaTargetAt *time.Time
 	if wfID, err := s.resolveWorkflowID(ctx, project.ID, input.Type, project.DefaultWorkflowID); err == nil {
 		if status, err := s.workflows.GetInitialStatus(ctx, wfID); err == nil {
 			initialStatus = status.Name
+		}
+		// Compute SLA deadline for the initial status (elapsed is 0 for new items)
+		if target, err := s.sla.GetTarget(ctx, project.ID, input.Type, wfID, initialStatus); err == nil {
+			slaTargetAt = ComputeSLATargetAtSimple(target.TargetSeconds, target.CalendarMode, project.BusinessHours)
 		}
 	}
 
@@ -291,6 +302,7 @@ func (s *WorkItemService) Create(ctx context.Context, info *model.AuthInfo, proj
 		Complexity:   input.Complexity,
 		CustomFields: customFields,
 		DueDate:      input.DueDate,
+		SLATargetAt:  slaTargetAt,
 	}
 
 	if err := s.items.Create(ctx, item); err != nil {
@@ -299,6 +311,11 @@ func (s *WorkItemService) Create(ctx context.Context, info *model.AuthInfo, proj
 
 	// Record "created" event
 	s.recordEvent(ctx, item.ID, &info.UserID, "created", nil, nil, nil)
+
+	// Initialize SLA elapsed tracking for the initial status
+	if err := s.sla.InitElapsedOnCreate(ctx, item.ID, item.Status, time.Now()); err != nil {
+		log.Ctx(ctx).Warn().Err(err).Msg("failed to initialize SLA elapsed tracking")
+	}
 
 	log.Ctx(ctx).Info().
 		Str("project_key", projectKey).
@@ -468,8 +485,33 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 			}
 		}
 
+		// SLA elapsed tracking: leave old status, enter new status
+		now := time.Now()
+		if err := s.sla.UpdateElapsedOnLeave(ctx, item.ID, item.Status, now); err != nil {
+			log.Ctx(ctx).Warn().Err(err).Msg("failed to update SLA elapsed on leave")
+		}
+		if err := s.sla.UpsertElapsedOnEnter(ctx, item.ID, *input.Status, now); err != nil {
+			log.Ctx(ctx).Warn().Err(err).Msg("failed to upsert SLA elapsed on enter")
+		}
+
 		s.recordFieldChange(ctx, item.ID, &info.UserID, "status", item.Status, *input.Status)
 		item.Status = *input.Status
+
+		// Recompute SLA deadline for the new status
+		if s.slaService != nil {
+			if wfID, err := s.resolveWorkflowID(ctx, project.ID, item.Type, project.DefaultWorkflowID); err == nil {
+				item.SLATargetAt = s.slaService.ComputeSLATargetAt(ctx, item, wfID, project.BusinessHours)
+			}
+		}
+	}
+
+	// If type changed but status didn't, recompute SLA (different type may have different SLA target)
+	if typeChanged && (input.Status == nil || *input.Status == item.Status) {
+		if s.slaService != nil {
+			if wfID, err := s.resolveWorkflowID(ctx, project.ID, item.Type, project.DefaultWorkflowID); err == nil {
+				item.SLATargetAt = s.slaService.ComputeSLATargetAt(ctx, item, wfID, project.BusinessHours)
+			}
+		}
 	}
 
 	if input.Priority != nil && *input.Priority != item.Priority {
@@ -1316,7 +1358,7 @@ func isValidVisibility(v string) bool {
 
 func isValidSortField(s string) bool {
 	switch s {
-	case "created_at", "updated_at", "priority", "due_date", "item_number", "type", "title", "status":
+	case "created_at", "updated_at", "priority", "due_date", "item_number", "type", "title", "status", "sla_target_at":
 		return true
 	}
 	return false

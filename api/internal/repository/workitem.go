@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/lib/pq"
@@ -53,12 +54,12 @@ func (r *WorkItemRepository) Create(ctx context.Context, item *model.WorkItem) e
 		`INSERT INTO work_items (
 			id, project_id, queue_id, milestone_id, parent_id, item_number, display_id, type, title, description,
 			status, priority, assignee_id, reporter_id, portal_contact_id, visibility,
-			labels, complexity, custom_fields, due_date, sla_deadline
+			labels, complexity, custom_fields, due_date, sla_target_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)`,
 		item.ID, item.ProjectID, item.QueueID, item.MilestoneID, item.ParentID, item.ItemNumber, item.DisplayID,
 		item.Type, item.Title, item.Description, item.Status, item.Priority,
 		item.AssigneeID, item.ReporterID, item.PortalContactID, item.Visibility,
-		pq.Array(item.Labels), item.Complexity, customFieldsJSON, item.DueDate, item.SLADeadline)
+		pq.Array(item.Labels), item.Complexity, customFieldsJSON, item.DueDate, item.SLATargetAt)
 	if err != nil {
 		return fmt.Errorf("inserting work item: %w", err)
 	}
@@ -75,7 +76,7 @@ func (r *WorkItemRepository) GetByProjectAndNumber(ctx context.Context, projectI
 	row := r.db.QueryRowContext(ctx,
 		`SELECT id, project_id, queue_id, milestone_id, parent_id, item_number, display_id, type, title, description,
 		        status, priority, assignee_id, reporter_id, portal_contact_id, visibility,
-		        labels, complexity, custom_fields, due_date, sla_deadline, resolved_at,
+		        labels, complexity, custom_fields, due_date, resolved_at, sla_target_at,
 		        created_at, updated_at
 		 FROM work_items
 		 WHERE project_id = $1 AND item_number = $2 AND deleted_at IS NULL`,
@@ -157,10 +158,21 @@ func (r *WorkItemRepository) List(ctx context.Context, projectID uuid.UUID, filt
 	case "priority":
 		// Use CASE expression for semantic ordering: critical(1) > high(2) > medium(3) > low(4)
 		sortCol = "CASE priority WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 WHEN 'low' THEN 4 ELSE 5 END"
+	case "sla_target_at":
+		sortCol = filter.Sort // COALESCE applied below
 	}
 	sortOrder := "DESC"
 	if filter.Order == "asc" {
 		sortOrder = "ASC"
+	}
+
+	// Push NULL sla_target_at values to the end regardless of sort direction
+	if sortCol == "sla_target_at" {
+		if sortOrder == "ASC" {
+			sortCol = "COALESCE(sla_target_at, 'infinity'::timestamptz)"
+		} else {
+			sortCol = "COALESCE(sla_target_at, '-infinity'::timestamptz)"
+		}
 	}
 
 	// Cursor pagination: fetch the cursor item's sort column value for tuple comparison.
@@ -191,7 +203,7 @@ func (r *WorkItemRepository) List(ctx context.Context, projectID uuid.UUID, filt
 	selectQuery := fmt.Sprintf(
 		`SELECT id, project_id, queue_id, milestone_id, parent_id, item_number, display_id, type, title, description,
 		        status, priority, assignee_id, reporter_id, portal_contact_id, visibility,
-		        labels, complexity, custom_fields, due_date, sla_deadline, resolved_at,
+		        labels, complexity, custom_fields, due_date, resolved_at, sla_target_at,
 		        created_at, updated_at
 		 FROM work_items %s
 		 ORDER BY %s %s, id %s
@@ -238,15 +250,15 @@ func (r *WorkItemRepository) Update(ctx context.Context, item *model.WorkItem) e
 		`UPDATE work_items SET
 			title = $1, description = $2, status = $3, priority = $4,
 			assignee_id = $5, visibility = $6, labels = $7, complexity = $8, custom_fields = $9,
-			due_date = $10, sla_deadline = $11, type = $12, parent_id = $13,
-			queue_id = $14, milestone_id = $15, portal_contact_id = $16, resolved_at = $17,
-			updated_at = now()
+			due_date = $10, type = $11, parent_id = $12,
+			queue_id = $13, milestone_id = $14, portal_contact_id = $15, resolved_at = $16,
+			sla_target_at = $17, updated_at = now()
 		 WHERE id = $18 AND deleted_at IS NULL`,
 		item.Title, item.Description, item.Status, item.Priority,
 		item.AssigneeID, item.Visibility, pq.Array(item.Labels), item.Complexity, customFieldsJSON,
-		item.DueDate, item.SLADeadline, item.Type, item.ParentID,
+		item.DueDate, item.Type, item.ParentID,
 		item.QueueID, item.MilestoneID, item.PortalContactID, item.ResolvedAt,
-		item.ID)
+		item.SLATargetAt, item.ID)
 	if err != nil {
 		return fmt.Errorf("updating work item: %w", err)
 	}
@@ -318,8 +330,8 @@ func scanWorkItem(row *sql.Row) (*model.WorkItem, error) {
 		portalContactID uuid.NullUUID
 		complexity      sql.NullInt64
 		dueDate         sql.NullTime
-		slaDeadline     sql.NullTime
 		resolvedAt      sql.NullTime
+		slaTargetAt     sql.NullTime
 		labels          pq.StringArray
 		customFieldsRaw []byte
 	)
@@ -328,7 +340,7 @@ func scanWorkItem(row *sql.Row) (*model.WorkItem, error) {
 		&item.ID, &item.ProjectID, &queueID, &milestoneID, &parentID, &item.ItemNumber, &item.DisplayID,
 		&item.Type, &item.Title, &description, &item.Status, &item.Priority,
 		&assigneeID, &item.ReporterID, &portalContactID, &item.Visibility,
-		&labels, &complexity, &customFieldsRaw, &dueDate, &slaDeadline, &resolvedAt,
+		&labels, &complexity, &customFieldsRaw, &dueDate, &resolvedAt, &slaTargetAt,
 		&item.CreatedAt, &item.UpdatedAt,
 	)
 	if err == sql.ErrNoRows {
@@ -339,7 +351,7 @@ func scanWorkItem(row *sql.Row) (*model.WorkItem, error) {
 	}
 
 	populateWorkItem(&item, description, queueID, milestoneID, parentID, assigneeID,
-		portalContactID, complexity, dueDate, slaDeadline, resolvedAt, labels, customFieldsRaw)
+		portalContactID, complexity, dueDate, resolvedAt, slaTargetAt, labels, customFieldsRaw)
 
 	return &item, nil
 }
@@ -357,8 +369,8 @@ func scanWorkItems(rows *sql.Rows) ([]model.WorkItem, error) {
 			portalContactID uuid.NullUUID
 			complexity      sql.NullInt64
 			dueDate         sql.NullTime
-			slaDeadline     sql.NullTime
 			resolvedAt      sql.NullTime
+			slaTargetAt     sql.NullTime
 			labels          pq.StringArray
 			customFieldsRaw []byte
 		)
@@ -367,14 +379,14 @@ func scanWorkItems(rows *sql.Rows) ([]model.WorkItem, error) {
 			&item.ID, &item.ProjectID, &queueID, &milestoneID, &parentID, &item.ItemNumber, &item.DisplayID,
 			&item.Type, &item.Title, &description, &item.Status, &item.Priority,
 			&assigneeID, &item.ReporterID, &portalContactID, &item.Visibility,
-			&labels, &complexity, &customFieldsRaw, &dueDate, &slaDeadline, &resolvedAt,
+			&labels, &complexity, &customFieldsRaw, &dueDate, &resolvedAt, &slaTargetAt,
 			&item.CreatedAt, &item.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scanning work item row: %w", err)
 		}
 
 		populateWorkItem(&item, description, queueID, milestoneID, parentID, assigneeID,
-			portalContactID, complexity, dueDate, slaDeadline, resolvedAt, labels, customFieldsRaw)
+			portalContactID, complexity, dueDate, resolvedAt, slaTargetAt, labels, customFieldsRaw)
 
 		items = append(items, item)
 	}
@@ -387,7 +399,7 @@ func populateWorkItem(
 	description sql.NullString,
 	queueID, milestoneID, parentID, assigneeID, portalContactID uuid.NullUUID,
 	complexity sql.NullInt64,
-	dueDate, slaDeadline, resolvedAt sql.NullTime,
+	dueDate, resolvedAt, slaTargetAt sql.NullTime,
 	labels pq.StringArray,
 	customFieldsRaw []byte,
 ) {
@@ -416,11 +428,11 @@ func populateWorkItem(
 	if dueDate.Valid {
 		item.DueDate = &dueDate.Time
 	}
-	if slaDeadline.Valid {
-		item.SLADeadline = &slaDeadline.Time
-	}
 	if resolvedAt.Valid {
 		item.ResolvedAt = &resolvedAt.Time
+	}
+	if slaTargetAt.Valid {
+		item.SLATargetAt = &slaTargetAt.Time
 	}
 
 	item.Labels = []string(labels)
@@ -432,4 +444,12 @@ func populateWorkItem(
 	if len(customFieldsRaw) > 0 {
 		json.Unmarshal(customFieldsRaw, &item.CustomFields)
 	}
+}
+
+// UpdateSLATargetAt updates only the sla_target_at column for a work item.
+func (r *WorkItemRepository) UpdateSLATargetAt(ctx context.Context, id uuid.UUID, slaTargetAt *time.Time) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE work_items SET sla_target_at = $1, updated_at = now() WHERE id = $2 AND deleted_at IS NULL`,
+		slaTargetAt, id)
+	return err
 }

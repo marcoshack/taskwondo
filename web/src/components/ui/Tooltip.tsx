@@ -4,6 +4,7 @@ interface TooltipProps {
   content: string | undefined
   children: ReactNode
   position?: 'top' | 'bottom' | 'left' | 'right'
+  className?: string
 }
 
 const positionClasses = {
@@ -20,7 +21,7 @@ const arrowClasses = {
   right: 'right-full top-1/2 -translate-y-1/2 border-r-gray-600 dark:border-r-gray-600 border-y-transparent border-l-transparent',
 }
 
-export function Tooltip({ content, children, position = 'top' }: TooltipProps) {
+export function Tooltip({ content, children, position = 'top', className }: TooltipProps) {
   const [visible, setVisible] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -45,7 +46,7 @@ export function Tooltip({ content, children, position = 'top' }: TooltipProps) {
 
   return (
     <span
-      className="relative inline-flex"
+      className={className ?? 'relative inline-flex'}
       onMouseEnter={show}
       onMouseLeave={hide}
       onFocus={show}

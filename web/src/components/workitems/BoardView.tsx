@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useUpdateWorkItem } from '@/hooks/useWorkItems'
 import { PriorityBadge } from './PriorityBadge'
 import { TypeBadge } from './TypeBadge'
+import { SLAIndicator } from '@/components/SLAIndicator'
 import { Tooltip } from '@/components/ui/Tooltip'
 import type { WorkItem } from '@/api/workitems'
 import type { WorkflowStatus, WorkflowTransition } from '@/api/workflows'
@@ -217,6 +218,11 @@ function BoardCard({
       <p className="text-sm font-medium text-gray-900 dark:text-gray-100 line-clamp-2">{item.title}</p>
       {item.description && (
         <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5">{item.description}</p>
+      )}
+      {item.sla && (
+        <div className="mt-1.5">
+          <SLAIndicator sla={item.sla} compact />
+        </div>
       )}
     </div>
   )

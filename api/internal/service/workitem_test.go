@@ -689,6 +689,44 @@ func newMockStorage() *mockStorage {
 	return &mockStorage{objects: make(map[string][]byte)}
 }
 
+// --- Mock SLA repo ---
+
+type mockSLARepo struct{}
+
+func newMockSLARepo() *mockSLARepo { return &mockSLARepo{} }
+
+func (m *mockSLARepo) ListTargetsByProject(_ context.Context, _ uuid.UUID) ([]model.SLAStatusTarget, error) {
+	return nil, nil
+}
+func (m *mockSLARepo) ListTargetsByProjectAndType(_ context.Context, _ uuid.UUID, _ string, _ uuid.UUID) ([]model.SLAStatusTarget, error) {
+	return nil, nil
+}
+func (m *mockSLARepo) GetTarget(_ context.Context, _ uuid.UUID, _ string, _ uuid.UUID, _ string) (*model.SLAStatusTarget, error) {
+	return nil, model.ErrNotFound
+}
+func (m *mockSLARepo) BulkUpsertTargets(_ context.Context, targets []model.SLAStatusTarget) ([]model.SLAStatusTarget, error) {
+	return targets, nil
+}
+func (m *mockSLARepo) DeleteTarget(_ context.Context, _ uuid.UUID) error { return nil }
+func (m *mockSLARepo) DeleteTargetsByTypeAndWorkflow(_ context.Context, _ uuid.UUID, _ string, _ uuid.UUID) error {
+	return nil
+}
+func (m *mockSLARepo) InitElapsedOnCreate(_ context.Context, _ uuid.UUID, _ string, _ time.Time) error {
+	return nil
+}
+func (m *mockSLARepo) UpsertElapsedOnEnter(_ context.Context, _ uuid.UUID, _ string, _ time.Time) error {
+	return nil
+}
+func (m *mockSLARepo) UpdateElapsedOnLeave(_ context.Context, _ uuid.UUID, _ string, _ time.Time) error {
+	return nil
+}
+func (m *mockSLARepo) GetElapsed(_ context.Context, _ uuid.UUID, _ string) (*model.SLAElapsed, error) {
+	return nil, model.ErrNotFound
+}
+func (m *mockSLARepo) ListElapsedByWorkItemIDs(_ context.Context, _ []uuid.UUID) ([]model.SLAElapsed, error) {
+	return nil, nil
+}
+
 func (m *mockStorage) Put(_ context.Context, key string, reader io.Reader, _ int64, contentType string) (*storage.ObjectInfo, error) {
 	data, err := io.ReadAll(reader)
 	if err != nil {
@@ -746,8 +784,10 @@ func newTestWorkItemSetup() *testWorkItemSetup {
 	queueRepo := newMockQueueRepo()
 	milestoneRepo := newMockMilestoneRepo()
 	attachRepo := newMockAttachmentRepo()
+	slaRepo := newMockSLARepo()
+	slaService := NewSLAService(slaRepo, projectRepo, memberRepo, workflowRepo)
 	store := newMockStorage()
-	svc := NewWorkItemService(itemRepo, eventRepo, commentRepo, relationRepo, attachRepo, projectRepo, memberRepo, workflowRepo, typeWorkflowRepo, queueRepo, milestoneRepo, store, 50*1024*1024)
+	svc := NewWorkItemService(itemRepo, eventRepo, commentRepo, relationRepo, attachRepo, projectRepo, memberRepo, workflowRepo, typeWorkflowRepo, queueRepo, milestoneRepo, slaRepo, slaService, store, 50*1024*1024)
 	return &testWorkItemSetup{
 		svc:              svc,
 		itemRepo:         itemRepo,

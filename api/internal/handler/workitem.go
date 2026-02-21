@@ -23,12 +23,13 @@ import (
 // WorkItemHandler handles work item endpoints.
 type WorkItemHandler struct {
 	items         *service.WorkItemService
+	sla           *service.SLAService
 	maxUploadSize int64
 }
 
 // NewWorkItemHandler creates a new WorkItemHandler.
-func NewWorkItemHandler(items *service.WorkItemService, maxUploadSize int64) *WorkItemHandler {
-	return &WorkItemHandler{items: items, maxUploadSize: maxUploadSize}
+func NewWorkItemHandler(items *service.WorkItemService, sla *service.SLAService, maxUploadSize int64) *WorkItemHandler {
+	return &WorkItemHandler{items: items, sla: sla, maxUploadSize: maxUploadSize}
 }
 
 // --- Request DTOs ---
@@ -70,7 +71,8 @@ type workItemResponse struct {
 	Complexity   *int                   `json:"complexity,omitempty"`
 	CustomFields map[string]interface{} `json:"custom_fields"`
 	DueDate      *string                `json:"due_date,omitempty"`
-	SLADeadline  *time.Time             `json:"sla_deadline,omitempty"`
+	SLA          *model.SLAInfo         `json:"sla,omitempty"`
+	SLATargetAt  *time.Time             `json:"sla_target_at,omitempty"`
 	ResolvedAt   *time.Time             `json:"resolved_at,omitempty"`
 	CreatedAt    time.Time              `json:"created_at"`
 	UpdatedAt    time.Time              `json:"updated_at"`
@@ -95,7 +97,7 @@ func toWorkItemResponse(item *model.WorkItem, projectKey string) workItemRespons
 		Labels:       item.Labels,
 		Complexity:   item.Complexity,
 		CustomFields: item.CustomFields,
-		SLADeadline:  item.SLADeadline,
+		SLATargetAt:  item.SLATargetAt,
 		ResolvedAt:   item.ResolvedAt,
 		CreatedAt:    item.CreatedAt,
 		UpdatedAt:    item.UpdatedAt,
@@ -202,7 +204,11 @@ func (h *WorkItemHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeData(w, http.StatusCreated, toWorkItemResponse(item, projectKey))
+	resp := toWorkItemResponse(item, projectKey)
+	if slaMap := h.sla.ComputeSLAForItems(r.Context(), projectKey, []model.WorkItem{*item}); slaMap != nil {
+		resp.SLA = slaMap[item.ID]
+	}
+	writeData(w, http.StatusCreated, resp)
 }
 
 // List handles GET /api/v1/projects/{projectKey}/items
@@ -315,9 +321,13 @@ func (h *WorkItemHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	slaMap := h.sla.ComputeSLAForItems(r.Context(), projectKey, result.Items)
 	items := make([]workItemResponse, len(result.Items))
 	for i := range result.Items {
 		items[i] = toWorkItemResponse(&result.Items[i], projectKey)
+		if slaMap != nil {
+			items[i].SLA = slaMap[result.Items[i].ID]
+		}
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
@@ -351,7 +361,11 @@ func (h *WorkItemHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeData(w, http.StatusOK, toWorkItemResponse(item, projectKey))
+	resp := toWorkItemResponse(item, projectKey)
+	if slaMap := h.sla.ComputeSLAForItems(r.Context(), projectKey, []model.WorkItem{*item}); slaMap != nil {
+		resp.SLA = slaMap[item.ID]
+	}
+	writeData(w, http.StatusOK, resp)
 }
 
 // Update handles PATCH /api/v1/projects/{projectKey}/items/{itemNumber}
@@ -538,7 +552,11 @@ func (h *WorkItemHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeData(w, http.StatusOK, toWorkItemResponse(item, projectKey))
+	resp := toWorkItemResponse(item, projectKey)
+	if slaMap := h.sla.ComputeSLAForItems(r.Context(), projectKey, []model.WorkItem{*item}); slaMap != nil {
+		resp.SLA = slaMap[item.ID]
+	}
+	writeData(w, http.StatusOK, resp)
 }
 
 // Delete handles DELETE /api/v1/projects/{projectKey}/items/{itemNumber}

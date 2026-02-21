@@ -34,11 +34,12 @@ type createProjectRequest struct {
 }
 
 type updateProjectRequest struct {
-	Name                    *string `json:"name,omitempty"`
-	Key                     *string `json:"key,omitempty"`
-	Description             *string `json:"description"`
-	DefaultWorkflowID       *string `json:"default_workflow_id,omitempty"`
-	AllowedComplexityValues *[]int  `json:"allowed_complexity_values"`
+	Name                    *string                  `json:"name,omitempty"`
+	Key                     *string                  `json:"key,omitempty"`
+	Description             *string                  `json:"description"`
+	DefaultWorkflowID       *string                  `json:"default_workflow_id,omitempty"`
+	AllowedComplexityValues *[]int                   `json:"allowed_complexity_values"`
+	BusinessHours           *model.BusinessHoursConfig `json:"business_hours,omitempty"`
 }
 
 type addMemberRequest struct {
@@ -53,15 +54,16 @@ type updateMemberRoleRequest struct {
 // --- Response DTOs ---
 
 type projectResponse struct {
-	ID                      uuid.UUID  `json:"id"`
-	Name                    string     `json:"name"`
-	Key                     string     `json:"key"`
-	Description             *string    `json:"description,omitempty"`
-	DefaultWorkflowID       *uuid.UUID `json:"default_workflow_id,omitempty"`
-	AllowedComplexityValues []int      `json:"allowed_complexity_values"`
-	ItemCounter             int        `json:"item_counter"`
-	CreatedAt               time.Time  `json:"created_at"`
-	UpdatedAt               time.Time  `json:"updated_at"`
+	ID                      uuid.UUID                   `json:"id"`
+	Name                    string                      `json:"name"`
+	Key                     string                      `json:"key"`
+	Description             *string                     `json:"description,omitempty"`
+	DefaultWorkflowID       *uuid.UUID                  `json:"default_workflow_id,omitempty"`
+	AllowedComplexityValues []int                       `json:"allowed_complexity_values"`
+	BusinessHours           *model.BusinessHoursConfig  `json:"business_hours,omitempty"`
+	ItemCounter             int                         `json:"item_counter"`
+	CreatedAt               time.Time                   `json:"created_at"`
+	UpdatedAt               time.Time                   `json:"updated_at"`
 }
 
 type projectListItemResponse struct {
@@ -92,6 +94,7 @@ func toProjectResponse(p *model.Project) projectResponse {
 		Description:             p.Description,
 		DefaultWorkflowID:       p.DefaultWorkflowID,
 		AllowedComplexityValues: acv,
+		BusinessHours:           p.BusinessHours,
 		ItemCounter:             p.ItemCounter,
 		CreatedAt:               p.CreatedAt,
 		UpdatedAt:               p.UpdatedAt,
@@ -247,7 +250,7 @@ func (h *ProjectHandler) Update(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	project, err := h.projects.Update(r.Context(), info, projectKey, req.Name, req.Key, req.Description, clearDescription, workflowID, allowedComplexityValues, clearAllowedComplexityValues)
+	project, err := h.projects.Update(r.Context(), info, projectKey, req.Name, req.Key, req.Description, clearDescription, workflowID, allowedComplexityValues, clearAllowedComplexityValues, req.BusinessHours, false)
 	if err != nil {
 		handleProjectError(w, r, err, "failed to update project")
 		return

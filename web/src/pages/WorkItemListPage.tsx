@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
 import { useWorkItems, useCreateWorkItem, useBulkUpdateWorkItems, useDeleteWorkItem } from '@/hooks/useWorkItems'
 import { useProject, useMembers } from '@/hooks/useProjects'
-import { useProjectWorkflow } from '@/hooks/useWorkflows'
+import { useProjectWorkflow, useAvailableStatuses } from '@/hooks/useWorkflows'
 import { useMilestones } from '@/hooks/useMilestones'
 import { useUserSetting, useSetUserSetting } from '@/hooks/useUserSettings'
 import { useDebounce } from '@/hooks/useDebounce'
@@ -19,6 +19,7 @@ import { StatusBadge } from '@/components/workitems/StatusBadge'
 import { WorkItemFilters } from '@/components/workitems/WorkItemFilters'
 import { WorkItemForm } from '@/components/workitems/WorkItemForm'
 import { BoardView } from '@/components/workitems/BoardView'
+import { SLAIndicator } from '@/components/SLAIndicator'
 import { listWorkItems, type WorkItem, type WorkItemFilter } from '@/api/workitems'
 
 type ViewMode = 'list' | 'board'
@@ -77,6 +78,7 @@ export function WorkItemListPage() {
   const [searchParams, setSearchParams] = useSearchParams()
 
   const { statuses, transitionsMap } = useProjectWorkflow(projectKey ?? '')
+  const { data: allStatuses } = useAvailableStatuses(projectKey ?? '')
   const { data: project } = useProject(projectKey ?? '')
   const { data: members } = useMembers(projectKey ?? '')
   const { data: milestones } = useMilestones(projectKey ?? '')
@@ -85,11 +87,12 @@ export function WorkItemListPage() {
   const { data: savedFilter, isLoading: settingsLoading } = useUserSetting<SavedFilter>(projectKey ?? '', SETTINGS_KEY)
   const saveMutation = useSetUserSetting(projectKey ?? '')
 
-  // Compute default open statuses (exclude done/cancelled)
+  // Compute default open statuses from ALL workflows (exclude done/cancelled)
   const defaultOpenStatuses = useMemo(() => {
-    if (!statuses.length) return undefined
-    return statuses.filter((s) => !closedCategories.has(s.category)).map((s) => s.name)
-  }, [statuses])
+    if (!allStatuses?.length) return undefined
+    const names = new Set(allStatuses.filter((s) => !closedCategories.has(s.category)).map((s) => s.name))
+    return Array.from(names)
+  }, [allStatuses])
 
   // Capture initial URL state once (before any effects run)
   const initialUrlRef = useRef<{ hasParams: boolean; filter: SavedFilter; search: string; view: ViewMode; sort: string; order: 'asc' | 'desc' } | null>(null)
@@ -120,7 +123,7 @@ export function WorkItemListPage() {
   // If no URL params, initialize from saved settings or defaults once data loads
   useEffect(() => {
     if (filterInitialized || settingsLoading) return
-    if (!statuses.length) return
+    if (!allStatuses?.length) return
 
     if (savedFilter) {
       setFilter(savedFilter)
@@ -128,7 +131,7 @@ export function WorkItemListPage() {
       setFilter({ status: defaultOpenStatuses })
     }
     setFilterInitialized(true)
-  }, [savedFilter, settingsLoading, defaultOpenStatuses, statuses, filterInitialized])
+  }, [savedFilter, settingsLoading, defaultOpenStatuses, allStatuses, filterInitialized])
 
   // Sync URL when filter initializes from settings/defaults (non-URL case)
   const urlSyncedRef = useRef(initialUrlRef.current.hasParams)
@@ -176,7 +179,7 @@ export function WorkItemListPage() {
     if (sort === sortKey) {
       newOrder = order === 'asc' ? 'desc' : 'asc'
     } else {
-      newOrder = ['title', 'type', 'status'].includes(sortKey) ? 'asc' : 'desc'
+      newOrder = ['title', 'type', 'status', 'sla_target_at'].includes(sortKey) ? 'asc' : 'desc'
     }
     setSort(sortKey)
     setOrder(newOrder)
@@ -321,7 +324,7 @@ export function WorkItemListPage() {
       header: t('workitems.table.status'),
       className: 'w-32',
       sortKey: 'status',
-      render: (row) => <StatusBadge status={row.status} statuses={statuses} />,
+      render: (row) => <StatusBadge status={row.status} statuses={allStatuses ?? statuses} />,
     },
     {
       key: 'priority',
@@ -329,6 +332,13 @@ export function WorkItemListPage() {
       className: 'w-28',
       sortKey: 'priority',
       render: (row) => <PriorityBadge priority={row.priority} />,
+    },
+    {
+      key: 'sla',
+      header: t('sla.columnHeader'),
+      className: 'w-36',
+      sortKey: 'sla_target_at',
+      render: (row) => <SLAIndicator sla={row.sla} />,
     },
     {
       key: 'updated',
@@ -375,7 +385,7 @@ export function WorkItemListPage() {
       <WorkItemFilters
         filter={filter}
         onFilterChange={handleFilterChange}
-        statuses={statuses}
+        statuses={allStatuses ?? statuses}
         milestones={milestones ?? []}
         search={search}
         onSearchChange={handleSearchChange}
@@ -392,7 +402,7 @@ export function WorkItemListPage() {
           <div className="w-40">
             <Select onChange={(e) => handleBulkStatus(e.target.value)} value="">
               <option value="">{t('workitems.bulk.changeStatus')}</option>
-              {statuses.map((s) => (
+              {(allStatuses ?? statuses).map((s) => (
                 <option key={s.name} value={s.name}>{t(`workitems.statuses.${s.name}`, { defaultValue: s.display_name })}</option>
               ))}
             </Select>
@@ -466,7 +476,7 @@ export function WorkItemListPage() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-mono text-sm font-semibold text-gray-700 dark:text-gray-300">{item.display_id}</span>
                     <TypeBadge type={item.type} />
-                    <StatusBadge status={item.status} statuses={statuses} />
+                    <StatusBadge status={item.status} statuses={allStatuses ?? statuses} />
                     <PriorityBadge priority={item.priority} />
                     <span className="ml-auto text-xs text-gray-400 dark:text-gray-500">{new Date(item.updated_at).toLocaleDateString()}</span>
                   </div>

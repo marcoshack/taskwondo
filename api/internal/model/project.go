@@ -21,8 +21,9 @@ type Project struct {
 	Key                     string     `json:"key"`
 	Description             *string    `json:"description,omitempty"`
 	DefaultWorkflowID       *uuid.UUID `json:"default_workflow_id,omitempty"`
-	AllowedComplexityValues []int      `json:"allowed_complexity_values"`
-	ItemCounter             int        `json:"item_counter"`
+	AllowedComplexityValues []int                `json:"allowed_complexity_values"`
+	BusinessHours           *BusinessHoursConfig `json:"business_hours,omitempty"`
+	ItemCounter             int                  `json:"item_counter"`
 	CreatedAt               time.Time  `json:"created_at"`
 	UpdatedAt               time.Time  `json:"updated_at"`
 	DeletedAt               *time.Time `json:"-"`

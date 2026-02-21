@@ -121,6 +121,7 @@ func main() {
 	attachmentRepo := repository.NewAttachmentRepository(db)
 	oauthAccountRepo := repository.NewOAuthAccountRepository(db)
 	typeWorkflowRepo := repository.NewProjectTypeWorkflowRepository(db)
+	slaRepo := repository.NewSLARepository(db)
 
 	// Initialize storage
 	store, err := storage.NewMinIOStorage(
@@ -141,7 +142,8 @@ func main() {
 	workflowService := service.NewWorkflowService(workflowRepo)
 	queueService := service.NewQueueService(queueRepo, projectRepo, projectMemberRepo)
 	milestoneService := service.NewMilestoneService(milestoneRepo, projectRepo, projectMemberRepo)
-	workItemService := service.NewWorkItemService(workItemRepo, workItemEventRepo, commentRepo, relationRepo, attachmentRepo, projectRepo, projectMemberRepo, workflowRepo, typeWorkflowRepo, queueRepo, milestoneRepo, store, cfg.MaxUploadSize)
+	slaService := service.NewSLAService(slaRepo, projectRepo, projectMemberRepo, workflowRepo)
+	workItemService := service.NewWorkItemService(workItemRepo, workItemEventRepo, commentRepo, relationRepo, attachmentRepo, projectRepo, projectMemberRepo, workflowRepo, typeWorkflowRepo, queueRepo, milestoneRepo, slaRepo, slaService, store, cfg.MaxUploadSize)
 	userSettingService := service.NewUserSettingService(userSettingRepo, projectRepo, projectMemberRepo)
 	systemSettingService := service.NewSystemSettingService(systemSettingRepo)
 	adminService := service.NewAdminService(userRepo, projectRepo, projectMemberRepo)
@@ -170,10 +172,11 @@ func main() {
 	workflows := handler.NewWorkflowHandler(workflowService, projectService)
 	queues := handler.NewQueueHandler(queueService)
 	milestones := handler.NewMilestoneHandler(milestoneService)
-	items := handler.NewWorkItemHandler(workItemService, cfg.MaxUploadSize)
+	items := handler.NewWorkItemHandler(workItemService, slaService, cfg.MaxUploadSize)
 	userSettings := handler.NewUserSettingHandler(userSettingService)
 	systemSettings := handler.NewSystemSettingHandler(systemSettingService)
 	admin := handler.NewAdminHandler(adminService)
+	sla := handler.NewSLAHandler(slaService)
 
 	// Set up router
 	r := chi.NewRouter()
@@ -279,6 +282,11 @@ func main() {
 							r.Patch("/", queues.Update)
 							r.Delete("/", queues.Delete)
 						})
+					})
+					r.Route("/sla-targets", func(r chi.Router) {
+						r.Get("/", sla.List)
+						r.Put("/", sla.BulkUpsert)
+						r.Delete("/{targetId}", sla.Delete)
 					})
 					r.Route("/milestones", func(r chi.Router) {
 						r.Get("/", milestones.List)

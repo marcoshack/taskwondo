@@ -26,6 +26,7 @@ import { TypeBadge } from '@/components/workitems/TypeBadge'
 import { StatusBadge } from '@/components/workitems/StatusBadge'
 import { PriorityBadge } from '@/components/workitems/PriorityBadge'
 import { CopyButton } from '@/components/ui/CopyButton'
+import { SLAIndicator } from '@/components/SLAIndicator'
 import { Settings2, User, Calendar, Lock, Unlock, Globe } from 'lucide-react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -230,6 +231,7 @@ export function WorkItemDetailPage() {
                 {item.visibility === 'public' && <Globe className="h-3.5 w-3.5" />}
                 {t(`workitems.visibilities.${item.visibility}`)}
               </span>
+              <span className="hidden sm:inline-flex"><SLAIndicator sla={item.sla} /></span>
               <CopyButton
                 text={[
                   '---',

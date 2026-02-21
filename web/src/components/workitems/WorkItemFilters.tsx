@@ -53,7 +53,9 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
   ]
 
   function buildStatusOptions(ss: WorkflowStatus[]): MultiSelectOption[] {
-    return ss.map((s) => ({
+    const open = ss.filter((s) => !closedCategories.has(s.category))
+    const closed = ss.filter((s) => closedCategories.has(s.category))
+    return [...open, ...closed].map((s) => ({
       value: s.name,
       label: t(`workitems.statuses.${s.name}`, { defaultValue: s.display_name }),
       group: closedCategories.has(s.category) ? t('workitems.filters.statusGroupClosed') : t('workitems.filters.statusGroupOpen'),
@@ -83,6 +85,7 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
     { key: 'type', label: t('workitems.sort.type') },
     { key: 'status', label: t('workitems.sort.status') },
     { key: 'item_number', label: t('workitems.sort.number') },
+    { key: 'sla_target_at', label: t('workitems.sort.sla') },
   ]
 
   const isDefaultSort = !sort || (sort === 'created_at' && order === 'desc')

@@ -52,8 +52,8 @@ type WorkItem struct {
 	Complexity      *int                   `json:"complexity,omitempty"`
 	CustomFields    map[string]interface{} `json:"custom_fields"`
 	DueDate         *time.Time             `json:"due_date,omitempty"`
-	SLADeadline     *time.Time             `json:"sla_deadline,omitempty"`
 	ResolvedAt      *time.Time             `json:"resolved_at,omitempty"`
+	SLATargetAt     *time.Time             `json:"sla_target_at,omitempty"`
 	CreatedAt       time.Time              `json:"created_at"`
 	UpdatedAt       time.Time              `json:"updated_at"`
 	DeletedAt       *time.Time             `json:"-"`

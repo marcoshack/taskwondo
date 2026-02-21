@@ -2,6 +2,14 @@ import { api } from './client'
 
 // --- Types ---
 
+export interface SLAInfo {
+  target_seconds: number
+  elapsed_seconds: number
+  remaining_seconds: number
+  percentage: number
+  status: 'on_track' | 'warning' | 'breached'
+}
+
 export interface WorkItem {
   id: string
   project_key: string
@@ -21,7 +29,8 @@ export interface WorkItem {
   complexity: number | null
   custom_fields: Record<string, unknown>
   due_date: string | null
-  sla_deadline: string | null
+  sla: SLAInfo | null
+  sla_target_at: string | null
   resolved_at: string | null
   created_at: string
   updated_at: string

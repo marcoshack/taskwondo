@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 	"time"
 
@@ -670,6 +671,132 @@ func newMockStorage() *mockStorage {
 	return &mockStorage{objects: make(map[string][]byte)}
 }
 
+// --- Mock SLA repo ---
+
+type mockSLARepo struct {
+	targets map[uuid.UUID]*model.SLAStatusTarget
+	elapsed map[string]*model.SLAElapsed // key: "workItemID:statusName"
+}
+
+func newMockSLARepo() *mockSLARepo {
+	return &mockSLARepo{
+		targets: make(map[uuid.UUID]*model.SLAStatusTarget),
+		elapsed: make(map[string]*model.SLAElapsed),
+	}
+}
+
+func slaElapsedKey(workItemID uuid.UUID, statusName string) string {
+	return workItemID.String() + ":" + statusName
+}
+
+func (m *mockSLARepo) ListTargetsByProject(_ context.Context, projectID uuid.UUID) ([]model.SLAStatusTarget, error) {
+	var result []model.SLAStatusTarget
+	for _, t := range m.targets {
+		if t.ProjectID == projectID {
+			result = append(result, *t)
+		}
+	}
+	return result, nil
+}
+func (m *mockSLARepo) ListTargetsByProjectAndType(_ context.Context, projectID uuid.UUID, workItemType string, workflowID uuid.UUID) ([]model.SLAStatusTarget, error) {
+	var result []model.SLAStatusTarget
+	for _, t := range m.targets {
+		if t.ProjectID == projectID && t.WorkItemType == workItemType && t.WorkflowID == workflowID {
+			result = append(result, *t)
+		}
+	}
+	return result, nil
+}
+func (m *mockSLARepo) GetTarget(_ context.Context, projectID uuid.UUID, workItemType string, workflowID uuid.UUID, statusName string) (*model.SLAStatusTarget, error) {
+	for _, t := range m.targets {
+		if t.ProjectID == projectID && t.WorkItemType == workItemType && t.WorkflowID == workflowID && t.StatusName == statusName {
+			return t, nil
+		}
+	}
+	return nil, model.ErrNotFound
+}
+func (m *mockSLARepo) BulkUpsertTargets(_ context.Context, targets []model.SLAStatusTarget) ([]model.SLAStatusTarget, error) {
+	now := time.Now()
+	result := make([]model.SLAStatusTarget, len(targets))
+	for i, t := range targets {
+		t.CreatedAt = now
+		t.UpdatedAt = now
+		m.targets[t.ID] = &t
+		result[i] = t
+	}
+	return result, nil
+}
+func (m *mockSLARepo) DeleteTarget(_ context.Context, id uuid.UUID) error {
+	delete(m.targets, id)
+	return nil
+}
+func (m *mockSLARepo) DeleteTargetsByTypeAndWorkflow(_ context.Context, projectID uuid.UUID, workItemType string, workflowID uuid.UUID) error {
+	for id, t := range m.targets {
+		if t.ProjectID == projectID && t.WorkItemType == workItemType && t.WorkflowID == workflowID {
+			delete(m.targets, id)
+		}
+	}
+	return nil
+}
+func (m *mockSLARepo) InitElapsedOnCreate(_ context.Context, workItemID uuid.UUID, statusName string, enteredAt time.Time) error {
+	key := slaElapsedKey(workItemID, statusName)
+	if _, exists := m.elapsed[key]; exists {
+		return nil
+	}
+	m.elapsed[key] = &model.SLAElapsed{
+		WorkItemID:     workItemID,
+		StatusName:     statusName,
+		ElapsedSeconds: 0,
+		LastEnteredAt:  &enteredAt,
+	}
+	return nil
+}
+func (m *mockSLARepo) UpsertElapsedOnEnter(_ context.Context, workItemID uuid.UUID, statusName string, now time.Time) error {
+	key := slaElapsedKey(workItemID, statusName)
+	if e, exists := m.elapsed[key]; exists {
+		e.LastEnteredAt = &now
+	} else {
+		m.elapsed[key] = &model.SLAElapsed{
+			WorkItemID:     workItemID,
+			StatusName:     statusName,
+			ElapsedSeconds: 0,
+			LastEnteredAt:  &now,
+		}
+	}
+	return nil
+}
+func (m *mockSLARepo) UpdateElapsedOnLeave(_ context.Context, workItemID uuid.UUID, statusName string, now time.Time) error {
+	key := slaElapsedKey(workItemID, statusName)
+	e, exists := m.elapsed[key]
+	if !exists || e.LastEnteredAt == nil {
+		return nil
+	}
+	e.ElapsedSeconds += int(now.Sub(*e.LastEnteredAt).Seconds())
+	e.LastEnteredAt = nil
+	return nil
+}
+func (m *mockSLARepo) GetElapsed(_ context.Context, workItemID uuid.UUID, statusName string) (*model.SLAElapsed, error) {
+	key := slaElapsedKey(workItemID, statusName)
+	e, exists := m.elapsed[key]
+	if !exists {
+		return nil, model.ErrNotFound
+	}
+	return e, nil
+}
+func (m *mockSLARepo) ListElapsedByWorkItemIDs(_ context.Context, ids []uuid.UUID) ([]model.SLAElapsed, error) {
+	idSet := make(map[uuid.UUID]bool, len(ids))
+	for _, id := range ids {
+		idSet[id] = true
+	}
+	var result []model.SLAElapsed
+	for _, e := range m.elapsed {
+		if idSet[e.WorkItemID] {
+			result = append(result, *e)
+		}
+	}
+	return result, nil
+}
+
 func (m *mockStorage) Put(_ context.Context, key string, reader io.Reader, _ int64, contentType string) (*storage.ObjectInfo, error) {
 	data, err := io.ReadAll(reader)
 	if err != nil {
@@ -709,9 +836,11 @@ func workItemTestSetup(t *testing.T) (*WorkItemHandler, *model.AuthInfo, string)
 	queueRepo := newMockQueueRepo()
 	milestoneRepo := newMockMilestoneRepo()
 	attachRepo := newMockAttachmentRepo()
+	slaRepo := newMockSLARepo()
 	store := newMockStorage()
-	svc := service.NewWorkItemService(itemRepo, eventRepo, commentRepo, relationRepo, attachRepo, projectRepo, memberRepo, workflowRepo, typeWorkflowRepo, queueRepo, milestoneRepo, store, 50*1024*1024)
-	h := NewWorkItemHandler(svc, 50*1024*1024)
+	slaSvc := service.NewSLAService(slaRepo, projectRepo, memberRepo, workflowRepo)
+	svc := service.NewWorkItemService(itemRepo, eventRepo, commentRepo, relationRepo, attachRepo, projectRepo, memberRepo, workflowRepo, typeWorkflowRepo, queueRepo, milestoneRepo, slaRepo, slaSvc, store, 50*1024*1024)
+	h := NewWorkItemHandler(svc, slaSvc, 50*1024*1024)
 
 	info := &model.AuthInfo{
 		UserID:     uuid.New(),
@@ -731,6 +860,60 @@ func workItemTestSetup(t *testing.T) (*WorkItemHandler, *model.AuthInfo, string)
 	})
 
 	return h, info, "TEST"
+}
+
+type workItemSLASetup struct {
+	handler    *WorkItemHandler
+	info       *model.AuthInfo
+	projectKey string
+	projectID  uuid.UUID
+	slaRepo    *mockSLARepo
+}
+
+func workItemTestSetupWithSLA(t *testing.T) *workItemSLASetup {
+	t.Helper()
+
+	projectRepo := newMockProjectRepo()
+	memberRepo := newMockProjectMemberRepo()
+	itemRepo := newMockWorkItemRepo()
+	eventRepo := newMockWorkItemEventRepo()
+	commentRepo := newMockCommentRepo()
+	relationRepo := newMockRelationRepo()
+
+	workflowRepo := newMockWorkflowRepo()
+	typeWorkflowRepo := newMockTypeWorkflowRepo()
+	queueRepo := newMockQueueRepo()
+	milestoneRepo := newMockMilestoneRepo()
+	attachRepo := newMockAttachmentRepo()
+	slaRepo := newMockSLARepo()
+	store := newMockStorage()
+	slaSvc := service.NewSLAService(slaRepo, projectRepo, memberRepo, workflowRepo)
+	svc := service.NewWorkItemService(itemRepo, eventRepo, commentRepo, relationRepo, attachRepo, projectRepo, memberRepo, workflowRepo, typeWorkflowRepo, queueRepo, milestoneRepo, slaRepo, slaSvc, store, 50*1024*1024)
+	h := NewWorkItemHandler(svc, slaSvc, 50*1024*1024)
+
+	info := &model.AuthInfo{
+		UserID:     uuid.New(),
+		Email:      "user@test.com",
+		GlobalRole: model.RoleUser,
+	}
+
+	project := &model.Project{ID: uuid.New(), Name: "Test Project", Key: "TEST"}
+	projectRepo.Create(context.Background(), project)
+	itemRepo.projectKeys[project.ID] = project.Key
+	memberRepo.Add(context.Background(), &model.ProjectMember{
+		ID:        uuid.New(),
+		ProjectID: project.ID,
+		UserID:    info.UserID,
+		Role:      model.ProjectRoleOwner,
+	})
+
+	return &workItemSLASetup{
+		handler:    h,
+		info:       info,
+		projectKey: "TEST",
+		projectID:  project.ID,
+		slaRepo:    slaRepo,
+	}
 }
 
 func createTestWorkItem(t *testing.T, h *WorkItemHandler, info *model.AuthInfo, projectKey string) map[string]interface{} {
@@ -1430,5 +1613,282 @@ func TestListEvents_Handler_Unauthenticated(t *testing.T) {
 
 	if w.Code != http.StatusUnauthorized {
 		t.Fatalf("expected 401, got %d", w.Code)
+	}
+}
+
+// --- SLA enrichment tests ---
+
+func addSLATarget(s *workItemSLASetup, workItemType, statusName string, targetSeconds int) {
+	s.slaRepo.targets[uuid.New()] = &model.SLAStatusTarget{
+		ID:            uuid.New(),
+		ProjectID:     s.projectID,
+		WorkItemType:  workItemType,
+		WorkflowID:    uuid.New(),
+		StatusName:    statusName,
+		TargetSeconds: targetSeconds,
+		CalendarMode:  model.CalendarMode24x7,
+	}
+}
+
+func TestCreateWorkItem_SLAEnriched(t *testing.T) {
+	s := workItemTestSetupWithSLA(t)
+
+	// Set up SLA target for task+open (initial status)
+	addSLATarget(s, "task", "open", 3600)
+
+	body := `{"type":"task","title":"SLA Test","priority":"medium"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/items", bytes.NewBufferString(body))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", s.projectKey)
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, s.info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	s.handler.Create(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data := resp["data"].(map[string]interface{})
+
+	sla, ok := data["sla"]
+	if !ok || sla == nil {
+		t.Fatal("expected sla field in response, got nil")
+	}
+
+	slaMap := sla.(map[string]interface{})
+	if slaMap["target_seconds"].(float64) != 3600 {
+		t.Fatalf("expected target_seconds 3600, got %v", slaMap["target_seconds"])
+	}
+	if slaMap["status"].(string) != "on_track" {
+		t.Fatalf("expected status on_track, got %v", slaMap["status"])
+	}
+}
+
+func TestCreateWorkItem_NoSLATarget(t *testing.T) {
+	s := workItemTestSetupWithSLA(t)
+
+	// No SLA targets configured
+
+	body := `{"type":"task","title":"No SLA","priority":"medium"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/items", bytes.NewBufferString(body))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", s.projectKey)
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, s.info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	s.handler.Create(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data := resp["data"].(map[string]interface{})
+
+	// sla should be absent (omitempty) or nil
+	if sla, ok := data["sla"]; ok && sla != nil {
+		t.Fatalf("expected no sla field, got %v", sla)
+	}
+}
+
+func TestListWorkItems_SLAEnriched(t *testing.T) {
+	s := workItemTestSetupWithSLA(t)
+
+	// Set up SLA target for task+open
+	addSLATarget(s, "task", "open", 7200)
+
+	// Create two items
+	createTestWorkItem(t, s.handler, s.info, s.projectKey)
+	createTestWorkItem(t, s.handler, s.info, s.projectKey)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/projects/TEST/items", nil)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", s.projectKey)
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, s.info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	s.handler.List(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data := resp["data"].([]interface{})
+
+	if len(data) != 2 {
+		t.Fatalf("expected 2 items, got %d", len(data))
+	}
+
+	// Both items should have SLA info
+	for i, raw := range data {
+		item := raw.(map[string]interface{})
+		sla, ok := item["sla"]
+		if !ok || sla == nil {
+			t.Fatalf("item %d: expected sla field, got nil", i)
+		}
+		slaMap := sla.(map[string]interface{})
+		if slaMap["target_seconds"].(float64) != 7200 {
+			t.Fatalf("item %d: expected target_seconds 7200, got %v", i, slaMap["target_seconds"])
+		}
+	}
+}
+
+func TestGetWorkItem_SLAEnriched(t *testing.T) {
+	s := workItemTestSetupWithSLA(t)
+
+	addSLATarget(s, "task", "open", 1800)
+
+	// Create an item
+	created := createTestWorkItem(t, s.handler, s.info, s.projectKey)
+	itemNum := int(created["item_number"].(float64))
+
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/projects/TEST/items/%d", itemNum), nil)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", s.projectKey)
+	rctx.URLParams.Add("itemNumber", strconv.Itoa(itemNum))
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, s.info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	s.handler.Get(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data := resp["data"].(map[string]interface{})
+
+	sla, ok := data["sla"]
+	if !ok || sla == nil {
+		t.Fatal("expected sla field in get response")
+	}
+	slaMap := sla.(map[string]interface{})
+	if slaMap["target_seconds"].(float64) != 1800 {
+		t.Fatalf("expected target_seconds 1800, got %v", slaMap["target_seconds"])
+	}
+	if slaMap["status"].(string) != "on_track" {
+		t.Fatalf("expected on_track, got %v", slaMap["status"])
+	}
+}
+
+func TestUpdateWorkItem_SLAEnriched(t *testing.T) {
+	s := workItemTestSetupWithSLA(t)
+
+	addSLATarget(s, "task", "open", 3600)
+
+	created := createTestWorkItem(t, s.handler, s.info, s.projectKey)
+	itemNum := int(created["item_number"].(float64))
+
+	body := `{"title":"Updated Title"}`
+	req := httptest.NewRequest(http.MethodPatch, fmt.Sprintf("/api/v1/projects/TEST/items/%d", itemNum), bytes.NewBufferString(body))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", s.projectKey)
+	rctx.URLParams.Add("itemNumber", strconv.Itoa(itemNum))
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, s.info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	s.handler.Update(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data := resp["data"].(map[string]interface{})
+
+	if data["title"] != "Updated Title" {
+		t.Fatalf("expected updated title, got %v", data["title"])
+	}
+
+	sla, ok := data["sla"]
+	if !ok || sla == nil {
+		t.Fatal("expected sla field in update response")
+	}
+	slaMap := sla.(map[string]interface{})
+	if slaMap["target_seconds"].(float64) != 3600 {
+		t.Fatalf("expected target_seconds 3600, got %v", slaMap["target_seconds"])
+	}
+}
+
+func TestListWorkItems_MixedSLA(t *testing.T) {
+	s := workItemTestSetupWithSLA(t)
+
+	// Only set SLA for bug type, not task
+	addSLATarget(s, "bug", "open", 3600)
+
+	// Create a task (no SLA)
+	createTestWorkItem(t, s.handler, s.info, s.projectKey)
+
+	// Create a bug (has SLA)
+	body := `{"type":"bug","title":"Bug with SLA","priority":"high"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/items", bytes.NewBufferString(body))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", s.projectKey)
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, s.info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+	s.handler.Create(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+	}
+
+	// List all items
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/projects/TEST/items", nil)
+	rctx = chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", s.projectKey)
+	ctx = context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, s.info)
+	req = req.WithContext(ctx)
+	w = httptest.NewRecorder()
+
+	s.handler.List(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data := resp["data"].([]interface{})
+
+	if len(data) != 2 {
+		t.Fatalf("expected 2 items, got %d", len(data))
+	}
+
+	// Check that bug has SLA and task does not
+	hasSLA := 0
+	noSLA := 0
+	for _, raw := range data {
+		item := raw.(map[string]interface{})
+		if sla, ok := item["sla"]; ok && sla != nil {
+			hasSLA++
+		} else {
+			noSLA++
+		}
+	}
+	if hasSLA != 1 {
+		t.Fatalf("expected 1 item with SLA, got %d", hasSLA)
+	}
+	if noSLA != 1 {
+		t.Fatalf("expected 1 item without SLA, got %d", noSLA)
 	}
 }

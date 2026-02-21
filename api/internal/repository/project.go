@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -22,10 +23,15 @@ func NewProjectRepository(db *sql.DB) *ProjectRepository {
 
 // Create inserts a new project.
 func (r *ProjectRepository) Create(ctx context.Context, project *model.Project) error {
-	_, err := r.db.ExecContext(ctx,
-		`INSERT INTO projects (id, name, key, description, default_workflow_id, allowed_complexity_values)
-		 VALUES ($1, $2, $3, $4, $5, $6)`,
-		project.ID, project.Name, project.Key, project.Description, project.DefaultWorkflowID, pq.Array(project.AllowedComplexityValues))
+	businessHoursJSON, err := json.Marshal(project.BusinessHours)
+	if err != nil {
+		return fmt.Errorf("marshaling business hours: %w", err)
+	}
+
+	_, err = r.db.ExecContext(ctx,
+		`INSERT INTO projects (id, name, key, description, default_workflow_id, allowed_complexity_values, business_hours)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		project.ID, project.Name, project.Key, project.Description, project.DefaultWorkflowID, pq.Array(project.AllowedComplexityValues), businessHoursJSON)
 	if err != nil {
 		return fmt.Errorf("inserting project: %w", err)
 	}
@@ -35,7 +41,7 @@ func (r *ProjectRepository) Create(ctx context.Context, project *model.Project) 
 // GetByKey returns a project by its unique key (e.g., "INFRA").
 func (r *ProjectRepository) GetByKey(ctx context.Context, key string) (*model.Project, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, name, key, description, default_workflow_id, allowed_complexity_values, item_counter, created_at, updated_at
+		`SELECT id, name, key, description, default_workflow_id, allowed_complexity_values, business_hours, item_counter, created_at, updated_at
 		 FROM projects WHERE key = $1 AND deleted_at IS NULL`, key)
 	return scanProject(row)
 }
@@ -43,7 +49,7 @@ func (r *ProjectRepository) GetByKey(ctx context.Context, key string) (*model.Pr
 // GetByID returns a project by ID.
 func (r *ProjectRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.Project, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, name, key, description, default_workflow_id, allowed_complexity_values, item_counter, created_at, updated_at
+		`SELECT id, name, key, description, default_workflow_id, allowed_complexity_values, business_hours, item_counter, created_at, updated_at
 		 FROM projects WHERE id = $1 AND deleted_at IS NULL`, id)
 	return scanProject(row)
 }
@@ -51,7 +57,7 @@ func (r *ProjectRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.P
 // ListByUser returns all non-deleted projects the given user is a member of.
 func (r *ProjectRepository) ListByUser(ctx context.Context, userID uuid.UUID) ([]model.Project, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT p.id, p.name, p.key, p.description, p.default_workflow_id, p.allowed_complexity_values, p.item_counter, p.created_at, p.updated_at
+		`SELECT p.id, p.name, p.key, p.description, p.default_workflow_id, p.allowed_complexity_values, p.business_hours, p.item_counter, p.created_at, p.updated_at
 		 FROM projects p
 		 INNER JOIN project_members pm ON pm.project_id = p.id
 		 WHERE pm.user_id = $1 AND p.deleted_at IS NULL
@@ -67,7 +73,7 @@ func (r *ProjectRepository) ListByUser(ctx context.Context, userID uuid.UUID) ([
 // ListAll returns all non-deleted projects (for global admins).
 func (r *ProjectRepository) ListAll(ctx context.Context) ([]model.Project, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, name, key, description, default_workflow_id, allowed_complexity_values, item_counter, created_at, updated_at
+		`SELECT id, name, key, description, default_workflow_id, allowed_complexity_values, business_hours, item_counter, created_at, updated_at
 		 FROM projects WHERE deleted_at IS NULL
 		 ORDER BY name`)
 	if err != nil {
@@ -80,10 +86,15 @@ func (r *ProjectRepository) ListAll(ctx context.Context) ([]model.Project, error
 
 // Update modifies a project's mutable fields.
 func (r *ProjectRepository) Update(ctx context.Context, project *model.Project) error {
+	businessHoursJSON, err := json.Marshal(project.BusinessHours)
+	if err != nil {
+		return fmt.Errorf("marshaling business hours: %w", err)
+	}
+
 	result, err := r.db.ExecContext(ctx,
-		`UPDATE projects SET name = $1, key = $2, description = $3, default_workflow_id = $4, allowed_complexity_values = $5, updated_at = now()
-		 WHERE id = $6 AND deleted_at IS NULL`,
-		project.Name, project.Key, project.Description, project.DefaultWorkflowID, pq.Array(project.AllowedComplexityValues), project.ID)
+		`UPDATE projects SET name = $1, key = $2, description = $3, default_workflow_id = $4, allowed_complexity_values = $5, business_hours = $6, updated_at = now()
+		 WHERE id = $7 AND deleted_at IS NULL`,
+		project.Name, project.Key, project.Description, project.DefaultWorkflowID, pq.Array(project.AllowedComplexityValues), businessHoursJSON, project.ID)
 	if err != nil {
 		return fmt.Errorf("updating project: %w", err)
 	}
@@ -179,9 +190,10 @@ func scanProject(row *sql.Row) (*model.Project, error) {
 	var description sql.NullString
 	var workflowID *uuid.UUID
 	var allowedComplexity pq.Int64Array
+	var businessHoursRaw []byte
 
 	err := row.Scan(&p.ID, &p.Name, &p.Key, &description,
-		&workflowID, &allowedComplexity, &p.ItemCounter, &p.CreatedAt, &p.UpdatedAt)
+		&workflowID, &allowedComplexity, &businessHoursRaw, &p.ItemCounter, &p.CreatedAt, &p.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, model.ErrNotFound
 	}
@@ -194,6 +206,12 @@ func scanProject(row *sql.Row) (*model.Project, error) {
 	}
 	p.DefaultWorkflowID = workflowID
 	p.AllowedComplexityValues = int64ArrayToIntSlice(allowedComplexity)
+	if len(businessHoursRaw) > 0 && string(businessHoursRaw) != "null" {
+		var bh model.BusinessHoursConfig
+		if err := json.Unmarshal(businessHoursRaw, &bh); err == nil {
+			p.BusinessHours = &bh
+		}
+	}
 
 	return &p, nil
 }
@@ -205,9 +223,10 @@ func scanProjects(rows *sql.Rows) ([]model.Project, error) {
 		var description sql.NullString
 		var workflowID *uuid.UUID
 		var allowedComplexity pq.Int64Array
+		var businessHoursRaw []byte
 
 		if err := rows.Scan(&p.ID, &p.Name, &p.Key, &description,
-			&workflowID, &allowedComplexity, &p.ItemCounter, &p.CreatedAt, &p.UpdatedAt); err != nil {
+			&workflowID, &allowedComplexity, &businessHoursRaw, &p.ItemCounter, &p.CreatedAt, &p.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("scanning project row: %w", err)
 		}
 
@@ -216,6 +235,12 @@ func scanProjects(rows *sql.Rows) ([]model.Project, error) {
 		}
 		p.DefaultWorkflowID = workflowID
 		p.AllowedComplexityValues = int64ArrayToIntSlice(allowedComplexity)
+		if len(businessHoursRaw) > 0 && string(businessHoursRaw) != "null" {
+			var bh model.BusinessHoursConfig
+			if err := json.Unmarshal(businessHoursRaw, &bh); err == nil {
+				p.BusinessHours = &bh
+			}
+		}
 
 		projects = append(projects, p)
 	}

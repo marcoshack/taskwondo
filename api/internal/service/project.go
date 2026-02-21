@@ -184,7 +184,7 @@ func (s *ProjectService) ListWithSummary(ctx context.Context, info *model.AuthIn
 }
 
 // Update modifies a project. Requires owner or admin role.
-func (s *ProjectService) Update(ctx context.Context, info *model.AuthInfo, projectKey string, name, key *string, description *string, clearDescription bool, defaultWorkflowID *uuid.UUID, allowedComplexityValues []int, clearAllowedComplexityValues bool) (*model.Project, error) {
+func (s *ProjectService) Update(ctx context.Context, info *model.AuthInfo, projectKey string, name, key *string, description *string, clearDescription bool, defaultWorkflowID *uuid.UUID, allowedComplexityValues []int, clearAllowedComplexityValues bool, businessHours *model.BusinessHoursConfig, clearBusinessHours bool) (*model.Project, error) {
 	project, err := s.projects.GetByKey(ctx, projectKey)
 	if err != nil {
 		return nil, err
@@ -237,6 +237,12 @@ func (s *ProjectService) Update(ctx context.Context, info *model.AuthInfo, proje
 			seen[v] = true
 		}
 		project.AllowedComplexityValues = allowedComplexityValues
+	}
+
+	if clearBusinessHours {
+		project.BusinessHours = nil
+	} else if businessHours != nil {
+		project.BusinessHours = businessHours
 	}
 
 	if err := s.projects.Update(ctx, project); err != nil {

@@ -1,5 +1,12 @@
 import { api } from './client'
 
+export interface BusinessHoursConfig {
+  days: number[]       // 0=Sun, 1=Mon, ..., 6=Sat
+  start_hour: number   // 0-23
+  end_hour: number     // 0-23
+  timezone: string     // IANA timezone name
+}
+
 export interface Project {
   id: string
   name: string
@@ -7,6 +14,7 @@ export interface Project {
   description?: string
   default_workflow_id?: string
   allowed_complexity_values: number[]
+  business_hours?: BusinessHoursConfig | null
   item_counter: number
   member_count: number
   open_count: number
@@ -80,6 +88,7 @@ export interface UpdateProjectInput {
   name?: string
   description?: string | null
   allowed_complexity_values?: number[]
+  business_hours?: BusinessHoursConfig | null
 }
 
 export async function updateProject(projectKey: string, input: UpdateProjectInput) {

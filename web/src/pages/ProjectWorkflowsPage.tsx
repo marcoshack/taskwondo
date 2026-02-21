@@ -9,15 +9,16 @@ import {
   useDeleteProjectWorkflow,
   useAvailableStatuses,
 } from '@/hooks/useWorkflows'
-import { useMembers } from '@/hooks/useProjects'
+import { useMembers, useProject, useUpdateProject, useTypeWorkflows, useUpdateTypeWorkflow } from '@/hooks/useProjects'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { Spinner } from '@/components/ui/Spinner'
 import { Badge } from '@/components/ui/Badge'
-import { Lock, Plus, Pencil, Trash2, ArrowRight, Check, Eye } from 'lucide-react'
+import { Lock, Plus, Pencil, Trash2, ArrowRight, Check, Eye, Clock } from 'lucide-react'
 import { Tooltip } from '@/components/ui/Tooltip'
+import { SLAConfigModal } from '@/components/SLAConfigModal'
 import type { WorkflowStatus } from '@/api/workflows'
 import type { AxiosError } from 'axios'
 
@@ -34,6 +35,10 @@ export function ProjectWorkflowsPage() {
   const { user } = useAuth()
   const { data: members } = useMembers(projectKey ?? '')
   const { data: workflows, isLoading } = useProjectWorkflows(projectKey ?? '')
+  const { data: project } = useProject(projectKey ?? '')
+  const updateProjectMutation = useUpdateProject(projectKey ?? '')
+  const { data: typeWorkflows } = useTypeWorkflows(projectKey ?? '')
+  const updateTypeWorkflowMutation = useUpdateTypeWorkflow(projectKey ?? '')
 
   const [editorOpen, setEditorOpen] = useState(false)
   const [editingWorkflowId, setEditingWorkflowId] = useState<string | null>(null)
@@ -41,6 +46,25 @@ export function ProjectWorkflowsPage() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
   const [error, setError] = useState('')
   const [savedId, setSavedId] = useState<string | null>(null)
+  const [workflowError, setWorkflowError] = useState('')
+
+  // SLA modal state
+  const [slaModalType, setSlaModalType] = useState<string | null>(null)
+  const [slaModalWorkflowId, setSlaModalWorkflowId] = useState<string | null>(null)
+
+  // Business hours state
+  const [bhDays, setBhDays] = useState<number[] | null>(null)
+  const [bhStart, setBhStart] = useState<number | null>(null)
+  const [bhEnd, setBhEnd] = useState<number | null>(null)
+  const [bhTimezone, setBhTimezone] = useState<string | null>(null)
+  const [bhError, setBhError] = useState('')
+
+  // Inline checkmark indicators
+  const [saved, setSaved] = useState<Record<string, boolean>>({})
+  function showSaved(key: string) {
+    setSaved((prev) => ({ ...prev, [key]: true }))
+    setTimeout(() => setSaved((prev) => ({ ...prev, [key]: false })), 2000)
+  }
 
   const deleteMutation = useDeleteProjectWorkflow(projectKey ?? '')
 
@@ -86,18 +110,21 @@ export function ProjectWorkflowsPage() {
   }
 
   return (
-    <div className="max-w-3xl space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('workflows.title')}</h2>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('workflows.description')}</p>
+    <div className="max-w-3xl space-y-8">
+      {/* Workflow Definitions */}
+      <div>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('workflows.definitionsTitle')}</h2>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('workflows.definitionsDescription')}</p>
+          </div>
+          {canManage && (
+            <Button size="sm" onClick={() => openEditor()}>
+              <Plus className="h-4 w-4 mr-1" />
+              {t('workflows.create')}
+            </Button>
+          )}
         </div>
-        {canManage && (
-          <Button size="sm" onClick={() => openEditor()}>
-            <Plus className="h-4 w-4 mr-1" />
-            {t('workflows.create')}
-          </Button>
-        )}
       </div>
 
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
@@ -200,6 +227,259 @@ export function ProjectWorkflowsPage() {
           </div>
         )}
       </div>
+
+      {/* Mapping */}
+      {canManage && (
+        <>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('workflows.mappingTitle')}</h2>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('workflows.mappingDescription')}</p>
+          </div>
+
+          {workflowError && <p className="text-sm text-red-600 dark:text-red-400">{workflowError}</p>}
+
+          <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
+            {['task', 'ticket', 'bug', 'feedback', 'epic'].map((itemType) => {
+              const mapping = typeWorkflows?.find((tw) => tw.work_item_type === itemType)
+              return (
+                <div key={itemType} className="flex items-center justify-between p-3">
+                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    {t(`workitems.types.${itemType}`)}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    {saved[`wf:${itemType}`] && (
+                      <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
+                    )}
+                    <select
+                      className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      value={mapping?.workflow_id ?? ''}
+                      onChange={(e) => {
+                        setWorkflowError('')
+                        updateTypeWorkflowMutation.mutate(
+                          { workItemType: itemType, workflowId: e.target.value },
+                          {
+                            onSuccess: () => {
+                              showSaved(`wf:${itemType}`)
+                            },
+                            onError: (err) => {
+                              const axiosErr = err as AxiosError<{ error?: { message?: string } }>
+                              setWorkflowError(axiosErr.response?.data?.error?.message ?? t('projects.settings.workflowUpdateError'))
+                            },
+                          },
+                        )
+                      }}
+                      disabled={updateTypeWorkflowMutation.isPending}
+                    >
+                      {!mapping && <option value="">{t('projects.settings.selectWorkflow')}</option>}
+                      {workflows?.map((wf) => (
+                        <option key={wf.id} value={wf.id}>{wf.name}</option>
+                      ))}
+                    </select>
+                    <Tooltip content={t('sla.configure')}>
+                      <button
+                        className="p-1 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                        onClick={() => {
+                          if (mapping?.workflow_id) {
+                            setSlaModalType(itemType)
+                            setSlaModalWorkflowId(mapping.workflow_id)
+                          }
+                        }}
+                        disabled={!mapping?.workflow_id}
+                      >
+                        <Clock className="h-4 w-4" />
+                      </button>
+                    </Tooltip>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </>
+      )}
+
+      {/* Business Hours */}
+      {canManage && project && (
+        <>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('workflows.businessHoursTitle')}</h2>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('workflows.businessHoursDescription')}</p>
+          </div>
+
+          {bhError && <p className="text-sm text-red-600 dark:text-red-400">{bhError}</p>}
+
+          <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-4">
+            {(() => {
+              const currentDays = bhDays ?? project.business_hours?.days ?? []
+              const currentStart = bhStart ?? project.business_hours?.start_hour ?? 9
+              const currentEnd = bhEnd ?? project.business_hours?.end_hour ?? 17
+              const currentTz = bhTimezone ?? project.business_hours?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone
+
+              const dayLabels = [
+                { value: 0, label: t('businessHours.sunday') },
+                { value: 1, label: t('businessHours.monday') },
+                { value: 2, label: t('businessHours.tuesday') },
+                { value: 3, label: t('businessHours.wednesday') },
+                { value: 4, label: t('businessHours.thursday') },
+                { value: 5, label: t('businessHours.friday') },
+                { value: 6, label: t('businessHours.saturday') },
+              ]
+
+              const hours = Array.from({ length: 24 }, (_, i) => i)
+
+              return (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      {t('businessHours.days')}
+                    </label>
+                    <div className="flex gap-2 flex-wrap">
+                      {dayLabels.map((d) => (
+                        <button
+                          key={d.value}
+                          type="button"
+                          className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
+                            currentDays.includes(d.value)
+                              ? 'bg-indigo-100 dark:bg-indigo-900 border-indigo-300 dark:border-indigo-600 text-indigo-700 dark:text-indigo-200'
+                              : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                          }`}
+                          onClick={() => {
+                            const newDays = currentDays.includes(d.value)
+                              ? currentDays.filter((v: number) => v !== d.value)
+                              : [...currentDays, d.value].sort()
+                            setBhDays(newDays)
+                          }}
+                        >
+                          {d.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        {t('businessHours.startHour')}
+                      </label>
+                      <select
+                        className="w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        value={currentStart}
+                        onChange={(e) => setBhStart(Number(e.target.value))}
+                      >
+                        {hours.map((h) => (
+                          <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        {t('businessHours.endHour')}
+                      </label>
+                      <select
+                        className="w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        value={currentEnd}
+                        onChange={(e) => setBhEnd(Number(e.target.value))}
+                      >
+                        {hours.map((h) => (
+                          <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        {t('businessHours.timezone')}
+                      </label>
+                      <Input
+                        value={currentTz}
+                        onChange={(e) => setBhTimezone(e.target.value)}
+                        placeholder="America/New_York"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Button
+                      disabled={bhDays === null && bhStart === null && bhEnd === null && bhTimezone === null}
+                      onClick={() => {
+                        setBhError('')
+                        updateProjectMutation.mutate(
+                          {
+                            business_hours: {
+                              days: currentDays,
+                              start_hour: currentStart,
+                              end_hour: currentEnd,
+                              timezone: currentTz,
+                            },
+                          },
+                          {
+                            onSuccess: () => {
+                              setBhDays(null)
+                              setBhStart(null)
+                              setBhEnd(null)
+                              setBhTimezone(null)
+                              showSaved('businessHours')
+                            },
+                            onError: (err) => {
+                              const axiosErr = err as AxiosError<{ error?: { message?: string } }>
+                              setBhError(axiosErr.response?.data?.error?.message ?? t('projects.settings.updateError'))
+                            },
+                          }
+                        )
+                      }}
+                    >
+                      {t('common.save')}
+                    </Button>
+                    {project.business_hours && (
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          setBhError('')
+                          updateProjectMutation.mutate(
+                            { business_hours: null },
+                            {
+                              onSuccess: () => {
+                                setBhDays(null)
+                                setBhStart(null)
+                                setBhEnd(null)
+                                setBhTimezone(null)
+                                showSaved('businessHours')
+                              },
+                              onError: (err) => {
+                                const axiosErr = err as AxiosError<{ error?: { message?: string } }>
+                                setBhError(axiosErr.response?.data?.error?.message ?? t('projects.settings.updateError'))
+                              },
+                            }
+                          )
+                        }}
+                      >
+                        {t('businessHours.clear')}
+                      </Button>
+                    )}
+                    {saved.businessHours && (
+                      <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
+                    )}
+                  </div>
+                </>
+              )
+            })()}
+          </div>
+        </>
+      )}
+
+      {/* SLA config modal */}
+      {slaModalType && slaModalWorkflowId && (() => {
+        const wf = workflows?.find((w) => w.id === slaModalWorkflowId)
+        if (!wf) return null
+        return (
+          <SLAConfigModal
+            open
+            onClose={() => { setSlaModalType(null); setSlaModalWorkflowId(null) }}
+            onSave={() => { showSaved(`wf:${slaModalType}`) }}
+            projectKey={projectKey!}
+            workItemType={slaModalType}
+            workflow={wf}
+          />
+        )
+      })()}
 
       {/* Workflow Editor Modal */}
       {editorOpen && (

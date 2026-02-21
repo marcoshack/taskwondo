@@ -112,14 +112,14 @@ var ExportTables = []TableDef{
 		ExportQuery: `SELECT id, project_id, queue_id, parent_id, item_number,
 			display_id, type, title, description, status, priority,
 			assignee_id, reporter_id, portal_contact_id, visibility,
-			labels, custom_fields, due_date, sla_deadline, resolved_at,
+			labels, custom_fields, due_date, resolved_at,
 			milestone_id, created_at, updated_at, deleted_at
 			FROM work_items ORDER BY created_at`,
 		ImportColumns: []string{
 			"id", "project_id", "queue_id", "parent_id", "item_number",
 			"display_id", "type", "title", "description", "status", "priority",
 			"assignee_id", "reporter_id", "portal_contact_id", "visibility",
-			"labels", "custom_fields", "due_date", "sla_deadline", "resolved_at",
+			"labels", "custom_fields", "due_date", "resolved_at",
 			"milestone_id", "created_at", "updated_at", "deleted_at",
 		},
 	},
