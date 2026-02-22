@@ -1,8 +1,17 @@
 import { useMemo } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { NavLink, useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import {
+  LayoutDashboard,
+  ClipboardList,
+  Inbox,
+  Target,
+  Route,
+  Settings,
+} from 'lucide-react'
+import { useNavigationGuard } from '@/contexts/NavigationGuardContext'
 import { useProject, useMembers } from '@/hooks/useProjects'
 import { useWorkItems } from '@/hooks/useWorkItems'
 import { useProjectWorkflow } from '@/hooks/useWorkflows'
@@ -16,6 +25,7 @@ export function ProjectOverviewPage() {
   const { t } = useTranslation()
   const { projectKey } = useParams<{ projectKey: string }>()
   const navigate = useNavigate()
+  const { guardRef, guardedNavigate } = useNavigationGuard()
   const { data: project } = useProject(projectKey ?? '')
   const { data: members, isLoading: membersLoading } = useMembers(projectKey ?? '')
   const { statuses } = useProjectWorkflow(projectKey ?? '')
@@ -73,8 +83,45 @@ export function ProjectOverviewPage() {
 
   const loading = itemsLoading || !statuses.length
 
+  const base = `/projects/${projectKey}`
+  const navItems = [
+    { to: '', label: t('sidebar.overview'), icon: LayoutDashboard, end: true },
+    { to: 'items', label: t('sidebar.items'), icon: ClipboardList, end: false },
+    { to: 'queues', label: t('sidebar.queues'), icon: Inbox, end: false },
+    { to: 'milestones', label: t('sidebar.milestones'), icon: Target, end: false },
+    { to: 'workflows', label: t('sidebar.workflows'), icon: Route, end: false },
+    { to: 'settings', label: t('sidebar.settings'), icon: Settings, end: false },
+  ]
+
   return (
     <div className="max-w-3xl space-y-6">
+      {/* Mobile top bar with navigation icons */}
+      <nav className="flex sm:hidden overflow-hidden">
+        {navItems.map((item) => (
+          <NavLink
+            key={item.to}
+            to={`${base}/${item.to}`}
+            end={item.end}
+            onClick={(e) => {
+              if (guardRef.current?.()) {
+                e.preventDefault()
+                guardedNavigate(`${base}/${item.to}`)
+              }
+            }}
+            className={({ isActive }) =>
+              `flex flex-1 flex-col items-center gap-1 py-3 text-xs font-medium transition-colors ${
+                isActive
+                  ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
+                  : 'text-gray-500 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-800'
+              }`
+            }
+          >
+            <item.icon className="h-5 w-5" />
+            <span className="truncate max-w-full px-1">{item.label}</span>
+          </NavLink>
+        ))}
+      </nav>
+
       <div>
         <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
           {t('projects.overview.openWorkItems')}
