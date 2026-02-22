@@ -205,6 +205,7 @@ export function WorkItemListPage() {
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [activeRow, setActiveRow] = useState(-1)
   const activeRowStorageKey = `taskwondo_activeRow_${projectKey}`
+  const filterStorageKey = `taskwondo_listParams_${projectKey}`
   const restoredRef = useRef(false)
 
   useKeyboardShortcut({ key: 'c' }, () => setShowCreate(true))
@@ -297,6 +298,7 @@ export function WorkItemListPage() {
   useKeyboardShortcut([{ key: 'Enter' }, { key: 'o' }], () => {
     if (activeRow >= 0 && activeRow < allItems.length) {
       sessionStorage.setItem(activeRowStorageKey, String(allItems[activeRow].item_number))
+      sessionStorage.setItem(filterStorageKey, searchParams.toString())
       navigate(`/projects/${projectKey}/items/${allItems[activeRow].item_number}`)
     }
   }, activeRow >= 0)
@@ -487,6 +489,7 @@ export function WorkItemListPage() {
               data={allItems}
               onRowClick={(row) => {
                 sessionStorage.setItem(activeRowStorageKey, String(row.item_number))
+                sessionStorage.setItem(filterStorageKey, searchParams.toString())
                 navigate(`/projects/${projectKey}/items/${row.item_number}`)
               }}
               emptyMessage={t('workitems.empty')}
@@ -511,6 +514,7 @@ export function WorkItemListPage() {
                     key={item.id}
                     onClick={() => {
                       sessionStorage.setItem(activeRowStorageKey, String(item.item_number))
+                      sessionStorage.setItem(filterStorageKey, searchParams.toString())
                       navigate(`/projects/${projectKey}/items/${item.item_number}`)
                     }}
                     className="w-full text-left rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 shadow-sm hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors"
@@ -569,7 +573,10 @@ export function WorkItemListPage() {
           items={allItems}
           statuses={statuses}
           transitionsMap={transitionsMap}
-          onItemClick={(item) => navigate(`/projects/${projectKey}/items/${item.item_number}`)}
+          onItemClick={(item) => {
+            sessionStorage.setItem(filterStorageKey, searchParams.toString())
+            navigate(`/projects/${projectKey}/items/${item.item_number}`)
+          }}
         />
       )}
 

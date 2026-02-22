@@ -67,6 +67,13 @@ export function WorkItemDetailPage() {
   const [previewTarget, setPreviewTarget] = useState<PreviewTarget | null>(null)
   const { confirmed: titleConfirmed, showConfirm: showTitleConfirm } = useConfirmFeedback()
   const { confirmed: descConfirmed, showConfirm: showDescConfirm } = useConfirmFeedback()
+
+  // Build back URL preserving list filters from sessionStorage
+  const backToListUrl = useMemo(() => {
+    const base = `/projects/${projectKey}/items`
+    const stored = sessionStorage.getItem(`taskwondo_listParams_${projectKey}`)
+    return stored ? `${base}?${stored}` : base
+  }, [projectKey])
   useKeyboardShortcut({ key: '#' }, () => setShowDelete(true))
 
   // Navigation guard for unsaved comment draft
@@ -215,7 +222,7 @@ export function WorkItemDetailPage() {
       <div className="flex items-center">
         <button
           className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-          onClick={() => guardedNavigate(`/projects/${projectKey}/items`)}
+          onClick={() => guardedNavigate(backToListUrl)}
         >
           &larr; {t('workitems.backToItems')}
         </button>
@@ -489,7 +496,7 @@ export function WorkItemDetailPage() {
         <form onSubmit={(e) => {
           e.preventDefault()
           deleteMutation.mutate(itemNumber, {
-            onSuccess: () => navigate(`/projects/${projectKey}/items`),
+            onSuccess: () => navigate(backToListUrl),
           })
         }}>
           <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">

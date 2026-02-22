@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
 import { useTranslation } from 'react-i18next'
-import { SlidersHorizontal, ArrowUpDown, Settings } from 'lucide-react'
+import { SlidersHorizontal, ArrowUpDown, Settings, X } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { Modal } from '@/components/ui/Modal'
@@ -97,14 +97,24 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
     <>
       {/* Desktop: inline layout */}
       <div className="hidden sm:flex flex-wrap items-end gap-3">
-        <div className="flex-1 min-w-[200px]">
+        <div className="flex-1 min-w-[200px] relative">
           <Input
             ref={searchRef}
             placeholder={t('workitems.filters.search')}
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Escape') searchRef.current?.blur() }}
+            className="pr-8"
           />
+          {search && (
+            <button
+              onClick={() => { onSearchChange(''); searchRef.current?.focus() }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              aria-label={t('common.clear')}
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
         <div className="w-36">
           <MultiSelect options={typeOptions} selected={filter.type ?? []} onChange={(v) => setArray('type', v)} placeholder={t('workitems.filters.allTypes')} />
@@ -144,12 +154,22 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
 
       {/* Mobile: search + sort icon + filter icon */}
       <div className="flex sm:hidden items-center gap-2">
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 relative">
           <Input
             placeholder={t('workitems.filters.search')}
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
+            className="pr-8"
           />
+          {search && (
+            <button
+              onClick={() => onSearchChange('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              aria-label={t('common.clear')}
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
         {onSort && (
           <button
