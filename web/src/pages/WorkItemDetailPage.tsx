@@ -90,6 +90,18 @@ export function WorkItemDetailPage() {
     return () => window.removeEventListener('beforeunload', handler)
   }, [hasUnsavedComment])
   const dragCounter = useRef(0)
+
+  // Reset drag overlay on any drop, even when stopPropagation prevents bubbling
+  // (e.g. drops on textarea handled by usePasteUpload)
+  useEffect(() => {
+    const handler = () => {
+      dragCounter.current = 0
+      setDraggingOver(false)
+    }
+    document.addEventListener('drop', handler, true) // capture phase
+    return () => document.removeEventListener('drop', handler, true)
+  }, [])
+
   const uploadMut = useUploadAttachment(projectKey ?? '', itemNumber)
   const { data: allAttachments } = useAttachments(projectKey ?? '', itemNumber)
 
@@ -102,7 +114,14 @@ export function WorkItemDetailPage() {
     setPreviewTarget({ kind: 'image', src, label: match?.filename, comment: match?.comment || undefined })
   }, [allAttachments])
 
-  const descMarkdownComponents = useMemo(() => getMarkdownComponents(handleImageClick), [handleImageClick])
+  const handleAttachmentLinkClick = useCallback((_href: string, attachmentId: string) => {
+    const match = allAttachments?.find((a) => a.id === attachmentId)
+    if (match) {
+      setPreviewTarget({ kind: 'attachment', attachment: match, projectKey: projectKey ?? '', itemNumber })
+    }
+  }, [allAttachments, projectKey, itemNumber])
+
+  const descMarkdownComponents = useMemo(() => getMarkdownComponents({ onImageClick: handleImageClick, onAttachmentLinkClick: handleAttachmentLinkClick }), [handleImageClick, handleAttachmentLinkClick])
 
   const handlePageDragEnter = useCallback((e: React.DragEvent) => {
     if (!e.dataTransfer.types.includes('Files')) return
@@ -414,7 +433,7 @@ export function WorkItemDetailPage() {
               )}
             </div>
 
-            {activeTab === 'comments' && <CommentList projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} highlightedCommentId={highlightedCommentId} onHighlightClear={() => setHighlightedCommentId(null)} onImageClick={handleImageClick} draft={commentDraft} onDraftChange={setCommentDraft} />}
+            {activeTab === 'comments' && <CommentList projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} highlightedCommentId={highlightedCommentId} onHighlightClear={() => setHighlightedCommentId(null)} onImageClick={handleImageClick} onAttachmentLinkClick={handleAttachmentLinkClick} draft={commentDraft} onDraftChange={setCommentDraft} />}
             {activeTab === 'activity' && <ActivityTimeline projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} onAttachmentClick={(id) => { setActiveTab('attachments'); setHighlightedAttachmentId(id) }} onCommentClick={(id) => { setActiveTab('comments'); setHighlightedCommentId(id) }} />}
             {activeTab === 'relations' && <RelationList projectKey={projectKey ?? ''} itemNumber={itemNumber} />}
             {activeTab === 'attachments' && <AttachmentList projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} highlightedAttachmentId={highlightedAttachmentId} onHighlightClear={() => setHighlightedAttachmentId(null)} onPreview={(a) => setPreviewTarget({ kind: 'attachment', attachment: a, projectKey: projectKey ?? '', itemNumber })} />}

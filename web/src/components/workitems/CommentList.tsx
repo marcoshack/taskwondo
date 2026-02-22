@@ -22,11 +22,12 @@ interface CommentListProps {
   highlightedCommentId?: string | null
   onHighlightClear?: () => void
   onImageClick?: (src: string) => void
+  onAttachmentLinkClick?: (href: string, attachmentId: string) => void
   draft?: string
   onDraftChange?: (value: string) => void
 }
 
-export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highlightedCommentId, onHighlightClear, onImageClick, draft, onDraftChange }: CommentListProps) {
+export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highlightedCommentId, onHighlightClear, onImageClick, onAttachmentLinkClick, draft, onDraftChange }: CommentListProps) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const { data: comments, isLoading } = useComments(projectKey, itemNumber)
@@ -120,7 +121,7 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
     textareaRef: editCommentRef,
   })
 
-  const mdComponents = useMemo(() => getMarkdownComponents(onImageClick), [onImageClick])
+  const mdComponents = useMemo(() => getMarkdownComponents({ onImageClick, onAttachmentLinkClick }), [onImageClick, onAttachmentLinkClick])
 
   function authorName(authorId: string | null): string {
     if (!authorId) return t('common.unknown')
