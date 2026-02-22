@@ -126,6 +126,17 @@ func (m *inMemorySLARepo) UpdateElapsedOnLeave(_ context.Context, workItemID uui
 	return nil
 }
 
+func (m *inMemorySLARepo) UpdateElapsedOnLeaveWithSeconds(_ context.Context, workItemID uuid.UUID, statusName string, additionalSeconds int) error {
+	key := elapsedKey(workItemID, statusName)
+	e, exists := m.elapsed[key]
+	if !exists || e.LastEnteredAt == nil {
+		return nil
+	}
+	e.ElapsedSeconds += additionalSeconds
+	e.LastEnteredAt = nil
+	return nil
+}
+
 func (m *inMemorySLARepo) GetElapsed(_ context.Context, workItemID uuid.UUID, statusName string) (*model.SLAElapsed, error) {
 	key := elapsedKey(workItemID, statusName)
 	e, exists := m.elapsed[key]
@@ -241,6 +252,9 @@ func TestBulkUpsertTargets_Success(t *testing.T) {
 	svc, _, projectRepo, memberRepo, workflowRepo := newTestSLAService()
 	info := userAuthInfo()
 	project := setupSLATestProject(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
+	project.BusinessHours = &model.BusinessHoursConfig{
+		Days: []int{1, 2, 3, 4, 5}, StartHour: 9, EndHour: 17, Timezone: "UTC",
+	}
 	wf := setupTestWorkflow(t, workflowRepo)
 
 	input := BulkUpsertSLAInput{
@@ -1192,5 +1206,130 @@ func TestComputeSLATargetAtSimple_BusinessHours(t *testing.T) {
 	// Can't easily test exact time since it depends on current time, but verify it's in the future
 	if !result.After(time.Now()) {
 		t.Fatal("expected result to be in the future")
+	}
+}
+
+func TestBulkUpsertTargets_BusinessHoursRequiresProjectConfig(t *testing.T) {
+	svc, _, projectRepo, memberRepo, workflowRepo := newTestSLAService()
+	info := adminAuthInfo()
+	project := setupSLATestProject(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
+	wf := setupTestWorkflow(t, workflowRepo)
+
+	// Project has no business hours configured (nil)
+	project.BusinessHours = nil
+
+	input := BulkUpsertSLAInput{
+		WorkItemType: model.WorkItemTypeTicket,
+		WorkflowID:   wf.ID,
+		Targets: []SLATargetInput{
+			{StatusName: "Open", TargetSeconds: 1800, CalendarMode: model.CalendarModeBusinessHours},
+		},
+	}
+
+	_, err := svc.BulkUpsertTargets(context.Background(), info, "TEST", input)
+	if err == nil {
+		t.Fatal("expected error when using business_hours without project config")
+	}
+}
+
+func TestBulkUpsertTargets_BusinessHoursAllowedWithProjectConfig(t *testing.T) {
+	svc, _, projectRepo, memberRepo, workflowRepo := newTestSLAService()
+	info := adminAuthInfo()
+	project := setupSLATestProject(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
+	project.BusinessHours = &model.BusinessHoursConfig{
+		Days: []int{1, 2, 3, 4, 5}, StartHour: 9, EndHour: 17, Timezone: "UTC",
+	}
+	wf := setupTestWorkflow(t, workflowRepo)
+
+	input := BulkUpsertSLAInput{
+		WorkItemType: model.WorkItemTypeTicket,
+		WorkflowID:   wf.ID,
+		Targets: []SLATargetInput{
+			{StatusName: "Open", TargetSeconds: 1800, CalendarMode: model.CalendarModeBusinessHours},
+		},
+	}
+
+	result, err := svc.BulkUpsertTargets(context.Background(), info, "TEST", input)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(result) != 1 {
+		t.Fatalf("expected 1 target, got %d", len(result))
+	}
+	if result[0].CalendarMode != model.CalendarModeBusinessHours {
+		t.Fatalf("expected business_hours, got %s", result[0].CalendarMode)
+	}
+}
+
+func TestBulkUpsertTargets_24x7AllowedWithoutProjectConfig(t *testing.T) {
+	svc, _, projectRepo, memberRepo, workflowRepo := newTestSLAService()
+	info := adminAuthInfo()
+	setupSLATestProject(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
+	wf := setupTestWorkflow(t, workflowRepo)
+
+	// 24x7 mode should work even without business hours configured
+	input := BulkUpsertSLAInput{
+		WorkItemType: model.WorkItemTypeTicket,
+		WorkflowID:   wf.ID,
+		Targets: []SLATargetInput{
+			{StatusName: "Open", TargetSeconds: 3600, CalendarMode: model.CalendarMode24x7},
+		},
+	}
+
+	result, err := svc.BulkUpsertTargets(context.Background(), info, "TEST", input)
+	if err != nil {
+		t.Fatalf("expected no error for 24x7 mode without business hours, got %v", err)
+	}
+	if len(result) != 1 {
+		t.Fatalf("expected 1 target, got %d", len(result))
+	}
+}
+
+func TestBulkUpsertTargets_MixedModesRequiresProjectConfig(t *testing.T) {
+	svc, _, projectRepo, memberRepo, workflowRepo := newTestSLAService()
+	info := adminAuthInfo()
+	setupSLATestProject(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
+	wf := setupTestWorkflow(t, workflowRepo)
+
+	// Mixed modes: one 24x7, one business_hours — should fail without project config
+	input := BulkUpsertSLAInput{
+		WorkItemType: model.WorkItemTypeTicket,
+		WorkflowID:   wf.ID,
+		Targets: []SLATargetInput{
+			{StatusName: "Open", TargetSeconds: 3600, CalendarMode: model.CalendarMode24x7},
+			{StatusName: "In Progress", TargetSeconds: 7200, CalendarMode: model.CalendarModeBusinessHours},
+		},
+	}
+
+	_, err := svc.BulkUpsertTargets(context.Background(), info, "TEST", input)
+	if err == nil {
+		t.Fatal("expected error for business_hours without project config in mixed mode")
+	}
+}
+
+func TestUpdateElapsedOnLeaveWithSeconds(t *testing.T) {
+	repo := newInMemorySLARepo()
+	itemID := uuid.New()
+	status := "Open"
+	entered := time.Date(2026, 2, 20, 14, 0, 0, 0, time.UTC) // Friday 2pm
+
+	// Init elapsed
+	_ = repo.InitElapsedOnCreate(context.Background(), itemID, status, entered)
+
+	// Leave with pre-computed business seconds (e.g., 3 hours of business time)
+	err := repo.UpdateElapsedOnLeaveWithSeconds(context.Background(), itemID, status, 10800)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	elapsed, err := repo.GetElapsed(context.Background(), itemID, status)
+	if err != nil {
+		t.Fatalf("unexpected error getting elapsed: %v", err)
+	}
+	if elapsed.ElapsedSeconds != 10800 {
+		t.Fatalf("expected 10800 elapsed seconds, got %d", elapsed.ElapsedSeconds)
+	}
+	if elapsed.LastEnteredAt != nil {
+		t.Fatal("expected LastEnteredAt to be nil after leaving")
 	}
 }

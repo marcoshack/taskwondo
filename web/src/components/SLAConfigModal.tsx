@@ -15,6 +15,7 @@ interface Props {
   projectKey: string
   workItemType: string
   workflow: Workflow
+  hasBusinessHours?: boolean
 }
 
 interface StatusRow {
@@ -25,7 +26,7 @@ interface StatusRow {
   calendarMode: string
 }
 
-export function SLAConfigModal({ open, onClose, onSave, projectKey, workItemType, workflow }: Props) {
+export function SLAConfigModal({ open, onClose, onSave, projectKey, workItemType, workflow, hasBusinessHours = false }: Props) {
   const { t } = useTranslation()
   const { data: existingTargets } = useSLATargets(projectKey)
   const bulkUpsert = useBulkUpsertSLATargets(projectKey)
@@ -143,7 +144,9 @@ export function SLAConfigModal({ open, onClose, onSave, projectKey, workItemType
                   disabled={terminal}
                 >
                   <option value="24x7">{t('sla.mode24x7')}</option>
-                  <option value="business_hours">{t('sla.modeBusinessHours')}</option>
+                  <option value="business_hours" disabled={!hasBusinessHours}>
+                    {t('sla.modeBusinessHours')}{!hasBusinessHours ? ` (${t('sla.requiresBusinessHours')})` : ''}
+                  </option>
                 </select>
               </div>
             </Tooltip>

@@ -97,6 +97,9 @@ func (m *inMemorySLARepo) UpsertElapsedOnEnter(_ context.Context, _ uuid.UUID, _
 func (m *inMemorySLARepo) UpdateElapsedOnLeave(_ context.Context, _ uuid.UUID, _ string, _ time.Time) error {
 	return nil
 }
+func (m *inMemorySLARepo) UpdateElapsedOnLeaveWithSeconds(_ context.Context, _ uuid.UUID, _ string, _ int) error {
+	return nil
+}
 func (m *inMemorySLARepo) GetElapsed(_ context.Context, _ uuid.UUID, _ string) (*model.SLAElapsed, error) {
 	return nil, model.ErrNotFound
 }
@@ -120,7 +123,12 @@ func slaTestSetup(t *testing.T) (*SLAHandler, *model.AuthInfo, string, *model.Wo
 		GlobalRole: model.RoleUser,
 	}
 
-	project := &model.Project{ID: uuid.New(), Name: "Test Project", Key: "TEST"}
+	project := &model.Project{
+		ID: uuid.New(), Name: "Test Project", Key: "TEST",
+		BusinessHours: &model.BusinessHoursConfig{
+			Days: []int{1, 2, 3, 4, 5}, StartHour: 9, EndHour: 17, Timezone: "UTC",
+		},
+	}
 	projectRepo.Create(context.Background(), project)
 	memberRepo.Add(context.Background(), &model.ProjectMember{
 		ID:        uuid.New(),
@@ -318,6 +326,67 @@ func TestSLAHandler_BulkUpsert_Unauthorized(t *testing.T) {
 
 	if w.Code != http.StatusUnauthorized {
 		t.Fatalf("expected 401, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestSLAHandler_BulkUpsert_BusinessHoursWithoutProjectConfig(t *testing.T) {
+	// Setup WITHOUT business hours on project
+	slaRepo := newInMemorySLARepo()
+	projectRepo := newMockProjectRepo()
+	memberRepo := newMockProjectMemberRepo()
+	workflowRepo := newMockWorkflowRepo()
+	svc := service.NewSLAService(slaRepo, projectRepo, memberRepo, workflowRepo)
+	h := NewSLAHandler(svc)
+
+	info := &model.AuthInfo{
+		UserID:     uuid.New(),
+		Email:      "user@test.com",
+		GlobalRole: model.RoleUser,
+	}
+
+	project := &model.Project{
+		ID: uuid.New(), Name: "No BH Project", Key: "NOBH",
+		BusinessHours: nil, // no business hours configured
+	}
+	projectRepo.Create(context.Background(), project)
+	memberRepo.Add(context.Background(), &model.ProjectMember{
+		ID:        uuid.New(),
+		ProjectID: project.ID,
+		UserID:    info.UserID,
+		Role:      model.ProjectRoleOwner,
+	})
+
+	wf := &model.Workflow{
+		ID:   uuid.New(),
+		Name: "Test Workflow",
+		Statuses: []model.WorkflowStatus{
+			{Name: "Open", Category: model.CategoryTodo},
+			{Name: "In Progress", Category: model.CategoryInProgress},
+			{Name: "Done", Category: model.CategoryDone},
+		},
+	}
+	workflowRepo.Create(context.Background(), wf)
+
+	body, _ := json.Marshal(map[string]interface{}{
+		"work_item_type": "task",
+		"workflow_id":    wf.ID.String(),
+		"targets": []map[string]interface{}{
+			{"status_name": "Open", "target_seconds": 3600, "calendar_mode": "business_hours"},
+		},
+	})
+
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/projects/NOBH/sla-targets", bytes.NewBuffer(body))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", "NOBH")
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	h.BulkUpsert(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for business_hours without project config, got %d: %s", w.Code, w.Body.String())
 	}
 }
 

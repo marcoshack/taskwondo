@@ -720,6 +720,9 @@ func (m *mockSLARepo) UpsertElapsedOnEnter(_ context.Context, _ uuid.UUID, _ str
 func (m *mockSLARepo) UpdateElapsedOnLeave(_ context.Context, _ uuid.UUID, _ string, _ time.Time) error {
 	return nil
 }
+func (m *mockSLARepo) UpdateElapsedOnLeaveWithSeconds(_ context.Context, _ uuid.UUID, _ string, _ int) error {
+	return nil
+}
 func (m *mockSLARepo) GetElapsed(_ context.Context, _ uuid.UUID, _ string) (*model.SLAElapsed, error) {
 	return nil, model.ErrNotFound
 }

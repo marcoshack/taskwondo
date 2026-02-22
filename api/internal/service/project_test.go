@@ -1201,3 +1201,108 @@ func TestUpdateProject_AllowedComplexityValues_InvalidValues(t *testing.T) {
 		t.Fatalf("expected ErrValidation for duplicate values, got %v", err)
 	}
 }
+
+func TestValidateBusinessHours(t *testing.T) {
+	tests := []struct {
+		name    string
+		config  *model.BusinessHoursConfig
+		wantErr bool
+	}{
+		{
+			name: "valid config",
+			config: &model.BusinessHoursConfig{
+				Days: []int{1, 2, 3, 4, 5}, StartHour: 9, EndHour: 17, Timezone: "UTC",
+			},
+			wantErr: false,
+		},
+		{
+			name: "valid config with named timezone",
+			config: &model.BusinessHoursConfig{
+				Days: []int{1, 2, 3, 4, 5}, StartHour: 8, EndHour: 18, Timezone: "America/New_York",
+			},
+			wantErr: false,
+		},
+		{
+			name: "empty timezone",
+			config: &model.BusinessHoursConfig{
+				Days: []int{1, 2, 3, 4, 5}, StartHour: 9, EndHour: 17, Timezone: "",
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid timezone",
+			config: &model.BusinessHoursConfig{
+				Days: []int{1, 2, 3, 4, 5}, StartHour: 9, EndHour: 17, Timezone: "Invalid/Timezone",
+			},
+			wantErr: true,
+		},
+		{
+			name: "start_hour negative",
+			config: &model.BusinessHoursConfig{
+				Days: []int{1, 2, 3, 4, 5}, StartHour: -1, EndHour: 17, Timezone: "UTC",
+			},
+			wantErr: true,
+		},
+		{
+			name: "start_hour too high",
+			config: &model.BusinessHoursConfig{
+				Days: []int{1, 2, 3, 4, 5}, StartHour: 24, EndHour: 17, Timezone: "UTC",
+			},
+			wantErr: true,
+		},
+		{
+			name: "end_hour too high",
+			config: &model.BusinessHoursConfig{
+				Days: []int{1, 2, 3, 4, 5}, StartHour: 9, EndHour: 24, Timezone: "UTC",
+			},
+			wantErr: true,
+		},
+		{
+			name: "end_hour equals start_hour",
+			config: &model.BusinessHoursConfig{
+				Days: []int{1, 2, 3, 4, 5}, StartHour: 9, EndHour: 9, Timezone: "UTC",
+			},
+			wantErr: true,
+		},
+		{
+			name: "end_hour less than start_hour",
+			config: &model.BusinessHoursConfig{
+				Days: []int{1, 2, 3, 4, 5}, StartHour: 17, EndHour: 9, Timezone: "UTC",
+			},
+			wantErr: true,
+		},
+		{
+			name: "no days",
+			config: &model.BusinessHoursConfig{
+				Days: []int{}, StartHour: 9, EndHour: 17, Timezone: "UTC",
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid day value",
+			config: &model.BusinessHoursConfig{
+				Days: []int{1, 7}, StartHour: 9, EndHour: 17, Timezone: "UTC",
+			},
+			wantErr: true,
+		},
+		{
+			name: "negative day value",
+			config: &model.BusinessHoursConfig{
+				Days: []int{-1, 1}, StartHour: 9, EndHour: 17, Timezone: "UTC",
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateBusinessHours(tt.config)
+			if tt.wantErr && err == nil {
+				t.Fatal("expected error, got nil")
+			}
+			if !tt.wantErr && err != nil {
+				t.Fatalf("expected no error, got %v", err)
+			}
+		})
+	}
+}

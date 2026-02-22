@@ -775,6 +775,16 @@ func (m *mockSLARepo) UpdateElapsedOnLeave(_ context.Context, workItemID uuid.UU
 	e.LastEnteredAt = nil
 	return nil
 }
+func (m *mockSLARepo) UpdateElapsedOnLeaveWithSeconds(_ context.Context, workItemID uuid.UUID, statusName string, additionalSeconds int) error {
+	key := slaElapsedKey(workItemID, statusName)
+	e, exists := m.elapsed[key]
+	if !exists || e.LastEnteredAt == nil {
+		return nil
+	}
+	e.ElapsedSeconds += additionalSeconds
+	e.LastEnteredAt = nil
+	return nil
+}
 func (m *mockSLARepo) GetElapsed(_ context.Context, workItemID uuid.UUID, statusName string) (*model.SLAElapsed, error) {
 	key := slaElapsedKey(workItemID, statusName)
 	e, exists := m.elapsed[key]

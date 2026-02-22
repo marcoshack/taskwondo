@@ -487,7 +487,7 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 
 		// SLA elapsed tracking: leave old status, enter new status
 		now := time.Now()
-		if err := s.sla.UpdateElapsedOnLeave(ctx, item.ID, item.Status, now); err != nil {
+		if err := s.accumulateElapsedOnLeave(ctx, project, item, now); err != nil {
 			log.Ctx(ctx).Warn().Err(err).Msg("failed to update SLA elapsed on leave")
 		}
 		if err := s.sla.UpsertElapsedOnEnter(ctx, item.ID, *input.Status, now); err != nil {
@@ -1327,6 +1327,29 @@ func (s *WorkItemService) resolveWorkflowID(ctx context.Context, projectID uuid.
 		return *fallback, nil
 	}
 	return uuid.Nil, model.ErrNotFound
+}
+
+// accumulateElapsedOnLeave computes the elapsed time for the current status
+// using business-hours-aware calculation when applicable, then persists it.
+func (s *WorkItemService) accumulateElapsedOnLeave(ctx context.Context, project *model.Project, item *model.WorkItem, now time.Time) error {
+	// Try to resolve the SLA target to check calendar mode
+	if s.slaService != nil {
+		wfID, err := s.resolveWorkflowID(ctx, project.ID, item.Type, project.DefaultWorkflowID)
+		if err == nil {
+			target, err := s.sla.GetTarget(ctx, project.ID, item.Type, wfID, item.Status)
+			if err == nil && target.CalendarMode == model.CalendarModeBusinessHours && project.BusinessHours != nil {
+				// Compute business-aware elapsed seconds
+				elapsed, err := s.sla.GetElapsed(ctx, item.ID, item.Status)
+				if err == nil && elapsed.LastEnteredAt != nil {
+					additionalSeconds := CalculateBusinessSeconds(*elapsed.LastEnteredAt, now, *project.BusinessHours)
+					return s.sla.UpdateElapsedOnLeaveWithSeconds(ctx, item.ID, item.Status, additionalSeconds)
+				}
+			}
+		}
+	}
+
+	// Fallback: wall-clock time (no SLA target, or 24x7 mode)
+	return s.sla.UpdateElapsedOnLeave(ctx, item.ID, item.Status, now)
 }
 
 // --- Validation helpers ---

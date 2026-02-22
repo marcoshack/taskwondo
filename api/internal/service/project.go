@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
@@ -242,6 +243,9 @@ func (s *ProjectService) Update(ctx context.Context, info *model.AuthInfo, proje
 	if clearBusinessHours {
 		project.BusinessHours = nil
 	} else if businessHours != nil {
+		if err := validateBusinessHours(businessHours); err != nil {
+			return nil, err
+		}
 		project.BusinessHours = businessHours
 	}
 
@@ -653,4 +657,31 @@ func isValidProjectRole(role string) bool {
 		return true
 	}
 	return false
+}
+
+func validateBusinessHours(bh *model.BusinessHoursConfig) error {
+	if bh.Timezone == "" {
+		return fmt.Errorf("timezone is required: %w", model.ErrValidation)
+	}
+	if _, err := time.LoadLocation(bh.Timezone); err != nil {
+		return fmt.Errorf("invalid timezone %q: %w", bh.Timezone, model.ErrValidation)
+	}
+	if bh.StartHour < 0 || bh.StartHour > 23 {
+		return fmt.Errorf("start_hour must be 0-23: %w", model.ErrValidation)
+	}
+	if bh.EndHour < 0 || bh.EndHour > 23 {
+		return fmt.Errorf("end_hour must be 0-23: %w", model.ErrValidation)
+	}
+	if bh.EndHour <= bh.StartHour {
+		return fmt.Errorf("end_hour must be greater than start_hour: %w", model.ErrValidation)
+	}
+	if len(bh.Days) == 0 {
+		return fmt.Errorf("at least one business day is required: %w", model.ErrValidation)
+	}
+	for _, d := range bh.Days {
+		if d < 0 || d > 6 {
+			return fmt.Errorf("invalid day %d, must be 0-6: %w", d, model.ErrValidation)
+		}
+	}
+	return nil
 }

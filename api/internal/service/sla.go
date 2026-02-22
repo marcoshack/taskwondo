@@ -22,6 +22,7 @@ type SLARepository interface {
 	InitElapsedOnCreate(ctx context.Context, workItemID uuid.UUID, statusName string, enteredAt time.Time) error
 	UpsertElapsedOnEnter(ctx context.Context, workItemID uuid.UUID, statusName string, now time.Time) error
 	UpdateElapsedOnLeave(ctx context.Context, workItemID uuid.UUID, statusName string, now time.Time) error
+	UpdateElapsedOnLeaveWithSeconds(ctx context.Context, workItemID uuid.UUID, statusName string, additionalSeconds int) error
 	GetElapsed(ctx context.Context, workItemID uuid.UUID, statusName string) (*model.SLAElapsed, error)
 	ListElapsedByWorkItemIDs(ctx context.Context, ids []uuid.UUID) ([]model.SLAElapsed, error)
 }
@@ -106,12 +107,16 @@ func (s *SLAService) BulkUpsertTargets(ctx context.Context, info *model.AuthInfo
 	}
 
 	// Validate each target
+	hasBusinessHours := false
 	for _, t := range input.Targets {
 		if t.TargetSeconds <= 0 {
 			return nil, fmt.Errorf("target_seconds must be positive: %w", model.ErrValidation)
 		}
 		if t.CalendarMode != model.CalendarMode24x7 && t.CalendarMode != model.CalendarModeBusinessHours {
 			return nil, fmt.Errorf("invalid calendar_mode %q: %w", t.CalendarMode, model.ErrValidation)
+		}
+		if t.CalendarMode == model.CalendarModeBusinessHours {
+			hasBusinessHours = true
 		}
 		category, exists := statusCategories[t.StatusName]
 		if !exists {
@@ -120,6 +125,11 @@ func (s *SLAService) BulkUpsertTargets(ctx context.Context, info *model.AuthInfo
 		if category == model.CategoryDone || category == model.CategoryCancelled {
 			return nil, fmt.Errorf("cannot set SLA on terminal status %q (%s): %w", t.StatusName, category, model.ErrValidation)
 		}
+	}
+
+	// Business hours mode requires project-level business hours configuration
+	if hasBusinessHours && project.BusinessHours == nil {
+		return nil, fmt.Errorf("business_hours calendar mode requires project business hours to be configured: %w", model.ErrValidation)
 	}
 
 	// Build target models
@@ -201,12 +211,15 @@ func (s *SLAService) ComputeSLAInfo(ctx context.Context, item *model.WorkItem, w
 		status = model.SLAStatusWarning
 	}
 
+	paused := target.CalendarMode == model.CalendarModeBusinessHours && businessHours != nil && isOutsideBusinessHours(time.Now(), *businessHours)
+
 	return &model.SLAInfo{
 		TargetSeconds:    target.TargetSeconds,
 		ElapsedSeconds:   totalElapsed,
 		RemainingSeconds: remaining,
 		Percentage:       percentage,
 		Status:           status,
+		Paused:           paused,
 	}
 }
 
@@ -299,12 +312,15 @@ func (s *SLAService) ComputeSLAInfoBatch(ctx context.Context, items []model.Work
 			status = model.SLAStatusWarning
 		}
 
+		paused := matchedTarget.CalendarMode == model.CalendarModeBusinessHours && businessHours != nil && isOutsideBusinessHours(now, *businessHours)
+
 		result[item.ID] = &model.SLAInfo{
 			TargetSeconds:    matchedTarget.TargetSeconds,
 			ElapsedSeconds:   totalElapsed,
 			RemainingSeconds: remaining,
 			Percentage:       percentage,
 			Status:           status,
+			Paused:           paused,
 		}
 	}
 
@@ -322,6 +338,30 @@ func (s *SLAService) ComputeSLAForItems(ctx context.Context, projectKey string, 
 		return nil
 	}
 	return s.ComputeSLAInfoBatch(ctx, items, project.ID, project.BusinessHours)
+}
+
+// isOutsideBusinessHours returns true if the given time falls outside the configured business hours.
+func isOutsideBusinessHours(now time.Time, config model.BusinessHoursConfig) bool {
+	loc, err := time.LoadLocation(config.Timezone)
+	if err != nil {
+		loc = time.UTC
+	}
+	t := now.In(loc)
+
+	// Check if today is a business day
+	isBusinessDay := false
+	for _, d := range config.Days {
+		if time.Weekday(d) == t.Weekday() {
+			isBusinessDay = true
+			break
+		}
+	}
+	if !isBusinessDay {
+		return true
+	}
+
+	hour := t.Hour()
+	return hour < config.StartHour || hour >= config.EndHour
 }
 
 // CalculateBusinessSeconds returns the number of business seconds between two times.

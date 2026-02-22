@@ -13,6 +13,7 @@ import { useMembers, useProject, useUpdateProject, useTypeWorkflows, useUpdateTy
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { TimezoneSelect } from '@/components/ui/TimezoneSelect'
 import { Modal } from '@/components/ui/Modal'
 import { Spinner } from '@/components/ui/Spinner'
 import { Badge } from '@/components/ui/Badge'
@@ -388,10 +389,9 @@ export function ProjectWorkflowsPage() {
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         {t('businessHours.timezone')}
                       </label>
-                      <Input
+                      <TimezoneSelect
                         value={currentTz}
-                        onChange={(e) => setBhTimezone(e.target.value)}
-                        placeholder="America/New_York"
+                        onChange={(tz) => setBhTimezone(tz)}
                       />
                     </div>
                   </div>
@@ -477,6 +477,7 @@ export function ProjectWorkflowsPage() {
             projectKey={projectKey!}
             workItemType={slaModalType}
             workflow={wf}
+            hasBusinessHours={!!project?.business_hours}
           />
         )
       })()}

@@ -189,6 +189,22 @@ func (r *SLARepository) UpdateElapsedOnLeave(ctx context.Context, workItemID uui
 	return nil
 }
 
+// UpdateElapsedOnLeaveWithSeconds accumulates a pre-computed number of seconds
+// when an item leaves a status. Used for business-hours-aware elapsed tracking
+// where the caller computes business seconds instead of relying on wall-clock SQL.
+func (r *SLARepository) UpdateElapsedOnLeaveWithSeconds(ctx context.Context, workItemID uuid.UUID, statusName string, additionalSeconds int) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE work_item_sla_elapsed
+		 SET elapsed_seconds = elapsed_seconds + $3,
+		     last_entered_at = NULL
+		 WHERE work_item_id = $1 AND status_name = $2 AND last_entered_at IS NOT NULL`,
+		workItemID, statusName, additionalSeconds)
+	if err != nil {
+		return fmt.Errorf("updating SLA elapsed on leave with seconds: %w", err)
+	}
+	return nil
+}
+
 // GetElapsed returns the elapsed record for a work item in a specific status.
 func (r *SLARepository) GetElapsed(ctx context.Context, workItemID uuid.UUID, statusName string) (*model.SLAElapsed, error) {
 	var e model.SLAElapsed
