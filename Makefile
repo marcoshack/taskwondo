@@ -32,7 +32,7 @@ check-env: ## Verify .env exists and has all required variables
 dev: check-env dev-services ## Start all services for development (API + Web)
 	trap 'kill 0' EXIT; \
 	(set -a && . ./.env && set +a && export DISCORD_REDIRECT_URI=http://localhost:5173/auth/discord/callback && cd api && air) & \
-	(cd web && npm run dev) & \
+	(cd web && npm run dev -- --host) & \
 	wait
 
 dev-services: check-env ## Start PostgreSQL and MinIO
