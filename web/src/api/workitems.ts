@@ -50,7 +50,7 @@ export interface WorkItemFilter {
   priority?: string[]
   assignee?: string[]
   queue?: string
-  milestone?: string
+  milestone?: string[]
   label?: string
   cursor?: string
   limit?: number
@@ -146,7 +146,7 @@ export async function listWorkItems(projectKey: string, filter: WorkItemFilter =
   if (filter.priority?.length) params.set('priority', filter.priority.join(','))
   if (filter.assignee?.length) params.set('assignee', filter.assignee.join(','))
   if (filter.queue) params.set('queue', filter.queue)
-  if (filter.milestone) params.set('milestone', filter.milestone)
+  if (filter.milestone?.length) params.set('milestones', filter.milestone.join(','))
   if (filter.label) params.set('label', filter.label)
   if (filter.cursor) params.set('cursor', filter.cursor)
   if (filter.limit) params.set('limit', String(filter.limit))

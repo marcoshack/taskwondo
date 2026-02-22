@@ -32,13 +32,13 @@ const SETTINGS_KEY = 'workitem_filters'
 const closedCategories = new Set(['done', 'cancelled'])
 
 /** Filter keys synced to URL and persisted. */
-const FILTER_PARAMS = ['type', 'status', 'priority', 'assignee'] as const
+const FILTER_PARAMS = ['type', 'status', 'priority', 'assignee', 'milestone'] as const
 type FilterParam = typeof FILTER_PARAMS[number]
 
 type SavedFilter = Pick<WorkItemFilter, FilterParam>
 
 function pickSavedFilter(f: WorkItemFilter): SavedFilter {
-  return { type: f.type, status: f.status, priority: f.priority, assignee: f.assignee }
+  return { type: f.type, status: f.status, priority: f.priority, assignee: f.assignee, milestone: f.milestone }
 }
 
 /** Check if URL has any filter/search/view params. */

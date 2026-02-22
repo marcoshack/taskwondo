@@ -266,17 +266,31 @@ func (h *WorkItemHandler) List(w http.ResponseWriter, r *http.Request) {
 		filter.QueueID = &id
 	}
 
-	// Parse milestone
-	if v := q.Get("milestone"); v != "" {
-		if v == "none" {
-			filter.MilestoneNone = true
-		} else {
-			id, err := uuid.Parse(v)
+	// Parse milestones (multi-value) and milestone (deprecated single-value)
+	milestoneOld := q.Get("milestone")
+	milestonesNew := q.Get("milestones")
+	if milestoneOld != "" && milestonesNew != "" {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "cannot use both 'milestone' and 'milestones' parameters")
+		return
+	}
+	milestoneRaw := milestonesNew
+	if milestoneOld != "" {
+		log.Ctx(r.Context()).Warn().Msg("deprecated: use 'milestones' query param instead of 'milestone'")
+		milestoneRaw = milestoneOld
+	}
+	if milestoneRaw != "" {
+		for _, part := range strings.Split(milestoneRaw, ",") {
+			part = strings.TrimSpace(part)
+			if part == "none" {
+				filter.MilestoneNone = true
+				continue
+			}
+			id, err := uuid.Parse(part)
 			if err != nil {
 				writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid milestone parameter")
 				return
 			}
-			filter.MilestoneID = &id
+			filter.MilestoneIDs = append(filter.MilestoneIDs, id)
 		}
 	}
 

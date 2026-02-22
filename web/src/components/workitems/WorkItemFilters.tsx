@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/Input'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { Modal } from '@/components/ui/Modal'
 import { MultiSelect, type MultiSelectOption } from '@/components/ui/MultiSelect'
-import { Select } from '@/components/ui/Select'
 import type { WorkItemFilter } from '@/api/workitems'
 import type { WorkflowStatus } from '@/api/workflows'
 import type { Milestone } from '@/api/milestones'
@@ -67,9 +66,19 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
 
   useKeyboardShortcut({ key: '/' }, () => searchRef.current?.focus())
 
-  function setArray(key: 'type' | 'status' | 'priority' | 'assignee', values: string[]) {
+  function setArray(key: 'type' | 'status' | 'priority' | 'assignee' | 'milestone', values: string[]) {
     onFilterChange({ ...filter, [key]: values.length > 0 ? values : undefined, cursor: undefined })
   }
+
+  const milestoneOptions: MultiSelectOption[] = [
+    { value: 'none', label: t('workitems.filters.noMilestone') },
+    ...milestones.filter((m) => m.status === 'open').map((m) => ({
+      value: m.id, label: m.name, group: t('workitems.filters.statusGroupOpen'),
+    })),
+    ...milestones.filter((m) => m.status === 'closed').map((m) => ({
+      value: m.id, label: m.name, group: t('milestones.statusClosed'),
+    })),
+  ]
 
   const statusOptions = buildStatusOptions(statuses)
 
@@ -78,7 +87,7 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
     (filter.priority?.length ? 1 : 0) +
     (filter.status?.length ? 1 : 0) +
     (filter.assignee?.length ? 1 : 0) +
-    (filter.milestone ? 1 : 0)
+    (filter.milestone?.length ? 1 : 0)
 
   const sortOptions: { key: string; label: string }[] = [
     { key: 'created_at', label: t('workitems.sort.created') },
@@ -130,24 +139,7 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
         </div>
         {milestones.length > 0 && (
           <div className="w-40">
-            <Select
-              value={filter.milestone ?? ''}
-              onChange={(e) => onFilterChange({ ...filter, milestone: e.target.value || undefined, cursor: undefined })}
-              className={filter.milestone ? '' : 'text-gray-500 dark:text-gray-400'}
-            >
-              <option value="">{t('workitems.filters.allMilestones')}</option>
-              <option value="none" className="text-gray-900 dark:text-gray-100">{t('workitems.filters.noMilestone')}</option>
-              {milestones.filter((m) => m.status === 'open').map((m) => (
-                <option key={m.id} value={m.id} className="text-gray-900 dark:text-gray-100">{m.name}</option>
-              ))}
-              {milestones.some((m) => m.status === 'closed') && (
-                <optgroup label={t('milestones.statusClosed')}>
-                  {milestones.filter((m) => m.status === 'closed').map((m) => (
-                    <option key={m.id} value={m.id} className="text-gray-900 dark:text-gray-100">{m.name}</option>
-                  ))}
-                </optgroup>
-              )}
-            </Select>
+            <MultiSelect options={milestoneOptions} selected={filter.milestone ?? []} onChange={(v) => setArray('milestone', v)} placeholder={t('workitems.filters.allMilestones')} />
           </div>
         )}
       </div>
@@ -304,25 +296,8 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
           </div>
           {milestones.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('workitems.form.milestone')}</label>
-              <Select
-                value={filter.milestone ?? ''}
-                onChange={(e) => onFilterChange({ ...filter, milestone: e.target.value || undefined, cursor: undefined })}
-                className={filter.milestone ? '' : 'text-gray-500 dark:text-gray-400'}
-              >
-                <option value="">{t('workitems.filters.allMilestones')}</option>
-                <option value="none" className="text-gray-900 dark:text-gray-100">{t('workitems.filters.noMilestone')}</option>
-                {milestones.filter((m) => m.status === 'open').map((m) => (
-                  <option key={m.id} value={m.id} className="text-gray-900 dark:text-gray-100">{m.name}</option>
-                ))}
-                {milestones.some((m) => m.status === 'closed') && (
-                  <optgroup label={t('milestones.statusClosed')}>
-                    {milestones.filter((m) => m.status === 'closed').map((m) => (
-                      <option key={m.id} value={m.id} className="text-gray-900 dark:text-gray-100">{m.name}</option>
-                    ))}
-                  </optgroup>
-                )}
-              </Select>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('workitems.filters.allMilestones')}</label>
+              <MultiSelect options={milestoneOptions} selected={filter.milestone ?? []} onChange={(v) => setArray('milestone', v)} placeholder={t('workitems.filters.allMilestones')} />
             </div>
           )}
         </div>
