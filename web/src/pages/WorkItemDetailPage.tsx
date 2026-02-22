@@ -481,6 +481,7 @@ export function WorkItemDetailPage() {
           statuses={statuses}
           allowedTransitions={allowed}
           members={members ?? []}
+          milestones={milestones}
           allowedComplexityValues={project?.allowed_complexity_values}
           typeWorkflows={typeWorkflows}
           allWorkflows={allWorkflows}
