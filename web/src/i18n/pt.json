@@ -37,6 +37,7 @@
   "brand.name": "Taskwondo",
 
   "nav.preferences": "Preferências",
+  "nav.help": "Ajuda",
   "nav.signOut": "Sair",
 
   "login.title": "Entrar no {{brandName}}",
@@ -526,5 +527,21 @@
   "businessHours.sunday": "Dom",
   "businessHours.saveSuccess": "Horário comercial salvo.",
   "businessHours.clear": "Limpar horário comercial",
-  "businessHours.notConfigured": "Não configurado. Metas de SLA no modo business_hours usarão 24/7 como padrão."
+  "businessHours.notConfigured": "Não configurado. Metas de SLA no modo business_hours usarão 24/7 como padrão.",
+
+  "welcome.title": "Bem-vindo",
+  "welcome.next": "Próximo",
+  "welcome.previous": "Anterior",
+  "welcome.getStarted": "Começar",
+  "welcome.dontShowAgain": "Não mostrar isso novamente",
+  "welcome.projects.title": "Projetos",
+  "welcome.projects.description": "Projetos são os contêineres de nível superior para o seu trabalho. Cada projeto tem seu próprio conjunto de itens de trabalho, marcos, filas e fluxos de trabalho. Crie projetos separados para diferentes equipes, produtos ou iniciativas.",
+  "welcome.workItems.title": "Itens de Trabalho",
+  "welcome.workItems.description": "Itens de trabalho são o núcleo do seu fluxo — tarefas, tickets, bugs e muito mais. Acompanhe status, prioridade, responsáveis, datas de vencimento e adicione comentários, relações e anexos para manter tudo em contexto.",
+  "welcome.queues.title": "Filas",
+  "welcome.queues.description": "Filas ajudam a organizar o trabalho recebido por categoria — solicitações de suporte, alertas, feedback ou tarefas gerais. Atribua itens de trabalho a filas para triagem e direcionamento à equipe correta.",
+  "welcome.milestones.title": "Marcos",
+  "welcome.milestones.description": "Marcos permitem agrupar itens de trabalho em torno de um objetivo ou prazo compartilhado. Acompanhe o progresso com contagens de conclusão e datas de vencimento para manter sua equipe no ritmo de lançamentos, sprints ou campanhas.",
+  "welcome.workflows.title": "Fluxos de Trabalho",
+  "welcome.workflows.description": "Fluxos de trabalho definem o ciclo de vida dos seus itens de trabalho — quais status estão disponíveis e como os itens transitam entre eles. Use os fluxos integrados ou crie fluxos personalizados para se adequar ao processo da sua equipe. Você também pode configurar metas de SLA por tipo de item de trabalho para acompanhar tempos de resposta e resolução."
 }

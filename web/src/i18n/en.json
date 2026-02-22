@@ -38,6 +38,7 @@
   "brand.name": "Taskwondo",
 
   "nav.preferences": "Preferences",
+  "nav.help": "Help",
   "nav.signOut": "Sign out",
 
   "login.title": "Sign in to {{brandName}}",
@@ -598,5 +599,21 @@
   "businessHours.sunday": "Sun",
   "businessHours.saveSuccess": "Business hours saved.",
   "businessHours.clear": "Clear business hours",
-  "businessHours.notConfigured": "Not configured. SLA targets using business_hours mode will fall back to 24/7."
+  "businessHours.notConfigured": "Not configured. SLA targets using business_hours mode will fall back to 24/7.",
+
+  "welcome.title": "Welcome",
+  "welcome.next": "Next",
+  "welcome.previous": "Previous",
+  "welcome.getStarted": "Get Started",
+  "welcome.dontShowAgain": "Don't show this again",
+  "welcome.projects.title": "Projects",
+  "welcome.projects.description": "Projects are the top-level containers for your work. Each project has its own set of work items, milestones, queues, and workflows. Create separate projects for different teams, products, or initiatives.",
+  "welcome.workItems.title": "Work Items",
+  "welcome.workItems.description": "Work items are the core of your workflow — tasks, tickets, bugs, and more. Track status, priority, assignees, due dates, and add comments, relations, and file attachments to keep everything in context.",
+  "welcome.queues.title": "Queues",
+  "welcome.queues.description": "Queues help you organize incoming work by category — support requests, alerts, feedback, or general tasks. Assign work items to queues to triage and route them to the right team.",
+  "welcome.milestones.title": "Milestones",
+  "welcome.milestones.description": "Milestones let you group work items toward a shared goal or deadline. Track progress with completion counts and due dates to keep your team on schedule for releases, sprints, or campaigns.",
+  "welcome.workflows.title": "Workflows",
+  "welcome.workflows.description": "Workflows define the lifecycle of your work items — which statuses are available and how items transition between them. Use the built-in workflows or create custom ones to match your team's process. You can also configure SLA targets per work item type to track response and resolution times."
 }

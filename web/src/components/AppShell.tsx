@@ -1,7 +1,7 @@
 import { Outlet, useNavigate, useMatch } from 'react-router-dom'
 
 import { useTranslation } from 'react-i18next'
-import { Settings, Menu } from 'lucide-react'
+import { Settings, Menu, HelpCircle } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSidebar } from '@/contexts/SidebarContext'
 import { useNavigationGuard } from '@/contexts/NavigationGuardContext'
@@ -14,6 +14,8 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useKeyboardShortcutContext } from '@/contexts/KeyboardShortcutContext'
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
 import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal'
+import { WelcomeModal } from '@/components/WelcomeModal'
+import { usePreference, useSetPreference } from '@/hooks/usePreferences'
 import { useBrand } from '@/contexts/BrandContext'
 import { PoweredByFooter } from '@/components/PoweredByFooter'
 
@@ -27,7 +29,22 @@ export function AppShell() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [switcherOpen, setSwitcherOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const [welcomeOpen, setWelcomeOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+
+  const { data: welcomeDismissed, isSuccess: welcomeLoaded, isError: welcomeNotFound } = usePreference<boolean>('welcome_dismissed')
+  const { mutate: savePref } = useSetPreference()
+
+  // Show welcome modal on first load if not dismissed
+  const [welcomeAutoShown, setWelcomeAutoShown] = useState(false)
+  useEffect(() => {
+    if (!welcomeAutoShown && (welcomeLoaded || welcomeNotFound)) {
+      setWelcomeAutoShown(true)
+      if (welcomeDismissed !== true) {
+        setWelcomeOpen(true)
+      }
+    }
+  }, [welcomeLoaded, welcomeNotFound, welcomeAutoShown, welcomeDismissed])
 
   const projectMatch = useMatch('/projects/:projectKey/*')
   const adminMatch = useMatch('/admin/*')
@@ -106,6 +123,13 @@ export function AppShell() {
               </button>
             )}
             <div className="relative flex items-center gap-2" ref={menuRef}>
+              <button
+                onClick={() => setWelcomeOpen(true)}
+                className="p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+                aria-label={t('nav.help')}
+              >
+                <HelpCircle className="h-5 w-5" />
+              </button>
               {(activeProjectKey || adminMatch) && (
                 <button
                   onClick={toggleMobileOpen}
@@ -141,6 +165,12 @@ export function AppShell() {
                       {t('nav.systemSettings')}
                     </button>
                   )}
+                  <button
+                    onClick={() => { setMenuOpen(false); setWelcomeOpen(true) }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  >
+                    {t('nav.help')}
+                  </button>
                   <div className="border-t border-gray-100 dark:border-gray-700" />
                   <button
                     onClick={handleLogout}
@@ -168,6 +198,12 @@ export function AppShell() {
         }}
       />
       <KeyboardShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+      <WelcomeModal
+        open={welcomeOpen}
+        onClose={() => setWelcomeOpen(false)}
+        onDismiss={() => savePref({ key: 'welcome_dismissed', value: true })}
+        alreadyDismissed={welcomeDismissed === true}
+      />
     </div>
   )
 }

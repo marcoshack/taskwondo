@@ -37,6 +37,7 @@
   "brand.name": "Taskwondo",
 
   "nav.preferences": "Préférences",
+  "nav.help": "Aide",
   "nav.signOut": "Se déconnecter",
 
   "login.title": "Se connecter à {{brandName}}",
@@ -526,5 +527,21 @@
   "businessHours.sunday": "Dim",
   "businessHours.saveSuccess": "Heures ouvrées enregistrées.",
   "businessHours.clear": "Effacer les heures ouvrées",
-  "businessHours.notConfigured": "Non configuré. Les objectifs SLA en mode business_hours utiliseront le mode 24/7 par défaut."
+  "businessHours.notConfigured": "Non configuré. Les objectifs SLA en mode business_hours utiliseront le mode 24/7 par défaut.",
+
+  "welcome.title": "Bienvenue",
+  "welcome.next": "Suivant",
+  "welcome.previous": "Précédent",
+  "welcome.getStarted": "Commencer",
+  "welcome.dontShowAgain": "Ne plus afficher",
+  "welcome.projects.title": "Projets",
+  "welcome.projects.description": "Les projets sont les conteneurs principaux de votre travail. Chaque projet possède son propre ensemble d'éléments de travail, jalons, files d'attente et flux de travail. Créez des projets séparés pour différentes équipes, produits ou initiatives.",
+  "welcome.workItems.title": "Éléments de travail",
+  "welcome.workItems.description": "Les éléments de travail sont au cœur de votre flux — tâches, tickets, bugs et plus encore. Suivez le statut, la priorité, les assignés, les dates d'échéance et ajoutez des commentaires, des relations et des pièces jointes pour tout garder en contexte.",
+  "welcome.queues.title": "Files d'attente",
+  "welcome.queues.description": "Les files d'attente vous aident à organiser le travail entrant par catégorie — demandes de support, alertes, retours ou tâches générales. Assignez des éléments de travail aux files pour les trier et les diriger vers la bonne équipe.",
+  "welcome.milestones.title": "Jalons",
+  "welcome.milestones.description": "Les jalons vous permettent de regrouper des éléments de travail vers un objectif ou une échéance commune. Suivez la progression avec des compteurs d'achèvement et des dates d'échéance pour maintenir votre équipe dans les temps pour les livraisons, sprints ou campagnes.",
+  "welcome.workflows.title": "Flux de travail",
+  "welcome.workflows.description": "Les flux de travail définissent le cycle de vie de vos éléments de travail — quels statuts sont disponibles et comment les éléments transitent entre eux. Utilisez les flux intégrés ou créez des flux personnalisés adaptés au processus de votre équipe. Vous pouvez également configurer des objectifs SLA par type d'élément de travail pour suivre les temps de réponse et de résolution."
 }

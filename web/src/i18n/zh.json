@@ -37,6 +37,7 @@
   "brand.name": "Taskwondo",
 
   "nav.preferences": "偏好设置",
+  "nav.help": "帮助",
   "nav.signOut": "退出登录",
 
   "login.title": "登录 {{brandName}}",
@@ -525,5 +526,21 @@
   "businessHours.sunday": "周日",
   "businessHours.saveSuccess": "工作时间已保存。",
   "businessHours.clear": "清除工作时间",
-  "businessHours.notConfigured": "未配置。business_hours模式的SLA目标将回退到24/7。"
+  "businessHours.notConfigured": "未配置。business_hours模式的SLA目标将回退到24/7。",
+
+  "welcome.title": "欢迎",
+  "welcome.next": "下一步",
+  "welcome.previous": "上一步",
+  "welcome.getStarted": "开始使用",
+  "welcome.dontShowAgain": "不再显示",
+  "welcome.projects.title": "项目",
+  "welcome.projects.description": "项目是工作的顶级容器。每个项目都有自己的工作项、里程碑、队列和工作流。为不同的团队、产品或计划创建单独的项目。",
+  "welcome.workItems.title": "工作项",
+  "welcome.workItems.description": "工作项是工作流的核心 — 任务、工单、缺陷等。跟踪状态、优先级、负责人、截止日期，并添加评论、关联和附件，将所有信息集中管理。",
+  "welcome.queues.title": "队列",
+  "welcome.queues.description": "队列帮助您按类别组织传入的工作 — 支持请求、警报、反馈或常规任务。将工作项分配到队列中进行分类和路由到合适的团队。",
+  "welcome.milestones.title": "里程碑",
+  "welcome.milestones.description": "里程碑让您将工作项集中到共同的目标或截止日期。通过完成计数和截止日期跟踪进度，确保团队按时完成发布、冲刺或活动。",
+  "welcome.workflows.title": "工作流",
+  "welcome.workflows.description": "工作流定义了工作项的生命周期 — 可用的状态以及项目之间的转换方式。使用内置工作流或创建自定义工作流以匹配团队的流程。您还可以按工作项类型配置SLA目标，以跟踪响应和解决时间。"
 }

@@ -37,6 +37,7 @@
   "brand.name": "Taskwondo",
 
   "nav.preferences": "Preferencias",
+  "nav.help": "Ayuda",
   "nav.signOut": "Cerrar sesión",
 
   "login.title": "Iniciar sesión en {{brandName}}",
@@ -525,5 +526,21 @@
   "businessHours.sunday": "Dom",
   "businessHours.saveSuccess": "Horario laboral guardado.",
   "businessHours.clear": "Borrar horario laboral",
-  "businessHours.notConfigured": "No configurado. Los objetivos de SLA en modo business_hours usarán 24/7 como respaldo."
+  "businessHours.notConfigured": "No configurado. Los objetivos de SLA en modo business_hours usarán 24/7 como respaldo.",
+
+  "welcome.title": "Bienvenido",
+  "welcome.next": "Siguiente",
+  "welcome.previous": "Anterior",
+  "welcome.getStarted": "Comenzar",
+  "welcome.dontShowAgain": "No mostrar esto de nuevo",
+  "welcome.projects.title": "Proyectos",
+  "welcome.projects.description": "Los proyectos son los contenedores principales para tu trabajo. Cada proyecto tiene su propio conjunto de elementos de trabajo, hitos, colas y flujos de trabajo. Crea proyectos separados para diferentes equipos, productos o iniciativas.",
+  "welcome.workItems.title": "Elementos de Trabajo",
+  "welcome.workItems.description": "Los elementos de trabajo son el núcleo de tu flujo — tareas, tickets, errores y más. Rastrea estado, prioridad, asignados, fechas límite y agrega comentarios, relaciones y archivos adjuntos para mantener todo en contexto.",
+  "welcome.queues.title": "Colas",
+  "welcome.queues.description": "Las colas te ayudan a organizar el trabajo entrante por categoría — solicitudes de soporte, alertas, comentarios o tareas generales. Asigna elementos de trabajo a colas para clasificarlos y dirigirlos al equipo adecuado.",
+  "welcome.milestones.title": "Hitos",
+  "welcome.milestones.description": "Los hitos te permiten agrupar elementos de trabajo hacia un objetivo o fecha límite compartida. Rastrea el progreso con conteos de finalización y fechas de vencimiento para mantener a tu equipo al día con lanzamientos, sprints o campañas.",
+  "welcome.workflows.title": "Flujos de Trabajo",
+  "welcome.workflows.description": "Los flujos de trabajo definen el ciclo de vida de tus elementos de trabajo — qué estados están disponibles y cómo los elementos transicionan entre ellos. Usa los flujos integrados o crea flujos personalizados para adaptarte al proceso de tu equipo. También puedes configurar objetivos de SLA por tipo de elemento de trabajo para rastrear tiempos de respuesta y resolución."
 }

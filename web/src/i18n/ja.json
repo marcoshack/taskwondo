@@ -37,6 +37,7 @@
   "brand.name": "Taskwondo",
 
   "nav.preferences": "設定",
+  "nav.help": "ヘルプ",
   "nav.signOut": "ログアウト",
 
   "login.title": "{{brandName}}にサインイン",
@@ -525,5 +526,21 @@
   "businessHours.sunday": "日",
   "businessHours.saveSuccess": "営業時間を保存しました。",
   "businessHours.clear": "営業時間をクリア",
-  "businessHours.notConfigured": "未設定。business_hoursモードのSLA目標は24/7にフォールバックします。"
+  "businessHours.notConfigured": "未設定。business_hoursモードのSLA目標は24/7にフォールバックします。",
+
+  "welcome.title": "ようこそ",
+  "welcome.next": "次へ",
+  "welcome.previous": "前へ",
+  "welcome.getStarted": "はじめる",
+  "welcome.dontShowAgain": "今後表示しない",
+  "welcome.projects.title": "プロジェクト",
+  "welcome.projects.description": "プロジェクトは作業の最上位コンテナです。各プロジェクトには独自の作業アイテム、マイルストーン、キュー、ワークフローがあります。チーム、製品、イニシアチブごとに個別のプロジェクトを作成しましょう。",
+  "welcome.workItems.title": "作業アイテム",
+  "welcome.workItems.description": "作業アイテムはワークフローの中核です — タスク、チケット、バグなど。ステータス、優先度、担当者、期限を追跡し、コメント、関連、添付ファイルを追加してすべてのコンテキストを一元管理できます。",
+  "welcome.queues.title": "キュー",
+  "welcome.queues.description": "キューはカテゴリ別に受信する作業を整理するのに役立ちます — サポートリクエスト、アラート、フィードバック、一般タスクなど。作業アイテムをキューに割り当てて、適切なチームにトリアージ・ルーティングしましょう。",
+  "welcome.milestones.title": "マイルストーン",
+  "welcome.milestones.description": "マイルストーンは共通の目標や期限に向けて作業アイテムをグループ化できます。完了数と期限で進捗を追跡し、リリース、スプリント、キャンペーンのスケジュールを管理しましょう。",
+  "welcome.workflows.title": "ワークフロー",
+  "welcome.workflows.description": "ワークフローは作業アイテムのライフサイクルを定義します — 利用可能なステータスとアイテム間の遷移方法を設定します。組み込みのワークフローを使用するか、チームのプロセスに合わせたカスタムワークフローを作成しましょう。作業アイテムタイプごとにSLA目標を設定して、応答時間と解決時間を追跡することもできます。"
 }

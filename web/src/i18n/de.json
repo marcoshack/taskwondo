@@ -37,6 +37,7 @@
   "brand.name": "Taskwondo",
 
   "nav.preferences": "Einstellungen",
+  "nav.help": "Hilfe",
   "nav.signOut": "Abmelden",
 
   "login.title": "Bei {{brandName}} anmelden",
@@ -525,5 +526,21 @@
   "businessHours.sunday": "So",
   "businessHours.saveSuccess": "Geschäftszeiten gespeichert.",
   "businessHours.clear": "Geschäftszeiten löschen",
-  "businessHours.notConfigured": "Nicht konfiguriert. SLA-Ziele im Modus business_hours verwenden 24/7 als Fallback."
+  "businessHours.notConfigured": "Nicht konfiguriert. SLA-Ziele im Modus business_hours verwenden 24/7 als Fallback.",
+
+  "welcome.title": "Willkommen",
+  "welcome.next": "Weiter",
+  "welcome.previous": "Zurück",
+  "welcome.getStarted": "Los geht's",
+  "welcome.dontShowAgain": "Nicht mehr anzeigen",
+  "welcome.projects.title": "Projekte",
+  "welcome.projects.description": "Projekte sind die übergeordneten Container für Ihre Arbeit. Jedes Projekt hat eigene Arbeitselemente, Meilensteine, Warteschlangen und Workflows. Erstellen Sie separate Projekte für verschiedene Teams, Produkte oder Initiativen.",
+  "welcome.workItems.title": "Arbeitselemente",
+  "welcome.workItems.description": "Arbeitselemente sind der Kern Ihres Workflows — Aufgaben, Tickets, Fehler und mehr. Verfolgen Sie Status, Priorität, Zugewiesene, Fälligkeitsdaten und fügen Sie Kommentare, Beziehungen und Dateianhänge hinzu, um alles im Kontext zu halten.",
+  "welcome.queues.title": "Warteschlangen",
+  "welcome.queues.description": "Warteschlangen helfen Ihnen, eingehende Arbeit nach Kategorie zu organisieren — Supportanfragen, Warnungen, Feedback oder allgemeine Aufgaben. Weisen Sie Arbeitselemente Warteschlangen zu, um sie zu sichten und an das richtige Team weiterzuleiten.",
+  "welcome.milestones.title": "Meilensteine",
+  "welcome.milestones.description": "Meilensteine ermöglichen es Ihnen, Arbeitselemente auf ein gemeinsames Ziel oder eine Frist hin zu gruppieren. Verfolgen Sie den Fortschritt mit Abschlusszählern und Fälligkeitsdaten, um Ihr Team bei Releases, Sprints oder Kampagnen auf Kurs zu halten.",
+  "welcome.workflows.title": "Workflows",
+  "welcome.workflows.description": "Workflows definieren den Lebenszyklus Ihrer Arbeitselemente — welche Status verfügbar sind und wie Elemente zwischen ihnen wechseln. Verwenden Sie die integrierten Workflows oder erstellen Sie eigene, die zum Prozess Ihres Teams passen. Sie können auch SLA-Ziele pro Arbeitselementtyp konfigurieren, um Antwort- und Lösungszeiten zu verfolgen."
 }
