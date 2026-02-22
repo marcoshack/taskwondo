@@ -1516,7 +1516,7 @@ func TestUpdateComment_NonAuthorMemberDenied(t *testing.T) {
 	}
 }
 
-func TestUpdateComment_AdminCanEdit(t *testing.T) {
+func TestUpdateComment_AdminCannotEdit(t *testing.T) {
 	s := newTestWorkItemSetup()
 	author := userAuthInfo()
 	admin := userAuthInfo()
@@ -1537,12 +1537,9 @@ func TestUpdateComment_AdminCanEdit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	updated, err := s.svc.UpdateComment(context.Background(), admin, "TEST", item.ItemNumber, comment.ID, "Admin edit")
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-	if updated.Body != "Admin edit" {
-		t.Fatalf("expected body 'Admin edit', got %s", updated.Body)
+	_, err = s.svc.UpdateComment(context.Background(), admin, "TEST", item.ItemNumber, comment.ID, "Admin edit")
+	if err != model.ErrForbidden {
+		t.Fatalf("expected ErrForbidden, got %v", err)
 	}
 }
 

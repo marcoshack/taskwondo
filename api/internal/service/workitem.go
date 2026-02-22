@@ -749,7 +749,7 @@ func (s *WorkItemService) ListComments(ctx context.Context, info *model.AuthInfo
 	return s.comments.ListByWorkItem(ctx, item.ID, visibility)
 }
 
-// UpdateComment updates a comment's body. Only the author or project owner/admin can edit.
+// UpdateComment updates a comment's body. Only the author can edit their own comments.
 func (s *WorkItemService) UpdateComment(ctx context.Context, info *model.AuthInfo, projectKey string, itemNumber int, commentID uuid.UUID, body string) (*model.Comment, error) {
 	project, err := s.projects.GetByKey(ctx, projectKey)
 	if err != nil {
@@ -770,13 +770,9 @@ func (s *WorkItemService) UpdateComment(ctx context.Context, info *model.AuthInf
 		return nil, err
 	}
 
-	// Check author or admin/owner role
-	isAuthor := comment.AuthorID != nil && *comment.AuthorID == info.UserID
-	if !isAuthor {
-		if err := s.requireRole(ctx, info, project.ID,
-			model.ProjectRoleOwner, model.ProjectRoleAdmin); err != nil {
-			return nil, model.ErrForbidden
-		}
+	// Only the author can edit their own comments
+	if comment.AuthorID == nil || *comment.AuthorID != info.UserID {
+		return nil, model.ErrForbidden
 	}
 
 	if strings.TrimSpace(body) == "" {
