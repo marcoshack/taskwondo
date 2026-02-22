@@ -260,6 +260,11 @@
   "workitems.visibilities.portal": "بوابة",
   "workitems.visibilities.public": "عام",
 
+  "workitems.settings.title": "الإعدادات",
+  "workitems.settings.showDates": "إظهار التواريخ",
+  "workitems.mobile.created": "تم الإنشاء",
+  "workitems.mobile.updated": "تم التحديث",
+
   "tabs.comments": "التعليقات",
   "tabs.activity": "النشاط",
   "tabs.relations": "العلاقات",

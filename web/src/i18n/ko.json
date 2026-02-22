@@ -260,6 +260,11 @@
   "workitems.visibilities.portal": "포털",
   "workitems.visibilities.public": "공개",
 
+  "workitems.settings.title": "설정",
+  "workitems.settings.showDates": "날짜 표시",
+  "workitems.mobile.created": "생성됨",
+  "workitems.mobile.updated": "업데이트됨",
+
   "tabs.comments": "댓글",
   "tabs.activity": "활동",
   "tabs.relations": "관계",

@@ -260,6 +260,11 @@
   "workitems.visibilities.portal": "ポータル",
   "workitems.visibilities.public": "公開",
 
+  "workitems.settings.title": "設定",
+  "workitems.settings.showDates": "日付を表示",
+  "workitems.mobile.created": "作成日",
+  "workitems.mobile.updated": "更新日",
+
   "tabs.comments": "コメント",
   "tabs.activity": "アクティビティ",
   "tabs.relations": "関連",

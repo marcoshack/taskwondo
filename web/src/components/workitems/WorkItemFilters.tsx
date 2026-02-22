@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
 import { useTranslation } from 'react-i18next'
-import { SlidersHorizontal, ArrowUpDown } from 'lucide-react'
+import { SlidersHorizontal, ArrowUpDown, Settings } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { Modal } from '@/components/ui/Modal'
@@ -22,15 +22,18 @@ interface WorkItemFiltersProps {
   order?: 'asc' | 'desc'
   onSort?: (sortKey: string) => void
   onOrderChange?: (order: 'asc' | 'desc') => void
+  showDates?: boolean
+  onShowDatesChange?: (value: boolean) => void
 }
 
 const closedCategories = new Set(['done', 'cancelled'])
 
-export function WorkItemFilters({ filter, onFilterChange, statuses, milestones = [], search, onSearchChange, sort, order, onSort, onOrderChange }: WorkItemFiltersProps) {
+export function WorkItemFilters({ filter, onFilterChange, statuses, milestones = [], search, onSearchChange, sort, order, onSort, onOrderChange, showDates, onShowDatesChange }: WorkItemFiltersProps) {
   const { t } = useTranslation()
   const searchRef = useRef<HTMLInputElement>(null)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [sortOpen, setSortOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   const typeOptions: MultiSelectOption[] = [
     { value: 'task', label: t('workitems.types.task') },
@@ -172,6 +175,15 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
             </span>
           )}
         </button>
+        {onShowDatesChange && (
+          <button
+            onClick={() => setSettingsOpen(true)}
+            className="relative shrink-0 p-2.5 rounded-md border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+            aria-label={t('workitems.settings.title')}
+          >
+            <Settings className="h-5 w-5" />
+          </button>
+        )}
       </div>
 
       {/* Mobile sort modal */}
@@ -224,6 +236,28 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
               )
             })}
           </div>
+        </Modal>
+      )}
+
+      {/* Mobile settings modal */}
+      {onShowDatesChange && (
+        <Modal open={settingsOpen} onClose={() => setSettingsOpen(false)} title={t('workitems.settings.title')}>
+          <label className="flex items-center justify-between cursor-pointer">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('workitems.settings.showDates')}</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={showDates}
+              onClick={() => onShowDatesChange(!showDates)}
+              className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors ${
+                showDates ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-600'
+              }`}
+            >
+              <span className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow ring-0 transition-transform ${
+                showDates ? 'translate-x-5' : 'translate-x-0'
+              }`} />
+            </button>
+          </label>
         </Modal>
       )}
 

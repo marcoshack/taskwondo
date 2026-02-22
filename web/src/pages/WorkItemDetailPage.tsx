@@ -27,7 +27,8 @@ import { StatusBadge } from '@/components/workitems/StatusBadge'
 import { PriorityBadge } from '@/components/workitems/PriorityBadge'
 import { CopyButton } from '@/components/ui/CopyButton'
 import { SLAIndicator } from '@/components/SLAIndicator'
-import { Settings2, User, Calendar, Lock, Unlock, Globe } from 'lucide-react'
+import { Settings2, User, Calendar, CalendarPlus, History, Lock, Unlock, Globe } from 'lucide-react'
+import { formatRelativeTime } from '@/utils/duration'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { getMarkdownComponents } from '@/components/ui/markdownComponents'
@@ -191,13 +192,22 @@ export function WorkItemDetailPage() {
         </div>
       )}
 
-      {/* Back link */}
-      <button
-        className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-        onClick={() => guardedNavigate(`/projects/${projectKey}/items`)}
-      >
-        &larr; {t('workitems.backToItems')}
-      </button>
+      {/* Back link + mobile properties button */}
+      <div className="flex items-center">
+        <button
+          className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          onClick={() => guardedNavigate(`/projects/${projectKey}/items`)}
+        >
+          &larr; {t('workitems.backToItems')}
+        </button>
+        <button
+          onClick={() => setShowProperties(true)}
+          className="sm:hidden ml-auto p-1.5 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+          aria-label={t('workitems.detail.properties')}
+        >
+          <Settings2 className="h-5 w-5" />
+        </button>
+      </div>
 
       <div className="flex gap-6">
         {/* Left column */}
@@ -249,43 +259,26 @@ export function WorkItemDetailPage() {
                 tooltip={t('common.copyAsMarkdown')}
                 className=""
               />
-              <button
-                onClick={() => setShowProperties(true)}
-                className="sm:hidden ml-auto p-1.5 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
-                aria-label={t('workitems.detail.properties')}
-              >
-                <Settings2 className="h-5 w-5" />
-              </button>
             </div>
 
             {/* Mobile metadata line */}
-            <button
-              onClick={() => setShowProperties(true)}
-              className="sm:hidden flex items-center gap-4 text-xs text-gray-400 dark:text-gray-500 mb-2 w-full text-left"
-            >
+            <div className="sm:hidden flex items-center gap-3 text-xs text-gray-400 dark:text-gray-500 mb-2 flex-wrap">
               <span className="inline-flex items-center gap-1">
                 <User className="h-3.5 w-3.5" />
                 {item.assignee_id
                   ? members?.find(m => m.user_id === item.assignee_id)?.display_name ?? t('userPicker.unassigned')
                   : t('userPicker.unassigned')}
               </span>
-              {item.due_date && (
-                <span className="inline-flex items-center gap-1">
-                  <Calendar className="h-3.5 w-3.5" />
-                  {item.due_date}
-                </span>
-              )}
-              <span className={`inline-flex items-center gap-1 ${
-                item.visibility === 'portal' ? 'text-yellow-500 dark:text-yellow-400' :
-                item.visibility === 'public' ? 'text-red-500 dark:text-red-400' :
-                ''
-              }`}>
-                {item.visibility === 'internal' && <Lock className="h-3.5 w-3.5" />}
-                {item.visibility === 'portal' && <Unlock className="h-3.5 w-3.5" />}
-                {item.visibility === 'public' && <Globe className="h-3.5 w-3.5" />}
-                {t(`workitems.visibilities.${item.visibility}`)}
+              <span className="inline-flex items-center gap-1">
+                <CalendarPlus className="h-3.5 w-3.5" />
+                {formatRelativeTime(item.created_at)}
               </span>
-            </button>
+              <span className="inline-flex items-center gap-1">
+                <History className="h-3.5 w-3.5" />
+                {formatRelativeTime(item.updated_at)}
+              </span>
+              {item.sla && <SLAIndicator sla={item.sla} />}
+            </div>
 
             {/* Title */}
             {editingTitle ? (

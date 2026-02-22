@@ -7,6 +7,7 @@ import { useProject, useMembers } from '@/hooks/useProjects'
 import { useProjectWorkflow, useAvailableStatuses } from '@/hooks/useWorkflows'
 import { useMilestones } from '@/hooks/useMilestones'
 import { useUserSetting, useSetUserSetting } from '@/hooks/useUserSettings'
+import { usePreference, useSetPreference } from '@/hooks/usePreferences'
 import { useDebounce } from '@/hooks/useDebounce'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Button } from '@/components/ui/Button'
@@ -20,6 +21,8 @@ import { WorkItemFilters } from '@/components/workitems/WorkItemFilters'
 import { WorkItemForm } from '@/components/workitems/WorkItemForm'
 import { BoardView } from '@/components/workitems/BoardView'
 import { SLAIndicator } from '@/components/SLAIndicator'
+import { formatRelativeTime } from '@/utils/duration'
+import { User, History } from 'lucide-react'
 import { listWorkItems, type WorkItem, type WorkItemFilter } from '@/api/workitems'
 
 type ViewMode = 'list' | 'board'
@@ -86,6 +89,11 @@ export function WorkItemListPage() {
   // Load saved filter from user settings
   const { data: savedFilter, isLoading: settingsLoading } = useUserSetting<SavedFilter>(projectKey ?? '', SETTINGS_KEY)
   const saveMutation = useSetUserSetting(projectKey ?? '')
+
+  // Show dates preference (global, persisted)
+  const { data: showDatesPref } = usePreference<boolean>('showDates')
+  const showDates = showDatesPref ?? true
+  const setPreferenceMutation = useSetPreference()
 
   // Compute default open statuses from ALL workflows (exclude done/cancelled)
   const defaultOpenStatuses = useMemo(() => {
@@ -393,6 +401,8 @@ export function WorkItemListPage() {
         order={order}
         onSort={handleSort}
         onOrderChange={handleOrderChange}
+        showDates={showDates}
+        onShowDatesChange={(v) => setPreferenceMutation.mutate({ key: 'showDates', value: v })}
       />
 
       {/* Bulk action toolbar */}
@@ -467,25 +477,45 @@ export function WorkItemListPage() {
             {allItems.length === 0 ? (
               <p className="text-center text-sm text-gray-500 dark:text-gray-400 py-12">{t('workitems.empty')}</p>
             ) : (
-              allItems.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => navigate(`/projects/${projectKey}/items/${item.item_number}`)}
-                  className="w-full text-left rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 shadow-sm hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors"
-                >
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono text-sm font-semibold text-gray-700 dark:text-gray-300">{item.display_id}</span>
-                    <TypeBadge type={item.type} />
-                    <StatusBadge status={item.status} statuses={allStatuses ?? statuses} />
-                    <PriorityBadge priority={item.priority} />
-                    <span className="ml-auto text-xs text-gray-400 dark:text-gray-500">{new Date(item.updated_at).toLocaleDateString()}</span>
-                  </div>
-                  <p className="mt-1.5 text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{item.title}</p>
-                  {item.description && (
-                    <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400 truncate">{item.description}</p>
-                  )}
-                </button>
-              ))
+              allItems.map((item) => {
+                const assigneeName = item.assignee_id
+                  ? members?.find(m => m.user_id === item.assignee_id)?.display_name ?? t('userPicker.unassigned')
+                  : t('userPicker.unassigned')
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => navigate(`/projects/${projectKey}/items/${item.item_number}`)}
+                    className="w-full text-left rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 shadow-sm hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors"
+                  >
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-mono text-sm font-semibold text-gray-700 dark:text-gray-300">{item.display_id}</span>
+                      <TypeBadge type={item.type} />
+                      <StatusBadge status={item.status} statuses={allStatuses ?? statuses} />
+                      <PriorityBadge priority={item.priority} />
+                      {!showDates && item.sla && (
+                        <span className="ml-auto"><SLAIndicator sla={item.sla} compact /></span>
+                      )}
+                    </div>
+                    {showDates && (
+                      <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-400 dark:text-gray-500">
+                        <span className="inline-flex items-center gap-1">
+                          <User className="h-3 w-3" />
+                          <span className="truncate max-w-[8rem]">{assigneeName}</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <History className="h-3 w-3" />
+                          {formatRelativeTime(item.updated_at)}
+                        </span>
+                        {item.sla && <SLAIndicator sla={item.sla} />}
+                      </div>
+                    )}
+                    <p className="mt-1.5 text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{item.title}</p>
+                    {item.description && (
+                      <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400 truncate">{item.description}</p>
+                    )}
+                  </button>
+                )
+              })
             )}
           </div>
 

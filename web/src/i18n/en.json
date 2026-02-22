@@ -265,6 +265,11 @@
   "workitems.visibilities.portal": "portal",
   "workitems.visibilities.public": "public",
 
+  "workitems.settings.title": "Settings",
+  "workitems.settings.showDates": "Show dates",
+  "workitems.mobile.created": "Created",
+  "workitems.mobile.updated": "Updated",
+
   "tabs.comments": "Comments",
   "tabs.activity": "Activity",
   "tabs.relations": "Relations",

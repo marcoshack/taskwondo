@@ -260,6 +260,11 @@
   "workitems.visibilities.portal": "门户",
   "workitems.visibilities.public": "公开",
 
+  "workitems.settings.title": "设置",
+  "workitems.settings.showDates": "显示日期",
+  "workitems.mobile.created": "创建于",
+  "workitems.mobile.updated": "更新于",
+
   "tabs.comments": "评论",
   "tabs.activity": "动态",
   "tabs.relations": "关联",

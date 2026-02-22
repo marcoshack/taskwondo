@@ -82,3 +82,29 @@ export function formatRemaining(seconds: number): string {
   }
   return `${formatDuration(Math.abs(seconds))} overdue`
 }
+
+/**
+ * Format a date as relative time from now.
+ * Examples: "2m ago", "3h ago", "5d ago", "2w ago", "3mo ago"
+ */
+export function formatRelativeTime(date: string | Date): string {
+  const then = typeof date === 'string' ? new Date(date) : date
+  const seconds = Math.floor((Date.now() - then.getTime()) / 1000)
+
+  if (seconds < 60) return '< 1m ago'
+
+  const months = Math.floor(seconds / (30 * UNITS.d))
+  if (months > 0) return `${months}mo ago`
+
+  const weeks = Math.floor(seconds / UNITS.w)
+  if (weeks > 0) return `${weeks}w ago`
+
+  const days = Math.floor(seconds / UNITS.d)
+  if (days > 0) return `${days}d ago`
+
+  const hours = Math.floor(seconds / UNITS.h)
+  if (hours > 0) return `${hours}h ago`
+
+  const minutes = Math.floor(seconds / UNITS.m)
+  return `${minutes}m ago`
+}
