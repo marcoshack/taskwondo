@@ -31,6 +31,7 @@ type UserRepository interface {
 	Create(ctx context.Context, user *model.User) error
 	UpdateLastLogin(ctx context.Context, id uuid.UUID) error
 	UpdateAvatarURL(ctx context.Context, id uuid.UUID, avatarURL string) error
+	UpdatePasswordHash(ctx context.Context, id uuid.UUID, hash string, forceChange bool) error
 	Search(ctx context.Context, query string) ([]model.User, error)
 }
 
@@ -54,8 +55,9 @@ type OAuthAccountRepository interface {
 // Claims are the JWT token claims.
 type Claims struct {
 	jwt.RegisteredClaims
-	Email      string `json:"email"`
-	GlobalRole string `json:"role"`
+	Email               string `json:"email"`
+	GlobalRole          string `json:"role"`
+	ForcePasswordChange bool   `json:"force_password_change,omitempty"`
 }
 
 const oauthStateExpiry = 10 * time.Minute
@@ -190,9 +192,10 @@ func (s *AuthService) ValidateJWT(tokenString string) (*model.AuthInfo, error) {
 	}
 
 	return &model.AuthInfo{
-		UserID:     userID,
-		Email:      claims.Email,
-		GlobalRole: claims.GlobalRole,
+		UserID:              userID,
+		Email:               claims.Email,
+		GlobalRole:          claims.GlobalRole,
+		ForcePasswordChange: claims.ForcePasswordChange,
 	}, nil
 }
 
@@ -572,12 +575,44 @@ func (s *AuthService) generateJWT(user *model.User) (string, error) {
 			ExpiresAt: jwt.NewNumericDate(now.Add(s.jwtExpiry)),
 			Issuer:    "taskwondo",
 		},
-		Email:      user.Email,
-		GlobalRole: user.GlobalRole,
+		Email:               user.Email,
+		GlobalRole:          user.GlobalRole,
+		ForcePasswordChange: user.ForcePasswordChange,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(s.jwtSecret)
+}
+
+// ChangePassword validates the old password and sets a new one, clearing force_password_change.
+func (s *AuthService) ChangePassword(ctx context.Context, userID uuid.UUID, oldPassword, newPassword string) error {
+	user, err := s.users.GetByID(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("looking up user: %w", err)
+	}
+
+	if user.PasswordHash == "" {
+		return model.ErrInvalidCredentials
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(oldPassword)); err != nil {
+		return model.ErrInvalidCredentials
+	}
+
+	if len(newPassword) < 8 {
+		return fmt.Errorf("%w: password must be at least 8 characters", model.ErrValidation)
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("hashing password: %w", err)
+	}
+
+	if err := s.users.UpdatePasswordHash(ctx, userID, string(hash), false); err != nil {
+		return fmt.Errorf("updating password: %w", err)
+	}
+
+	return nil
 }
 
 // HashAPIKey computes the SHA-256 hash of an API key for storage/lookup.

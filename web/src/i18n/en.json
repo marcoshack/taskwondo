@@ -32,6 +32,7 @@
   "common.description": "Description",
   "common.noResults": "No results",
   "common.you": "you",
+  "common.close": "Close",
 
   "brand.name": "Taskwondo",
 
@@ -442,6 +443,35 @@
   "admin.users.removeFromProjectTitle": "Remove from Project",
   "admin.users.removeFromProjectBody": "Are you sure you want to remove <bold>{{name}}</bold> from <bold>{{project}}</bold>?",
   "admin.users.removeFromProjectButton": "Remove",
+
+  "admin.users.createUser": "New User",
+  "admin.users.createUserTitle": "Create New User",
+  "admin.users.createUserDescription": "The user will be created with a temporary password that must be changed on first login.",
+  "admin.users.displayName": "Display Name",
+  "admin.users.emailAddress": "Email Address",
+  "admin.users.createUserButton": "Create User",
+  "admin.users.createUserError": "Failed to create user.",
+  "admin.users.emailExists": "A user with this email already exists.",
+
+  "admin.users.temporaryPasswordTitle": "Temporary Password",
+  "admin.users.temporaryPasswordDescription": "Temporary password for {{name}}:",
+  "admin.users.temporaryPasswordWarning": "This password will only be shown once. Make sure to copy it now.",
+
+  "admin.users.resetPasswordTitle": "Reset Password",
+  "admin.users.resetPasswordBody": "Generate a new temporary password for <bold>{{name}}</bold>? They will need to change it on next login.",
+  "admin.users.resetPasswordButton": "Reset Password",
+  "admin.users.resetPasswordError": "Failed to reset password.",
+
+  "changePassword.title": "Change Password",
+  "changePassword.description": "You must change your password before continuing.",
+  "changePassword.oldPassword": "Current Password",
+  "changePassword.newPassword": "New Password",
+  "changePassword.confirmPassword": "Confirm New Password",
+  "changePassword.submit": "Change Password",
+  "changePassword.submitting": "Changing...",
+  "changePassword.mismatch": "Passwords do not match.",
+  "changePassword.tooShort": "Password must be at least 8 characters.",
+  "changePassword.error": "Failed to change password.",
 
   "footer.poweredBy": "Powered by <brand>Taskwondo</brand>",
 

@@ -11,6 +11,7 @@ interface LoginResponse {
   data: {
     token: string
     user: User
+    force_password_change: boolean
   }
 }
 
@@ -84,5 +85,15 @@ interface DiscordCallbackResponse {
 
 export async function discordCallback(code: string, state: string) {
   const res = await api.post<DiscordCallbackResponse>('/auth/discord/callback', { code, state })
+  return res.data.data
+}
+
+// Password management
+
+export async function changePassword(oldPassword: string, newPassword: string) {
+  const res = await api.post<{ data: { token: string } }>('/auth/change-password', {
+    old_password: oldPassword,
+    new_password: newPassword,
+  })
   return res.data.data
 }

@@ -7,8 +7,10 @@ import { setToken, clearToken, getToken } from '@/api/client'
 interface AuthContextValue {
   user: User | null
   isLoading: boolean
+  forcePasswordChange: boolean
   login: (email: string, password: string) => Promise<void>
   loginWithToken: (token: string, user: User) => void
+  clearForcePasswordChange: (newToken: string) => void
   logout: () => void
 }
 
@@ -17,6 +19,7 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [forcePasswordChange, setForcePasswordChange] = useState(false)
 
   useEffect(() => {
     const token = getToken()
@@ -32,9 +35,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const login = useCallback(async (email: string, password: string) => {
-    const { token, user } = await authApi.login(email, password)
-    setToken(token)
-    setUser(user)
+    const result = await authApi.login(email, password)
+    setToken(result.token)
+    setUser(result.user)
+    if (result.force_password_change) {
+      setForcePasswordChange(true)
+    }
   }, [])
 
   const loginWithToken = useCallback((token: string, user: User) => {
@@ -42,13 +48,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(user)
   }, [])
 
+  const clearForcePasswordChange = useCallback((newToken: string) => {
+    setToken(newToken)
+    setForcePasswordChange(false)
+  }, [])
+
   const logout = useCallback(() => {
     clearToken()
     setUser(null)
+    setForcePasswordChange(false)
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, loginWithToken, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, forcePasswordChange, login, loginWithToken, clearForcePasswordChange, logout }}>
       {children}
     </AuthContext.Provider>
   )

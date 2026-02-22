@@ -14,11 +14,15 @@ import (
 // --- Mock repositories for admin service ---
 
 type mockAdminUserRepo struct {
-	byID map[uuid.UUID]*model.User
+	byID    map[uuid.UUID]*model.User
+	byEmail map[string]*model.User
 }
 
 func newMockAdminUserRepo() *mockAdminUserRepo {
-	return &mockAdminUserRepo{byID: make(map[uuid.UUID]*model.User)}
+	return &mockAdminUserRepo{
+		byID:    make(map[uuid.UUID]*model.User),
+		byEmail: make(map[string]*model.User),
+	}
 }
 
 func (m *mockAdminUserRepo) GetByID(_ context.Context, id uuid.UUID) (*model.User, error) {
@@ -67,6 +71,30 @@ func (m *mockAdminUserRepo) CountByRole(_ context.Context, role string) (int, er
 	return count, nil
 }
 
+func (m *mockAdminUserRepo) GetByEmail(_ context.Context, email string) (*model.User, error) {
+	u, ok := m.byEmail[email]
+	if !ok {
+		return nil, model.ErrNotFound
+	}
+	return u, nil
+}
+
+func (m *mockAdminUserRepo) Create(_ context.Context, user *model.User) error {
+	m.byID[user.ID] = user
+	m.byEmail[user.Email] = user
+	return nil
+}
+
+func (m *mockAdminUserRepo) UpdatePasswordHash(_ context.Context, id uuid.UUID, hash string, forceChange bool) error {
+	u, ok := m.byID[id]
+	if !ok {
+		return model.ErrNotFound
+	}
+	u.PasswordHash = hash
+	u.ForcePasswordChange = forceChange
+	return nil
+}
+
 func (m *mockAdminUserRepo) addUser(role string, active bool) *model.User {
 	u := &model.User{
 		ID:          uuid.New(),
@@ -78,6 +106,7 @@ func (m *mockAdminUserRepo) addUser(role string, active bool) *model.User {
 		UpdatedAt:   time.Now(),
 	}
 	m.byID[u.ID] = u
+	m.byEmail[u.Email] = u
 	return u
 }
 
@@ -459,6 +488,104 @@ func TestAdminRemoveUserFromProject_NotFound(t *testing.T) {
 	proj := projectRepo.addProject("TEST", "Test Project")
 
 	err := svc.RemoveUserFromProject(ctx, user.ID, proj.ID)
+	if !errors.Is(err, model.ErrNotFound) {
+		t.Fatalf("expected ErrNotFound, got %v", err)
+	}
+}
+
+// --- CreateUser tests ---
+
+func TestCreateUser_Success(t *testing.T) {
+	svc, userRepo, _, _ := newTestAdminService()
+	ctx := context.Background()
+
+	user, password, err := svc.CreateUser(ctx, "new@test.com", "New User")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if user.Email != "new@test.com" {
+		t.Fatalf("expected email new@test.com, got %s", user.Email)
+	}
+	if user.DisplayName != "New User" {
+		t.Fatalf("expected display name 'New User', got %s", user.DisplayName)
+	}
+	if user.GlobalRole != model.RoleUser {
+		t.Fatalf("expected role user, got %s", user.GlobalRole)
+	}
+	if !user.IsActive {
+		t.Fatal("expected user to be active")
+	}
+	if !user.ForcePasswordChange {
+		t.Fatal("expected ForcePasswordChange to be true")
+	}
+	if len(password) != 12 {
+		t.Fatalf("expected 12-char password, got %d", len(password))
+	}
+	// Verify user is stored
+	if _, err := userRepo.GetByEmail(ctx, "new@test.com"); err != nil {
+		t.Fatalf("expected user to be persisted, got %v", err)
+	}
+}
+
+func TestCreateUser_EmailAlreadyExists(t *testing.T) {
+	svc, userRepo, _, _ := newTestAdminService()
+	ctx := context.Background()
+
+	existing := userRepo.addUser(model.RoleUser, true)
+
+	_, _, err := svc.CreateUser(ctx, existing.Email, "Another User")
+	if !errors.Is(err, model.ErrAlreadyExists) {
+		t.Fatalf("expected ErrAlreadyExists, got %v", err)
+	}
+}
+
+func TestCreateUser_EmptyEmail(t *testing.T) {
+	svc, _, _, _ := newTestAdminService()
+	ctx := context.Background()
+
+	_, _, err := svc.CreateUser(ctx, "", "Some Name")
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation, got %v", err)
+	}
+}
+
+func TestCreateUser_EmptyDisplayName(t *testing.T) {
+	svc, _, _, _ := newTestAdminService()
+	ctx := context.Background()
+
+	_, _, err := svc.CreateUser(ctx, "test@test.com", "")
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation, got %v", err)
+	}
+}
+
+// --- ResetUserPassword tests ---
+
+func TestResetUserPassword_Success(t *testing.T) {
+	svc, userRepo, _, _ := newTestAdminService()
+	ctx := context.Background()
+
+	user := userRepo.addUser(model.RoleUser, true)
+
+	password, err := svc.ResetUserPassword(ctx, user.ID)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(password) != 12 {
+		t.Fatalf("expected 12-char password, got %d", len(password))
+	}
+	// Verify force_password_change is set
+	updated, _ := userRepo.GetByID(ctx, user.ID)
+	if !updated.ForcePasswordChange {
+		t.Fatal("expected ForcePasswordChange to be true after reset")
+	}
+}
+
+func TestResetUserPassword_UserNotFound(t *testing.T) {
+	svc, _, _, _ := newTestAdminService()
+	ctx := context.Background()
+
+	_, err := svc.ResetUserPassword(ctx, uuid.New())
 	if !errors.Is(err, model.ErrNotFound) {
 		t.Fatalf("expected ErrNotFound, got %v", err)
 	}

@@ -74,8 +74,9 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeData(w, http.StatusOK, map[string]interface{}{
-		"token": token,
-		"user":  toUserResponse(user),
+		"token":                 token,
+		"user":                  toUserResponse(user),
+		"force_password_change": user.ForcePasswordChange,
 	})
 }
 
@@ -311,6 +312,68 @@ func (h *AuthHandler) SearchUsers(w http.ResponseWriter, r *http.Request) {
 		resp[i] = toUserResponse(&users[i])
 	}
 	writeData(w, http.StatusOK, resp)
+}
+
+type changePasswordRequest struct {
+	OldPassword string `json:"old_password"`
+	NewPassword string `json:"new_password"`
+}
+
+// ChangePassword handles POST /api/v1/auth/change-password.
+func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	var req changePasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		return
+	}
+
+	if req.OldPassword == "" || req.NewPassword == "" {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "old_password and new_password are required")
+		return
+	}
+
+	if err := h.auth.ChangePassword(r.Context(), info.UserID, req.OldPassword, req.NewPassword); err != nil {
+		if errors.Is(err, model.ErrInvalidCredentials) {
+			writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "invalid current password")
+			return
+		}
+		if errors.Is(err, model.ErrValidation) {
+			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+			return
+		}
+		log.Ctx(r.Context()).Error().Err(err).Msg("failed to change password")
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		return
+	}
+
+	// Get updated user and generate new token without force_password_change
+	user, err := h.auth.GetUser(r.Context(), info.UserID)
+	if err != nil {
+		log.Ctx(r.Context()).Error().Err(err).Msg("failed to get user after password change")
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		return
+	}
+
+	token, err := h.auth.Refresh(r.Context(), &model.AuthInfo{
+		UserID:     user.ID,
+		Email:      user.Email,
+		GlobalRole: user.GlobalRole,
+	})
+	if err != nil {
+		log.Ctx(r.Context()).Error().Err(err).Msg("failed to generate token after password change")
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		return
+	}
+
+	writeData(w, http.StatusOK, map[string]interface{}{
+		"token": token,
+	})
 }
 
 // DeleteAPIKey deletes an API key by ID.

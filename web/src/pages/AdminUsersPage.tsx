@@ -1,14 +1,15 @@
 import { useMemo, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
-import { Check, ChevronDown, ChevronRight, Trash2 } from 'lucide-react'
+import { Check, ChevronDown, ChevronRight, Copy, KeyRound, Plus, Trash2 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { useAdminUsers, useUpdateUser, useUserProjects, useAddUserToProject, useUpdateUserProjectRole, useRemoveUserFromProject } from '@/hooks/useAdmin'
+import { useAdminUsers, useUpdateUser, useCreateUser, useResetUserPassword, useUserProjects, useAddUserToProject, useUpdateUserProjectRole, useRemoveUserFromProject } from '@/hooks/useAdmin'
 import { usePreference, useSetPreference } from '@/hooks/usePreferences'
 import { useProjects } from '@/hooks/useProjects'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import { ProjectKeyBadge } from '@/components/ui/ProjectKeyBadge'
 import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { MultiSelect } from '@/components/ui/MultiSelect'
 import { Spinner } from '@/components/ui/Spinner'
@@ -31,6 +32,8 @@ export function AdminUsersPage() {
   const { user: currentUser } = useAuth()
   const { data: users, isLoading } = useAdminUsers()
   const updateUserMutation = useUpdateUser()
+  const createUserMutation = useCreateUser()
+  const resetPasswordMutation = useResetUserPassword()
 
   const { data: savedFilter } = usePreference<string>(PREFERENCE_KEY)
   const setPref = useSetPreference()
@@ -52,6 +55,14 @@ export function AdminUsersPage() {
   const [saved, setSaved] = useState<Record<string, boolean>>({})
   const [error, setError] = useState<string | null>(null)
   const [disableTarget, setDisableTarget] = useState<AdminUser | null>(null)
+  const [createModalOpen, setCreateModalOpen] = useState(false)
+  const [createEmail, setCreateEmail] = useState('')
+  const [createDisplayName, setCreateDisplayName] = useState('')
+  const [createError, setCreateError] = useState<string | null>(null)
+  const [revealedPassword, setRevealedPassword] = useState<string | null>(null)
+  const [revealedUserName, setRevealedUserName] = useState('')
+  const [resetTarget, setResetTarget] = useState<AdminUser | null>(null)
+  const [copied, setCopied] = useState(false)
 
   function showSaved(key: string) {
     setSaved((prev) => ({ ...prev, [key]: true }))
@@ -105,6 +116,54 @@ export function AdminUsersPage() {
     )
   }
 
+  function handleCreateUser() {
+    setCreateError(null)
+    createUserMutation.mutate(
+      { email: createEmail, display_name: createDisplayName },
+      {
+        onSuccess: (data) => {
+          setCreateModalOpen(false)
+          setCreateEmail('')
+          setCreateDisplayName('')
+          setRevealedPassword(data.temporary_password)
+          setRevealedUserName(data.user.display_name)
+        },
+        onError: (err) => {
+          const axiosErr = err as AxiosError<{ error?: { message?: string; code?: string } }>
+          if (axiosErr.response?.status === 409) {
+            setCreateError(t('admin.users.emailExists'))
+          } else {
+            setCreateError(axiosErr.response?.data?.error?.message ?? t('admin.users.createUserError'))
+          }
+        },
+      },
+    )
+  }
+
+  function handleResetPassword() {
+    if (!resetTarget) return
+    resetPasswordMutation.mutate(resetTarget.id, {
+      onSuccess: (data) => {
+        setRevealedPassword(data.temporary_password)
+        setRevealedUserName(resetTarget.display_name)
+        setResetTarget(null)
+      },
+      onError: (err) => {
+        const axiosErr = err as AxiosError<{ error?: { message?: string } }>
+        setError(axiosErr.response?.data?.error?.message ?? t('admin.users.resetPasswordError'))
+        setResetTarget(null)
+      },
+    })
+  }
+
+  function handleCopyPassword() {
+    if (revealedPassword) {
+      navigator.clipboard.writeText(revealedPassword)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
   function formatLastLogin(lastLogin?: string) {
     if (!lastLogin) return t('admin.users.never')
     const date = new Date(lastLogin)
@@ -132,16 +191,22 @@ export function AdminUsersPage() {
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('admin.users.title')}</h2>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('admin.users.description')}</p>
         </div>
-        <MultiSelect
-          options={[
-            { value: 'active', label: t('admin.users.filterActive') },
-            { value: 'disabled', label: t('admin.users.filterDisabled') },
-          ]}
-          selected={statusFilter}
-          onChange={handleStatusFilterChange}
-          placeholder={t('admin.users.title')}
-          className="w-44 shrink-0"
-        />
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <MultiSelect
+            options={[
+              { value: 'active', label: t('admin.users.filterActive') },
+              { value: 'disabled', label: t('admin.users.filterDisabled') },
+            ]}
+            selected={statusFilter}
+            onChange={handleStatusFilterChange}
+            placeholder={t('admin.users.title')}
+            className="w-44"
+          />
+          <Button size="sm" onClick={() => setCreateModalOpen(true)}>
+            <Plus className="h-4 w-4 mr-1" />
+            {t('admin.users.createUser')}
+          </Button>
+        </div>
       </div>
 
       {error && (
@@ -215,6 +280,16 @@ export function AdminUsersPage() {
                         <span className="text-red-600 dark:text-red-400">{t('admin.users.disabled')}</span>
                       </Button>
                     )}
+                    {!isSelf && (
+                      <Tooltip content={t('admin.users.resetPasswordButton')}>
+                        <button
+                          className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                          onClick={() => setResetTarget(u)}
+                        >
+                          <KeyRound className="h-4 w-4" />
+                        </button>
+                      </Tooltip>
+                    )}
                     <span className="text-xs text-gray-400 hidden sm:block w-16 text-right">
                       {formatLastLogin(u.last_login_at)}
                     </span>
@@ -249,6 +324,95 @@ export function AdminUsersPage() {
             onClick={handleDisable}
           >
             {updateUserMutation.isPending ? t('common.saving') : t('admin.users.disableConfirmButton')}
+          </Button>
+        </div>
+      </Modal>
+
+      {/* Create user modal */}
+      <Modal
+        open={createModalOpen}
+        onClose={() => { setCreateModalOpen(false); setCreateEmail(''); setCreateDisplayName(''); setCreateError(null) }}
+        title={t('admin.users.createUserTitle')}
+      >
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+          {t('admin.users.createUserDescription')}
+        </p>
+        <div className="space-y-3">
+          <Input
+            label={t('admin.users.displayName')}
+            value={createDisplayName}
+            onChange={(e) => setCreateDisplayName(e.target.value)}
+            autoFocus
+          />
+          <Input
+            label={t('admin.users.emailAddress')}
+            type="email"
+            value={createEmail}
+            onChange={(e) => setCreateEmail(e.target.value)}
+          />
+          {createError && (
+            <p className="text-sm text-red-600 dark:text-red-400">{createError}</p>
+          )}
+        </div>
+        <div className="flex justify-end gap-2 mt-4">
+          <Button variant="secondary" onClick={() => { setCreateModalOpen(false); setCreateEmail(''); setCreateDisplayName(''); setCreateError(null) }}>
+            {t('common.cancel')}
+          </Button>
+          <Button
+            disabled={!createEmail || !createDisplayName || createUserMutation.isPending}
+            onClick={handleCreateUser}
+          >
+            {createUserMutation.isPending ? t('common.saving') : t('admin.users.createUserButton')}
+          </Button>
+        </div>
+      </Modal>
+
+      {/* Temporary password reveal modal */}
+      <Modal
+        open={!!revealedPassword}
+        onClose={() => { setRevealedPassword(null); setCopied(false) }}
+        title={t('admin.users.temporaryPasswordTitle')}
+      >
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+          {t('admin.users.temporaryPasswordDescription', { name: revealedUserName })}
+        </p>
+        <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-3 font-mono text-sm">
+          <span className="flex-1 select-all text-gray-900 dark:text-gray-100">{revealedPassword}</span>
+          <button
+            className="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            onClick={handleCopyPassword}
+          >
+            {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+          </button>
+        </div>
+        <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+          {t('admin.users.temporaryPasswordWarning')}
+        </p>
+        <div className="flex justify-end mt-4">
+          <Button onClick={() => { setRevealedPassword(null); setCopied(false) }}>
+            {t('common.close')}
+          </Button>
+        </div>
+      </Modal>
+
+      {/* Reset password confirmation modal */}
+      <Modal open={!!resetTarget} onClose={() => setResetTarget(null)} title={t('admin.users.resetPasswordTitle')}>
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+          <Trans
+            i18nKey="admin.users.resetPasswordBody"
+            values={{ name: resetTarget?.display_name }}
+            components={{ bold: <strong /> }}
+          />
+        </p>
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={() => setResetTarget(null)}>
+            {t('common.cancel')}
+          </Button>
+          <Button
+            disabled={resetPasswordMutation.isPending}
+            onClick={handleResetPassword}
+          >
+            {resetPasswordMutation.isPending ? t('common.saving') : t('admin.users.resetPasswordButton')}
           </Button>
         </div>
       </Modal>

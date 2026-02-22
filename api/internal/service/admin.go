@@ -2,10 +2,14 @@ package service
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
+	"math/big"
+	"strings"
 
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/marcoshack/taskwondo/internal/model"
 )
@@ -13,9 +17,12 @@ import (
 // AdminUserRepository defines user persistence operations needed by the admin service.
 type AdminUserRepository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*model.User, error)
+	GetByEmail(ctx context.Context, email string) (*model.User, error)
+	Create(ctx context.Context, user *model.User) error
 	ListAll(ctx context.Context) ([]model.User, error)
 	UpdateGlobalRole(ctx context.Context, id uuid.UUID, role string) error
 	UpdateIsActive(ctx context.Context, id uuid.UUID, isActive bool) error
+	UpdatePasswordHash(ctx context.Context, id uuid.UUID, hash string, forceChange bool) error
 	CountByRole(ctx context.Context, role string) (int, error)
 }
 
@@ -185,4 +192,90 @@ func (s *AdminService) RemoveUserFromProject(ctx context.Context, userID, projec
 	}
 
 	return s.members.Remove(ctx, projectID, userID)
+}
+
+// CreateUser creates a new user with a temporary password.
+// Returns the created user and the plaintext temporary password (shown once).
+func (s *AdminService) CreateUser(ctx context.Context, email, displayName string) (*model.User, string, error) {
+	email = strings.TrimSpace(email)
+	displayName = strings.TrimSpace(displayName)
+
+	if email == "" {
+		return nil, "", fmt.Errorf("%w: email is required", model.ErrValidation)
+	}
+	if displayName == "" {
+		return nil, "", fmt.Errorf("%w: display name is required", model.ErrValidation)
+	}
+
+	// Check email uniqueness
+	_, err := s.users.GetByEmail(ctx, email)
+	if err == nil {
+		return nil, "", model.ErrAlreadyExists
+	}
+	if !errors.Is(err, model.ErrNotFound) {
+		return nil, "", fmt.Errorf("checking email: %w", err)
+	}
+
+	password, err := generateTemporaryPassword()
+	if err != nil {
+		return nil, "", fmt.Errorf("generating password: %w", err)
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, "", fmt.Errorf("hashing password: %w", err)
+	}
+
+	user := &model.User{
+		ID:                  uuid.New(),
+		Email:               email,
+		DisplayName:         displayName,
+		PasswordHash:        string(hash),
+		GlobalRole:          model.RoleUser,
+		IsActive:            true,
+		ForcePasswordChange: true,
+	}
+
+	if err := s.users.Create(ctx, user); err != nil {
+		return nil, "", fmt.Errorf("creating user: %w", err)
+	}
+
+	return user, password, nil
+}
+
+// ResetUserPassword generates a new temporary password for a user.
+// Returns the plaintext temporary password (shown once).
+func (s *AdminService) ResetUserPassword(ctx context.Context, userID uuid.UUID) (string, error) {
+	if _, err := s.users.GetByID(ctx, userID); err != nil {
+		return "", err
+	}
+
+	password, err := generateTemporaryPassword()
+	if err != nil {
+		return "", fmt.Errorf("generating password: %w", err)
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return "", fmt.Errorf("hashing password: %w", err)
+	}
+
+	if err := s.users.UpdatePasswordHash(ctx, userID, string(hash), true); err != nil {
+		return "", fmt.Errorf("updating password: %w", err)
+	}
+
+	return password, nil
+}
+
+func generateTemporaryPassword() (string, error) {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	b := make([]byte, 12)
+	for i := range b {
+		n, err := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
+		if err != nil {
+			return "", err
+		}
+		b[i] = charset[n.Int64()]
+	}
+	return string(b), nil
 }

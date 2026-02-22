@@ -19,11 +19,15 @@ import (
 // --- Mock repos for admin service ---
 
 type mockAdminUserRepo struct {
-	byID map[uuid.UUID]*model.User
+	byID    map[uuid.UUID]*model.User
+	byEmail map[string]*model.User
 }
 
 func newMockAdminUserRepo() *mockAdminUserRepo {
-	return &mockAdminUserRepo{byID: make(map[uuid.UUID]*model.User)}
+	return &mockAdminUserRepo{
+		byID:    make(map[uuid.UUID]*model.User),
+		byEmail: make(map[string]*model.User),
+	}
 }
 
 func (m *mockAdminUserRepo) GetByID(_ context.Context, id uuid.UUID) (*model.User, error) {
@@ -68,6 +72,30 @@ func (m *mockAdminUserRepo) CountByRole(_ context.Context, role string) (int, er
 		}
 	}
 	return count, nil
+}
+
+func (m *mockAdminUserRepo) GetByEmail(_ context.Context, email string) (*model.User, error) {
+	u, ok := m.byEmail[email]
+	if !ok {
+		return nil, model.ErrNotFound
+	}
+	return u, nil
+}
+
+func (m *mockAdminUserRepo) Create(_ context.Context, user *model.User) error {
+	m.byID[user.ID] = user
+	m.byEmail[user.Email] = user
+	return nil
+}
+
+func (m *mockAdminUserRepo) UpdatePasswordHash(_ context.Context, id uuid.UUID, hash string, forceChange bool) error {
+	u, ok := m.byID[id]
+	if !ok {
+		return model.ErrNotFound
+	}
+	u.PasswordHash = hash
+	u.ForcePasswordChange = forceChange
+	return nil
 }
 
 type mockAdminProjectRepo struct {
@@ -190,6 +218,7 @@ func addTestUser(repo *mockAdminUserRepo, role string, active bool) *model.User 
 		UpdatedAt:   time.Now(),
 	}
 	repo.byID[u.ID] = u
+	repo.byEmail[u.Email] = u
 	return u
 }
 
@@ -451,6 +480,116 @@ func TestAdminRemoveUserFromProjectHandler_NotFound(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	h.RemoveUserFromProject(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+// --- CreateUser handler tests ---
+
+func TestCreateUser_Handler_201(t *testing.T) {
+	h, _, _, _ := adminTestSetup(t)
+
+	body := `{"email":"new@test.com","display_name":"New User"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/users", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	caller := addTestUser(newMockAdminUserRepo(), model.RoleAdmin, true)
+	req = req.WithContext(adminCtx(caller.ID))
+	w := httptest.NewRecorder()
+
+	h.CreateUser(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data := resp["data"].(map[string]interface{})
+	if data["temporary_password"] == nil || data["temporary_password"] == "" {
+		t.Fatal("expected temporary_password in response")
+	}
+	user := data["user"].(map[string]interface{})
+	if user["email"] != "new@test.com" {
+		t.Fatalf("expected email new@test.com, got %v", user["email"])
+	}
+	if user["force_password_change"] != true {
+		t.Fatal("expected force_password_change to be true")
+	}
+}
+
+func TestCreateUser_Handler_409_EmailExists(t *testing.T) {
+	h, userRepo, _, _ := adminTestSetup(t)
+
+	existing := addTestUser(userRepo, model.RoleUser, true)
+
+	body := `{"email":"` + existing.Email + `","display_name":"Duplicate"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/users", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	caller := addTestUser(userRepo, model.RoleAdmin, true)
+	req = req.WithContext(adminCtx(caller.ID))
+	w := httptest.NewRecorder()
+
+	h.CreateUser(w, req)
+
+	if w.Code != http.StatusConflict {
+		t.Fatalf("expected 409, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestCreateUser_Handler_400_MissingFields(t *testing.T) {
+	h, _, _, _ := adminTestSetup(t)
+
+	body := `{"email":"","display_name":""}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/users", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(adminCtx(uuid.New()))
+	w := httptest.NewRecorder()
+
+	h.CreateUser(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+// --- ResetUserPassword handler tests ---
+
+func TestResetUserPassword_Handler_200(t *testing.T) {
+	h, userRepo, _, _ := adminTestSetup(t)
+	user := addTestUser(userRepo, model.RoleUser, true)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/users/"+user.ID.String()+"/reset-password", nil)
+	ctx := adminCtx(uuid.New())
+	ctx = withChiParam(ctx, "userId", user.ID.String())
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	h.ResetUserPassword(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data := resp["data"].(map[string]interface{})
+	if data["temporary_password"] == nil || data["temporary_password"] == "" {
+		t.Fatal("expected temporary_password in response")
+	}
+}
+
+func TestResetUserPassword_Handler_404(t *testing.T) {
+	h, _, _, _ := adminTestSetup(t)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/users/"+uuid.New().String()+"/reset-password", nil)
+	ctx := adminCtx(uuid.New())
+	ctx = withChiParam(ctx, "userId", uuid.New().String())
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	h.ResetUserPassword(w, req)
 
 	if w.Code != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d: %s", w.Code, w.Body.String())

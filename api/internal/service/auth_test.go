@@ -66,6 +66,16 @@ func (m *mockUserRepo) UpdateAvatarURL(_ context.Context, id uuid.UUID, avatarUR
 	return nil
 }
 
+func (m *mockUserRepo) UpdatePasswordHash(_ context.Context, id uuid.UUID, hash string, forceChange bool) error {
+	u, ok := m.byID[id]
+	if !ok {
+		return model.ErrNotFound
+	}
+	u.PasswordHash = hash
+	u.ForcePasswordChange = forceChange
+	return nil
+}
+
 func (m *mockUserRepo) Search(_ context.Context, query string) ([]model.User, error) {
 	var result []model.User
 	q := strings.ToLower(query)
@@ -939,5 +949,71 @@ func TestFindOrCreateOAuthUser_DisabledEmailMatch(t *testing.T) {
 	_, err := svc.findOrCreateOAuthUser(context.Background(), model.OAuthProviderDiscord, discord)
 	if err != model.ErrAccountDisabled {
 		t.Fatalf("expected ErrAccountDisabled, got %v", err)
+	}
+}
+
+// --- ChangePassword tests ---
+
+func TestChangePassword_Success(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	user := createTestUser(t, userRepo, "test@example.com", "oldpassword", model.RoleUser)
+	user.ForcePasswordChange = true
+
+	err := svc.ChangePassword(context.Background(), user.ID, "oldpassword", "newpassword123")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	updated, _ := userRepo.GetByID(context.Background(), user.ID)
+	if updated.ForcePasswordChange {
+		t.Fatal("expected ForcePasswordChange to be false after change")
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(updated.PasswordHash), []byte("newpassword123")); err != nil {
+		t.Fatal("expected new password to be valid")
+	}
+}
+
+func TestChangePassword_WrongOldPassword(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	user := createTestUser(t, userRepo, "test@example.com", "correctpassword", model.RoleUser)
+
+	err := svc.ChangePassword(context.Background(), user.ID, "wrongpassword", "newpassword123")
+	if err != model.ErrInvalidCredentials {
+		t.Fatalf("expected ErrInvalidCredentials, got %v", err)
+	}
+}
+
+func TestChangePassword_TooShort(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	user := createTestUser(t, userRepo, "test@example.com", "oldpassword", model.RoleUser)
+
+	err := svc.ChangePassword(context.Background(), user.ID, "oldpassword", "short")
+	if err == nil {
+		t.Fatal("expected error for short password")
+	}
+}
+
+func TestLogin_ReturnsForcePasswordChange(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	user := createTestUser(t, userRepo, "test@example.com", "password123", model.RoleUser)
+	user.ForcePasswordChange = true
+
+	token, returnedUser, err := svc.Login(context.Background(), "test@example.com", "password123")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if token == "" {
+		t.Fatal("expected non-empty token")
+	}
+	if !returnedUser.ForcePasswordChange {
+		t.Fatal("expected ForcePasswordChange to be true in returned user")
+	}
+
+	info, err := svc.ValidateJWT(token)
+	if err != nil {
+		t.Fatalf("expected valid JWT, got %v", err)
+	}
+	if !info.ForcePasswordChange {
+		t.Fatal("expected ForcePasswordChange in JWT claims")
 	}
 }

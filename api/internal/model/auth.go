@@ -8,9 +8,10 @@ import (
 
 // AuthInfo holds the authenticated user's identity extracted from JWT or API key.
 type AuthInfo struct {
-	UserID     uuid.UUID
-	Email      string
-	GlobalRole string
+	UserID              uuid.UUID
+	Email               string
+	GlobalRole          string
+	ForcePasswordChange bool
 }
 
 type contextKey string

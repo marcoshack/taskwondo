@@ -212,6 +212,7 @@ func main() {
 			r.Post("/auth/refresh", auth.Refresh)
 			r.Post("/auth/logout", auth.Logout)
 			r.Get("/auth/me", auth.Me)
+			r.Post("/auth/change-password", auth.ChangePassword)
 
 			// API key management
 			r.Get("/user/api-keys", auth.ListAPIKeys)
@@ -341,8 +342,10 @@ func main() {
 				r.Use(middleware.RequireAdmin)
 				r.Route("/users", func(r chi.Router) {
 					r.Get("/", admin.ListUsers)
+					r.Post("/", admin.CreateUser)
 					r.Route("/{userId}", func(r chi.Router) {
 						r.Patch("/", admin.UpdateUser)
+						r.Post("/reset-password", admin.ResetUserPassword)
 						r.Route("/projects", func(r chi.Router) {
 							r.Get("/", admin.ListUserProjects)
 							r.Post("/", admin.AddUserToProject)

@@ -25,26 +25,28 @@ func NewAdminHandler(admin *service.AdminService) *AdminHandler {
 }
 
 type adminUserResponse struct {
-	ID          uuid.UUID  `json:"id"`
-	Email       string     `json:"email"`
-	DisplayName string     `json:"display_name"`
-	GlobalRole  string     `json:"global_role"`
-	AvatarURL   *string    `json:"avatar_url,omitempty"`
-	IsActive    bool       `json:"is_active"`
-	LastLoginAt *time.Time `json:"last_login_at,omitempty"`
-	CreatedAt   time.Time  `json:"created_at"`
+	ID                  uuid.UUID  `json:"id"`
+	Email               string     `json:"email"`
+	DisplayName         string     `json:"display_name"`
+	GlobalRole          string     `json:"global_role"`
+	AvatarURL           *string    `json:"avatar_url,omitempty"`
+	IsActive            bool       `json:"is_active"`
+	ForcePasswordChange bool       `json:"force_password_change"`
+	LastLoginAt         *time.Time `json:"last_login_at,omitempty"`
+	CreatedAt           time.Time  `json:"created_at"`
 }
 
 func toAdminUserResponse(u *model.User) adminUserResponse {
 	return adminUserResponse{
-		ID:          u.ID,
-		Email:       u.Email,
-		DisplayName: u.DisplayName,
-		GlobalRole:  u.GlobalRole,
-		AvatarURL:   u.AvatarURL,
-		IsActive:    u.IsActive,
-		LastLoginAt: u.LastLoginAt,
-		CreatedAt:   u.CreatedAt,
+		ID:                  u.ID,
+		Email:               u.Email,
+		DisplayName:         u.DisplayName,
+		GlobalRole:          u.GlobalRole,
+		AvatarURL:           u.AvatarURL,
+		IsActive:            u.IsActive,
+		ForcePasswordChange: u.ForcePasswordChange,
+		LastLoginAt:         u.LastLoginAt,
+		CreatedAt:           u.CreatedAt,
 	}
 }
 
@@ -71,6 +73,78 @@ func (h *AdminHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 		resp[i] = toAdminUserResponse(&users[i])
 	}
 	writeData(w, http.StatusOK, resp)
+}
+
+type createUserRequest struct {
+	Email       string `json:"email"`
+	DisplayName string `json:"display_name"`
+}
+
+type createUserResponse struct {
+	User              adminUserResponse `json:"user"`
+	TemporaryPassword string            `json:"temporary_password"`
+}
+
+type resetPasswordResponse struct {
+	TemporaryPassword string `json:"temporary_password"`
+}
+
+// CreateUser handles POST /api/v1/admin/users.
+func (h *AdminHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
+	var req createUserRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		return
+	}
+
+	if req.Email == "" || req.DisplayName == "" {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "email and display_name are required")
+		return
+	}
+
+	user, password, err := h.admin.CreateUser(r.Context(), req.Email, req.DisplayName)
+	if err != nil {
+		if errors.Is(err, model.ErrAlreadyExists) {
+			writeError(w, http.StatusConflict, "CONFLICT", "a user with this email already exists")
+			return
+		}
+		if errors.Is(err, model.ErrValidation) {
+			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+			return
+		}
+		log.Ctx(r.Context()).Error().Err(err).Msg("failed to create user")
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		return
+	}
+
+	writeData(w, http.StatusCreated, createUserResponse{
+		User:              toAdminUserResponse(user),
+		TemporaryPassword: password,
+	})
+}
+
+// ResetUserPassword handles POST /api/v1/admin/users/{userId}/reset-password.
+func (h *AdminHandler) ResetUserPassword(w http.ResponseWriter, r *http.Request) {
+	userID, err := uuid.Parse(chi.URLParam(r, "userId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid user ID")
+		return
+	}
+
+	password, err := h.admin.ResetUserPassword(r.Context(), userID)
+	if err != nil {
+		if errors.Is(err, model.ErrNotFound) {
+			writeError(w, http.StatusNotFound, "NOT_FOUND", "user not found")
+			return
+		}
+		log.Ctx(r.Context()).Error().Err(err).Msg("failed to reset user password")
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		return
+	}
+
+	writeData(w, http.StatusOK, resetPasswordResponse{
+		TemporaryPassword: password,
+	})
 }
 
 type updateUserRequest struct {

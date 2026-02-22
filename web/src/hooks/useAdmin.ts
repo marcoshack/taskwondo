@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { listUsers, updateUser, listUserProjects, addUserToProject, updateUserProjectRole, removeUserFromProject } from '@/api/admin'
+import { listUsers, updateUser, listUserProjects, addUserToProject, updateUserProjectRole, removeUserFromProject, createUser, resetUserPassword } from '@/api/admin'
+import type { CreateUserInput } from '@/api/admin'
 
 export function useAdminUsers() {
   return useQuery({
@@ -55,5 +56,21 @@ export function useRemoveUserFromProject(userId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin', 'users', userId, 'projects'] })
     },
+  })
+}
+
+export function useCreateUser() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: CreateUserInput) => createUser(input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'users'] })
+    },
+  })
+}
+
+export function useResetUserPassword() {
+  return useMutation({
+    mutationFn: (userId: string) => resetUserPassword(userId),
   })
 }

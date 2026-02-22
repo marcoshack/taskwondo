@@ -68,6 +68,16 @@ func (m *mockUserRepo) UpdateAvatarURL(_ context.Context, id uuid.UUID, avatarUR
 	return nil
 }
 
+func (m *mockUserRepo) UpdatePasswordHash(_ context.Context, id uuid.UUID, hash string, forceChange bool) error {
+	u, ok := m.byID[id]
+	if !ok {
+		return model.ErrNotFound
+	}
+	u.PasswordHash = hash
+	u.ForcePasswordChange = forceChange
+	return nil
+}
+
 func (m *mockUserRepo) Search(_ context.Context, query string) ([]model.User, error) {
 	var result []model.User
 	q := strings.ToLower(query)
@@ -477,5 +487,70 @@ func TestDiscordCallbackHandler_InvalidBody(t *testing.T) {
 
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+// --- ChangePassword handler tests ---
+
+func TestChangePassword_Handler_200(t *testing.T) {
+	h, authSvc, token := testSetup(t)
+	info, _ := authSvc.ValidateJWT(token)
+
+	body := `{"old_password":"adminpass","new_password":"newpassword123"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/change-password", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), info))
+	w := httptest.NewRecorder()
+
+	h.ChangePassword(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data := resp["data"].(map[string]interface{})
+	if data["token"] == nil || data["token"] == "" {
+		t.Fatal("expected new token in response")
+	}
+}
+
+func TestChangePassword_Handler_401_WrongPassword(t *testing.T) {
+	h, authSvc, token := testSetup(t)
+	info, _ := authSvc.ValidateJWT(token)
+
+	body := `{"old_password":"wrongpassword","new_password":"newpassword123"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/change-password", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), info))
+	w := httptest.NewRecorder()
+
+	h.ChangePassword(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestLogin_Handler_ReturnsForcePasswordChange(t *testing.T) {
+	h, _, _ := testSetup(t)
+
+	body := `{"email":"admin@test.com","password":"adminpass"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	h.Login(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data := resp["data"].(map[string]interface{})
+	if data["force_password_change"] != false {
+		t.Fatalf("expected force_password_change=false for seeded admin, got %v", data["force_password_change"])
 	}
 }

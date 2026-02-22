@@ -23,7 +23,7 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*model.User, error) {
 	row := r.db.QueryRowContext(ctx,
 		`SELECT id, email, display_name, password_hash, global_role, avatar_url,
-		        is_active, last_login_at, created_at, updated_at
+		        is_active, force_password_change, last_login_at, created_at, updated_at
 		 FROM users WHERE email = $1`, email)
 
 	return scanUser(row)
@@ -33,7 +33,7 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*model.U
 func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.User, error) {
 	row := r.db.QueryRowContext(ctx,
 		`SELECT id, email, display_name, password_hash, global_role, avatar_url,
-		        is_active, last_login_at, created_at, updated_at
+		        is_active, force_password_change, last_login_at, created_at, updated_at
 		 FROM users WHERE id = $1`, id)
 
 	return scanUser(row)
@@ -42,10 +42,10 @@ func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.User
 // Create inserts a new user.
 func (r *UserRepository) Create(ctx context.Context, user *model.User) error {
 	_, err := r.db.ExecContext(ctx,
-		`INSERT INTO users (id, email, display_name, password_hash, global_role, avatar_url, is_active)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		`INSERT INTO users (id, email, display_name, password_hash, global_role, avatar_url, is_active, force_password_change)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
 		user.ID, user.Email, user.DisplayName, sql.NullString{String: user.PasswordHash, Valid: user.PasswordHash != ""},
-		user.GlobalRole, user.AvatarURL, user.IsActive)
+		user.GlobalRole, user.AvatarURL, user.IsActive, user.ForcePasswordChange)
 	if err != nil {
 		return fmt.Errorf("inserting user: %w", err)
 	}
@@ -79,7 +79,7 @@ func (r *UserRepository) Search(ctx context.Context, query string) ([]model.User
 	q := "%" + query + "%"
 	rows, err := r.db.QueryContext(ctx,
 		`SELECT id, email, display_name, password_hash, global_role, avatar_url,
-		        is_active, last_login_at, created_at, updated_at
+		        is_active, force_password_change, last_login_at, created_at, updated_at
 		 FROM users
 		 WHERE is_active = true
 		   AND (email ILIKE $1 OR display_name ILIKE $1)
@@ -98,7 +98,7 @@ func (r *UserRepository) Search(ctx context.Context, query string) ([]model.User
 		var lastLoginAt sql.NullTime
 		if err := rows.Scan(
 			&u.ID, &u.Email, &u.DisplayName, &passwordHash, &u.GlobalRole,
-			&avatarURL, &u.IsActive, &lastLoginAt, &u.CreatedAt, &u.UpdatedAt,
+			&avatarURL, &u.IsActive, &u.ForcePasswordChange, &lastLoginAt, &u.CreatedAt, &u.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scanning user row: %w", err)
 		}
@@ -117,7 +117,7 @@ func (r *UserRepository) Search(ctx context.Context, query string) ([]model.User
 func (r *UserRepository) ListAll(ctx context.Context) ([]model.User, error) {
 	rows, err := r.db.QueryContext(ctx,
 		`SELECT id, email, display_name, password_hash, global_role, avatar_url,
-		        is_active, last_login_at, created_at, updated_at
+		        is_active, force_password_change, last_login_at, created_at, updated_at
 		 FROM users
 		 ORDER BY display_name ASC`)
 	if err != nil {
@@ -133,7 +133,7 @@ func (r *UserRepository) ListAll(ctx context.Context) ([]model.User, error) {
 		var lastLoginAt sql.NullTime
 		if err := rows.Scan(
 			&u.ID, &u.Email, &u.DisplayName, &passwordHash, &u.GlobalRole,
-			&avatarURL, &u.IsActive, &lastLoginAt, &u.CreatedAt, &u.UpdatedAt,
+			&avatarURL, &u.IsActive, &u.ForcePasswordChange, &lastLoginAt, &u.CreatedAt, &u.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scanning user row: %w", err)
 		}
@@ -195,6 +195,24 @@ func (r *UserRepository) CountByRole(ctx context.Context, role string) (int, err
 	return count, nil
 }
 
+// UpdatePasswordHash sets a user's password hash and force_password_change flag.
+func (r *UserRepository) UpdatePasswordHash(ctx context.Context, id uuid.UUID, hash string, forceChange bool) error {
+	result, err := r.db.ExecContext(ctx,
+		`UPDATE users SET password_hash = $1, force_password_change = $2, updated_at = now() WHERE id = $3`,
+		hash, forceChange, id)
+	if err != nil {
+		return fmt.Errorf("updating password hash: %w", err)
+	}
+	n, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("checking rows affected: %w", err)
+	}
+	if n == 0 {
+		return model.ErrNotFound
+	}
+	return nil
+}
+
 func scanUser(row *sql.Row) (*model.User, error) {
 	var u model.User
 	var passwordHash sql.NullString
@@ -203,7 +221,7 @@ func scanUser(row *sql.Row) (*model.User, error) {
 
 	err := row.Scan(
 		&u.ID, &u.Email, &u.DisplayName, &passwordHash, &u.GlobalRole,
-		&avatarURL, &u.IsActive, &lastLoginAt, &u.CreatedAt, &u.UpdatedAt,
+		&avatarURL, &u.IsActive, &u.ForcePasswordChange, &lastLoginAt, &u.CreatedAt, &u.UpdatedAt,
 	)
 	if err == sql.ErrNoRows {
 		return nil, model.ErrNotFound
