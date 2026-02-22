@@ -394,7 +394,7 @@ function UserProjectsPanel({
         {availableProjects.length > 0 && (
           <div className="flex gap-2 items-center pt-2 border-t border-gray-100 dark:border-gray-700">
             <select
-              className="max-w-48 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1.5 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="min-w-0 flex-1 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1.5 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               value={selectedProjectId}
               onChange={(e) => setSelectedProjectId(e.target.value)}
             >
