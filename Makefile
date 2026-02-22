@@ -3,7 +3,7 @@
 # Required environment variables (checked by sourcing .env)
 REQUIRED_VARS := POSTGRES_USER POSTGRES_PASSWORD MINIO_ROOT_USER MINIO_ROOT_PASSWORD JWT_SECRET DATABASE_URL STORAGE_ACCESS_KEY STORAGE_SECRET_KEY
 
-build: ## Build all Docker images
+build: test ## Build all Docker images
 	docker compose build
 
 help: ## Show this help
