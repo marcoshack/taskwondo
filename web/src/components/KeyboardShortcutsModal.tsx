@@ -19,14 +19,14 @@ function Kbd({ children }: { children: string }) {
   )
 }
 
-function ShortcutRow({ keys, label }: ShortcutEntry) {
+function ShortcutRow({ keys, label, thenLabel }: ShortcutEntry & { thenLabel: string }) {
   return (
     <div className="flex items-center justify-between py-1.5">
       <span className="text-sm text-gray-600 dark:text-gray-300">{label}</span>
       <span className="flex items-center gap-1 shrink-0 ml-4">
         {keys.map((k, i) => (
           <span key={i} className="flex items-center gap-1">
-            {i > 0 && <span className="text-xs text-gray-400">then</span>}
+            {i > 0 && <span className="text-xs text-gray-400">{thenLabel}</span>}
             <Kbd>{k}</Kbd>
           </span>
         ))}
@@ -53,6 +53,7 @@ export function KeyboardShortcutsModal({ open, onClose }: { open: boolean; onClo
         { keys: ['j / \u2193'], label: t('shortcuts.lists.moveDown') },
         { keys: ['k / \u2191'], label: t('shortcuts.lists.moveUp') },
         { keys: ['o / \u21B5'], label: t('shortcuts.lists.open') },
+        { keys: ['x'], label: t('shortcuts.lists.select') },
         { keys: ['Esc'], label: t('shortcuts.lists.deselect') },
       ],
     },
@@ -92,7 +93,7 @@ export function KeyboardShortcutsModal({ open, onClose }: { open: boolean; onClo
             </h3>
             <div className="divide-y divide-gray-100 dark:divide-gray-700">
               {cat.shortcuts.map((s, i) => (
-                <ShortcutRow key={i} keys={s.keys} label={s.label} />
+                <ShortcutRow key={i} keys={s.keys} label={s.label} thenLabel={t('shortcuts.then')} />
               ))}
             </div>
           </div>

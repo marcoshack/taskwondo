@@ -21,6 +21,7 @@ import { WorkItemFilters } from '@/components/workitems/WorkItemFilters'
 import { WorkItemForm } from '@/components/workitems/WorkItemForm'
 import { BoardView } from '@/components/workitems/BoardView'
 import { SLAIndicator } from '@/components/SLAIndicator'
+import { Tooltip } from '@/components/ui/Tooltip'
 import { formatRelativeTime } from '@/utils/duration'
 import { User, History } from 'lucide-react'
 import { listWorkItems, type WorkItem, type WorkItemFilter } from '@/api/workitems'
@@ -203,6 +204,8 @@ export function WorkItemListPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [activeRow, setActiveRow] = useState(-1)
+  const activeRowStorageKey = `taskwondo_activeRow_${projectKey}`
+  const restoredRef = useRef(false)
 
   useKeyboardShortcut({ key: 'c' }, () => setShowCreate(true))
 
@@ -275,14 +278,33 @@ export function WorkItemListPage() {
     setActiveRow(-1)
   }
 
-  // List navigation: arrows + j/k (vim), o/Enter to open, # to delete, Escape to deselect
+  // Restore active row from sessionStorage after navigating back
+  useEffect(() => {
+    if (restoredRef.current || allItems.length === 0) return
+    const stored = sessionStorage.getItem(activeRowStorageKey)
+    if (stored) {
+      const itemNumber = parseInt(stored, 10)
+      const idx = allItems.findIndex((i) => i.item_number === itemNumber)
+      if (idx >= 0) setActiveRow(idx)
+      sessionStorage.removeItem(activeRowStorageKey)
+    }
+    restoredRef.current = true
+  }, [allItems, activeRowStorageKey])
+
+  // List navigation: arrows + j/k (vim), o/Enter to open, x to select, # to delete, Escape to deselect
   useKeyboardShortcut([{ key: 'ArrowDown' }, { key: 'j' }], () => setActiveRow((prev) => Math.min(prev + 1, allItems.length - 1)), viewMode === 'list')
   useKeyboardShortcut([{ key: 'ArrowUp' }, { key: 'k' }], () => setActiveRow((prev) => Math.max(prev - 1, 0)), viewMode === 'list')
   useKeyboardShortcut([{ key: 'Enter' }, { key: 'o' }], () => {
     if (activeRow >= 0 && activeRow < allItems.length) {
+      sessionStorage.setItem(activeRowStorageKey, String(allItems[activeRow].item_number))
       navigate(`/projects/${projectKey}/items/${allItems[activeRow].item_number}`)
     }
   }, activeRow >= 0)
+  useKeyboardShortcut({ key: 'x' }, () => {
+    if (activeRow >= 0 && activeRow < allItems.length) {
+      toggleSelect(allItems[activeRow].item_number)
+    }
+  }, viewMode === 'list' && activeRow >= 0)
   useKeyboardShortcut({ key: '#' }, () => setShowDeleteConfirm(true), selected.size > 0 || activeRow >= 0)
   useKeyboardShortcut({ key: 'Escape' }, () => setActiveRow(-1), activeRow >= 0)
 
@@ -310,7 +332,7 @@ export function WorkItemListPage() {
     {
       key: 'display_id',
       header: t('workitems.table.id'),
-      className: 'w-28',
+      className: 'w-[102px]',
       sortKey: 'item_number',
       render: (row) => <span className="font-mono text-gray-500 dark:text-gray-400">{row.display_id}</span>,
     },
@@ -325,7 +347,7 @@ export function WorkItemListPage() {
       key: 'title',
       header: t('workitems.table.title'),
       sortKey: 'title',
-      render: (row) => <span className="font-medium text-gray-900 dark:text-gray-100 truncate block">{row.title}</span>,
+      render: (row) => <Tooltip content={row.title} className="relative block min-w-0"><span className="font-medium text-gray-900 dark:text-gray-100 truncate block">{row.title}</span></Tooltip>,
     },
     {
       key: 'status',
@@ -344,14 +366,14 @@ export function WorkItemListPage() {
     {
       key: 'sla',
       header: t('sla.columnHeader'),
-      className: 'w-36',
+      className: 'w-[124px]',
       sortKey: 'sla_target_at',
       render: (row) => <SLAIndicator sla={row.sla} />,
     },
     {
       key: 'updated',
       header: t('workitems.table.updated'),
-      className: 'w-36',
+      className: 'w-[124px]',
       sortKey: 'updated_at',
       render: (row) => <span className="text-gray-500 dark:text-gray-400">{new Date(row.updated_at).toLocaleDateString()}</span>,
     },
@@ -463,7 +485,10 @@ export function WorkItemListPage() {
             <DataTable
               columns={columns}
               data={allItems}
-              onRowClick={(row) => navigate(`/projects/${projectKey}/items/${row.item_number}`)}
+              onRowClick={(row) => {
+                sessionStorage.setItem(activeRowStorageKey, String(row.item_number))
+                navigate(`/projects/${projectKey}/items/${row.item_number}`)
+              }}
               emptyMessage={t('workitems.empty')}
               sortBy={sort}
               sortOrder={order}
@@ -484,7 +509,10 @@ export function WorkItemListPage() {
                 return (
                   <button
                     key={item.id}
-                    onClick={() => navigate(`/projects/${projectKey}/items/${item.item_number}`)}
+                    onClick={() => {
+                      sessionStorage.setItem(activeRowStorageKey, String(item.item_number))
+                      navigate(`/projects/${projectKey}/items/${item.item_number}`)
+                    }}
                     className="w-full text-left rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 shadow-sm hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors"
                   >
                     <div className="flex items-center gap-2 flex-wrap">
@@ -588,6 +616,7 @@ export function WorkItemListPage() {
           </div>
         </form>
       </Modal>
+
     </div>
   )
 }
