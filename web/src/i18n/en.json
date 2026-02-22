@@ -475,6 +475,7 @@
 
   "workitems.form.milestone": "Milestone",
   "workitems.filters.allMilestones": "All milestones",
+  "workitems.filters.noMilestone": "No milestone",
 
   "workflows.title": "Workflows",
   "workflows.description": "Manage workflows for this project. System workflows are read-only.",

@@ -123,15 +123,17 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
             <Select
               value={filter.milestone ?? ''}
               onChange={(e) => onFilterChange({ ...filter, milestone: e.target.value || undefined, cursor: undefined })}
+              className={filter.milestone ? '' : 'text-gray-500 dark:text-gray-400'}
             >
               <option value="">{t('workitems.filters.allMilestones')}</option>
+              <option value="none" className="text-gray-900 dark:text-gray-100">{t('workitems.filters.noMilestone')}</option>
               {milestones.filter((m) => m.status === 'open').map((m) => (
-                <option key={m.id} value={m.id}>{m.name}</option>
+                <option key={m.id} value={m.id} className="text-gray-900 dark:text-gray-100">{m.name}</option>
               ))}
               {milestones.some((m) => m.status === 'closed') && (
                 <optgroup label={t('milestones.statusClosed')}>
                   {milestones.filter((m) => m.status === 'closed').map((m) => (
-                    <option key={m.id} value={m.id}>{m.name}</option>
+                    <option key={m.id} value={m.id} className="text-gray-900 dark:text-gray-100">{m.name}</option>
                   ))}
                 </optgroup>
               )}
@@ -286,15 +288,17 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
               <Select
                 value={filter.milestone ?? ''}
                 onChange={(e) => onFilterChange({ ...filter, milestone: e.target.value || undefined, cursor: undefined })}
+                className={filter.milestone ? '' : 'text-gray-500 dark:text-gray-400'}
               >
                 <option value="">{t('workitems.filters.allMilestones')}</option>
+                <option value="none" className="text-gray-900 dark:text-gray-100">{t('workitems.filters.noMilestone')}</option>
                 {milestones.filter((m) => m.status === 'open').map((m) => (
-                  <option key={m.id} value={m.id}>{m.name}</option>
+                  <option key={m.id} value={m.id} className="text-gray-900 dark:text-gray-100">{m.name}</option>
                 ))}
                 {milestones.some((m) => m.status === 'closed') && (
                   <optgroup label={t('milestones.statusClosed')}>
                     {milestones.filter((m) => m.status === 'closed').map((m) => (
-                      <option key={m.id} value={m.id}>{m.name}</option>
+                      <option key={m.id} value={m.id} className="text-gray-900 dark:text-gray-100">{m.name}</option>
                     ))}
                   </optgroup>
                 )}

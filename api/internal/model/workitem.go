@@ -82,8 +82,9 @@ type WorkItemFilter struct {
 	Unassigned bool       // true = WHERE assignee_id IS NULL
 	AssigneeMe bool       // true = use the caller's user ID
 	QueueID    *uuid.UUID // filter by queue
-	MilestoneID *uuid.UUID // filter by milestone
-	Labels     []string   // filter items that contain ALL these labels
+	MilestoneID   *uuid.UUID // filter by milestone
+	MilestoneNone bool       // true = WHERE milestone_id IS NULL
+	Labels        []string   // filter items that contain ALL these labels
 	ParentID   *uuid.UUID // children of a specific parent
 	ParentNone bool       // true = top-level items only (parent_id IS NULL)
 	Search     string     // full-text search query

@@ -268,12 +268,16 @@ func (h *WorkItemHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	// Parse milestone
 	if v := q.Get("milestone"); v != "" {
-		id, err := uuid.Parse(v)
-		if err != nil {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid milestone parameter")
-			return
+		if v == "none" {
+			filter.MilestoneNone = true
+		} else {
+			id, err := uuid.Parse(v)
+			if err != nil {
+				writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid milestone parameter")
+				return
+			}
+			filter.MilestoneID = &id
 		}
-		filter.MilestoneID = &id
 	}
 
 	// Parse label
