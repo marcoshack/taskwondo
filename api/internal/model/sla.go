@@ -50,6 +50,7 @@ type SLAInfo struct {
 	RemainingSeconds int    `json:"remaining_seconds"`
 	Percentage       int    `json:"percentage"`
 	Status           string `json:"status"` // on_track, warning, breached
+	Paused           bool   `json:"paused"` // true when business_hours mode and currently outside business hours
 }
 
 // BusinessHoursConfig defines business hours for SLA calculations.
@@ -59,3 +60,4 @@ type BusinessHoursConfig struct {
 	EndHour   int    `json:"end_hour"`   // 0-23
 	Timezone  string `json:"timezone"`   // IANA timezone name
 }
+

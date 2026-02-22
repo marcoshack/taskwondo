@@ -8,6 +8,7 @@ export interface SLAInfo {
   remaining_seconds: number
   percentage: number
   status: 'on_track' | 'warning' | 'breached'
+  paused: boolean
 }
 
 export interface WorkItem {
