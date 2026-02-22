@@ -7,6 +7,7 @@
 # temporary files
 tmp/
 backups/
+build/
 
 # Go
 api/tmp/

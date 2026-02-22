@@ -1,4 +1,4 @@
-.PHONY: build push help dev dev-db dev-api dev-web up down logs logs-api migrate migrate-new test check-env export import
+.PHONY: build push help dev dev-db dev-api dev-web up down logs logs-api migrate migrate-new test check-env export import release
 
 # Required environment variables (checked by sourcing .env)
 REQUIRED_VARS := POSTGRES_USER POSTGRES_PASSWORD MINIO_ROOT_USER MINIO_ROOT_PASSWORD JWT_SECRET DATABASE_URL STORAGE_ACCESS_KEY STORAGE_SECRET_KEY
@@ -83,6 +83,46 @@ export: check-env ## Export all data to backups/taskwondo-export.tar.gz
 
 import: check-env ## Import data from backups/ (IMPORT_FILE=filename.tar.gz)
 	docker compose run --rm import
+
+# --- Release ---
+
+RELEASE_VERSION ?=
+
+release: ## Build release tarballs (usage: make release or RELEASE_VERSION=1.0.0 make release)
+	@if [ -z "$(RELEASE_VERSION)" ]; then \
+		printf "Release version (e.g. 1.0.0): "; \
+		read ver; \
+		if [ -z "$$ver" ]; then echo "Error: version is required"; exit 1; fi; \
+		$(MAKE) _release VERSION=$$ver; \
+	else \
+		$(MAKE) _release VERSION=$(RELEASE_VERSION); \
+	fi
+
+_release:
+	@echo "==> Building release v$(VERSION)..."
+	rm -rf build/release
+	mkdir -p build/release/taskwondo-$(VERSION)/bin build/release/taskwondo-$(VERSION)/html
+	@echo "==> Building API binary (Docker)..."
+	docker build -f docker/Dockerfile.api --target builder -t taskwondo-api-builder api
+	docker create --name taskwondo-api-extract taskwondo-api-builder true
+	docker cp taskwondo-api-extract:/bin/taskwondo build/release/taskwondo-$(VERSION)/bin/taskwondo
+	docker rm taskwondo-api-extract
+	@echo "==> Building Web bundle (Docker)..."
+	docker build -f docker/Dockerfile.web --target builder -t taskwondo-web-builder .
+	docker create --name taskwondo-web-extract taskwondo-web-builder true
+	docker cp taskwondo-web-extract:/src/dist/. build/release/taskwondo-$(VERSION)/html/
+	docker rm taskwondo-web-extract
+	cp .env.template build/release/taskwondo-$(VERSION)/.env.template
+	cp docker/nginx.conf build/release/taskwondo-$(VERSION)/nginx.conf
+	cp docs/install/manual-install.md build/release/taskwondo-$(VERSION)/README.md
+	@echo "==> Packaging tarball..."
+	tar -czf build/release/taskwondo-$(VERSION).tar.gz -C build/release taskwondo-$(VERSION)
+	@echo ""
+	@echo "Release artifact:"
+	@ls -lh build/release/taskwondo-$(VERSION).tar.gz
+	@echo ""
+	@echo "Contents:"
+	@tar -tzf build/release/taskwondo-$(VERSION).tar.gz | head -20
 
 # --- Testing ---
 
