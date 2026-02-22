@@ -38,6 +38,7 @@ interface WorkItemFormProps {
   onSubmit: (values: Record<string, unknown>) => void
   onCancel: () => void
   isSubmitting: boolean
+  submitError?: string | null
 }
 
 export function WorkItemForm({
@@ -52,6 +53,7 @@ export function WorkItemForm({
   onSubmit,
   onCancel,
   isSubmitting,
+  submitError,
 }: WorkItemFormProps) {
   const { t } = useTranslation()
   const [type, setType] = useState(initialValues.type ?? 'task')
@@ -72,6 +74,26 @@ export function WorkItemForm({
     onValueChange: setDescription,
     textareaRef: descRef,
   })
+
+  const MAX_COMPLEXITY = 1000000
+
+  function validateComplexity(value: string): string | undefined {
+    if (!value) return undefined
+    const num = Number(value)
+    if (!Number.isInteger(num) || num <= 0) {
+      return t('workitems.form.complexityMustBePositive')
+    }
+    if (num > MAX_COMPLEXITY) {
+      return t('workitems.form.complexityTooLarge')
+    }
+    if (allowedComplexityValues.length > 0 && !allowedComplexityValues.includes(num)) {
+      return t('workitems.form.complexityNotAllowed', { values: allowedComplexityValues.join(', ') })
+    }
+    return undefined
+  }
+
+  const complexityError = validateComplexity(complexity)
+  const hasValidationErrors = !!complexityError
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -154,14 +176,14 @@ export function WorkItemForm({
         </Select>
       )}
       {allowedComplexityValues.length > 0 ? (
-        <Select label={t('workitems.form.complexity')} value={complexity} onChange={(e) => setComplexity(e.target.value)}>
+        <Select label={t('workitems.form.complexity')} value={complexity} onChange={(e) => setComplexity(e.target.value)} error={complexityError}>
           <option value="">{t('workitems.form.complexityPlaceholder')}</option>
           {allowedComplexityValues.map((v) => (
             <option key={v} value={String(v)}>{v}</option>
           ))}
         </Select>
       ) : (
-        <Input label={t('workitems.form.complexity')} type="number" min="1" value={complexity} onChange={(e) => setComplexity(e.target.value)} placeholder={t('workitems.form.complexityPlaceholder')} />
+        <Input label={t('workitems.form.complexity')} type="number" min="1" value={complexity} onChange={(e) => setComplexity(e.target.value)} placeholder={t('workitems.form.complexityPlaceholder')} error={complexityError} />
       )}
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('workitems.form.assignee')}</label>
@@ -182,9 +204,12 @@ export function WorkItemForm({
           ))}
         </Select>
       )}
+      {submitError && (
+        <p className="text-sm text-red-600 dark:text-red-400">{submitError}</p>
+      )}
       <div className="flex justify-end gap-3 pt-2">
         <Button type="button" variant="secondary" onClick={onCancel}>{t('common.cancel')}</Button>
-        <Button type="submit" disabled={isSubmitting || !title.trim()}>
+        <Button type="submit" disabled={isSubmitting || !title.trim() || hasValidationErrors}>
           {isSubmitting ? t('common.saving') : mode === 'create' ? t('common.create') : t('common.save')}
         </Button>
       </div>

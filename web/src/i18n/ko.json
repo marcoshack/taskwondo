@@ -178,6 +178,8 @@
   "workitems.bulk.changeStatus": "상태 변경...",
   "workitems.bulk.assign": "담당자 지정...",
   "workitems.bulk.unassign": "담당 해제",
+  "workitems.bulk.milestone": "마일스톤 설정...",
+  "workitems.bulk.transitionError": "잘못된 상태 전환: {{items}}",
 
   "workitems.form.type": "유형",
   "workitems.form.title": "제목",
@@ -191,6 +193,10 @@
   "workitems.form.dueDate": "마감일",
   "workitems.form.complexity": "복잡도",
   "workitems.form.complexityPlaceholder": "없음",
+  "workitems.form.complexityMustBePositive": "복잡도는 양의 정수여야 합니다.",
+  "workitems.form.complexityTooLarge": "복잡도 값이 너무 큽니다.",
+  "workitems.form.complexityNotAllowed": "허용된 목록에 없는 값입니다: {{values}}.",
+  "workitems.form.submitError": "저장 실패: {{message}}",
   "workitems.detail.complexity": "복잡도",
 
   "workitems.detail.description": "설명",

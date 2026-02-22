@@ -70,15 +70,26 @@ export function useDeleteWorkItem(projectKey: string) {
   })
 }
 
+export interface BulkUpdateResult {
+  succeeded: number
+  failed: { itemNumber: number; message: string }[]
+}
+
 export function useBulkUpdateWorkItems(projectKey: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (updates: { itemNumber: number; input: UpdateWorkItemInput }[]) => {
-      const results = []
+    mutationFn: async (updates: { itemNumber: number; input: UpdateWorkItemInput }[]): Promise<BulkUpdateResult> => {
+      const result: BulkUpdateResult = { succeeded: 0, failed: [] }
       for (const { itemNumber, input } of updates) {
-        results.push(await updateWorkItem(projectKey, itemNumber, input))
+        try {
+          await updateWorkItem(projectKey, itemNumber, input)
+          result.succeeded++
+        } catch (err) {
+          const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Unknown error'
+          result.failed.push({ itemNumber, message: msg })
+        }
       }
-      return results
+      return result
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['projects', projectKey, 'items'] })

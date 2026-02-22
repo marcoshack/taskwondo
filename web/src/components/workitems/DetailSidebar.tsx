@@ -24,10 +24,13 @@ const PRIORITIES = ['low', 'medium', 'high', 'critical']
 const TYPES = ['task', 'ticket', 'bug', 'feedback', 'epic']
 const VISIBILITIES = ['internal', 'portal', 'public']
 
+const MAX_COMPLEXITY = 1000000
+
 export function DetailSidebar({ item, statuses, allowedTransitions, members, milestones = [], allowedComplexityValues = [], typeWorkflows, allWorkflows, onUpdate }: DetailSidebarProps) {
   const { t } = useTranslation()
   const [pendingType, setPendingType] = useState<string | null>(null)
   const [statusWarning, setStatusWarning] = useState(false)
+  const [complexityError, setComplexityError] = useState<string | undefined>(undefined)
 
   // Resolve statuses to show: either from pending type's workflow or current workflow
   let displayStatuses = statuses
@@ -134,17 +137,38 @@ export function DetailSidebar({ item, statuses, allowedTransitions, members, mil
             min="1"
             defaultValue={item.complexity != null ? String(item.complexity) : ''}
             placeholder={t('workitems.form.complexityPlaceholder')}
+            error={complexityError}
             onKeyDown={(e) => {
               if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
               if (e.key === 'Escape') {
                 (e.target as HTMLInputElement).value = item.complexity != null ? String(item.complexity) : ''
+                setComplexityError(undefined)
                 ;(e.target as HTMLInputElement).blur()
               }
             }}
             onBlur={(e) => {
-              const newVal = e.target.value ? Number(e.target.value) : null
-              if (newVal !== item.complexity) {
-                onUpdate({ complexity: newVal })
+              const raw = e.target.value
+              if (!raw) {
+                setComplexityError(undefined)
+                if (item.complexity != null) onUpdate({ complexity: null })
+                return
+              }
+              const num = Number(raw)
+              if (!Number.isInteger(num) || num <= 0) {
+                setComplexityError(t('workitems.form.complexityMustBePositive'))
+                return
+              }
+              if (num > MAX_COMPLEXITY) {
+                setComplexityError(t('workitems.form.complexityTooLarge'))
+                return
+              }
+              if (allowedComplexityValues.length > 0 && !allowedComplexityValues.includes(num)) {
+                setComplexityError(t('workitems.form.complexityNotAllowed', { values: allowedComplexityValues.join(', ') }))
+                return
+              }
+              setComplexityError(undefined)
+              if (num !== item.complexity) {
+                onUpdate({ complexity: num })
               }
             }}
           />

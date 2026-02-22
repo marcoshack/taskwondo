@@ -178,6 +178,8 @@
   "workitems.bulk.changeStatus": "Changer le statut...",
   "workitems.bulk.assign": "Assigner...",
   "workitems.bulk.unassign": "Désassigner",
+  "workitems.bulk.milestone": "Définir le jalon...",
+  "workitems.bulk.transitionError": "Transition de statut invalide pour : {{items}}",
 
   "workitems.form.type": "Type",
   "workitems.form.title": "Titre",
@@ -191,6 +193,10 @@
   "workitems.form.dueDate": "Échéance",
   "workitems.form.complexity": "Complexité",
   "workitems.form.complexityPlaceholder": "Aucune",
+  "workitems.form.complexityMustBePositive": "La complexité doit être un nombre entier positif.",
+  "workitems.form.complexityTooLarge": "La valeur de complexité est trop grande.",
+  "workitems.form.complexityNotAllowed": "Valeur non autorisée : {{values}}.",
+  "workitems.form.submitError": "Échec de l'enregistrement : {{message}}",
 
   "workitems.detail.complexity": "Complexité",
 

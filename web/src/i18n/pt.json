@@ -178,6 +178,8 @@
   "workitems.bulk.changeStatus": "Alterar status...",
   "workitems.bulk.assign": "Atribuir...",
   "workitems.bulk.unassign": "Desatribuir",
+  "workitems.bulk.milestone": "Definir marco...",
+  "workitems.bulk.transitionError": "Transição de status inválida para: {{items}}",
 
   "workitems.form.type": "Tipo",
   "workitems.form.title": "Título",
@@ -191,6 +193,10 @@
   "workitems.form.dueDate": "Data Limite",
   "workitems.form.complexity": "Complexidade",
   "workitems.form.complexityPlaceholder": "Nenhum",
+  "workitems.form.complexityMustBePositive": "A complexidade deve ser um número inteiro positivo.",
+  "workitems.form.complexityTooLarge": "O valor de complexidade é muito grande.",
+  "workitems.form.complexityNotAllowed": "Valor não está na lista permitida: {{values}}.",
+  "workitems.form.submitError": "Falha ao salvar: {{message}}",
 
   "workitems.detail.complexity": "Complexidade",
 

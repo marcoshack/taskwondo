@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
-import { useWorkItems, useCreateWorkItem, useBulkUpdateWorkItems, useDeleteWorkItem } from '@/hooks/useWorkItems'
+import { useWorkItems, useCreateWorkItem, useBulkUpdateWorkItems, useDeleteWorkItem, type BulkUpdateResult } from '@/hooks/useWorkItems'
 import { useProject, useMembers } from '@/hooks/useProjects'
 import { useProjectWorkflow, useAvailableStatuses } from '@/hooks/useWorkflows'
 import { useMilestones } from '@/hooks/useMilestones'
@@ -24,6 +24,7 @@ import { SLAIndicator } from '@/components/SLAIndicator'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { formatRelativeTime } from '@/utils/duration'
 import { User, History } from 'lucide-react'
+import type { AxiosError } from 'axios'
 import { listWorkItems, type WorkItem, type WorkItemFilter } from '@/api/workitems'
 
 type ViewMode = 'list' | 'board'
@@ -203,6 +204,7 @@ export function WorkItemListPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [bulkError, setBulkError] = useState<string | null>(null)
   const [activeRow, setActiveRow] = useState(-1)
   const activeRowStorageKey = `taskwondo_activeRow_${projectKey}`
   const filterStorageKey = `taskwondo_listParams_${projectKey}`
@@ -248,24 +250,43 @@ export function WorkItemListPage() {
     }
   }
 
+  function handleBulkResult(result: BulkUpdateResult) {
+    if (result.failed.length === 0) {
+      setSelected(new Set())
+      setBulkError(null)
+      return
+    }
+    // Keep only failed items selected
+    setSelected(new Set(result.failed.map((f) => f.itemNumber)))
+    // Build display IDs for failed items
+    const displayIds = result.failed.map((f) => {
+      const item = allItems.find((i) => i.item_number === f.itemNumber)
+      return item?.display_id ?? `#${f.itemNumber}`
+    })
+    setBulkError(t('workitems.bulk.transitionError', { items: displayIds.join(', ') }))
+  }
+
   function handleBulkStatus(status: string) {
     if (!status) return
+    setBulkError(null)
     const updates = Array.from(selected).map((itemNumber) => ({ itemNumber, input: { status } }))
-    bulkMutation.mutate(updates, { onSuccess: () => setSelected(new Set()) })
+    bulkMutation.mutate(updates, { onSuccess: handleBulkResult })
   }
 
   function handleBulkAssign(value: string) {
     if (!value) return
+    setBulkError(null)
     const input = value === 'unassign' ? { assignee_id: null } : { assignee_id: value }
     const updates = Array.from(selected).map((itemNumber) => ({ itemNumber, input }))
-    bulkMutation.mutate(updates, { onSuccess: () => setSelected(new Set()) })
+    bulkMutation.mutate(updates, { onSuccess: handleBulkResult })
   }
 
   function handleBulkMilestone(value: string) {
     if (!value) return
+    setBulkError(null)
     const input = value === 'none' ? { milestone_id: null } : { milestone_id: value }
     const updates = Array.from(selected).map((itemNumber) => ({ itemNumber, input }))
-    bulkMutation.mutate(updates, { onSuccess: () => setSelected(new Set()) })
+    bulkMutation.mutate(updates, { onSuccess: handleBulkResult })
   }
 
   const [loadedPages, setLoadedPages] = useState<WorkItem[][]>([])
@@ -467,8 +488,11 @@ export function WorkItemListPage() {
               </Select>
             </div>
           )}
-          <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>{t('common.clear')}</Button>
+          <Button variant="ghost" size="sm" onClick={() => { setSelected(new Set()); setBulkError(null) }}>{t('common.clear')}</Button>
           {bulkMutation.isPending && <Spinner size="sm" />}
+          {bulkError && (
+            <span className="text-sm text-red-600 dark:text-red-400">{bulkError}</span>
+          )}
         </div>
       )}
 
@@ -586,7 +610,7 @@ export function WorkItemListPage() {
         />
       )}
 
-      <Modal open={showCreate} onClose={() => setShowCreate(false)} title={t('workitems.newTitle')}>
+      <Modal open={showCreate} onClose={() => { setShowCreate(false); createMutation.reset() }} title={t('workitems.newTitle')}>
         <WorkItemForm
           projectKey={projectKey ?? ''}
           mode="create"
@@ -595,11 +619,12 @@ export function WorkItemListPage() {
           allowedComplexityValues={project?.allowed_complexity_values}
           onSubmit={(values) => {
             createMutation.mutate(values as { type: string; title: string }, {
-              onSuccess: () => setShowCreate(false),
+              onSuccess: () => { setShowCreate(false); createMutation.reset() },
             })
           }}
-          onCancel={() => setShowCreate(false)}
+          onCancel={() => { setShowCreate(false); createMutation.reset() }}
           isSubmitting={createMutation.isPending}
+          submitError={createMutation.error ? t('workitems.form.submitError', { message: (createMutation.error as AxiosError<{ error?: { message?: string } }>).response?.data?.error?.message ?? t('common.unknown') }) : null}
         />
       </Modal>
 

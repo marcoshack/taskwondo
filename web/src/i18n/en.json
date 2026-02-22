@@ -183,6 +183,7 @@
   "workitems.bulk.assign": "Assign...",
   "workitems.bulk.unassign": "Unassign",
   "workitems.bulk.milestone": "Set milestone...",
+  "workitems.bulk.transitionError": "Invalid status transition for: {{items}}",
 
   "workitems.form.type": "Type",
   "workitems.form.title": "Title",
@@ -196,6 +197,10 @@
   "workitems.form.dueDate": "Due Date",
   "workitems.form.complexity": "Complexity",
   "workitems.form.complexityPlaceholder": "None",
+  "workitems.form.complexityMustBePositive": "Complexity must be a positive integer.",
+  "workitems.form.complexityTooLarge": "Complexity value is too large.",
+  "workitems.form.complexityNotAllowed": "Value not in the allowed list: {{values}}.",
+  "workitems.form.submitError": "Failed to save: {{message}}",
 
   "workitems.detail.complexity": "Complexity",
 

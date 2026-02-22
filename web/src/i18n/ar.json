@@ -178,6 +178,8 @@
   "workitems.bulk.changeStatus": "تغيير الحالة...",
   "workitems.bulk.assign": "تعيين...",
   "workitems.bulk.unassign": "إلغاء التعيين",
+  "workitems.bulk.milestone": "تعيين مرحلة...",
+  "workitems.bulk.transitionError": "انتقال حالة غير صالح لـ: {{items}}",
 
   "workitems.form.type": "النوع",
   "workitems.form.title": "العنوان",
@@ -191,6 +193,10 @@
   "workitems.form.dueDate": "تاريخ الاستحقاق",
   "workitems.form.complexity": "التعقيد",
   "workitems.form.complexityPlaceholder": "لا شيء",
+  "workitems.form.complexityMustBePositive": "يجب أن يكون التعقيد عددًا صحيحًا موجبًا.",
+  "workitems.form.complexityTooLarge": "قيمة التعقيد كبيرة جدًا.",
+  "workitems.form.complexityNotAllowed": "القيمة ليست في القائمة المسموح بها: {{values}}.",
+  "workitems.form.submitError": "فشل الحفظ: {{message}}",
 
   "workitems.detail.complexity": "التعقيد",
   "workitems.detail.description": "الوصف",

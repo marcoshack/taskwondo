@@ -178,6 +178,8 @@
   "workitems.bulk.changeStatus": "Cambiar estado...",
   "workitems.bulk.assign": "Asignar...",
   "workitems.bulk.unassign": "Desasignar",
+  "workitems.bulk.milestone": "Asignar hito...",
+  "workitems.bulk.transitionError": "Transición de estado no válida para: {{items}}",
 
   "workitems.form.type": "Tipo",
   "workitems.form.title": "Título",
@@ -191,6 +193,10 @@
   "workitems.form.dueDate": "Fecha Límite",
   "workitems.form.complexity": "Complejidad",
   "workitems.form.complexityPlaceholder": "Ninguno",
+  "workitems.form.complexityMustBePositive": "La complejidad debe ser un número entero positivo.",
+  "workitems.form.complexityTooLarge": "El valor de complejidad es demasiado grande.",
+  "workitems.form.complexityNotAllowed": "Valor no está en la lista permitida: {{values}}.",
+  "workitems.form.submitError": "Error al guardar: {{message}}",
   "workitems.detail.complexity": "Complejidad",
 
   "workitems.detail.description": "Descripción",

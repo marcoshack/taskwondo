@@ -178,6 +178,8 @@
   "workitems.bulk.changeStatus": "更改状态...",
   "workitems.bulk.assign": "分配...",
   "workitems.bulk.unassign": "取消分配",
+  "workitems.bulk.milestone": "设置里程碑...",
+  "workitems.bulk.transitionError": "无效的状态转换：{{items}}",
 
   "workitems.form.type": "类型",
   "workitems.form.title": "标题",
@@ -191,6 +193,10 @@
   "workitems.form.dueDate": "截止日期",
   "workitems.form.complexity": "复杂度",
   "workitems.form.complexityPlaceholder": "无",
+  "workitems.form.complexityMustBePositive": "复杂度必须是正整数。",
+  "workitems.form.complexityTooLarge": "复杂度值过大。",
+  "workitems.form.complexityNotAllowed": "值不在允许列表中：{{values}}。",
+  "workitems.form.submitError": "保存失败：{{message}}",
 
   "workitems.detail.complexity": "复杂度",
   "workitems.detail.description": "描述",

@@ -178,6 +178,8 @@
   "workitems.bulk.changeStatus": "ステータス変更...",
   "workitems.bulk.assign": "担当者変更...",
   "workitems.bulk.unassign": "担当解除",
+  "workitems.bulk.milestone": "マイルストーン設定...",
+  "workitems.bulk.transitionError": "無効なステータス遷移: {{items}}",
 
   "workitems.form.type": "種別",
   "workitems.form.title": "タイトル",
@@ -191,6 +193,10 @@
   "workitems.form.dueDate": "期限",
   "workitems.form.complexity": "複雑度",
   "workitems.form.complexityPlaceholder": "なし",
+  "workitems.form.complexityMustBePositive": "複雑度は正の整数でなければなりません。",
+  "workitems.form.complexityTooLarge": "複雑度の値が大きすぎます。",
+  "workitems.form.complexityNotAllowed": "許可されたリストにない値です: {{values}}。",
+  "workitems.form.submitError": "保存に失敗しました: {{message}}",
   "workitems.detail.complexity": "複雑度",
 
   "workitems.detail.description": "説明",
