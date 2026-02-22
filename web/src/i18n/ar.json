@@ -32,6 +32,7 @@
   "common.description": "الوصف",
   "common.noResults": "لا توجد نتائج",
   "common.you": "أنت",
+  "common.search": "بحث...",
 
   "brand.name": "Taskwondo",
 
@@ -217,6 +218,7 @@
   "workitems.filters.allAssignees": "جميع المسؤولين",
   "workitems.filters.assignedToMe": "المعيّنة لي",
   "workitems.filters.unassigned": "غير معيّن",
+  "workitems.filters.members": "الأعضاء",
   "workitems.filters.statusGroupOpen": "مفتوح",
   "workitems.filters.statusGroupClosed": "مغلق",
 

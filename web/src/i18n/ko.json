@@ -32,6 +32,7 @@
   "common.description": "설명",
   "common.noResults": "결과 없음",
   "common.you": "나",
+  "common.search": "검색...",
 
   "brand.name": "Taskwondo",
 
@@ -217,6 +218,7 @@
   "workitems.filters.allAssignees": "모든 담당자",
   "workitems.filters.assignedToMe": "내 담당",
   "workitems.filters.unassigned": "미배정",
+  "workitems.filters.members": "멤버",
   "workitems.filters.statusGroupOpen": "미완료",
   "workitems.filters.statusGroupClosed": "완료",
 

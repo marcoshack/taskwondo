@@ -239,20 +239,34 @@ func (h *WorkItemHandler) List(w http.ResponseWriter, r *http.Request) {
 		filter.Priorities = strings.Split(v, ",")
 	}
 
-	// Parse assignee
-	if v := q.Get("assignee"); v != "" {
-		switch v {
-		case "me":
-			filter.AssigneeMe = true
-		case "unassigned":
-			filter.Unassigned = true
-		default:
-			id, err := uuid.Parse(v)
-			if err != nil {
-				writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid assignee parameter")
-				return
+	// Parse assignees (multi-value) and assignee (deprecated single-value)
+	assigneeOld := q.Get("assignee")
+	assigneesNew := q.Get("assignees")
+	if assigneeOld != "" && assigneesNew != "" {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "cannot use both 'assignee' and 'assignees' parameters")
+		return
+	}
+	assigneeRaw := assigneesNew
+	if assigneeOld != "" {
+		log.Ctx(r.Context()).Warn().Msg("deprecated: use 'assignees' query param instead of 'assignee'")
+		assigneeRaw = assigneeOld
+	}
+	if assigneeRaw != "" {
+		for _, part := range strings.Split(assigneeRaw, ",") {
+			part = strings.TrimSpace(part)
+			switch part {
+			case "me":
+				filter.AssigneeMe = true
+			case "unassigned":
+				filter.Unassigned = true
+			default:
+				id, err := uuid.Parse(part)
+				if err != nil {
+					writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid assignee parameter")
+					return
+				}
+				filter.AssigneeIDs = append(filter.AssigneeIDs, id)
 			}
-			filter.AssigneeID = &id
 		}
 	}
 

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
 export interface MultiSelectOption {
@@ -13,12 +13,15 @@ interface MultiSelectProps {
   onChange: (selected: string[]) => void
   placeholder?: string
   className?: string
+  searchable?: boolean
 }
 
-export function MultiSelect({ options, selected, onChange, placeholder = 'All', className = '' }: MultiSelectProps) {
+export function MultiSelect({ options, selected, onChange, placeholder = 'All', className = '', searchable = false }: MultiSelectProps) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
   const ref = useRef<HTMLDivElement>(null)
+  const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -30,6 +33,14 @@ export function MultiSelect({ options, selected, onChange, placeholder = 'All', 
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
+  useEffect(() => {
+    if (open && searchable) {
+      // Focus search input when dropdown opens
+      setTimeout(() => searchRef.current?.focus(), 0)
+    }
+    if (!open) setSearch('')
+  }, [open, searchable])
+
   function toggle(value: string) {
     if (selected.includes(value)) {
       onChange(selected.filter((v) => v !== value))
@@ -38,8 +49,14 @@ export function MultiSelect({ options, selected, onChange, placeholder = 'All', 
     }
   }
 
+  const filteredOptions = useMemo(() => {
+    if (!search) return options
+    const lower = search.toLowerCase()
+    return options.filter((o) => o.label.toLowerCase().includes(lower))
+  }, [options, search])
+
   function selectAll() {
-    onChange(options.map((o) => o.value))
+    onChange(filteredOptions.map((o) => o.value))
   }
 
   function clearAll() {
@@ -55,11 +72,11 @@ export function MultiSelect({ options, selected, onChange, placeholder = 'All', 
         : t('multiSelect.selected', { count: selected.length })
 
   // Group options if any have a group
-  const hasGroups = options.some((o) => o.group)
+  const hasGroups = filteredOptions.some((o) => o.group)
   const groups: { name: string | null; items: MultiSelectOption[] }[] = []
   if (hasGroups) {
     const groupMap = new Map<string | null, MultiSelectOption[]>()
-    for (const opt of options) {
+    for (const opt of filteredOptions) {
       const g = opt.group ?? null
       if (!groupMap.has(g)) groupMap.set(g, [])
       groupMap.get(g)!.push(opt)
@@ -86,6 +103,18 @@ export function MultiSelect({ options, selected, onChange, placeholder = 'All', 
 
       {open && (
         <div className="absolute z-20 mt-1 w-full min-w-[180px] rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg">
+          {searchable && (
+            <div className="px-2 pt-2 pb-1">
+              <input
+                ref={searchRef}
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={t('common.search')}
+                className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-2 py-1 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              />
+            </div>
+          )}
           <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-100 dark:border-gray-700">
             <button type="button" className="text-xs text-indigo-600 hover:text-indigo-800" onClick={selectAll}>
               {t('common.all')}
@@ -95,7 +124,9 @@ export function MultiSelect({ options, selected, onChange, placeholder = 'All', 
             </button>
           </div>
           <div className="max-h-60 overflow-y-auto py-1">
-            {hasGroups ? (
+            {filteredOptions.length === 0 ? (
+              <div className="px-3 py-2 text-sm text-gray-400 dark:text-gray-500">{t('common.noResults')}</div>
+            ) : hasGroups ? (
               groups.map((group) => (
                 <div key={group.name ?? '__default'}>
                   {group.name && (
@@ -109,7 +140,7 @@ export function MultiSelect({ options, selected, onChange, placeholder = 'All', 
                 </div>
               ))
             ) : (
-              options.map((opt) => (
+              filteredOptions.map((opt) => (
                 <OptionRow key={opt.value} option={opt} checked={selected.includes(opt.value)} onToggle={toggle} />
               ))
             )}

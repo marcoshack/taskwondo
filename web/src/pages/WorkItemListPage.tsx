@@ -424,6 +424,7 @@ export function WorkItemListPage() {
         onFilterChange={handleFilterChange}
         statuses={allStatuses ?? statuses}
         milestones={milestones ?? []}
+        members={members ?? []}
         search={search}
         onSearchChange={handleSearchChange}
         sort={sort}

@@ -32,6 +32,7 @@
   "common.description": "説明",
   "common.noResults": "結果なし",
   "common.you": "あなた",
+  "common.search": "検索...",
 
   "brand.name": "Taskwondo",
 
@@ -217,6 +218,7 @@
   "workitems.filters.allAssignees": "すべての担当者",
   "workitems.filters.assignedToMe": "自分に割当",
   "workitems.filters.unassigned": "未割当",
+  "workitems.filters.members": "メンバー",
   "workitems.filters.statusGroupOpen": "未完了",
   "workitems.filters.statusGroupClosed": "完了",
 

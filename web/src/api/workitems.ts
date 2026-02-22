@@ -144,7 +144,7 @@ export async function listWorkItems(projectKey: string, filter: WorkItemFilter =
   if (filter.type?.length) params.set('type', filter.type.join(','))
   if (filter.status?.length) params.set('status', filter.status.join(','))
   if (filter.priority?.length) params.set('priority', filter.priority.join(','))
-  if (filter.assignee?.length) params.set('assignee', filter.assignee.join(','))
+  if (filter.assignee?.length) params.set('assignees', filter.assignee.join(','))
   if (filter.queue) params.set('queue', filter.queue)
   if (filter.milestone?.length) params.set('milestones', filter.milestone.join(','))
   if (filter.label) params.set('label', filter.label)

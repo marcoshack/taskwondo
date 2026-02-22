@@ -78,9 +78,10 @@ type WorkItemFilter struct {
 	Types      []string   // filter by type (multiple allowed)
 	Statuses   []string   // filter by status (multiple allowed)
 	Priorities []string   // filter by priority (multiple allowed)
-	AssigneeID *uuid.UUID // specific assignee
-	Unassigned bool       // true = WHERE assignee_id IS NULL
-	AssigneeMe bool       // true = use the caller's user ID
+	AssigneeID  *uuid.UUID   // specific assignee (deprecated, single-value)
+	AssigneeIDs []uuid.UUID  // specific assignees (multiple allowed)
+	Unassigned  bool         // true = include WHERE assignee_id IS NULL
+	AssigneeMe  bool         // true = include the caller's user ID
 	QueueID    *uuid.UUID // filter by queue
 	MilestoneIDs  []uuid.UUID // filter by milestone (multiple allowed)
 	MilestoneNone bool        // true = WHERE milestone_id IS NULL

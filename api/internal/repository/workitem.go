@@ -107,11 +107,29 @@ func (r *WorkItemRepository) List(ctx context.Context, projectID uuid.UUID, filt
 		qb.add("priority = ANY(?)", pq.Array(filter.Priorities))
 	}
 
-	// Assignee filter
-	if filter.Unassigned {
-		qb.addRaw("assignee_id IS NULL")
-	} else if filter.AssigneeID != nil {
-		qb.add("assignee_id = ?", *filter.AssigneeID)
+	// Assignee filter — supports combinations via OR
+	// AssigneeMe is resolved to AssigneeIDs in the service layer.
+	{
+		var clauses []string
+		if filter.Unassigned {
+			clauses = append(clauses, "assignee_id IS NULL")
+		}
+		if filter.AssigneeID != nil {
+			// deprecated single-value
+			qb.argIndex++
+			clauses = append(clauses, fmt.Sprintf("assignee_id = $%d", qb.argIndex))
+			qb.args = append(qb.args, *filter.AssigneeID)
+		}
+		if len(filter.AssigneeIDs) > 0 {
+			qb.argIndex++
+			clauses = append(clauses, fmt.Sprintf("assignee_id = ANY($%d)", qb.argIndex))
+			qb.args = append(qb.args, pq.Array(filter.AssigneeIDs))
+		}
+		if len(clauses) == 1 {
+			qb.conditions = append(qb.conditions, clauses[0])
+		} else if len(clauses) > 1 {
+			qb.conditions = append(qb.conditions, "("+strings.Join(clauses, " OR ")+")")
+		}
 	}
 
 	// Queue filter

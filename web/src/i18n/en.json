@@ -32,6 +32,7 @@
   "common.description": "Description",
   "common.noResults": "No results",
   "common.you": "you",
+  "common.search": "Search...",
   "common.close": "Close",
 
   "brand.name": "Taskwondo",
@@ -223,6 +224,7 @@
   "workitems.filters.allAssignees": "All assignees",
   "workitems.filters.assignedToMe": "Assigned to me",
   "workitems.filters.unassigned": "Unassigned",
+  "workitems.filters.members": "Members",
   "workitems.filters.statusGroupOpen": "Open",
   "workitems.filters.statusGroupClosed": "Closed",
 

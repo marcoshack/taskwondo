@@ -9,12 +9,15 @@ import { MultiSelect, type MultiSelectOption } from '@/components/ui/MultiSelect
 import type { WorkItemFilter } from '@/api/workitems'
 import type { WorkflowStatus } from '@/api/workflows'
 import type { Milestone } from '@/api/milestones'
+import type { ProjectMember } from '@/api/projects'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface WorkItemFiltersProps {
   filter: WorkItemFilter
   onFilterChange: (filter: WorkItemFilter) => void
   statuses: WorkflowStatus[]
   milestones?: Milestone[]
+  members?: ProjectMember[]
   search: string
   onSearchChange: (value: string) => void
   sort?: string
@@ -27,8 +30,9 @@ interface WorkItemFiltersProps {
 
 const closedCategories = new Set(['done', 'cancelled'])
 
-export function WorkItemFilters({ filter, onFilterChange, statuses, milestones = [], search, onSearchChange, sort, order, onSort, onOrderChange, showDates, onShowDatesChange }: WorkItemFiltersProps) {
+export function WorkItemFilters({ filter, onFilterChange, statuses, milestones = [], members = [], search, onSearchChange, sort, order, onSort, onOrderChange, showDates, onShowDatesChange }: WorkItemFiltersProps) {
   const { t } = useTranslation()
+  const { user } = useAuth()
   const searchRef = useRef<HTMLInputElement>(null)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [sortOpen, setSortOpen] = useState(false)
@@ -49,9 +53,11 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
     { value: 'low', label: t('workitems.priorities.low') },
   ]
 
+  const otherMembers = members.filter((m) => m.user_id !== user?.id)
   const assigneeOptions: MultiSelectOption[] = [
     { value: 'me', label: t('workitems.filters.assignedToMe') },
     { value: 'unassigned', label: t('workitems.filters.unassigned') },
+    ...otherMembers.map((m) => ({ value: m.user_id, label: m.display_name, group: t('workitems.filters.members') })),
   ]
 
   function buildStatusOptions(ss: WorkflowStatus[]): MultiSelectOption[] {
@@ -135,7 +141,7 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
           <MultiSelect options={statusOptions} selected={filter.status ?? []} onChange={(v) => setArray('status', v)} placeholder={t('workitems.filters.allStatuses')} />
         </div>
         <div className="w-40">
-          <MultiSelect options={assigneeOptions} selected={filter.assignee ?? []} onChange={(v) => setArray('assignee', v)} placeholder={t('workitems.filters.allAssignees')} />
+          <MultiSelect options={assigneeOptions} selected={filter.assignee ?? []} onChange={(v) => setArray('assignee', v)} placeholder={t('workitems.filters.allAssignees')} searchable />
         </div>
         {milestones.length > 0 && (
           <div className="w-40">
@@ -292,7 +298,7 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('workitems.filters.allAssignees')}</label>
-            <MultiSelect options={assigneeOptions} selected={filter.assignee ?? []} onChange={(v) => setArray('assignee', v)} placeholder={t('workitems.filters.allAssignees')} />
+            <MultiSelect options={assigneeOptions} selected={filter.assignee ?? []} onChange={(v) => setArray('assignee', v)} placeholder={t('workitems.filters.allAssignees')} searchable />
           </div>
           {milestones.length > 0 && (
             <div>

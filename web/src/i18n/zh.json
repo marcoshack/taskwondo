@@ -32,6 +32,7 @@
   "common.description": "描述",
   "common.noResults": "无结果",
   "common.you": "你",
+  "common.search": "搜索...",
 
   "brand.name": "Taskwondo",
 
@@ -217,6 +218,7 @@
   "workitems.filters.allAssignees": "所有负责人",
   "workitems.filters.assignedToMe": "分配给我",
   "workitems.filters.unassigned": "未分配",
+  "workitems.filters.members": "成员",
   "workitems.filters.statusGroupOpen": "未关闭",
   "workitems.filters.statusGroupClosed": "已关闭",
 

@@ -357,9 +357,9 @@ func (s *WorkItemService) List(ctx context.Context, info *model.AuthInfo, projec
 		return nil, err
 	}
 
-	// Resolve "assignee=me"
+	// Resolve "assignee=me" into AssigneeIDs
 	if filter.AssigneeMe {
-		filter.AssigneeID = &info.UserID
+		filter.AssigneeIDs = append(filter.AssigneeIDs, info.UserID)
 	}
 
 	// Sanitize defaults
