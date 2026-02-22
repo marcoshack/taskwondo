@@ -7,6 +7,11 @@ export interface MultiSelectOption {
   group?: string
 }
 
+export interface GroupAction {
+  label: string
+  values: string[]
+}
+
 interface MultiSelectProps {
   options: MultiSelectOption[]
   selected: string[]
@@ -14,9 +19,10 @@ interface MultiSelectProps {
   placeholder?: string
   className?: string
   searchable?: boolean
+  groupActions?: GroupAction[]
 }
 
-export function MultiSelect({ options, selected, onChange, placeholder = 'All', className = '', searchable = false }: MultiSelectProps) {
+export function MultiSelect({ options, selected, onChange, placeholder = 'All', className = '', searchable = false, groupActions }: MultiSelectProps) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -115,11 +121,16 @@ export function MultiSelect({ options, selected, onChange, placeholder = 'All', 
               />
             </div>
           )}
-          <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-100 dark:border-gray-700">
+          <div className="flex items-center gap-2 px-3 py-1.5 border-b border-gray-100 dark:border-gray-700">
             <button type="button" className="text-xs text-indigo-600 hover:text-indigo-800" onClick={selectAll}>
               {t('common.all')}
             </button>
-            <button type="button" className="text-xs text-gray-400 hover:text-gray-600" onClick={clearAll}>
+            {groupActions?.map((action) => (
+              <button key={action.label} type="button" className="text-xs text-indigo-600 hover:text-indigo-800" onClick={() => onChange(action.values)}>
+                {action.label}
+              </button>
+            ))}
+            <button type="button" className="ml-auto text-xs text-gray-400 hover:text-gray-600" onClick={clearAll}>
               {t('common.none')}
             </button>
           </div>

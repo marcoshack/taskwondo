@@ -5,7 +5,7 @@ import { SlidersHorizontal, ArrowUpDown, Settings, X } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { Modal } from '@/components/ui/Modal'
-import { MultiSelect, type MultiSelectOption } from '@/components/ui/MultiSelect'
+import { MultiSelect, type MultiSelectOption, type GroupAction } from '@/components/ui/MultiSelect'
 import type { WorkItemFilter } from '@/api/workitems'
 import type { WorkflowStatus } from '@/api/workflows'
 import type { Milestone } from '@/api/milestones'
@@ -87,6 +87,10 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
   ]
 
   const statusOptions = buildStatusOptions(statuses)
+  const statusGroupActions: GroupAction[] = [
+    { label: t('workitems.filters.statusGroupOpen'), values: statuses.filter((s) => !closedCategories.has(s.category)).map((s) => s.name) },
+    { label: t('workitems.filters.statusGroupClosed'), values: statuses.filter((s) => closedCategories.has(s.category)).map((s) => s.name) },
+  ]
 
   const activeFilterCount =
     (filter.type?.length ? 1 : 0) +
@@ -138,7 +142,7 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
           <MultiSelect options={priorityOptions} selected={filter.priority ?? []} onChange={(v) => setArray('priority', v)} placeholder={t('workitems.filters.allPriorities')} />
         </div>
         <div className="w-40">
-          <MultiSelect options={statusOptions} selected={filter.status ?? []} onChange={(v) => setArray('status', v)} placeholder={t('workitems.filters.allStatuses')} />
+          <MultiSelect options={statusOptions} selected={filter.status ?? []} onChange={(v) => setArray('status', v)} placeholder={t('workitems.filters.allStatuses')} groupActions={statusGroupActions} />
         </div>
         <div className="w-40">
           <MultiSelect options={assigneeOptions} selected={filter.assignee ?? []} onChange={(v) => setArray('assignee', v)} placeholder={t('workitems.filters.allAssignees')} searchable />
@@ -294,7 +298,7 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('workitems.filters.allStatuses')}</label>
-            <MultiSelect options={statusOptions} selected={filter.status ?? []} onChange={(v) => setArray('status', v)} placeholder={t('workitems.filters.allStatuses')} />
+            <MultiSelect options={statusOptions} selected={filter.status ?? []} onChange={(v) => setArray('status', v)} placeholder={t('workitems.filters.allStatuses')} groupActions={statusGroupActions} />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('workitems.filters.allAssignees')}</label>
