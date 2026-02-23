@@ -8,6 +8,7 @@ import { LanguageProvider } from '@/contexts/LanguageContext'
 import { SidebarProvider } from '@/contexts/SidebarContext'
 import { KeyboardShortcutProvider } from '@/contexts/KeyboardShortcutContext'
 import { NavigationGuardProvider } from '@/contexts/NavigationGuardContext'
+import { NotificationProvider } from '@/contexts/NotificationContext'
 import { BrandProvider } from '@/contexts/BrandContext'
 import '@/i18n'
 import App from '@/App'
@@ -32,9 +33,11 @@ createRoot(document.getElementById('root')!).render(
               <LanguageProvider>
                 <KeyboardShortcutProvider>
                   <NavigationGuardProvider>
-                    <SidebarProvider>
-                      <App />
-                    </SidebarProvider>
+                    <NotificationProvider>
+                      <SidebarProvider>
+                        <App />
+                      </SidebarProvider>
+                    </NotificationProvider>
                   </NavigationGuardProvider>
                 </KeyboardShortcutProvider>
               </LanguageProvider>

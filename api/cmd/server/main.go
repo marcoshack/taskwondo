@@ -121,6 +121,7 @@ func main() {
 	attachmentRepo := repository.NewAttachmentRepository(db)
 	oauthAccountRepo := repository.NewOAuthAccountRepository(db)
 	typeWorkflowRepo := repository.NewProjectTypeWorkflowRepository(db)
+	inviteRepo := repository.NewProjectInviteRepository(db)
 	slaRepo := repository.NewSLARepository(db)
 
 	// Initialize storage
@@ -151,7 +152,7 @@ func main() {
 		cfg.JWTSecret, cfg.JWTExpiry,
 		oauthProviders,
 	)
-	projectService := service.NewProjectService(projectRepo, projectMemberRepo, userRepo, workflowRepo, typeWorkflowRepo, systemSettingRepo)
+	projectService := service.NewProjectService(projectRepo, projectMemberRepo, userRepo, workflowRepo, typeWorkflowRepo, systemSettingRepo, inviteRepo)
 	workflowService := service.NewWorkflowService(workflowRepo)
 	queueService := service.NewQueueService(queueRepo, projectRepo, projectMemberRepo)
 	milestoneService := service.NewMilestoneService(milestoneRepo, projectRepo, projectMemberRepo)
@@ -181,7 +182,7 @@ func main() {
 	// Initialize handlers
 	health := handler.NewHealthHandler(db)
 	auth := handler.NewAuthHandler(authService)
-	projects := handler.NewProjectHandler(projectService)
+	projects := handler.NewProjectHandler(projectService, cfg.BaseURL)
 	workflows := handler.NewWorkflowHandler(workflowService, projectService)
 	queues := handler.NewQueueHandler(queueService)
 	milestones := handler.NewMilestoneHandler(milestoneService)
@@ -218,6 +219,9 @@ func main() {
 		// Public settings (unauthenticated)
 		r.Get("/settings/public", systemSettings.GetPublic)
 
+		// Public invite info (unauthenticated)
+		r.Get("/invites/{code}", projects.GetInviteInfo)
+
 		// Authenticated routes
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.Auth(authService))
@@ -234,6 +238,9 @@ func main() {
 
 			// User search
 			r.Get("/users/search", auth.SearchUsers)
+
+			// Accept invite (authenticated)
+			r.Post("/invites/{code}/accept", projects.AcceptInvite)
 
 			// Global user preferences
 			r.Route("/user/preferences", func(r chi.Router) {
@@ -273,6 +280,11 @@ func main() {
 						r.Post("/", projects.AddMember)
 						r.Patch("/{userId}", projects.UpdateMemberRole)
 						r.Delete("/{userId}", projects.RemoveMember)
+					})
+					r.Route("/invites", func(r chi.Router) {
+						r.Get("/", projects.ListInvites)
+						r.Post("/", projects.CreateInvite)
+						r.Delete("/{inviteId}", projects.DeleteInvite)
 					})
 					r.Route("/type-workflows", func(r chi.Router) {
 						r.Get("/", projects.ListTypeWorkflows)

@@ -3,7 +3,9 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -17,11 +19,12 @@ import (
 // ProjectHandler handles project and membership endpoints.
 type ProjectHandler struct {
 	projects *service.ProjectService
+	baseURL  string
 }
 
 // NewProjectHandler creates a new ProjectHandler.
-func NewProjectHandler(projects *service.ProjectService) *ProjectHandler {
-	return &ProjectHandler{projects: projects}
+func NewProjectHandler(projects *service.ProjectService, baseURL string) *ProjectHandler {
+	return &ProjectHandler{projects: projects, baseURL: strings.TrimRight(baseURL, "/")}
 }
 
 // --- Request DTOs ---
@@ -504,6 +507,195 @@ func (h *ProjectHandler) UpdateTypeWorkflow(w http.ResponseWriter, r *http.Reque
 		WorkItemType: mapping.WorkItemType,
 		WorkflowID:   mapping.WorkflowID,
 	})
+}
+
+// --- Invite Handlers ---
+
+type createInviteRequest struct {
+	Role      string `json:"role"`
+	ExpiresIn string `json:"expires_in,omitempty"`
+	MaxUses   *int   `json:"max_uses,omitempty"`
+}
+
+type inviteResponse struct {
+	ID            uuid.UUID  `json:"id"`
+	Code          string     `json:"code"`
+	Role          string     `json:"role"`
+	URL           string     `json:"url"`
+	CreatedByName string     `json:"created_by_name"`
+	ExpiresAt     *time.Time `json:"expires_at,omitempty"`
+	MaxUses       int        `json:"max_uses"`
+	UseCount      int        `json:"use_count"`
+	CreatedAt     time.Time  `json:"created_at"`
+}
+
+type inviteInfoResponse struct {
+	ProjectName string `json:"project_name"`
+	ProjectKey  string `json:"project_key"`
+	Role        string `json:"role"`
+	Expired     bool   `json:"expired"`
+	Full        bool   `json:"full"`
+}
+
+func (h *ProjectHandler) toInviteResponse(inv *model.ProjectInvite) inviteResponse {
+	return inviteResponse{
+		ID:            inv.ID,
+		Code:          inv.Code,
+		Role:          inv.Role,
+		URL:           fmt.Sprintf("%s/invite/%s", h.baseURL, inv.Code),
+		CreatedByName: inv.CreatedByName,
+		ExpiresAt:     inv.ExpiresAt,
+		MaxUses:       inv.MaxUses,
+		UseCount:      inv.UseCount,
+		CreatedAt:     inv.CreatedAt,
+	}
+}
+
+// CreateInvite handles POST /api/v1/projects/{projectKey}/invites
+func (h *ProjectHandler) CreateInvite(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	projectKey := chi.URLParam(r, "projectKey")
+
+	var req createInviteRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		return
+	}
+
+	if req.Role == "" {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "role is required")
+		return
+	}
+
+	var expiresAt *time.Time
+	if req.ExpiresIn != "" {
+		d, err := parseExpiresIn(req.ExpiresIn)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+			return
+		}
+		t := time.Now().Add(d)
+		expiresAt = &t
+	}
+
+	maxUses := 0
+	if req.MaxUses != nil {
+		maxUses = *req.MaxUses
+	}
+
+	invite, err := h.projects.CreateInvite(r.Context(), info, projectKey, req.Role, expiresAt, maxUses)
+	if err != nil {
+		handleProjectError(w, r, err, "failed to create invite")
+		return
+	}
+
+	writeData(w, http.StatusCreated, h.toInviteResponse(invite))
+}
+
+// ListInvites handles GET /api/v1/projects/{projectKey}/invites
+func (h *ProjectHandler) ListInvites(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	projectKey := chi.URLParam(r, "projectKey")
+
+	invites, err := h.projects.ListInvites(r.Context(), info, projectKey)
+	if err != nil {
+		handleProjectError(w, r, err, "failed to list invites")
+		return
+	}
+
+	resp := make([]inviteResponse, len(invites))
+	for i := range invites {
+		resp[i] = h.toInviteResponse(&invites[i])
+	}
+
+	writeData(w, http.StatusOK, resp)
+}
+
+// DeleteInvite handles DELETE /api/v1/projects/{projectKey}/invites/{inviteId}
+func (h *ProjectHandler) DeleteInvite(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	projectKey := chi.URLParam(r, "projectKey")
+
+	inviteID, err := uuid.Parse(chi.URLParam(r, "inviteId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid invite ID")
+		return
+	}
+
+	if err := h.projects.DeleteInvite(r.Context(), info, projectKey, inviteID); err != nil {
+		handleProjectError(w, r, err, "failed to delete invite")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// GetInviteInfo handles GET /api/v1/invites/{code}
+func (h *ProjectHandler) GetInviteInfo(w http.ResponseWriter, r *http.Request) {
+	code := chi.URLParam(r, "code")
+
+	inviteInfo, err := h.projects.GetInviteInfo(r.Context(), code)
+	if err != nil {
+		handleProjectError(w, r, err, "failed to get invite info")
+		return
+	}
+
+	writeData(w, http.StatusOK, inviteInfoResponse{
+		ProjectName: inviteInfo.ProjectName,
+		ProjectKey:  inviteInfo.ProjectKey,
+		Role:        inviteInfo.Role,
+		Expired:     inviteInfo.Expired,
+		Full:        inviteInfo.Full,
+	})
+}
+
+// AcceptInvite handles POST /api/v1/invites/{code}/accept
+func (h *ProjectHandler) AcceptInvite(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	code := chi.URLParam(r, "code")
+
+	project, err := h.projects.AcceptInvite(r.Context(), info, code)
+	if err != nil {
+		handleProjectError(w, r, err, "failed to accept invite")
+		return
+	}
+
+	writeData(w, http.StatusOK, toProjectResponse(project))
+}
+
+func parseExpiresIn(s string) (time.Duration, error) {
+	switch s {
+	case "1h":
+		return time.Hour, nil
+	case "1d":
+		return 24 * time.Hour, nil
+	case "7d":
+		return 7 * 24 * time.Hour, nil
+	case "30d":
+		return 30 * 24 * time.Hour, nil
+	default:
+		return 0, fmt.Errorf("invalid expires_in value %q; allowed: 1h, 1d, 7d, 30d", s)
+	}
 }
 
 // handleProjectError maps service errors to HTTP responses.

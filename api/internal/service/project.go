@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"regexp"
@@ -45,6 +46,17 @@ type ProjectTypeWorkflowRepository interface {
 	Upsert(ctx context.Context, mapping *model.ProjectTypeWorkflow) error
 }
 
+// ProjectInviteRepository defines persistence operations for project invites.
+type ProjectInviteRepository interface {
+	Create(ctx context.Context, invite *model.ProjectInvite) error
+	GetByCode(ctx context.Context, code string) (*model.ProjectInvite, error)
+	GetByID(ctx context.Context, id uuid.UUID) (*model.ProjectInvite, error)
+	ListByProject(ctx context.Context, projectID uuid.UUID) ([]model.ProjectInvite, error)
+	IncrementUseCount(ctx context.Context, id uuid.UUID) error
+	Delete(ctx context.Context, id uuid.UUID) error
+	DeleteByProject(ctx context.Context, projectID uuid.UUID) error
+}
+
 // ProjectService handles project business logic and authorization.
 type ProjectService struct {
 	projects       ProjectRepository
@@ -53,10 +65,11 @@ type ProjectService struct {
 	workflows      WorkflowRepository
 	typeWorkflows  ProjectTypeWorkflowRepository
 	systemSettings SystemSettingRepositoryInterface
+	invites        ProjectInviteRepository
 }
 
 // NewProjectService creates a new ProjectService.
-func NewProjectService(projects ProjectRepository, members ProjectMemberRepository, users UserRepository, workflows WorkflowRepository, typeWorkflows ProjectTypeWorkflowRepository, systemSettings SystemSettingRepositoryInterface) *ProjectService {
+func NewProjectService(projects ProjectRepository, members ProjectMemberRepository, users UserRepository, workflows WorkflowRepository, typeWorkflows ProjectTypeWorkflowRepository, systemSettings SystemSettingRepositoryInterface, invites ProjectInviteRepository) *ProjectService {
 	return &ProjectService{
 		projects:       projects,
 		members:        members,
@@ -64,6 +77,7 @@ func NewProjectService(projects ProjectRepository, members ProjectMemberReposito
 		workflows:      workflows,
 		typeWorkflows:  typeWorkflows,
 		systemSettings: systemSettings,
+		invites:        invites,
 	}
 }
 
@@ -657,6 +671,217 @@ func (s *ProjectService) seedTypeWorkflows(ctx context.Context, projectID uuid.U
 				Msg("failed to seed type workflow mapping")
 		}
 	}
+}
+
+// CreateInvite creates a new invite link for a project. Requires owner or admin role.
+func (s *ProjectService) CreateInvite(ctx context.Context, info *model.AuthInfo, projectKey, role string, expiresAt *time.Time, maxUses int) (*model.ProjectInvite, error) {
+	project, err := s.projects.GetByKey(ctx, projectKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.requireRole(ctx, info, project.ID, model.ProjectRoleOwner, model.ProjectRoleAdmin); err != nil {
+		return nil, err
+	}
+
+	if !isValidInviteRole(role) {
+		return nil, fmt.Errorf("invalid invite role %q (owner not allowed): %w", role, model.ErrValidation)
+	}
+
+	code, err := generateInviteCode()
+	if err != nil {
+		return nil, fmt.Errorf("generating invite code: %w", err)
+	}
+
+	invite := &model.ProjectInvite{
+		ID:        uuid.New(),
+		ProjectID: project.ID,
+		Code:      code,
+		Role:      role,
+		CreatedBy: info.UserID,
+		ExpiresAt: expiresAt,
+		MaxUses:   maxUses,
+	}
+
+	if err := s.invites.Create(ctx, invite); err != nil {
+		return nil, fmt.Errorf("creating invite: %w", err)
+	}
+
+	log.Ctx(ctx).Info().
+		Str("project_key", projectKey).
+		Str("invite_code", code).
+		Str("role", role).
+		Msg("project invite created")
+
+	return invite, nil
+}
+
+// ListInvites returns all invites for a project. Requires owner or admin role.
+func (s *ProjectService) ListInvites(ctx context.Context, info *model.AuthInfo, projectKey string) ([]model.ProjectInvite, error) {
+	project, err := s.projects.GetByKey(ctx, projectKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.requireRole(ctx, info, project.ID, model.ProjectRoleOwner, model.ProjectRoleAdmin); err != nil {
+		return nil, err
+	}
+
+	return s.invites.ListByProject(ctx, project.ID)
+}
+
+// DeleteInvite revokes an invite link. Requires owner or admin role.
+func (s *ProjectService) DeleteInvite(ctx context.Context, info *model.AuthInfo, projectKey string, inviteID uuid.UUID) error {
+	project, err := s.projects.GetByKey(ctx, projectKey)
+	if err != nil {
+		return err
+	}
+
+	if err := s.requireRole(ctx, info, project.ID, model.ProjectRoleOwner, model.ProjectRoleAdmin); err != nil {
+		return err
+	}
+
+	// Verify the invite belongs to this project
+	invite, err := s.invites.GetByID(ctx, inviteID)
+	if err != nil {
+		return err
+	}
+	if invite.ProjectID != project.ID {
+		return model.ErrNotFound
+	}
+
+	if err := s.invites.Delete(ctx, inviteID); err != nil {
+		return fmt.Errorf("deleting invite: %w", err)
+	}
+
+	log.Ctx(ctx).Info().
+		Str("project_key", projectKey).
+		Str("invite_id", inviteID.String()).
+		Msg("project invite revoked")
+
+	return nil
+}
+
+// GetInviteInfo returns public information about an invite for the join page.
+// No authentication required.
+func (s *ProjectService) GetInviteInfo(ctx context.Context, code string) (*model.ProjectInviteInfo, error) {
+	invite, err := s.invites.GetByCode(ctx, code)
+	if err != nil {
+		return nil, err
+	}
+
+	project, err := s.projects.GetByID(ctx, invite.ProjectID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Don't expose invites for deleted projects
+	if project.DeletedAt != nil {
+		return nil, model.ErrNotFound
+	}
+
+	info := &model.ProjectInviteInfo{
+		ProjectName: project.Name,
+		ProjectKey:  project.Key,
+		Role:        invite.Role,
+		Expired:     invite.ExpiresAt != nil && invite.ExpiresAt.Before(time.Now()),
+		Full:        invite.MaxUses > 0 && invite.UseCount >= invite.MaxUses,
+	}
+
+	return info, nil
+}
+
+// AcceptInvite uses an invite code to join a project. Requires authentication.
+func (s *ProjectService) AcceptInvite(ctx context.Context, info *model.AuthInfo, code string) (*model.Project, error) {
+	invite, err := s.invites.GetByCode(ctx, code)
+	if err != nil {
+		return nil, err
+	}
+
+	project, err := s.projects.GetByID(ctx, invite.ProjectID)
+	if err != nil {
+		return nil, err
+	}
+
+	if project.DeletedAt != nil {
+		return nil, model.ErrNotFound
+	}
+
+	// Check expiry
+	if invite.ExpiresAt != nil && invite.ExpiresAt.Before(time.Now()) {
+		return nil, fmt.Errorf("invite has expired: %w", model.ErrValidation)
+	}
+
+	// Check max uses
+	if invite.MaxUses > 0 && invite.UseCount >= invite.MaxUses {
+		return nil, fmt.Errorf("invite has reached maximum uses: %w", model.ErrValidation)
+	}
+
+	// Check if already a member — upgrade role if invite grants a different one
+	existing, err := s.members.GetByProjectAndUser(ctx, project.ID, info.UserID)
+	if err != nil && err != model.ErrNotFound {
+		return nil, fmt.Errorf("checking membership: %w", err)
+	}
+	if existing != nil {
+		if existing.Role != invite.Role {
+			if err := s.members.UpdateRole(ctx, project.ID, info.UserID, invite.Role); err != nil {
+				return nil, fmt.Errorf("updating member role: %w", err)
+			}
+			log.Ctx(ctx).Info().
+				Str("project_key", project.Key).
+				Str("user_id", info.UserID.String()).
+				Str("old_role", existing.Role).
+				Str("new_role", invite.Role).
+				Msg("upgraded member role via invite")
+		}
+	} else {
+		// Add as new member
+		member := &model.ProjectMember{
+			ID:        uuid.New(),
+			ProjectID: project.ID,
+			UserID:    info.UserID,
+			Role:      invite.Role,
+		}
+		if err := s.members.Add(ctx, member); err != nil {
+			return nil, fmt.Errorf("adding member: %w", err)
+		}
+	}
+
+	// Increment use count (atomic, respects max_uses)
+	if err := s.invites.IncrementUseCount(ctx, invite.ID); err != nil {
+		log.Ctx(ctx).Warn().Err(err).Str("invite_id", invite.ID.String()).Msg("failed to increment invite use count")
+	}
+
+	log.Ctx(ctx).Info().
+		Str("project_key", project.Key).
+		Str("user_id", info.UserID.String()).
+		Str("role", invite.Role).
+		Str("invite_code", code).
+		Msg("user joined project via invite")
+
+	return project, nil
+}
+
+const base62Chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+func generateInviteCode() (string, error) {
+	b := make([]byte, 8)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	code := make([]byte, 8)
+	for i := range b {
+		code[i] = base62Chars[int(b[i])%len(base62Chars)]
+	}
+	return string(code), nil
+}
+
+func isValidInviteRole(role string) bool {
+	switch role {
+	case model.ProjectRoleAdmin, model.ProjectRoleMember, model.ProjectRoleViewer:
+		return true
+	}
+	return false
 }
 
 // requireMembership checks that the user is a member of the project or a global admin.

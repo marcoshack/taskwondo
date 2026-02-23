@@ -194,6 +194,83 @@ func (m *mockProjectMemberRepo) CountByRole(_ context.Context, projectID uuid.UU
 	return count, nil
 }
 
+type mockProjectInviteRepo struct {
+	invites map[uuid.UUID]*model.ProjectInvite
+	byCode  map[string]*model.ProjectInvite
+}
+
+func newMockProjectInviteRepo() *mockProjectInviteRepo {
+	return &mockProjectInviteRepo{
+		invites: make(map[uuid.UUID]*model.ProjectInvite),
+		byCode:  make(map[string]*model.ProjectInvite),
+	}
+}
+
+func (m *mockProjectInviteRepo) Create(_ context.Context, invite *model.ProjectInvite) error {
+	invite.CreatedAt = time.Now()
+	m.invites[invite.ID] = invite
+	m.byCode[invite.Code] = invite
+	return nil
+}
+
+func (m *mockProjectInviteRepo) GetByCode(_ context.Context, code string) (*model.ProjectInvite, error) {
+	inv, ok := m.byCode[code]
+	if !ok {
+		return nil, model.ErrNotFound
+	}
+	return inv, nil
+}
+
+func (m *mockProjectInviteRepo) GetByID(_ context.Context, id uuid.UUID) (*model.ProjectInvite, error) {
+	inv, ok := m.invites[id]
+	if !ok {
+		return nil, model.ErrNotFound
+	}
+	return inv, nil
+}
+
+func (m *mockProjectInviteRepo) ListByProject(_ context.Context, projectID uuid.UUID) ([]model.ProjectInvite, error) {
+	var result []model.ProjectInvite
+	for _, inv := range m.invites {
+		if inv.ProjectID == projectID {
+			result = append(result, *inv)
+		}
+	}
+	return result, nil
+}
+
+func (m *mockProjectInviteRepo) IncrementUseCount(_ context.Context, id uuid.UUID) error {
+	inv, ok := m.invites[id]
+	if !ok {
+		return model.ErrNotFound
+	}
+	if inv.MaxUses > 0 && inv.UseCount >= inv.MaxUses {
+		return model.ErrNotFound
+	}
+	inv.UseCount++
+	return nil
+}
+
+func (m *mockProjectInviteRepo) Delete(_ context.Context, id uuid.UUID) error {
+	inv, ok := m.invites[id]
+	if !ok {
+		return model.ErrNotFound
+	}
+	delete(m.byCode, inv.Code)
+	delete(m.invites, id)
+	return nil
+}
+
+func (m *mockProjectInviteRepo) DeleteByProject(_ context.Context, projectID uuid.UUID) error {
+	for id, inv := range m.invites {
+		if inv.ProjectID == projectID {
+			delete(m.byCode, inv.Code)
+			delete(m.invites, id)
+		}
+	}
+	return nil
+}
+
 // --- Test setup ---
 
 func projectTestSetup(t *testing.T) (*ProjectHandler, *model.AuthInfo) {
@@ -204,8 +281,9 @@ func projectTestSetup(t *testing.T) (*ProjectHandler, *model.AuthInfo) {
 	userRepo := newMockUserRepo()
 	workflowRepo := newMockWorkflowRepo()
 	typeWorkflowRepo := newMockTypeWorkflowRepo()
-	projectSvc := service.NewProjectService(projectRepo, memberRepo, userRepo, workflowRepo, typeWorkflowRepo, newMockSystemSettingRepo())
-	h := NewProjectHandler(projectSvc)
+	inviteRepo := newMockProjectInviteRepo()
+	projectSvc := service.NewProjectService(projectRepo, memberRepo, userRepo, workflowRepo, typeWorkflowRepo, newMockSystemSettingRepo(), inviteRepo)
+	h := NewProjectHandler(projectSvc, "http://localhost:3000")
 
 	info := &model.AuthInfo{
 		UserID:     uuid.New(),

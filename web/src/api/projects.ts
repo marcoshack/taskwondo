@@ -130,3 +130,55 @@ export async function updateTypeWorkflow(projectKey: string, workItemType: strin
   const res = await api.put<{ data: ProjectTypeWorkflow }>(`/projects/${projectKey}/type-workflows/${workItemType}`, { workflow_id: workflowId })
   return res.data.data
 }
+
+// --- Project Invites ---
+
+export interface ProjectInvite {
+  id: string
+  code: string
+  role: string
+  url: string
+  created_by_name: string
+  expires_at?: string
+  max_uses: number
+  use_count: number
+  created_at: string
+}
+
+export interface InviteInfo {
+  project_name: string
+  project_key: string
+  role: string
+  expired: boolean
+  full: boolean
+}
+
+export interface CreateInviteInput {
+  role: string
+  expires_in?: string
+  max_uses?: number
+}
+
+export async function listInvites(projectKey: string) {
+  const res = await api.get<{ data: ProjectInvite[] }>(`/projects/${projectKey}/invites`)
+  return res.data.data
+}
+
+export async function createInvite(projectKey: string, input: CreateInviteInput) {
+  const res = await api.post<{ data: ProjectInvite }>(`/projects/${projectKey}/invites`, input)
+  return res.data.data
+}
+
+export async function deleteInvite(projectKey: string, inviteId: string) {
+  await api.delete(`/projects/${projectKey}/invites/${inviteId}`)
+}
+
+export async function getInviteInfo(code: string) {
+  const res = await api.get<{ data: InviteInfo }>(`/invites/${code}`)
+  return res.data.data
+}
+
+export async function acceptInvite(code: string) {
+  const res = await api.post<{ data: Project }>(`/invites/${code}/accept`)
+  return res.data.data
+}

@@ -29,7 +29,13 @@ export function OAuthCallbackPage() {
     oauthCallback(provider, code, state)
       .then(({ token, user }) => {
         loginWithToken(token, user)
-        navigate('/projects', { replace: true })
+        const pendingInvite = localStorage.getItem('taskwondo_pending_invite')
+        if (pendingInvite) {
+          localStorage.removeItem('taskwondo_pending_invite')
+          navigate(`/invite/${pendingInvite}`, { replace: true })
+        } else {
+          navigate('/projects', { replace: true })
+        }
       })
       .catch(() => {
         setError(t(`login.${provider}.callbackError`, t('login.oauth.callbackError')))

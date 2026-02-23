@@ -31,6 +31,8 @@ const OAUTH_PROVIDERS: Record<string, { icon: React.ReactNode }> = {
   },
 }
 
+const PENDING_INVITE_KEY = 'taskwondo_pending_invite'
+
 export function LoginPage() {
   const { t } = useTranslation()
   const { brandName } = useBrand()
@@ -46,6 +48,12 @@ export function LoginPage() {
   }, [])
 
   if (user) {
+    const pendingInvite = localStorage.getItem(PENDING_INVITE_KEY)
+    if (pendingInvite) {
+      // Don't remove here — InviteAcceptPage will clean up after accepting.
+      // Removing here causes issues with React StrictMode double-rendering.
+      return <Navigate to={`/invite/${pendingInvite}`} replace />
+    }
     return <Navigate to="/projects" replace />
   }
 
@@ -55,6 +63,8 @@ export function LoginPage() {
     setLoading(true)
     try {
       await login(email, password)
+      // Navigation is handled by the declarative if (user) block above,
+      // which checks for pending invites and redirects accordingly.
     } catch (err) {
       if (isAxiosError(err) && err.response?.data?.error?.message) {
         setError(err.response.data.error.message)

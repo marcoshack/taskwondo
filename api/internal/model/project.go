@@ -76,3 +76,26 @@ type ProjectMemberWithProject struct {
 	ProjectKey  string `json:"project_key"`
 	OwnerCount  int    `json:"owner_count"`
 }
+
+// ProjectInvite represents a shareable invite link to join a project.
+type ProjectInvite struct {
+	ID            uuid.UUID  `json:"id"`
+	ProjectID     uuid.UUID  `json:"project_id"`
+	Code          string     `json:"code"`
+	Role          string     `json:"role"`
+	CreatedBy     uuid.UUID  `json:"created_by"`
+	CreatedByName string     `json:"created_by_name"`
+	ExpiresAt     *time.Time `json:"expires_at,omitempty"`
+	MaxUses       int        `json:"max_uses"`
+	UseCount      int        `json:"use_count"`
+	CreatedAt     time.Time  `json:"created_at"`
+}
+
+// ProjectInviteInfo is a public-facing view of an invite for the join page.
+type ProjectInviteInfo struct {
+	ProjectName string `json:"project_name"`
+	ProjectKey  string `json:"project_key"`
+	Role        string `json:"role"`
+	Expired     bool   `json:"expired"`
+	Full        bool   `json:"full"`
+}

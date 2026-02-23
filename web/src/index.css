@@ -26,3 +26,8 @@ html:where(.dark) {
   animation: confirm-fade 1.5s ease-out forwards;
 }
 
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(0.5rem); }
+  to { opacity: 1; transform: translateY(0); }
+}
+

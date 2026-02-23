@@ -11,9 +11,15 @@ import {
   deleteProject,
   getTypeWorkflows,
   updateTypeWorkflow,
+  listInvites,
+  createInvite,
+  deleteInvite,
+  getInviteInfo,
+  acceptInvite,
   type CreateProjectInput,
   type UpdateProjectInput,
   type AddMemberInput,
+  type CreateInviteInput,
 } from '@/api/projects'
 
 export function useProjects() {
@@ -133,6 +139,54 @@ export function useUpdateTypeWorkflow(projectKey: string) {
       updateTypeWorkflow(projectKey, workItemType, workflowId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['projects', projectKey, 'type-workflows'] })
+    },
+  })
+}
+
+// --- Invite Hooks ---
+
+export function useInvites(projectKey: string) {
+  return useQuery({
+    queryKey: ['projects', projectKey, 'invites'],
+    queryFn: () => listInvites(projectKey),
+    enabled: !!projectKey,
+  })
+}
+
+export function useCreateInvite(projectKey: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: CreateInviteInput) => createInvite(projectKey, input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['projects', projectKey, 'invites'] })
+    },
+  })
+}
+
+export function useDeleteInvite(projectKey: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (inviteId: string) => deleteInvite(projectKey, inviteId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['projects', projectKey, 'invites'] })
+    },
+  })
+}
+
+export function useInviteInfo(code: string) {
+  return useQuery({
+    queryKey: ['invites', code],
+    queryFn: () => getInviteInfo(code),
+    enabled: !!code,
+  })
+}
+
+export function useAcceptInvite() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (code: string) => acceptInvite(code),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['projects'] })
     },
   })
 }

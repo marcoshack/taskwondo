@@ -196,6 +196,83 @@ func (m *mockProjectMemberRepo) CountByRole(_ context.Context, projectID uuid.UU
 	return count, nil
 }
 
+type mockProjectInviteRepo struct {
+	invites map[uuid.UUID]*model.ProjectInvite
+	byCode  map[string]*model.ProjectInvite
+}
+
+func newMockProjectInviteRepo() *mockProjectInviteRepo {
+	return &mockProjectInviteRepo{
+		invites: make(map[uuid.UUID]*model.ProjectInvite),
+		byCode:  make(map[string]*model.ProjectInvite),
+	}
+}
+
+func (m *mockProjectInviteRepo) Create(_ context.Context, invite *model.ProjectInvite) error {
+	invite.CreatedAt = time.Now()
+	m.invites[invite.ID] = invite
+	m.byCode[invite.Code] = invite
+	return nil
+}
+
+func (m *mockProjectInviteRepo) GetByCode(_ context.Context, code string) (*model.ProjectInvite, error) {
+	inv, ok := m.byCode[code]
+	if !ok {
+		return nil, model.ErrNotFound
+	}
+	return inv, nil
+}
+
+func (m *mockProjectInviteRepo) GetByID(_ context.Context, id uuid.UUID) (*model.ProjectInvite, error) {
+	inv, ok := m.invites[id]
+	if !ok {
+		return nil, model.ErrNotFound
+	}
+	return inv, nil
+}
+
+func (m *mockProjectInviteRepo) ListByProject(_ context.Context, projectID uuid.UUID) ([]model.ProjectInvite, error) {
+	var result []model.ProjectInvite
+	for _, inv := range m.invites {
+		if inv.ProjectID == projectID {
+			result = append(result, *inv)
+		}
+	}
+	return result, nil
+}
+
+func (m *mockProjectInviteRepo) IncrementUseCount(_ context.Context, id uuid.UUID) error {
+	inv, ok := m.invites[id]
+	if !ok {
+		return model.ErrNotFound
+	}
+	if inv.MaxUses > 0 && inv.UseCount >= inv.MaxUses {
+		return model.ErrNotFound
+	}
+	inv.UseCount++
+	return nil
+}
+
+func (m *mockProjectInviteRepo) Delete(_ context.Context, id uuid.UUID) error {
+	inv, ok := m.invites[id]
+	if !ok {
+		return model.ErrNotFound
+	}
+	delete(m.byCode, inv.Code)
+	delete(m.invites, id)
+	return nil
+}
+
+func (m *mockProjectInviteRepo) DeleteByProject(_ context.Context, projectID uuid.UUID) error {
+	for id, inv := range m.invites {
+		if inv.ProjectID == projectID {
+			delete(m.byCode, inv.Code)
+			delete(m.invites, id)
+		}
+	}
+	return nil
+}
+
 // --- Test helpers ---
 
 type testProjectSetup struct {
@@ -206,6 +283,7 @@ type testProjectSetup struct {
 	workflowRepo     *mockWorkflowRepo
 	typeWorkflowRepo *mockTypeWorkflowRepo
 	settingsRepo     *mockSystemSettingRepo
+	inviteRepo       *mockProjectInviteRepo
 }
 
 func newTestProjectSetup() *testProjectSetup {
@@ -215,7 +293,8 @@ func newTestProjectSetup() *testProjectSetup {
 	workflowRepo := newMockWorkflowRepo()
 	typeWorkflowRepo := newMockTypeWorkflowRepo()
 	settingsRepo := newMockSystemSettingRepo()
-	svc := NewProjectService(projectRepo, memberRepo, userRepo, workflowRepo, typeWorkflowRepo, settingsRepo)
+	inviteRepo := newMockProjectInviteRepo()
+	svc := NewProjectService(projectRepo, memberRepo, userRepo, workflowRepo, typeWorkflowRepo, settingsRepo, inviteRepo)
 	return &testProjectSetup{
 		svc:              svc,
 		projectRepo:      projectRepo,
@@ -224,6 +303,7 @@ func newTestProjectSetup() *testProjectSetup {
 		workflowRepo:     workflowRepo,
 		typeWorkflowRepo: typeWorkflowRepo,
 		settingsRepo:     settingsRepo,
+		inviteRepo:       inviteRepo,
 	}
 }
 
@@ -1734,5 +1814,400 @@ func TestValidateBusinessHours(t *testing.T) {
 				t.Fatalf("expected no error, got %v", err)
 			}
 		})
+	}
+}
+
+// --- Invite Tests ---
+
+func TestCreateInvite_Success(t *testing.T) {
+	s := newTestProjectSetup()
+	owner := userAuthInfo()
+	ctx := context.Background()
+
+	_, err := s.svc.Create(ctx, owner, "Test", "TT", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	invite, err := s.svc.CreateInvite(ctx, owner, "TT", model.ProjectRoleMember, nil, 0)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if invite.Role != model.ProjectRoleMember {
+		t.Fatalf("expected role 'member', got %s", invite.Role)
+	}
+	if len(invite.Code) != 8 {
+		t.Fatalf("expected 8-char code, got %d chars: %s", len(invite.Code), invite.Code)
+	}
+	if invite.MaxUses != 0 {
+		t.Fatalf("expected max_uses 0, got %d", invite.MaxUses)
+	}
+}
+
+func TestCreateInvite_WithExpiration(t *testing.T) {
+	s := newTestProjectSetup()
+	owner := userAuthInfo()
+	ctx := context.Background()
+
+	_, err := s.svc.Create(ctx, owner, "Test", "TT", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expiresAt := time.Now().Add(24 * time.Hour)
+	invite, err := s.svc.CreateInvite(ctx, owner, "TT", model.ProjectRoleViewer, &expiresAt, 10)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if invite.ExpiresAt == nil {
+		t.Fatal("expected expires_at to be set")
+	}
+	if invite.MaxUses != 10 {
+		t.Fatalf("expected max_uses 10, got %d", invite.MaxUses)
+	}
+}
+
+func TestCreateInvite_OwnerRoleDenied(t *testing.T) {
+	s := newTestProjectSetup()
+	owner := userAuthInfo()
+	ctx := context.Background()
+
+	_, err := s.svc.Create(ctx, owner, "Test", "TT", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = s.svc.CreateInvite(ctx, owner, "TT", model.ProjectRoleOwner, nil, 0)
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation for owner role, got %v", err)
+	}
+}
+
+func TestCreateInvite_MemberCannotCreate(t *testing.T) {
+	s := newTestProjectSetup()
+	owner := userAuthInfo()
+	member := userAuthInfo()
+	ctx := context.Background()
+
+	project, err := s.svc.Create(ctx, owner, "Test", "TT", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s.memberRepo.Add(ctx, &model.ProjectMember{
+		ID: uuid.New(), ProjectID: project.ID,
+		UserID: member.UserID, Role: model.ProjectRoleMember,
+	})
+
+	_, err = s.svc.CreateInvite(ctx, member, "TT", model.ProjectRoleMember, nil, 0)
+	if !errors.Is(err, model.ErrForbidden) {
+		t.Fatalf("expected ErrForbidden, got %v", err)
+	}
+}
+
+func TestListInvites_Success(t *testing.T) {
+	s := newTestProjectSetup()
+	owner := userAuthInfo()
+	ctx := context.Background()
+
+	_, err := s.svc.Create(ctx, owner, "Test", "TT", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = s.svc.CreateInvite(ctx, owner, "TT", model.ProjectRoleMember, nil, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = s.svc.CreateInvite(ctx, owner, "TT", model.ProjectRoleViewer, nil, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	invites, err := s.svc.ListInvites(ctx, owner, "TT")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(invites) != 2 {
+		t.Fatalf("expected 2 invites, got %d", len(invites))
+	}
+}
+
+func TestDeleteInvite_Success(t *testing.T) {
+	s := newTestProjectSetup()
+	owner := userAuthInfo()
+	ctx := context.Background()
+
+	_, err := s.svc.Create(ctx, owner, "Test", "TT", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	invite, err := s.svc.CreateInvite(ctx, owner, "TT", model.ProjectRoleMember, nil, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = s.svc.DeleteInvite(ctx, owner, "TT", invite.ID)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	invites, _ := s.svc.ListInvites(ctx, owner, "TT")
+	if len(invites) != 0 {
+		t.Fatalf("expected 0 invites after delete, got %d", len(invites))
+	}
+}
+
+func TestAcceptInvite_Success(t *testing.T) {
+	s := newTestProjectSetup()
+	owner := userAuthInfo()
+	joiner := userAuthInfo()
+	ctx := context.Background()
+
+	_, err := s.svc.Create(ctx, owner, "Test", "TT", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	invite, err := s.svc.CreateInvite(ctx, owner, "TT", model.ProjectRoleMember, nil, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	project, err := s.svc.AcceptInvite(ctx, joiner, invite.Code)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if project.Key != "TT" {
+		t.Fatalf("expected project key 'TT', got %s", project.Key)
+	}
+
+	// Verify membership was created
+	members, _ := s.svc.ListMembers(ctx, owner, "TT")
+	found := false
+	for _, m := range members {
+		if m.UserID == joiner.UserID && m.Role == model.ProjectRoleMember {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("expected joiner to be a member")
+	}
+
+	// Verify use count incremented
+	updated, _ := s.inviteRepo.GetByCode(ctx, invite.Code)
+	if updated.UseCount != 1 {
+		t.Fatalf("expected use_count 1, got %d", updated.UseCount)
+	}
+}
+
+func TestAcceptInvite_Expired(t *testing.T) {
+	s := newTestProjectSetup()
+	owner := userAuthInfo()
+	joiner := userAuthInfo()
+	ctx := context.Background()
+
+	_, err := s.svc.Create(ctx, owner, "Test", "TT", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expired := time.Now().Add(-time.Hour)
+	invite, err := s.svc.CreateInvite(ctx, owner, "TT", model.ProjectRoleMember, &expired, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = s.svc.AcceptInvite(ctx, joiner, invite.Code)
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation for expired invite, got %v", err)
+	}
+}
+
+func TestAcceptInvite_MaxUsesReached(t *testing.T) {
+	s := newTestProjectSetup()
+	owner := userAuthInfo()
+	ctx := context.Background()
+
+	_, err := s.svc.Create(ctx, owner, "Test", "TT", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	invite, err := s.svc.CreateInvite(ctx, owner, "TT", model.ProjectRoleMember, nil, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// First accept should work
+	joiner1 := userAuthInfo()
+	_, err = s.svc.AcceptInvite(ctx, joiner1, invite.Code)
+	if err != nil {
+		t.Fatalf("expected first accept to succeed, got %v", err)
+	}
+
+	// Second accept should fail
+	joiner2 := userAuthInfo()
+	_, err = s.svc.AcceptInvite(ctx, joiner2, invite.Code)
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation for max uses, got %v", err)
+	}
+}
+
+func TestAcceptInvite_AlreadyMember_SameRole(t *testing.T) {
+	s := newTestProjectSetup()
+	owner := userAuthInfo()
+	joiner := userAuthInfo()
+	ctx := context.Background()
+
+	_, err := s.svc.Create(ctx, owner, "Test", "TT", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	invite, err := s.svc.CreateInvite(ctx, owner, "TT", model.ProjectRoleMember, nil, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Joiner accepts invite and becomes member
+	_, err = s.svc.AcceptInvite(ctx, joiner, invite.Code)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	// Create another member invite, joiner accepts again — should succeed silently
+	invite2, err := s.svc.CreateInvite(ctx, owner, "TT", model.ProjectRoleMember, nil, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = s.svc.AcceptInvite(ctx, joiner, invite2.Code)
+	if err != nil {
+		t.Fatalf("expected no error for same-role re-accept, got %v", err)
+	}
+}
+
+func TestAcceptInvite_AlreadyMember_RoleUpgrade(t *testing.T) {
+	s := newTestProjectSetup()
+	owner := userAuthInfo()
+	joiner := userAuthInfo()
+	ctx := context.Background()
+
+	_, err := s.svc.Create(ctx, owner, "Test", "TT", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Join as viewer first
+	viewerInvite, err := s.svc.CreateInvite(ctx, owner, "TT", model.ProjectRoleViewer, nil, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = s.svc.AcceptInvite(ctx, joiner, viewerInvite.Code)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	// Now accept a member invite — role should be upgraded
+	memberInvite, err := s.svc.CreateInvite(ctx, owner, "TT", model.ProjectRoleMember, nil, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = s.svc.AcceptInvite(ctx, joiner, memberInvite.Code)
+	if err != nil {
+		t.Fatalf("expected no error for role upgrade, got %v", err)
+	}
+
+	// Verify the role was updated
+	members, err := s.svc.ListMembers(ctx, owner, "TT")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, m := range members {
+		if m.UserID == joiner.UserID {
+			if m.Role != model.ProjectRoleMember {
+				t.Fatalf("expected role %q after upgrade, got %q", model.ProjectRoleMember, m.Role)
+			}
+			return
+		}
+	}
+	t.Fatal("joiner not found in members list")
+}
+
+func TestAcceptInvite_NotFound(t *testing.T) {
+	s := newTestProjectSetup()
+	joiner := userAuthInfo()
+	ctx := context.Background()
+
+	_, err := s.svc.AcceptInvite(ctx, joiner, "nonexistent")
+	if !errors.Is(err, model.ErrNotFound) {
+		t.Fatalf("expected ErrNotFound, got %v", err)
+	}
+}
+
+func TestGetInviteInfo_Success(t *testing.T) {
+	s := newTestProjectSetup()
+	owner := userAuthInfo()
+	ctx := context.Background()
+
+	_, err := s.svc.Create(ctx, owner, "Test Project", "TT", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	invite, err := s.svc.CreateInvite(ctx, owner, "TT", model.ProjectRoleMember, nil, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	info, err := s.svc.GetInviteInfo(ctx, invite.Code)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if info.ProjectName != "Test Project" {
+		t.Fatalf("expected project name 'Test Project', got %s", info.ProjectName)
+	}
+	if info.ProjectKey != "TT" {
+		t.Fatalf("expected project key 'TT', got %s", info.ProjectKey)
+	}
+	if info.Role != model.ProjectRoleMember {
+		t.Fatalf("expected role 'member', got %s", info.Role)
+	}
+	if info.Expired || info.Full {
+		t.Fatal("expected not expired and not full")
+	}
+}
+
+func TestGetInviteInfo_ExpiredAndFull(t *testing.T) {
+	s := newTestProjectSetup()
+	owner := userAuthInfo()
+	ctx := context.Background()
+
+	_, err := s.svc.Create(ctx, owner, "Test", "TT", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expired := time.Now().Add(-time.Hour)
+	invite, err := s.svc.CreateInvite(ctx, owner, "TT", model.ProjectRoleMember, &expired, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Manually set use_count to max
+	inv, _ := s.inviteRepo.GetByCode(ctx, invite.Code)
+	inv.UseCount = 1
+
+	info, err := s.svc.GetInviteInfo(ctx, invite.Code)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if !info.Expired {
+		t.Fatal("expected expired to be true")
+	}
+	if !info.Full {
+		t.Fatal("expected full to be true")
 	}
 }
