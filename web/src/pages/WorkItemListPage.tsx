@@ -610,7 +610,7 @@ export function WorkItemListPage() {
         />
       )}
 
-      <Modal open={showCreate} onClose={() => { setShowCreate(false); createMutation.reset() }} title={t('workitems.newTitle')}>
+      <Modal open={showCreate} onClose={() => { setShowCreate(false); createMutation.reset() }} title={t('workitems.newTitle')} dismissable={false}>
         <WorkItemForm
           projectKey={projectKey ?? ''}
           mode="create"
