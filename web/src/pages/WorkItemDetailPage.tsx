@@ -27,6 +27,7 @@ import { StatusBadge } from '@/components/workitems/StatusBadge'
 import { PriorityBadge } from '@/components/workitems/PriorityBadge'
 import { CopyButton } from '@/components/ui/CopyButton'
 import { SLAIndicator } from '@/components/SLAIndicator'
+import { useAuth } from '@/contexts/AuthContext'
 import { Settings2, User, Calendar, CalendarPlus, History, Lock, Unlock, Globe } from 'lucide-react'
 import { formatRelativeTime } from '@/utils/duration'
 import Markdown from 'react-markdown'
@@ -49,8 +50,13 @@ export function WorkItemDetailPage() {
   const { data: typeWorkflows } = useTypeWorkflows(projectKey ?? '')
   const { data: allWorkflows } = useWorkflows()
   const { data: milestones } = useMilestones(projectKey ?? '')
+  const { user } = useAuth()
   const updateMutation = useUpdateWorkItem(projectKey ?? '')
   const deleteMutation = useDeleteWorkItem(projectKey ?? '')
+
+  const currentUserRole = members?.find((m) => m.user_id === user?.id)?.role ?? (user?.global_role === 'admin' ? 'owner' : null)
+  const canEdit = user?.global_role === 'admin' || (currentUserRole != null && currentUserRole !== 'viewer')
+  const readOnly = !canEdit
 
   const [activeTab, setActiveTab] = useState<Tab>('comments')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
@@ -74,7 +80,7 @@ export function WorkItemDetailPage() {
     const stored = sessionStorage.getItem(`taskwondo_listParams_${projectKey}`)
     return stored ? `${base}?${stored}` : base
   }, [projectKey])
-  useKeyboardShortcut({ key: '#' }, () => setShowDelete(true))
+  useKeyboardShortcut({ key: '#' }, () => setShowDelete(true), canEdit)
 
   // Navigation guard for unsaved comment draft
   const hasUnsavedComment = commentDraft.trim().length > 0
@@ -205,10 +211,10 @@ export function WorkItemDetailPage() {
   return (
     <div
       className="space-y-4 relative"
-      onDragEnter={handlePageDragEnter}
-      onDragLeave={handlePageDragLeave}
-      onDragOver={handlePageDragOver}
-      onDrop={handlePageDrop}
+      onDragEnter={readOnly ? undefined : handlePageDragEnter}
+      onDragLeave={readOnly ? undefined : handlePageDragLeave}
+      onDragOver={readOnly ? undefined : handlePageDragOver}
+      onDrop={readOnly ? undefined : handlePageDrop}
     >
       {draggingOver && (
         <div className="fixed inset-0 z-50 bg-indigo-500/10 border-2 border-dashed border-indigo-400 flex items-center justify-center pointer-events-none">
@@ -307,7 +313,7 @@ export function WorkItemDetailPage() {
             </div>
 
             {/* Title */}
-            {editingTitle ? (
+            {!readOnly && editingTitle ? (
               <div className="flex gap-2 items-center">
                 <input
                   className="text-xl font-semibold text-gray-900 dark:text-gray-100 border-b border-indigo-500 outline-none flex-1 bg-transparent"
@@ -328,8 +334,8 @@ export function WorkItemDetailPage() {
             ) : (
               <div className="flex items-center gap-2">
                 <h1
-                  className="text-xl font-semibold text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded px-1 -mx-1"
-                  onClick={() => { setTitleDraft(item.title); setEditingTitle(true) }}
+                  className={`text-xl font-semibold text-gray-900 dark:text-gray-100 rounded px-1 -mx-1 ${readOnly ? '' : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+                  onClick={readOnly ? undefined : () => { setTitleDraft(item.title); setEditingTitle(true) }}
                 >
                   {item.title}
                 </h1>
@@ -343,7 +349,7 @@ export function WorkItemDetailPage() {
             <div className="flex items-center gap-1 mb-1">
               <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('workitems.detail.description')}</h3>
               <ConfirmCheck visible={descConfirmed} />
-              {!editingDesc && (
+              {!readOnly && !editingDesc && (
                 <button
                   className="group/edit relative inline-flex items-center justify-center w-7 h-7 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-gray-700 transition-colors opacity-0 group-hover/desc:opacity-100"
                   onClick={() => { setDescDraft(item.description ?? ''); setEditingDesc(true) }}
@@ -360,7 +366,7 @@ export function WorkItemDetailPage() {
                 <CopyButton text={item.description} className="opacity-0 group-hover/desc:opacity-100" />
               )}
             </div>
-            {editingDesc ? (
+            {!readOnly && editingDesc ? (
               <div className="space-y-2">
                 <textarea
                   ref={descTextareaRef}
@@ -396,7 +402,7 @@ export function WorkItemDetailPage() {
             ) : (
               <div
                 className="hover:bg-gray-50 dark:hover:bg-gray-800 rounded p-2 -m-2 min-h-[2rem]"
-                onDoubleClick={() => { setDescDraft(item.description ?? ''); setEditingDesc(true) }}
+                onDoubleClick={readOnly ? undefined : () => { setDescDraft(item.description ?? ''); setEditingDesc(true) }}
               >
                 {item.description ? (
                   <div className="prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 break-words">
@@ -440,10 +446,10 @@ export function WorkItemDetailPage() {
               )}
             </div>
 
-            {activeTab === 'comments' && <CommentList projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} highlightedCommentId={highlightedCommentId} onHighlightClear={() => setHighlightedCommentId(null)} onImageClick={handleImageClick} onAttachmentLinkClick={handleAttachmentLinkClick} draft={commentDraft} onDraftChange={setCommentDraft} />}
+            {activeTab === 'comments' && <CommentList projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} highlightedCommentId={highlightedCommentId} onHighlightClear={() => setHighlightedCommentId(null)} onImageClick={handleImageClick} onAttachmentLinkClick={handleAttachmentLinkClick} draft={commentDraft} onDraftChange={setCommentDraft} readOnly={readOnly} />}
             {activeTab === 'activity' && <ActivityTimeline projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} onAttachmentClick={(id) => { setActiveTab('attachments'); setHighlightedAttachmentId(id) }} onCommentClick={(id) => { setActiveTab('comments'); setHighlightedCommentId(id) }} />}
-            {activeTab === 'relations' && <RelationList projectKey={projectKey ?? ''} itemNumber={itemNumber} />}
-            {activeTab === 'attachments' && <AttachmentList projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} highlightedAttachmentId={highlightedAttachmentId} onHighlightClear={() => setHighlightedAttachmentId(null)} onPreview={(a) => setPreviewTarget({ kind: 'attachment', attachment: a, projectKey: projectKey ?? '', itemNumber })} />}
+            {activeTab === 'relations' && <RelationList projectKey={projectKey ?? ''} itemNumber={itemNumber} readOnly={readOnly} />}
+            {activeTab === 'attachments' && <AttachmentList projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} highlightedAttachmentId={highlightedAttachmentId} onHighlightClear={() => setHighlightedAttachmentId(null)} onPreview={(a) => setPreviewTarget({ kind: 'attachment', attachment: a, projectKey: projectKey ?? '', itemNumber })} readOnly={readOnly} />}
           </div>
         </div>
 
@@ -459,10 +465,13 @@ export function WorkItemDetailPage() {
             typeWorkflows={typeWorkflows}
             allWorkflows={allWorkflows}
             onUpdate={(input) => updateMutation.mutate({ itemNumber, input })}
+            readOnly={readOnly}
           />
-          <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-            <Button variant="danger" size="sm" onClick={() => setShowDelete(true)}>{t('workitems.detail.deleteItem')}</Button>
-          </div>
+          {!readOnly && (
+            <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
+              <Button variant="danger" size="sm" onClick={() => setShowDelete(true)}>{t('workitems.detail.deleteItem')}</Button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -486,10 +495,13 @@ export function WorkItemDetailPage() {
           typeWorkflows={typeWorkflows}
           allWorkflows={allWorkflows}
           onUpdate={(input) => updateMutation.mutate({ itemNumber, input })}
+          readOnly={readOnly}
         />
-        <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-          <Button variant="danger" size="sm" onClick={() => { setShowProperties(false); setShowDelete(true) }}>{t('workitems.detail.deleteItem')}</Button>
-        </div>
+        {!readOnly && (
+          <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
+            <Button variant="danger" size="sm" onClick={() => { setShowProperties(false); setShowDelete(true) }}>{t('workitems.detail.deleteItem')}</Button>
+          </div>
+        )}
       </Modal>
 
       {/* Delete confirmation */}

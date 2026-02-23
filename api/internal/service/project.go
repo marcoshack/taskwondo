@@ -413,18 +413,47 @@ func (s *ProjectService) AddMember(ctx context.Context, info *model.AuthInfo, pr
 	return member, nil
 }
 
-// ListMembers returns all members of a project. Requires membership.
-func (s *ProjectService) ListMembers(ctx context.Context, info *model.AuthInfo, projectKey string) ([]model.ProjectMemberWithUser, error) {
+// ListMembers returns members of a project and the total member count. Requires membership.
+// Viewers only see owners, admins, and themselves to avoid leaking membership info.
+// The total count always reflects the full membership regardless of filtering.
+func (s *ProjectService) ListMembers(ctx context.Context, info *model.AuthInfo, projectKey string) ([]model.ProjectMemberWithUser, int, error) {
 	project, err := s.projects.GetByKey(ctx, projectKey)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	if err := s.requireMembership(ctx, info, project.ID); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	return s.members.ListByProject(ctx, project.ID)
+	members, err := s.members.ListByProject(ctx, project.ID)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	totalCount := len(members)
+
+	// Viewers only see owners, admins, and themselves
+	if info.GlobalRole != model.RoleAdmin {
+		callerRole := ""
+		for _, m := range members {
+			if m.UserID == info.UserID {
+				callerRole = m.Role
+				break
+			}
+		}
+		if callerRole == model.ProjectRoleViewer {
+			filtered := make([]model.ProjectMemberWithUser, 0, len(members))
+			for _, m := range members {
+				if m.Role == model.ProjectRoleOwner || m.Role == model.ProjectRoleAdmin || m.UserID == info.UserID {
+					filtered = append(filtered, m)
+				}
+			}
+			return filtered, totalCount, nil
+		}
+	}
+
+	return members, totalCount, nil
 }
 
 // UpdateMemberRole changes a member's role. Requires owner or admin role.

@@ -139,6 +139,8 @@
   "projects.overview.members": "成员",
   "projects.overview.noDescription": "暂无描述。",
   "projects.overview.noMembers": "暂无成员。",
+  "projects.settings.hiddenMembers_one": "+ {{count}} 个其他成员",
+  "projects.settings.hiddenMembers_other": "+ {{count}} 个其他成员",
 
   "projects.switcher.title": "切换项目",
   "projects.switcher.search": "搜索项目...",
@@ -500,6 +502,7 @@
   "sla.description": "定义此工作项类型在每个状态中允许的最大时间。",
   "sla.blankHint": "留空表示该状态不设置 SLA。",
   "sla.configure": "配置SLA",
+  "sla.view": "查看SLA",
   "sla.noTargets": "未配置SLA目标。",
   "sla.status": "状态",
   "sla.target": "目标",

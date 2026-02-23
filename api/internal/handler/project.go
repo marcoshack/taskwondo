@@ -358,7 +358,7 @@ func (h *ProjectHandler) ListMembers(w http.ResponseWriter, r *http.Request) {
 
 	projectKey := chi.URLParam(r, "projectKey")
 
-	members, err := h.projects.ListMembers(r.Context(), info, projectKey)
+	members, totalCount, err := h.projects.ListMembers(r.Context(), info, projectKey)
 	if err != nil {
 		handleProjectError(w, r, err, "failed to list members")
 		return
@@ -369,7 +369,10 @@ func (h *ProjectHandler) ListMembers(w http.ResponseWriter, r *http.Request) {
 		resp[i] = toMemberResponse(&members[i])
 	}
 
-	writeData(w, http.StatusOK, resp)
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"data":        resp,
+		"total_count": totalCount,
+	})
 }
 
 // UpdateMemberRole handles PATCH /api/v1/projects/{projectKey}/members/{userId}

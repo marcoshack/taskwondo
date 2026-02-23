@@ -139,6 +139,8 @@
   "projects.overview.members": "멤버",
   "projects.overview.noDescription": "설명이 없습니다.",
   "projects.overview.noMembers": "멤버가 없습니다.",
+  "projects.settings.hiddenMembers_one": "+ {{count}}명의 다른 멤버",
+  "projects.settings.hiddenMembers_other": "+ {{count}}명의 다른 멤버",
 
   "projects.switcher.title": "프로젝트 전환",
   "projects.switcher.search": "프로젝트 검색...",
@@ -500,6 +502,7 @@
   "sla.description": "이 작업 항목 유형의 각 상태에서 허용되는 최대 시간을 정의합니다.",
   "sla.blankHint": "해당 상태에 SLA를 적용하지 않으려면 비워 두세요.",
   "sla.configure": "SLA 구성",
+  "sla.view": "SLA 보기",
   "sla.noTargets": "구성된 SLA 목표가 없습니다.",
   "sla.status": "상태",
   "sla.target": "목표",

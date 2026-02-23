@@ -495,6 +495,10 @@ func TestListMembers_Handler(t *testing.T) {
 	if len(data) != 1 {
 		t.Fatalf("expected 1 member (owner), got %d", len(data))
 	}
+	totalCount := int(resp["total_count"].(float64))
+	if totalCount != 1 {
+		t.Fatalf("expected total_count 1, got %d", totalCount)
+	}
 }
 
 func TestUpdateProject_Handler(t *testing.T) {

@@ -18,6 +18,7 @@ interface DetailSidebarProps {
   typeWorkflows?: ProjectTypeWorkflow[]
   allWorkflows?: Workflow[]
   onUpdate: (input: UpdateWorkItemInput) => void
+  readOnly?: boolean
 }
 
 const PRIORITIES = ['low', 'medium', 'high', 'critical']
@@ -26,7 +27,7 @@ const VISIBILITIES = ['internal', 'portal', 'public']
 
 const MAX_COMPLEXITY = 1000000
 
-export function DetailSidebar({ item, statuses, allowedTransitions, members, milestones = [], allowedComplexityValues = [], typeWorkflows, allWorkflows, onUpdate }: DetailSidebarProps) {
+export function DetailSidebar({ item, statuses, allowedTransitions, members, milestones = [], allowedComplexityValues = [], typeWorkflows, allWorkflows, onUpdate, readOnly = false }: DetailSidebarProps) {
   const { t } = useTranslation()
   const [pendingType, setPendingType] = useState<string | null>(null)
   const [statusWarning, setStatusWarning] = useState(false)
@@ -91,7 +92,7 @@ export function DetailSidebar({ item, statuses, allowedTransitions, members, mil
   return (
     <div className="space-y-4">
       <Field label={t('workitems.form.type')}>
-        <Select value={pendingType ?? item.type} onChange={(e) => handleTypeChange(e.target.value)}>
+        <Select value={pendingType ?? item.type} onChange={(e) => handleTypeChange(e.target.value)} disabled={readOnly}>
           {TYPES.map((tp) => <option key={tp} value={tp}>{t(`workitems.types.${tp}`)}</option>)}
         </Select>
       </Field>
@@ -101,6 +102,7 @@ export function DetailSidebar({ item, statuses, allowedTransitions, members, mil
           value={pendingType ? '' : item.status}
           onChange={(e) => handleStatusChange(e.target.value)}
           className={statusWarning ? 'ring-2 ring-red-500 border-red-500' : ''}
+          disabled={readOnly}
         >
           {pendingType && <option value="">{t('workitems.detail.selectStatus')}</option>}
           {statusOptions.map((ws) => (
@@ -115,7 +117,7 @@ export function DetailSidebar({ item, statuses, allowedTransitions, members, mil
       </Field>
 
       <Field label={t('workitems.form.priority')}>
-        <Select value={item.priority} onChange={(e) => onUpdate({ priority: e.target.value })}>
+        <Select value={item.priority} onChange={(e) => onUpdate({ priority: e.target.value })} disabled={readOnly}>
           {PRIORITIES.map((p) => <option key={p} value={p}>{t(`workitems.priorities.${p}`)}</option>)}
         </Select>
       </Field>
@@ -125,6 +127,7 @@ export function DetailSidebar({ item, statuses, allowedTransitions, members, mil
           <Select
             value={item.complexity != null ? String(item.complexity) : ''}
             onChange={(e) => onUpdate({ complexity: e.target.value ? Number(e.target.value) : null })}
+            disabled={readOnly}
           >
             <option value="">{t('workitems.form.complexityPlaceholder')}</option>
             {allowedComplexityValues.map((v) => (
@@ -138,6 +141,7 @@ export function DetailSidebar({ item, statuses, allowedTransitions, members, mil
             defaultValue={item.complexity != null ? String(item.complexity) : ''}
             placeholder={t('workitems.form.complexityPlaceholder')}
             error={complexityError}
+            disabled={readOnly}
             onKeyDown={(e) => {
               if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
               if (e.key === 'Escape') {
@@ -180,6 +184,7 @@ export function DetailSidebar({ item, statuses, allowedTransitions, members, mil
           members={members}
           value={item.assignee_id}
           onChange={(userId) => onUpdate({ assignee_id: userId })}
+          disabled={readOnly}
         />
       </Field>
 
@@ -187,6 +192,7 @@ export function DetailSidebar({ item, statuses, allowedTransitions, members, mil
         <Select
           value={item.milestone_id ?? ''}
           onChange={(e) => onUpdate({ milestone_id: e.target.value || null })}
+          disabled={readOnly}
         >
           <option value="">{t('milestones.noMilestone')}</option>
           {milestones
@@ -196,7 +202,7 @@ export function DetailSidebar({ item, statuses, allowedTransitions, members, mil
       </Field>
 
       <Field label={t('workitems.form.visibility')}>
-        <Select value={item.visibility} onChange={(e) => onUpdate({ visibility: e.target.value })}>
+        <Select value={item.visibility} onChange={(e) => onUpdate({ visibility: e.target.value })} disabled={readOnly}>
           {VISIBILITIES.map((v) => <option key={v} value={v}>{t(`workitems.visibilities.${v}`)}</option>)}
         </Select>
       </Field>
@@ -206,6 +212,7 @@ export function DetailSidebar({ item, statuses, allowedTransitions, members, mil
           type="date"
           value={item.due_date ?? ''}
           onChange={(e) => onUpdate({ due_date: e.target.value || null })}
+          disabled={readOnly}
         />
       </Field>
 
@@ -213,6 +220,7 @@ export function DetailSidebar({ item, statuses, allowedTransitions, members, mil
         <Input
           defaultValue={item.labels.join(', ')}
           placeholder={t('workitems.form.labelsPlaceholder')}
+          disabled={readOnly}
           onKeyDown={(e) => {
             if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
             if (e.key === 'Escape') {

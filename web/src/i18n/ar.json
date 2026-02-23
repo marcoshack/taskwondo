@@ -139,6 +139,8 @@
   "projects.overview.members": "الأعضاء",
   "projects.overview.noDescription": "لا يوجد وصف.",
   "projects.overview.noMembers": "لا يوجد أعضاء.",
+  "projects.settings.hiddenMembers_one": "+ {{count}} عضو آخر",
+  "projects.settings.hiddenMembers_other": "+ {{count}} أعضاء آخرين",
 
   "projects.switcher.title": "تبديل المشروع",
   "projects.switcher.search": "البحث في المشاريع...",
@@ -500,6 +502,7 @@
   "sla.description": "حدد الحد الأقصى للوقت المسموح به في كل حالة لهذا النوع من عناصر العمل.",
   "sla.blankHint": "اتركه فارغًا لعدم تطبيق SLA على تلك الحالة.",
   "sla.configure": "تكوين SLA",
+  "sla.view": "عرض SLA",
   "sla.noTargets": "لم يتم تكوين أهداف SLA.",
   "sla.status": "الحالة",
   "sla.target": "الهدف",

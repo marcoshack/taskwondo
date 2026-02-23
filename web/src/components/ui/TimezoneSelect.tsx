@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 interface Props {
   value: string
   onChange: (tz: string) => void
+  disabled?: boolean
 }
 
 const TIMEZONES: string[] = (() => {
@@ -26,7 +27,7 @@ const TIMEZONES: string[] = (() => {
   }
 })()
 
-export function TimezoneSelect({ value, onChange }: Props) {
+export function TimezoneSelect({ value, onChange, disabled = false }: Props) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -59,7 +60,8 @@ export function TimezoneSelect({ value, onChange }: Props) {
     <div ref={containerRef} className="relative">
       <button
         type="button"
-        className="w-full text-left rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 truncate"
+        disabled={disabled}
+        className="w-full text-left rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 truncate disabled:opacity-60 disabled:cursor-not-allowed"
         onClick={() => {
           setOpen(!open)
           if (!open) {

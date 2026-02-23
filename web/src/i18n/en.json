@@ -152,6 +152,8 @@
   "projects.overview.members": "Members",
   "projects.overview.noDescription": "No description provided.",
   "projects.overview.noMembers": "No members.",
+  "projects.settings.hiddenMembers_one": "+ {{count}} other member",
+  "projects.settings.hiddenMembers_other": "+ {{count}} other members",
 
   "projects.switcher.title": "Switch Project",
   "projects.switcher.search": "Search projects...",
@@ -580,6 +582,7 @@
   "sla.description": "Define maximum time allowed in each status for this work item type.",
   "sla.blankHint": "Leave blank for no SLA on that status.",
   "sla.configure": "Configure SLA",
+  "sla.view": "View SLA",
   "sla.noTargets": "No SLA targets configured.",
   "sla.status": "Status",
   "sla.target": "Target",

@@ -30,9 +30,10 @@ function displayIdToPath(displayId: string) {
 interface RelationListProps {
   projectKey: string
   itemNumber: number
+  readOnly?: boolean
 }
 
-export function RelationList({ projectKey, itemNumber }: RelationListProps) {
+export function RelationList({ projectKey, itemNumber, readOnly = false }: RelationListProps) {
   const { t } = useTranslation()
   const { data: relations, isLoading } = useRelations(projectKey, itemNumber)
   const createMutation = useCreateRelation(projectKey, itemNumber)
@@ -77,45 +78,49 @@ export function RelationList({ projectKey, itemNumber }: RelationListProps) {
                 {linked.title}
               </Link>
             </div>
-            <button
-              className="text-xs text-red-400 hover:text-red-600 dark:hover:text-red-300 shrink-0 ml-2"
-              onClick={() => deleteMutation.mutate(r.id)}
-            >
-              {t('common.remove')}
-            </button>
+            {!readOnly && (
+              <button
+                className="text-xs text-red-400 hover:text-red-600 dark:hover:text-red-300 shrink-0 ml-2"
+                onClick={() => deleteMutation.mutate(r.id)}
+              >
+                {t('common.remove')}
+              </button>
+            )}
           </div>
         )
       })}
 
-      <div className="flex items-end gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
-        <div className="flex-1">
-          <WorkItemPicker
-            projectKey={projectKey}
-            excludeItemNumber={itemNumber}
-            value={targetId}
-            onChange={setTargetId}
-            onSelect={setTargetId}
-          />
+      {!readOnly && (
+        <div className="flex items-end gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+          <div className="flex-1">
+            <WorkItemPicker
+              projectKey={projectKey}
+              excludeItemNumber={itemNumber}
+              value={targetId}
+              onChange={setTargetId}
+              onSelect={setTargetId}
+            />
+          </div>
+          <div className="w-40">
+            <Select value={relationType} onChange={(e) => setRelationType(e.target.value)}>
+              {RELATION_TYPES.map((tp) => (
+                <option key={tp} value={tp}>{t(`relations.types.${tp}`)}</option>
+              ))}
+            </Select>
+          </div>
+          <Button
+            size="sm"
+            onClick={() => {
+              createMutation.mutate({ targetDisplayId: targetId, relationType }, {
+                onSuccess: () => setTargetId(''),
+              })
+            }}
+            disabled={!targetId.trim() || createMutation.isPending}
+          >
+            {t('common.add')}
+          </Button>
         </div>
-        <div className="w-40">
-          <Select value={relationType} onChange={(e) => setRelationType(e.target.value)}>
-            {RELATION_TYPES.map((tp) => (
-              <option key={tp} value={tp}>{t(`relations.types.${tp}`)}</option>
-            ))}
-          </Select>
-        </div>
-        <Button
-          size="sm"
-          onClick={() => {
-            createMutation.mutate({ targetDisplayId: targetId, relationType }, {
-              onSuccess: () => setTargetId(''),
-            })
-          }}
-          disabled={!targetId.trim() || createMutation.isPending}
-        >
-          {t('common.add')}
-        </Button>
-      </div>
+      )}
     </div>
   )
 }

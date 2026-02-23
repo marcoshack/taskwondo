@@ -19,6 +19,7 @@ interface AttachmentListProps {
   highlightedAttachmentId?: string | null
   onHighlightClear?: () => void
   onPreview?: (attachment: Attachment) => void
+  readOnly?: boolean
 }
 
 function formatFileSize(bytes: number): string {
@@ -27,7 +28,7 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc', highlightedAttachmentId, onHighlightClear, onPreview }: AttachmentListProps) {
+export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc', highlightedAttachmentId, onHighlightClear, onPreview, readOnly = false }: AttachmentListProps) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const { data: attachments, isLoading } = useAttachments(projectKey, itemNumber)
@@ -92,28 +93,30 @@ export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc', hig
   return (
     <div className="space-y-4">
       {/* Upload form */}
-      <div className="space-y-2 pb-3 border-b border-gray-100 dark:border-gray-700">
-        <input
-          type="text"
-          className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-1.5 text-sm"
-          placeholder={t('attachments.commentPlaceholder')}
-          value={comment}
-          onChange={(e) => setComment(e.target.value)}
-        />
-        <div className="flex items-center gap-2">
+      {!readOnly && (
+        <div className="space-y-2 pb-3 border-b border-gray-100 dark:border-gray-700">
           <input
-            ref={fileInputRef}
-            type="file"
-            className="text-sm text-gray-500 file:mr-2 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-sm file:bg-indigo-50 file:text-indigo-600 dark:file:bg-indigo-900/30 dark:file:text-indigo-400 hover:file:bg-indigo-100"
-            onChange={handleFileSelect}
-            disabled={uploadMutation.isPending}
+            type="text"
+            className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-1.5 text-sm"
+            placeholder={t('attachments.commentPlaceholder')}
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
           />
-          {uploadMutation.isPending && <Spinner size="sm" />}
+          <div className="flex items-center gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="text-sm text-gray-500 file:mr-2 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-sm file:bg-indigo-50 file:text-indigo-600 dark:file:bg-indigo-900/30 dark:file:text-indigo-400 hover:file:bg-indigo-100"
+              onChange={handleFileSelect}
+              disabled={uploadMutation.isPending}
+            />
+            {uploadMutation.isPending && <Spinner size="sm" />}
+          </div>
+          {uploadMutation.isError && (
+            <p className="text-xs text-red-500">{t('attachments.uploadFailed')}</p>
+          )}
         </div>
-        {uploadMutation.isError && (
-          <p className="text-xs text-red-500">{t('attachments.uploadFailed')}</p>
-        )}
-      </div>
+      )}
 
       {/* Attachment list */}
       {(sortOrder === 'desc' ? [...(attachments ?? [])].reverse() : (attachments ?? [])).map((a) => (

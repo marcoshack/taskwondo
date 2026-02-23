@@ -763,12 +763,72 @@ func TestListMembers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	members, err := svc.ListMembers(context.Background(), owner, "TT")
+	members, _, err := svc.ListMembers(context.Background(), owner, "TT")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 	if len(members) != 1 {
 		t.Fatalf("expected 1 member (owner), got %d", len(members))
+	}
+}
+
+func TestListMembers_ViewerSeesOnlyOwnersAdminsAndSelf(t *testing.T) {
+	svc, _, _, userRepo := newTestProjectService()
+	owner := userAuthInfo()
+	ctx := context.Background()
+
+	_, err := svc.Create(ctx, owner, "Test", "TT", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Add an admin member
+	adminUser := &model.User{ID: uuid.New(), Email: "padmin@example.com", IsActive: true}
+	userRepo.Create(ctx, adminUser)
+	adminInfo := &model.AuthInfo{UserID: adminUser.ID, Email: adminUser.Email, GlobalRole: model.RoleUser}
+	svc.AddMember(ctx, owner, "TT", adminUser.ID, model.ProjectRoleAdmin)
+
+	// Add a regular member
+	regularUser := &model.User{ID: uuid.New(), Email: "regular@example.com", IsActive: true}
+	userRepo.Create(ctx, regularUser)
+	svc.AddMember(ctx, owner, "TT", regularUser.ID, model.ProjectRoleMember)
+
+	// Add a viewer
+	viewerUser := &model.User{ID: uuid.New(), Email: "viewer@example.com", IsActive: true}
+	userRepo.Create(ctx, viewerUser)
+	svc.AddMember(ctx, owner, "TT", viewerUser.ID, model.ProjectRoleViewer)
+
+	viewerInfo := &model.AuthInfo{UserID: viewerUser.ID, Email: viewerUser.Email, GlobalRole: model.RoleUser}
+
+	// Viewer should only see owner, admin, and themselves
+	members, totalCount, err := svc.ListMembers(ctx, viewerInfo, "TT")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(members) != 3 {
+		t.Fatalf("expected 3 members (owner + admin + self), got %d", len(members))
+	}
+	if totalCount != 4 {
+		t.Fatalf("expected total_count 4, got %d", totalCount)
+	}
+	roles := map[string]bool{}
+	for _, m := range members {
+		roles[m.Role] = true
+	}
+	if !roles["owner"] || !roles["admin"] || !roles["viewer"] {
+		t.Fatalf("expected owner, admin, and viewer roles, got %v", roles)
+	}
+
+	// Non-viewer (admin) should see all 4 members
+	allMembers, adminTotal, err := svc.ListMembers(ctx, adminInfo, "TT")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(allMembers) != 4 {
+		t.Fatalf("expected 4 members for admin, got %d", len(allMembers))
+	}
+	if adminTotal != 4 {
+		t.Fatalf("expected total_count 4 for admin, got %d", adminTotal)
 	}
 }
 
@@ -942,7 +1002,7 @@ func TestListMembers_AdminBypass(t *testing.T) {
 	}
 	_ = project
 
-	members, err := svc.ListMembers(context.Background(), admin, "TT")
+	members, _, err := svc.ListMembers(context.Background(), admin, "TT")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1984,7 +2044,7 @@ func TestAcceptInvite_Success(t *testing.T) {
 	}
 
 	// Verify membership was created
-	members, _ := s.svc.ListMembers(ctx, owner, "TT")
+	members, _, _ := s.svc.ListMembers(ctx, owner, "TT")
 	found := false
 	for _, m := range members {
 		if m.UserID == joiner.UserID && m.Role == model.ProjectRoleMember {
@@ -2121,7 +2181,7 @@ func TestAcceptInvite_AlreadyMember_RoleUpgrade(t *testing.T) {
 	}
 
 	// Verify the role was updated
-	members, err := s.svc.ListMembers(ctx, owner, "TT")
+	members, _, err := s.svc.ListMembers(ctx, owner, "TT")
 	if err != nil {
 		t.Fatal(err)
 	}

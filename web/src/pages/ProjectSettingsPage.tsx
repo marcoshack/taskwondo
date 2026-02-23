@@ -68,7 +68,7 @@ export function ProjectSettingsPage() {
   const { data: project, isLoading } = useProject(projectKey ?? '')
   const updateMutation = useUpdateProject(projectKey ?? '')
   const deleteMutation = useDeleteProject(projectKey ?? '')
-  const { data: members } = useMembers(projectKey ?? '')
+  const { data: members, totalCount: membersTotalCount } = useMembers(projectKey ?? '')
   const addMemberMutation = useAddMember(projectKey ?? '')
   const updateRoleMutation = useUpdateMemberRole(projectKey ?? '')
   const removeMemberMutation = useRemoveMember(projectKey ?? '')
@@ -242,6 +242,7 @@ export function ProjectSettingsPage() {
           value={currentName}
           onChange={(e) => setName(e.target.value)}
           required
+          disabled={!canManageMembers}
         />
 
         <div>
@@ -251,22 +252,25 @@ export function ProjectSettingsPage() {
           <textarea
             id="description"
             rows={12}
-            className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed"
             value={currentDescription}
             onChange={(e) => setDescription(e.target.value)}
+            disabled={!canManageMembers}
           />
         </div>
 
         {saveError && <p className="text-sm text-red-600 dark:text-red-400">{saveError}</p>}
 
-        <div className="flex items-center gap-2">
-          <Button type="submit" disabled={!hasChanges || updateMutation.isPending}>
-            {updateMutation.isPending ? t('common.saving') : t('projects.settings.saveChanges')}
-          </Button>
-          {saved.general && (
-            <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
-          )}
-        </div>
+        {canManageMembers && (
+          <div className="flex items-center gap-2">
+            <Button type="submit" disabled={!hasChanges || updateMutation.isPending}>
+              {updateMutation.isPending ? t('common.saving') : t('projects.settings.saveChanges')}
+            </Button>
+            {saved.general && (
+              <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
+            )}
+          </div>
+        )}
       </form>
 
       {/* Members section */}
@@ -384,6 +388,11 @@ export function ProjectSettingsPage() {
               </div>
             )
           })}
+          {membersTotalCount != null && membersTotalCount > members.length && (
+            <div className="py-2 text-sm text-gray-500 dark:text-gray-400 pl-[60px]">
+              {t('projects.settings.hiddenMembers', { count: membersTotalCount - members.length })}
+            </div>
+          )}
         </div>
       )}
 
@@ -629,7 +638,7 @@ export function ProjectSettingsPage() {
       )}
 
       {/* Danger Zone */}
-      <div className="border border-red-300 dark:border-red-800 rounded-lg mt-8">
+      {canManageMembers && <div className="border border-red-300 dark:border-red-800 rounded-lg mt-8">
         <div className="px-4 py-3 border-b border-red-300 dark:border-red-800">
           <h3 className="text-base font-semibold text-red-600">{t('projects.settings.dangerZone')}</h3>
         </div>
@@ -644,7 +653,7 @@ export function ProjectSettingsPage() {
             {t('projects.settings.deleteProject')}
           </Button>
         </div>
-      </div>
+      </div>}
 
       {/* Delete confirmation modal */}
       <Modal open={showDeleteModal} onClose={() => setShowDeleteModal(false)} title={t('projects.settings.deleteConfirmTitle')}>

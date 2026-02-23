@@ -1,3 +1,4 @@
+import { useRef, useState, useCallback, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Clock, Pause } from 'lucide-react'
 import { Tooltip } from '@/components/ui/Tooltip'
@@ -21,6 +22,66 @@ const STATUS_I18N_KEYS: Record<string, string> = {
   warning: 'sla.warning',
   breached: 'sla.breached',
   paused: 'sla.paused',
+}
+
+function MarqueeContainer({ children }: { children: ReactNode }) {
+  const innerRef = useRef<HTMLSpanElement>(null)
+  const styleRef = useRef<HTMLStyleElement | null>(null)
+  const [scrollAnim, setScrollAnim] = useState<string | undefined>(undefined)
+
+  const handleMouseEnter = useCallback(() => {
+    const inner = innerRef.current
+    if (!inner) return
+
+    // Find the <td> ancestor to get the actual available width
+    const td = inner.closest('td')
+    if (!td) return
+
+    const tdStyle = getComputedStyle(td)
+    const availableWidth = td.clientWidth - parseFloat(tdStyle.paddingLeft) - parseFloat(tdStyle.paddingRight)
+    const contentWidth = inner.scrollWidth
+    const overflow = contentWidth - availableWidth
+    if (overflow <= 0) return
+
+    const scrollDuration = Math.max(1.5, overflow / 30)
+    const totalDuration = scrollDuration * 2 + 1
+    const scrollEnd = (scrollDuration / totalDuration) * 100
+    const pauseEnd = ((scrollDuration + 0.5) / totalDuration) * 100
+    const rewindEnd = ((scrollDuration * 2 + 0.5) / totalDuration) * 100
+
+    const name = `sla-marquee-${Date.now()}`
+    const style = document.createElement('style')
+    style.textContent = `@keyframes ${name} {
+  0% { transform: translateX(0); }
+  ${scrollEnd.toFixed(1)}% { transform: translateX(-${overflow}px); }
+  ${pauseEnd.toFixed(1)}% { transform: translateX(-${overflow}px); }
+  ${rewindEnd.toFixed(1)}% { transform: translateX(0); }
+  100% { transform: translateX(0); }
+}`
+    document.head.appendChild(style)
+    styleRef.current = style
+    setScrollAnim(`${name} ${totalDuration}s ease-in-out infinite`)
+  }, [])
+
+  const handleMouseLeave = useCallback(() => {
+    setScrollAnim(undefined)
+    if (styleRef.current) {
+      styleRef.current.remove()
+      styleRef.current = null
+    }
+  }, [])
+
+  return (
+    <span
+      ref={innerRef}
+      className="inline-flex items-center gap-1 whitespace-nowrap"
+      style={scrollAnim ? { animation: scrollAnim } : undefined}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      {children}
+    </span>
+  )
 }
 
 export function SLAIndicator({ sla, compact = false }: Props) {
@@ -51,10 +112,10 @@ export function SLAIndicator({ sla, compact = false }: Props) {
 
   return (
     <Tooltip content={tooltipContent}>
-      <span className={`inline-flex items-center gap-1 text-xs ${colorClass}`}>
-        <Icon className="h-3.5 w-3.5" />
-        <span>{label}</span>
-      </span>
+      <MarqueeContainer>
+        <Icon className={`h-3.5 w-3.5 shrink-0 ${colorClass}`} />
+        <span className={`text-xs ${colorClass}`}>{label}</span>
+      </MarqueeContainer>
     </Tooltip>
   )
 }

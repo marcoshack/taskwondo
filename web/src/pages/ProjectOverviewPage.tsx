@@ -11,6 +11,7 @@ import {
   Route,
   Settings,
 } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
 import { useNavigationGuard } from '@/contexts/NavigationGuardContext'
 import { useProject, useMembers } from '@/hooks/useProjects'
 import { useWorkItems } from '@/hooks/useWorkItems'
@@ -25,9 +26,10 @@ export function ProjectOverviewPage() {
   const { t } = useTranslation()
   const { projectKey } = useParams<{ projectKey: string }>()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const { guardRef, guardedNavigate } = useNavigationGuard()
   const { data: project } = useProject(projectKey ?? '')
-  const { data: members, isLoading: membersLoading } = useMembers(projectKey ?? '')
+  const { data: members, totalCount: membersTotalCount, isLoading: membersLoading } = useMembers(projectKey ?? '')
   const { statuses } = useProjectWorkflow(projectKey ?? '')
 
   const panels = [
@@ -176,18 +178,24 @@ export function ProjectOverviewPage() {
           ) : !members || members.length === 0 ? (
             <p className="text-sm text-gray-400 dark:text-gray-500">{t('projects.overview.noMembers')}</p>
           ) : (
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-3 items-center">
               {members.map((member) => (
                 <div key={member.user_id} className="flex items-center gap-2">
                   <Avatar name={member.display_name} size="sm" />
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                       {member.display_name}
+                      {member.user_id === user?.id && <span className="ml-1 text-xs text-gray-400">({t('common.you')})</span>}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{member.role}</p>
                   </div>
                 </div>
               ))}
+              {membersTotalCount != null && membersTotalCount > members.length && (
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  {t('projects.settings.hiddenMembers', { count: membersTotalCount - members.length })}
+                </span>
+              )}
             </div>
           )}
         </div>

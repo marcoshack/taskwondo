@@ -25,9 +25,10 @@ interface CommentListProps {
   onAttachmentLinkClick?: (href: string, attachmentId: string) => void
   draft?: string
   onDraftChange?: (value: string) => void
+  readOnly?: boolean
 }
 
-export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highlightedCommentId, onHighlightClear, onImageClick, onAttachmentLinkClick, draft, onDraftChange }: CommentListProps) {
+export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highlightedCommentId, onHighlightClear, onImageClick, onAttachmentLinkClick, draft, onDraftChange, readOnly = false }: CommentListProps) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const { data: comments, isLoading } = useComments(projectKey, itemNumber)
@@ -133,38 +134,40 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
 
   return (
     <div className="space-y-4">
-      <div ref={addCommentRef} className="space-y-2 pb-3 border-b border-gray-100 dark:border-gray-700">
-        <textarea
-          ref={newCommentRef}
-          className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm"
-          rows={3}
-          placeholder={t('comments.placeholder')}
-          value={newBody}
-          onChange={(e) => setNewBody(e.target.value)}
-          onKeyDown={(e) => {
-            newMention.onMentionKeyDown(e)
-            if (e.defaultPrevented) return
-            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && newBody.trim()) {
-              e.preventDefault()
-              createMutation.mutate({ body: newBody }, { onSuccess: () => setNewBody('') })
-            }
-          }}
-          onPaste={handlePaste}
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-        />
-        <Button
-          size="sm"
-          onClick={() => {
-            createMutation.mutate({ body: newBody }, {
-              onSuccess: () => setNewBody(''),
-            })
-          }}
-          disabled={!newBody.trim() || createMutation.isPending}
-        >
-          {createMutation.isPending ? t('comments.adding') : t('comments.add')}
-        </Button>
-      </div>
+      {!readOnly && (
+        <div ref={addCommentRef} className="space-y-2 pb-3 border-b border-gray-100 dark:border-gray-700">
+          <textarea
+            ref={newCommentRef}
+            className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm"
+            rows={3}
+            placeholder={t('comments.placeholder')}
+            value={newBody}
+            onChange={(e) => setNewBody(e.target.value)}
+            onKeyDown={(e) => {
+              newMention.onMentionKeyDown(e)
+              if (e.defaultPrevented) return
+              if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && newBody.trim()) {
+                e.preventDefault()
+                createMutation.mutate({ body: newBody }, { onSuccess: () => setNewBody('') })
+              }
+            }}
+            onPaste={handlePaste}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+          />
+          <Button
+            size="sm"
+            onClick={() => {
+              createMutation.mutate({ body: newBody }, {
+                onSuccess: () => setNewBody(''),
+              })
+            }}
+            disabled={!newBody.trim() || createMutation.isPending}
+          >
+            {createMutation.isPending ? t('comments.adding') : t('comments.add')}
+          </Button>
+        </div>
+      )}
 
       {(sortOrder === 'desc' ? [...(comments ?? [])].reverse() : (comments ?? [])).map((c) => (
         <div

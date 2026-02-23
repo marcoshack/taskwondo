@@ -24,6 +24,7 @@ import { SLAIndicator } from '@/components/SLAIndicator'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { formatRelativeTime } from '@/utils/duration'
 import { User, History } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
 import type { AxiosError } from 'axios'
 import { listWorkItems, type WorkItem, type WorkItemFilter } from '@/api/workitems'
 
@@ -82,11 +83,16 @@ export function WorkItemListPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
 
+  const { user } = useAuth()
   const { statuses, transitionsMap } = useProjectWorkflow(projectKey ?? '')
   const { data: allStatuses } = useAvailableStatuses(projectKey ?? '')
   const { data: project } = useProject(projectKey ?? '')
   const { data: members } = useMembers(projectKey ?? '')
   const { data: milestones } = useMilestones(projectKey ?? '')
+
+  const currentUserRole = members?.find((m) => m.user_id === user?.id)?.role ?? (user?.global_role === 'admin' ? 'owner' : null)
+  const canEdit = user?.global_role === 'admin' || (currentUserRole != null && currentUserRole !== 'viewer')
+  const readOnly = !canEdit
 
   // Load saved filter from user settings
   const { data: savedFilter, isLoading: settingsLoading } = useUserSetting<SavedFilter>(projectKey ?? '', SETTINGS_KEY)
@@ -215,7 +221,7 @@ export function WorkItemListPage() {
   )
   const restoredRef = useRef(false)
 
-  useKeyboardShortcut({ key: 'c' }, () => setShowCreate(true))
+  useKeyboardShortcut({ key: 'c' }, () => setShowCreate(true), canEdit)
 
   const debouncedSearch = useDebounce(search, 300)
 
@@ -332,8 +338,8 @@ export function WorkItemListPage() {
     if (activeRow >= 0 && activeRow < allItems.length) {
       toggleSelect(allItems[activeRow].item_number)
     }
-  }, viewMode === 'list' && activeRow >= 0)
-  useKeyboardShortcut({ key: '#' }, () => setShowDeleteConfirm(true), selected.size > 0 || activeRow >= 0)
+  }, canEdit && viewMode === 'list' && activeRow >= 0)
+  useKeyboardShortcut({ key: '#' }, () => setShowDeleteConfirm(true), canEdit && (selected.size > 0 || activeRow >= 0))
   useKeyboardShortcut({ key: 'Escape' }, () => setActiveRow(-1), activeRow >= 0)
 
   // Items targeted for deletion: selected checkboxes take priority, otherwise highlighted row
@@ -344,19 +350,19 @@ export function WorkItemListPage() {
   }, [selected, activeRow, allItems])
 
   const columns: Column<WorkItem>[] = [
-    {
+    ...(!readOnly ? [{
       key: 'select',
       header: '',
       className: 'w-10',
-      render: (row) => (
+      render: (row: WorkItem) => (
         <input
           type="checkbox"
           checked={selected.has(row.item_number)}
-          onChange={(e) => { e.stopPropagation(); toggleSelect(row.item_number) }}
-          onClick={(e) => e.stopPropagation()}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => { e.stopPropagation(); toggleSelect(row.item_number) }}
+          onClick={(e: React.MouseEvent) => e.stopPropagation()}
         />
       ),
-    },
+    }] as Column<WorkItem>[] : []),
     {
       key: 'display_id',
       header: t('workitems.table.id'),
@@ -367,7 +373,7 @@ export function WorkItemListPage() {
     {
       key: 'type',
       header: t('workitems.table.type'),
-      className: 'w-24',
+      className: 'w-20',
       sortKey: 'type',
       render: (row) => <TypeBadge type={row.type} />,
     },
@@ -394,14 +400,14 @@ export function WorkItemListPage() {
     {
       key: 'sla',
       header: t('sla.columnHeader'),
-      className: 'w-[124px]',
+      className: 'w-[110px]',
       sortKey: 'sla_target_at',
       render: (row) => <SLAIndicator sla={row.sla} />,
     },
     {
       key: 'updated',
       header: t('workitems.table.updated'),
-      className: 'w-[124px]',
+      className: 'w-[130px]',
       sortKey: 'updated_at',
       render: (row) => <span className="text-gray-500 dark:text-gray-400">{new Date(row.updated_at).toLocaleDateString()}</span>,
     },
@@ -433,10 +439,12 @@ export function WorkItemListPage() {
               {t('workitems.view.board')}
             </button>
           </div>
-          <Button onClick={() => setShowCreate(true)}>
-            <span className="sm:hidden">{t('workitems.newShort')}</span>
-            <span className="hidden sm:inline">{t('workitems.new')}</span>
-          </Button>
+          {!readOnly && (
+            <Button onClick={() => setShowCreate(true)}>
+              <span className="sm:hidden">{t('workitems.newShort')}</span>
+              <span className="hidden sm:inline">{t('workitems.new')}</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -457,7 +465,7 @@ export function WorkItemListPage() {
       />
 
       {/* Bulk action toolbar */}
-      {selected.size > 0 && (
+      {!readOnly && selected.size > 0 && (
         <div className="flex items-center gap-3 rounded-md bg-indigo-50 dark:bg-indigo-900/30 px-4 py-2">
           <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">{t('workitems.selected', { count: selected.size })}</span>
           <div className="w-40">
@@ -504,16 +512,18 @@ export function WorkItemListPage() {
         <>
           {/* Desktop: table view */}
           <div className="hidden sm:block border dark:border-gray-700 rounded-lg overflow-hidden">
-            <div className="bg-gray-50 dark:bg-gray-800 px-6 py-2 border-b dark:border-gray-700">
-              <label className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                <input
-                  type="checkbox"
-                  checked={items.length > 0 && selected.size === items.length}
-                  onChange={toggleSelectAll}
-                />
-                {t('common.selectAll')}
-              </label>
-            </div>
+            {!readOnly && (
+              <div className="bg-gray-50 dark:bg-gray-800 px-6 py-2 border-b dark:border-gray-700">
+                <label className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                  <input
+                    type="checkbox"
+                    checked={items.length > 0 && selected.size === items.length}
+                    onChange={toggleSelectAll}
+                  />
+                  {t('common.selectAll')}
+                </label>
+              </div>
+            )}
             <DataTable
               columns={columns}
               data={allItems}
@@ -603,6 +613,7 @@ export function WorkItemListPage() {
           items={allItems}
           statuses={statuses}
           transitionsMap={transitionsMap}
+          readOnly={readOnly}
           onItemClick={(item) => {
             sessionStorage.setItem(filterStorageKey, currentParamsString())
             navigate(`/projects/${projectKey}/items/${item.item_number}`)

@@ -55,11 +55,16 @@ export function useProject(projectKey: string) {
 }
 
 export function useMembers(projectKey: string) {
-  return useQuery({
+  const query = useQuery({
     queryKey: ['projects', projectKey, 'members'],
     queryFn: () => listMembers(projectKey),
     enabled: !!projectKey,
   })
+  return {
+    ...query,
+    data: query.data?.members,
+    totalCount: query.data?.totalCount,
+  }
 }
 
 export function useAddMember(projectKey: string) {

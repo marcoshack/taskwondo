@@ -16,6 +16,7 @@ interface Props {
   workItemType: string
   workflow: Workflow
   hasBusinessHours?: boolean
+  readOnly?: boolean
 }
 
 interface StatusRow {
@@ -26,7 +27,7 @@ interface StatusRow {
   calendarMode: string
 }
 
-export function SLAConfigModal({ open, onClose, onSave, projectKey, workItemType, workflow, hasBusinessHours = false }: Props) {
+export function SLAConfigModal({ open, onClose, onSave, projectKey, workItemType, workflow, hasBusinessHours = false, readOnly = false }: Props) {
   const { t } = useTranslation()
   const { data: existingTargets } = useSLATargets(projectKey)
   const bulkUpsert = useBulkUpsertSLATargets(projectKey)
@@ -134,14 +135,14 @@ export function SLAConfigModal({ open, onClose, onSave, projectKey, workItemType
                   value={row.duration}
                   onChange={(e) => updateRow(index, 'duration', e.target.value)}
                   placeholder={t('sla.durationPlaceholder')}
-                  disabled={terminal}
+                  disabled={terminal || readOnly}
                   className="text-sm"
                 />
                 <select
                   className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   value={row.calendarMode}
                   onChange={(e) => updateRow(index, 'calendarMode', e.target.value)}
-                  disabled={terminal}
+                  disabled={terminal || readOnly}
                 >
                   <option value="24x7">{t('sla.mode24x7')}</option>
                   <option value="business_hours" disabled={!hasBusinessHours}>
@@ -158,11 +159,13 @@ export function SLAConfigModal({ open, onClose, onSave, projectKey, workItemType
 
       <div className="flex justify-end gap-2 mt-4">
         <Button variant="secondary" onClick={onClose}>
-          {t('common.cancel')}
+          {readOnly ? t('common.close') : t('common.cancel')}
         </Button>
-        <Button onClick={handleSave} disabled={bulkUpsert.isPending}>
-          {bulkUpsert.isPending ? t('common.saving') : t('common.save')}
-        </Button>
+        {!readOnly && (
+          <Button onClick={handleSave} disabled={bulkUpsert.isPending}>
+            {bulkUpsert.isPending ? t('common.saving') : t('common.save')}
+          </Button>
+        )}
       </div>
     </Modal>
   )

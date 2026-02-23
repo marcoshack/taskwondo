@@ -230,76 +230,72 @@ export function ProjectWorkflowsPage() {
       </div>
 
       {/* Mapping */}
-      {canManage && (
-        <>
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('workflows.mappingTitle')}</h2>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('workflows.mappingDescription')}</p>
-          </div>
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('workflows.mappingTitle')}</h2>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('workflows.mappingDescription')}</p>
+      </div>
 
-          {workflowError && <p className="text-sm text-red-600 dark:text-red-400">{workflowError}</p>}
+      {workflowError && <p className="text-sm text-red-600 dark:text-red-400">{workflowError}</p>}
 
-          <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
-            {['task', 'ticket', 'bug', 'feedback', 'epic'].map((itemType) => {
-              const mapping = typeWorkflows?.find((tw) => tw.work_item_type === itemType)
-              return (
-                <div key={itemType} className="flex items-center justify-between p-3">
-                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    {t(`workitems.types.${itemType}`)}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    {saved[`wf:${itemType}`] && (
-                      <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
-                    )}
-                    <select
-                      className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      value={mapping?.workflow_id ?? ''}
-                      onChange={(e) => {
-                        setWorkflowError('')
-                        updateTypeWorkflowMutation.mutate(
-                          { workItemType: itemType, workflowId: e.target.value },
-                          {
-                            onSuccess: () => {
-                              showSaved(`wf:${itemType}`)
-                            },
-                            onError: (err) => {
-                              const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-                              setWorkflowError(axiosErr.response?.data?.error?.message ?? t('projects.settings.workflowUpdateError'))
-                            },
-                          },
-                        )
-                      }}
-                      disabled={updateTypeWorkflowMutation.isPending}
-                    >
-                      {!mapping && <option value="">{t('projects.settings.selectWorkflow')}</option>}
-                      {workflows?.map((wf) => (
-                        <option key={wf.id} value={wf.id}>{wf.name}</option>
-                      ))}
-                    </select>
-                    <Tooltip content={t('sla.configure')}>
-                      <button
-                        className="p-1 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                        onClick={() => {
-                          if (mapping?.workflow_id) {
-                            setSlaModalType(itemType)
-                            setSlaModalWorkflowId(mapping.workflow_id)
-                          }
-                        }}
-                        disabled={!mapping?.workflow_id}
-                      >
-                        <Clock className="h-4 w-4" />
-                      </button>
-                    </Tooltip>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </>
-      )}
+      <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
+        {['task', 'ticket', 'bug', 'feedback', 'epic'].map((itemType) => {
+          const mapping = typeWorkflows?.find((tw) => tw.work_item_type === itemType)
+          return (
+            <div key={itemType} className="flex items-center justify-between p-3">
+              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                {t(`workitems.types.${itemType}`)}
+              </span>
+              <div className="flex items-center gap-2">
+                {saved[`wf:${itemType}`] && (
+                  <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
+                )}
+                <select
+                  className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                  value={mapping?.workflow_id ?? ''}
+                  onChange={(e) => {
+                    setWorkflowError('')
+                    updateTypeWorkflowMutation.mutate(
+                      { workItemType: itemType, workflowId: e.target.value },
+                      {
+                        onSuccess: () => {
+                          showSaved(`wf:${itemType}`)
+                        },
+                        onError: (err) => {
+                          const axiosErr = err as AxiosError<{ error?: { message?: string } }>
+                          setWorkflowError(axiosErr.response?.data?.error?.message ?? t('projects.settings.workflowUpdateError'))
+                        },
+                      },
+                    )
+                  }}
+                  disabled={!canManage || updateTypeWorkflowMutation.isPending}
+                >
+                  {!mapping && <option value="">{t('projects.settings.selectWorkflow')}</option>}
+                  {workflows?.map((wf) => (
+                    <option key={wf.id} value={wf.id}>{wf.name}</option>
+                  ))}
+                </select>
+                <Tooltip content={canManage ? t('sla.configure') : t('sla.view')}>
+                  <button
+                    className="p-1 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={() => {
+                      if (mapping?.workflow_id) {
+                        setSlaModalType(itemType)
+                        setSlaModalWorkflowId(mapping.workflow_id)
+                      }
+                    }}
+                    disabled={!mapping?.workflow_id}
+                  >
+                    <Clock className="h-4 w-4" />
+                  </button>
+                </Tooltip>
+              </div>
+            </div>
+          )
+        })}
+      </div>
 
       {/* Business Hours */}
-      {canManage && project && (
+      {project && (
         <>
           <div>
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('workflows.businessHoursTitle')}</h2>
@@ -338,7 +334,8 @@ export function ProjectWorkflowsPage() {
                         <button
                           key={d.value}
                           type="button"
-                          className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
+                          disabled={!canManage}
+                          className={`px-3 py-1.5 text-sm rounded-md border transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
                             currentDays.includes(d.value)
                               ? 'bg-indigo-100 dark:bg-indigo-900 border-indigo-300 dark:border-indigo-600 text-indigo-700 dark:text-indigo-200'
                               : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
@@ -362,9 +359,10 @@ export function ProjectWorkflowsPage() {
                         {t('businessHours.startHour')}
                       </label>
                       <select
-                        className="w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed"
                         value={currentStart}
                         onChange={(e) => setBhStart(Number(e.target.value))}
+                        disabled={!canManage}
                       >
                         {hours.map((h) => (
                           <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>
@@ -376,9 +374,10 @@ export function ProjectWorkflowsPage() {
                         {t('businessHours.endHour')}
                       </label>
                       <select
-                        className="w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed"
                         value={currentEnd}
                         onChange={(e) => setBhEnd(Number(e.target.value))}
+                        disabled={!canManage}
                       >
                         {hours.map((h) => (
                           <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>
@@ -392,49 +391,26 @@ export function ProjectWorkflowsPage() {
                       <TimezoneSelect
                         value={currentTz}
                         onChange={(tz) => setBhTimezone(tz)}
+                        disabled={!canManage}
                       />
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <Button
-                      disabled={bhDays === null && bhStart === null && bhEnd === null && bhTimezone === null}
-                      onClick={() => {
-                        setBhError('')
-                        updateProjectMutation.mutate(
-                          {
-                            business_hours: {
-                              days: currentDays,
-                              start_hour: currentStart,
-                              end_hour: currentEnd,
-                              timezone: currentTz,
-                            },
-                          },
-                          {
-                            onSuccess: () => {
-                              setBhDays(null)
-                              setBhStart(null)
-                              setBhEnd(null)
-                              setBhTimezone(null)
-                              showSaved('businessHours')
-                            },
-                            onError: (err) => {
-                              const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-                              setBhError(axiosErr.response?.data?.error?.message ?? t('projects.settings.updateError'))
-                            },
-                          }
-                        )
-                      }}
-                    >
-                      {t('common.save')}
-                    </Button>
-                    {project.business_hours && (
+                  {canManage && (
+                    <div className="flex items-center gap-2">
                       <Button
-                        variant="secondary"
+                        disabled={bhDays === null && bhStart === null && bhEnd === null && bhTimezone === null}
                         onClick={() => {
                           setBhError('')
                           updateProjectMutation.mutate(
-                            { business_hours: null },
+                            {
+                              business_hours: {
+                                days: currentDays,
+                                start_hour: currentStart,
+                                end_hour: currentEnd,
+                                timezone: currentTz,
+                              },
+                            },
                             {
                               onSuccess: () => {
                                 setBhDays(null)
@@ -451,13 +427,39 @@ export function ProjectWorkflowsPage() {
                           )
                         }}
                       >
-                        {t('businessHours.clear')}
+                        {t('common.save')}
                       </Button>
-                    )}
-                    {saved.businessHours && (
-                      <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
-                    )}
-                  </div>
+                      {project.business_hours && (
+                        <Button
+                          variant="secondary"
+                          onClick={() => {
+                            setBhError('')
+                            updateProjectMutation.mutate(
+                              { business_hours: null },
+                              {
+                                onSuccess: () => {
+                                  setBhDays(null)
+                                  setBhStart(null)
+                                  setBhEnd(null)
+                                  setBhTimezone(null)
+                                  showSaved('businessHours')
+                                },
+                                onError: (err) => {
+                                  const axiosErr = err as AxiosError<{ error?: { message?: string } }>
+                                  setBhError(axiosErr.response?.data?.error?.message ?? t('projects.settings.updateError'))
+                                },
+                              }
+                            )
+                          }}
+                        >
+                          {t('businessHours.clear')}
+                        </Button>
+                      )}
+                      {saved.businessHours && (
+                        <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
+                      )}
+                    </div>
+                  )}
                 </>
               )
             })()}
@@ -478,6 +480,7 @@ export function ProjectWorkflowsPage() {
             workItemType={slaModalType}
             workflow={wf}
             hasBusinessHours={!!project?.business_hours}
+            readOnly={!canManage}
           />
         )
       })()}

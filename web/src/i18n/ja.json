@@ -139,6 +139,8 @@
   "projects.overview.members": "メンバー",
   "projects.overview.noDescription": "説明はありません。",
   "projects.overview.noMembers": "メンバーなし。",
+  "projects.settings.hiddenMembers_one": "+ {{count}} 人の他のメンバー",
+  "projects.settings.hiddenMembers_other": "+ {{count}} 人の他のメンバー",
 
   "projects.switcher.title": "プロジェクト切替",
   "projects.switcher.search": "プロジェクトを検索...",
@@ -500,6 +502,7 @@
   "sla.description": "この作業項目タイプの各ステータスで許可される最大時間を定義します。",
   "sla.blankHint": "そのステータスにSLAを適用しない場合は空欄にしてください。",
   "sla.configure": "SLAを設定",
+  "sla.view": "SLAを表示",
   "sla.noTargets": "SLA目標が設定されていません。",
   "sla.status": "ステータス",
   "sla.target": "目標",

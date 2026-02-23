@@ -139,6 +139,8 @@
   "projects.overview.members": "Miembros",
   "projects.overview.noDescription": "Sin descripción.",
   "projects.overview.noMembers": "Sin miembros.",
+  "projects.settings.hiddenMembers_one": "+ {{count}} otro miembro",
+  "projects.settings.hiddenMembers_other": "+ {{count}} otros miembros",
 
   "projects.switcher.title": "Cambiar Proyecto",
   "projects.switcher.search": "Buscar proyectos...",
@@ -500,6 +502,7 @@
   "sla.description": "Defina el tiempo máximo permitido en cada estado para este tipo de elemento de trabajo.",
   "sla.blankHint": "Deje en blanco para no aplicar SLA en ese estado.",
   "sla.configure": "Configurar SLA",
+  "sla.view": "Ver SLA",
   "sla.noTargets": "No hay objetivos de SLA configurados.",
   "sla.status": "Estado",
   "sla.target": "Objetivo",

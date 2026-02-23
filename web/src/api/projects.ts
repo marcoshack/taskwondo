@@ -75,9 +75,14 @@ export interface ProjectMember {
   created_at: string
 }
 
-export async function listMembers(projectKey: string) {
-  const res = await api.get<{ data: ProjectMember[] }>(`/projects/${projectKey}/members`)
-  return res.data.data
+export interface MemberListResponse {
+  members: ProjectMember[]
+  totalCount: number
+}
+
+export async function listMembers(projectKey: string): Promise<MemberListResponse> {
+  const res = await api.get<{ data: ProjectMember[]; total_count: number }>(`/projects/${projectKey}/members`)
+  return { members: res.data.data, totalCount: res.data.total_count }
 }
 
 export interface AddMemberInput {

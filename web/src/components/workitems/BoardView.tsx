@@ -19,9 +19,10 @@ interface BoardViewProps {
   statuses: WorkflowStatus[]
   transitionsMap?: Record<string, WorkflowTransition[]>
   onItemClick: (item: WorkItem) => void
+  readOnly?: boolean
 }
 
-export function BoardView({ projectKey, items, statuses, transitionsMap, onItemClick }: BoardViewProps) {
+export function BoardView({ projectKey, items, statuses, transitionsMap, onItemClick, readOnly = false }: BoardViewProps) {
   const { t } = useTranslation()
   const updateMutation = useUpdateWorkItem(projectKey)
   const [draggedItem, setDraggedItem] = useState<DraggedItem | null>(null)
@@ -123,6 +124,7 @@ export function BoardView({ projectKey, items, statuses, transitionsMap, onItemC
                   transitionsMap={transitionsMap}
                   statuses={statuses}
                   isDragging={draggedItem?.itemNumber === item.item_number}
+                  readOnly={readOnly}
                   onClick={() => onItemClick(item)}
                   onStatusChange={(newStatus) => {
                     updateMutation.mutate({ itemNumber: item.item_number, input: { status: newStatus } })
@@ -148,6 +150,7 @@ function BoardCard({
   transitionsMap,
   statuses,
   isDragging,
+  readOnly,
   onClick,
   onStatusChange,
   onDragStart,
@@ -157,6 +160,7 @@ function BoardCard({
   transitionsMap?: Record<string, { to_status: string }[]>
   statuses: WorkflowStatus[]
   isDragging?: boolean
+  readOnly?: boolean
   onClick: () => void
   onStatusChange: (status: string) => void
   onDragStart: () => void
@@ -169,7 +173,7 @@ function BoardCard({
   return (
     <div
       className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 shadow-sm hover:shadow-md cursor-pointer relative ${isDragging ? 'opacity-50' : ''}`}
-      draggable
+      draggable={!readOnly}
       onClick={onClick}
       onDragStart={(e) => {
         e.dataTransfer.effectAllowed = 'move'
@@ -182,7 +186,7 @@ function BoardCard({
         <span className="text-xs font-bold font-mono text-gray-600 dark:text-gray-400">{item.display_id}</span>
         <TypeBadge type={item.type} />
         <PriorityBadge priority={item.priority} />
-        {allowed.length > 0 && (
+        {allowed.length > 0 && !readOnly && (
           <div className="relative ml-auto">
             <Tooltip content={t('workitems.view.moveTo')}>
               <button
