@@ -185,6 +185,8 @@
   "workitems.bulk.transitionError": "Transição de status inválida para: {{items}}",
 
   "workitems.form.type": "Tipo",
+  "workitems.form.typePlaceholder": "Selecionar tipo",
+  "workitems.form.typeRequiredTooltip": "Selecione um tipo primeiro",
   "workitems.form.title": "Título",
   "workitems.form.description": "Descrição",
   "workitems.form.priority": "Prioridade",

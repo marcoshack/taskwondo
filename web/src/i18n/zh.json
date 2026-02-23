@@ -185,6 +185,8 @@
   "workitems.bulk.transitionError": "无效的状态转换：{{items}}",
 
   "workitems.form.type": "类型",
+  "workitems.form.typePlaceholder": "选择类型",
+  "workitems.form.typeRequiredTooltip": "请先选择类型",
   "workitems.form.title": "标题",
   "workitems.form.description": "描述",
   "workitems.form.priority": "优先级",

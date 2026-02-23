@@ -185,6 +185,8 @@
   "workitems.bulk.transitionError": "انتقال حالة غير صالح لـ: {{items}}",
 
   "workitems.form.type": "النوع",
+  "workitems.form.typePlaceholder": "اختر النوع",
+  "workitems.form.typeRequiredTooltip": "اختر النوع أولاً",
   "workitems.form.title": "العنوان",
   "workitems.form.description": "الوصف",
   "workitems.form.priority": "الأولوية",

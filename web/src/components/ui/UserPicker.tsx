@@ -7,9 +7,10 @@ interface UserPickerProps {
   value: string | null
   onChange: (userId: string | null) => void
   placeholder?: string
+  disabled?: boolean
 }
 
-export function UserPicker({ members, value, onChange, placeholder }: UserPickerProps) {
+export function UserPicker({ members, value, onChange, placeholder, disabled }: UserPickerProps) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -42,8 +43,9 @@ export function UserPicker({ members, value, onChange, placeholder }: UserPicker
       {/* Display / trigger */}
       <button
         type="button"
-        className="block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-left shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800"
-        onClick={() => { setOpen(!open); setTimeout(() => inputRef.current?.focus(), 0) }}
+        className={`block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-left shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+        onClick={() => { if (disabled) return; setOpen(!open); setTimeout(() => inputRef.current?.focus(), 0) }}
+        disabled={disabled}
       >
         {selected ? (
           <span className="text-gray-900 dark:text-gray-100">{selected.display_name}</span>

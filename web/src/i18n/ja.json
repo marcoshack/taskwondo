@@ -185,6 +185,8 @@
   "workitems.bulk.transitionError": "無効なステータス遷移: {{items}}",
 
   "workitems.form.type": "種別",
+  "workitems.form.typePlaceholder": "タイプを選択",
+  "workitems.form.typeRequiredTooltip": "最初にタイプを選択してください",
   "workitems.form.title": "タイトル",
   "workitems.form.description": "説明",
   "workitems.form.priority": "優先度",

@@ -25,6 +25,12 @@ export function Tooltip({ content, children, position = 'top', className }: Tool
   const [visible, setVisible] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+    }
+  }, [])
+
   if (!content) return <>{children}</>
 
   function show() {
@@ -36,13 +42,6 @@ export function Tooltip({ content, children, position = 'top', className }: Tool
     timerRef.current = null
     setVisible(false)
   }
-
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current)
-    }
-  }, [])
 
   return (
     <span

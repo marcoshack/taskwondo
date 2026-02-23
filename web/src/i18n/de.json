@@ -185,6 +185,8 @@
   "workitems.bulk.transitionError": "Ungültiger Statusübergang für: {{items}}",
 
   "workitems.form.type": "Typ",
+  "workitems.form.typePlaceholder": "Typ auswählen",
+  "workitems.form.typeRequiredTooltip": "Wählen Sie zuerst einen Typ",
   "workitems.form.title": "Titel",
   "workitems.form.description": "Beschreibung",
   "workitems.form.priority": "Priorität",

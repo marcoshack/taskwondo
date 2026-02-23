@@ -198,6 +198,8 @@
   "workitems.bulk.transitionError": "Invalid status transition for: {{items}}",
 
   "workitems.form.type": "Type",
+  "workitems.form.typePlaceholder": "Select type",
+  "workitems.form.typeRequiredTooltip": "Select a type first",
   "workitems.form.title": "Title",
   "workitems.form.description": "Description",
   "workitems.form.priority": "Priority",

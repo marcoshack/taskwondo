@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
+import { Tooltip } from '@/components/ui/Tooltip'
 import { UserPicker } from '@/components/ui/UserPicker'
 import { MentionModal } from '@/components/ui/MentionModal'
 import { useMentionAutocomplete } from '@/hooks/useMentionAutocomplete'
@@ -56,7 +57,10 @@ export function WorkItemForm({
   submitError,
 }: WorkItemFormProps) {
   const { t } = useTranslation()
-  const [type, setType] = useState(initialValues.type ?? 'task')
+  const [type, setType] = useState(initialValues.type ?? '')
+  const typeSelected = mode === 'edit' || type !== ''
+  const disabledUntilType = mode === 'create' && !typeSelected
+  const disabledTooltip = disabledUntilType ? t('workitems.form.typeRequiredTooltip') : undefined
   const [title, setTitle] = useState(initialValues.title ?? '')
   const [description, setDescription] = useState(initialValues.description ?? '')
   const [priority, setPriority] = useState(initialValues.priority ?? 'medium')
@@ -132,38 +136,46 @@ export function WorkItemForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {mode === 'create' && (
-        <Select label={t('workitems.form.type')} value={type} onChange={(e) => setType(e.target.value)}>
+        <Select label={t('workitems.form.type')} value={type} onChange={(e) => setType(e.target.value)} required>
+          {!typeSelected && <option value="">{t('workitems.form.typePlaceholder')}</option>}
           {TYPES.map((tp) => (
             <option key={tp} value={tp}>{t(`workitems.types.${tp}`)}</option>
           ))}
         </Select>
       )}
-      <Input label={t('workitems.form.title')} value={title} onChange={(e) => setTitle(e.target.value)} required autoFocus />
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('workitems.form.description')}</label>
-        <textarea
-          ref={descRef}
-          className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-          rows={4}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          onKeyDown={(e) => {
-            descMention.onMentionKeyDown(e)
-          }}
-        />
-        <MentionModal
-          open={descMention.mentionModalOpen}
-          position={descMention.dropdownPosition}
-          onClose={descMention.onMentionClose}
-          onSelect={descMention.onMentionSelect}
-          projectKey={projectKey}
-        />
-      </div>
-      <Select label={t('workitems.form.priority')} value={priority} onChange={(e) => setPriority(e.target.value)}>
-        {PRIORITIES.map((p) => (
-          <option key={p} value={p}>{t(`workitems.priorities.${p}`)}</option>
-        ))}
-      </Select>
+      <Tooltip content={disabledTooltip} className="relative block">
+        <Input label={t('workitems.form.title')} value={title} onChange={(e) => setTitle(e.target.value)} required autoFocus={typeSelected} disabled={disabledUntilType} />
+      </Tooltip>
+      <Tooltip content={disabledTooltip} className="relative block">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('workitems.form.description')}</label>
+          <textarea
+            ref={descRef}
+            className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            rows={4}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            onKeyDown={(e) => {
+              descMention.onMentionKeyDown(e)
+            }}
+            disabled={disabledUntilType}
+          />
+          <MentionModal
+            open={descMention.mentionModalOpen}
+            position={descMention.dropdownPosition}
+            onClose={descMention.onMentionClose}
+            onSelect={descMention.onMentionSelect}
+            projectKey={projectKey}
+          />
+        </div>
+      </Tooltip>
+      <Tooltip content={disabledTooltip} className="relative block">
+        <Select label={t('workitems.form.priority')} value={priority} onChange={(e) => setPriority(e.target.value)} disabled={disabledUntilType}>
+          {PRIORITIES.map((p) => (
+            <option key={p} value={p}>{t(`workitems.priorities.${p}`)}</option>
+          ))}
+        </Select>
+      </Tooltip>
       {mode === 'edit' && statuses && allowedTransitions && (
         <Select label={t('workitems.form.status')} value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value={initialValues.status}>{t(`workitems.statuses.${initialValues.status}`, { defaultValue: statuses.find((s) => s.name === initialValues.status)?.display_name ?? initialValues.status })}</option>
@@ -175,41 +187,53 @@ export function WorkItemForm({
             })}
         </Select>
       )}
-      {allowedComplexityValues.length > 0 ? (
-        <Select label={t('workitems.form.complexity')} value={complexity} onChange={(e) => setComplexity(e.target.value)} error={complexityError}>
-          <option value="">{t('workitems.form.complexityPlaceholder')}</option>
-          {allowedComplexityValues.map((v) => (
-            <option key={v} value={String(v)}>{v}</option>
+      <Tooltip content={disabledTooltip} className="relative block">
+        {allowedComplexityValues.length > 0 ? (
+          <Select label={t('workitems.form.complexity')} value={complexity} onChange={(e) => setComplexity(e.target.value)} error={complexityError} disabled={disabledUntilType}>
+            <option value="">{t('workitems.form.complexityPlaceholder')}</option>
+            {allowedComplexityValues.map((v) => (
+              <option key={v} value={String(v)}>{v}</option>
+            ))}
+          </Select>
+        ) : (
+          <Input label={t('workitems.form.complexity')} type="number" min="1" value={complexity} onChange={(e) => setComplexity(e.target.value)} placeholder={t('workitems.form.complexityPlaceholder')} error={complexityError} disabled={disabledUntilType} />
+        )}
+      </Tooltip>
+      <Tooltip content={disabledTooltip} className="relative block">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('workitems.form.assignee')}</label>
+          <UserPicker members={members} value={assigneeId} onChange={setAssigneeId} disabled={disabledUntilType} />
+        </div>
+      </Tooltip>
+      <Tooltip content={disabledTooltip} className="relative block">
+        <Input label={t('workitems.form.labels')} value={labels} onChange={(e) => setLabels(e.target.value)} placeholder={t('workitems.form.labelsPlaceholder')} disabled={disabledUntilType} />
+      </Tooltip>
+      <Tooltip content={disabledTooltip} className="relative block">
+        <Select label={t('workitems.form.visibility')} value={visibility} onChange={(e) => setVisibility(e.target.value)} disabled={disabledUntilType}>
+          {VISIBILITIES.map((v) => (
+            <option key={v} value={v}>{t(`workitems.visibilities.${v}`)}</option>
           ))}
         </Select>
-      ) : (
-        <Input label={t('workitems.form.complexity')} type="number" min="1" value={complexity} onChange={(e) => setComplexity(e.target.value)} placeholder={t('workitems.form.complexityPlaceholder')} error={complexityError} />
-      )}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('workitems.form.assignee')}</label>
-        <UserPicker members={members} value={assigneeId} onChange={setAssigneeId} />
-      </div>
-      <Input label={t('workitems.form.labels')} value={labels} onChange={(e) => setLabels(e.target.value)} placeholder={t('workitems.form.labelsPlaceholder')} />
-      <Select label={t('workitems.form.visibility')} value={visibility} onChange={(e) => setVisibility(e.target.value)}>
-        {VISIBILITIES.map((v) => (
-          <option key={v} value={v}>{t(`workitems.visibilities.${v}`)}</option>
-        ))}
-      </Select>
-      <Input label={t('workitems.form.dueDate')} type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+      </Tooltip>
+      <Tooltip content={disabledTooltip} className="relative block">
+        <Input label={t('workitems.form.dueDate')} type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} disabled={disabledUntilType} />
+      </Tooltip>
       {milestones.length > 0 && (
-        <Select label={t('workitems.form.milestone')} value={milestoneId} onChange={(e) => setMilestoneId(e.target.value)}>
-          <option value="">{t('milestones.noMilestone')}</option>
-          {milestones.filter((m) => m.status === 'open').map((m) => (
-            <option key={m.id} value={m.id}>{m.name}</option>
-          ))}
-        </Select>
+        <Tooltip content={disabledTooltip} className="relative block">
+          <Select label={t('workitems.form.milestone')} value={milestoneId} onChange={(e) => setMilestoneId(e.target.value)} disabled={disabledUntilType}>
+            <option value="">{t('milestones.noMilestone')}</option>
+            {milestones.filter((m) => m.status === 'open').map((m) => (
+              <option key={m.id} value={m.id}>{m.name}</option>
+            ))}
+          </Select>
+        </Tooltip>
       )}
       {submitError && (
         <p className="text-sm text-red-600 dark:text-red-400">{submitError}</p>
       )}
       <div className="flex justify-end gap-3 pt-2">
         <Button type="button" variant="secondary" onClick={onCancel}>{t('common.cancel')}</Button>
-        <Button type="submit" disabled={isSubmitting || !title.trim() || hasValidationErrors}>
+        <Button type="submit" disabled={isSubmitting || !title.trim() || hasValidationErrors || disabledUntilType}>
           {isSubmitting ? t('common.saving') : mode === 'create' ? t('common.create') : t('common.save')}
         </Button>
       </div>

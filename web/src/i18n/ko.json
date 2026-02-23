@@ -185,6 +185,8 @@
   "workitems.bulk.transitionError": "잘못된 상태 전환: {{items}}",
 
   "workitems.form.type": "유형",
+  "workitems.form.typePlaceholder": "유형 선택",
+  "workitems.form.typeRequiredTooltip": "먼저 유형을 선택하세요",
   "workitems.form.title": "제목",
   "workitems.form.description": "설명",
   "workitems.form.priority": "우선순위",
