@@ -217,6 +217,7 @@
   "workitems.form.complexityTooLarge": "Complexity value is too large.",
   "workitems.form.complexityNotAllowed": "Value not in the allowed list: {{values}}.",
   "workitems.form.submitError": "Failed to save: {{message}}",
+  "workitems.detail.updateError": "Failed to update. Please try again.",
 
   "workitems.detail.complexity": "Complexity",
 

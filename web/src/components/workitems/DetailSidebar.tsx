@@ -19,6 +19,7 @@ interface DetailSidebarProps {
   allWorkflows?: Workflow[]
   onUpdate: (input: UpdateWorkItemInput) => void
   readOnly?: boolean
+  updateError?: boolean
 }
 
 const PRIORITIES = ['low', 'medium', 'high', 'critical']
@@ -27,7 +28,7 @@ const VISIBILITIES = ['internal', 'portal', 'public']
 
 const MAX_COMPLEXITY = 1000000
 
-export function DetailSidebar({ item, statuses, allowedTransitions, members, milestones = [], allowedComplexityValues = [], typeWorkflows, allWorkflows, onUpdate, readOnly = false }: DetailSidebarProps) {
+export function DetailSidebar({ item, statuses, allowedTransitions, members, milestones = [], allowedComplexityValues = [], typeWorkflows, allWorkflows, onUpdate, readOnly = false, updateError = false }: DetailSidebarProps) {
   const { t } = useTranslation()
   const [pendingType, setPendingType] = useState<string | null>(null)
   const [statusWarning, setStatusWarning] = useState(false)
@@ -91,6 +92,9 @@ export function DetailSidebar({ item, statuses, allowedTransitions, members, mil
 
   return (
     <div className="space-y-4">
+      {updateError && (
+        <p className="text-xs text-red-600 dark:text-red-400">{t('workitems.detail.updateError')}</p>
+      )}
       <Field label={t('workitems.form.type')}>
         <Select value={pendingType ?? item.type} onChange={(e) => handleTypeChange(e.target.value)} disabled={readOnly}>
           {TYPES.map((tp) => <option key={tp} value={tp}>{t(`workitems.types.${tp}`)}</option>)}

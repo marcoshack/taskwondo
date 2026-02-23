@@ -2773,7 +2773,7 @@ func TestUpdate_TypeChange_StatusCompatible(t *testing.T) {
 	}
 }
 
-func TestUpdate_TypeChange_StatusIncompatible(t *testing.T) {
+func TestUpdate_TypeChange_StatusAutoReset(t *testing.T) {
 	s := newTestWorkItemSetup()
 	info := userAuthInfo()
 	project := setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleOwner)
@@ -2805,14 +2805,17 @@ func TestUpdate_TypeChange_StatusIncompatible(t *testing.T) {
 		Type: model.WorkItemTypeTask, Title: "Incompatible test", Priority: model.PriorityMedium,
 	})
 
-	// Change type to ticket — "open" doesn't exist in ticket workflow → ErrStatusIncompatible
+	// Change type to ticket — "open" doesn't exist in ticket workflow → auto-reset to "new"
 	newType := model.WorkItemTypeTicket
-	_, err := s.svc.Update(ctx, info, "TEST", item.ItemNumber, UpdateWorkItemInput{Type: &newType})
-	if err == nil {
-		t.Fatal("expected ErrStatusIncompatible, got nil")
+	updated, err := s.svc.Update(ctx, info, "TEST", item.ItemNumber, UpdateWorkItemInput{Type: &newType})
+	if err != nil {
+		t.Fatalf("expected no error for type change with auto-reset, got %v", err)
 	}
-	if !errors.Is(err, model.ErrStatusIncompatible) {
-		t.Errorf("expected ErrStatusIncompatible, got %v", err)
+	if updated.Type != model.WorkItemTypeTicket {
+		t.Errorf("expected type %q, got %q", model.WorkItemTypeTicket, updated.Type)
+	}
+	if updated.Status != "new" {
+		t.Errorf("expected status auto-reset to %q, got %q", "new", updated.Status)
 	}
 }
 

@@ -432,7 +432,8 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 			return nil, fmt.Errorf("invalid work item type %q: %w", *input.Type, model.ErrValidation)
 		}
 
-		// Check if current status is valid in the new type's workflow
+		// Check if current status is valid in the new type's workflow.
+		// If incompatible, auto-reset to the target workflow's initial status.
 		if newWfID, err := s.resolveWorkflowID(ctx, project.ID, *input.Type, project.DefaultWorkflowID); err == nil {
 			statuses, _ := s.workflows.ListStatuses(ctx, newWfID)
 			statusExists := false
@@ -447,8 +448,29 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 				}
 			}
 			if !statusExists {
-				return nil, fmt.Errorf("status %q does not exist in the workflow for type %q: %w",
-					effectiveStatus, *input.Type, model.ErrStatusIncompatible)
+				initialStatus, err := s.workflows.GetInitialStatus(ctx, newWfID)
+				if err != nil {
+					return nil, fmt.Errorf("getting initial status for workflow: %w", err)
+				}
+				log.Ctx(ctx).Info().
+					Str("old_status", effectiveStatus).
+					Str("new_status", initialStatus.Name).
+					Str("new_type", *input.Type).
+					Msg("auto-resetting status to initial for new workflow")
+				s.recordFieldChange(ctx, item.ID, &info.UserID, "status", item.Status, initialStatus.Name)
+				// Manage resolved_at based on status category change
+				newCategory, _ := s.workflows.GetStatusCategory(ctx, newWfID, initialStatus.Name)
+				oldCategory, _ := s.workflows.GetStatusCategory(ctx, newWfID, item.Status)
+				if oldCategory != newCategory {
+					now := time.Now()
+					if newCategory == "done" || newCategory == "cancelled" {
+						item.ResolvedAt = &now
+					} else {
+						item.ResolvedAt = nil
+					}
+				}
+				item.Status = initialStatus.Name
+				input.Status = nil // prevent duplicate status processing below
 			}
 		}
 

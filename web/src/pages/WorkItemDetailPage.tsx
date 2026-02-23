@@ -466,6 +466,7 @@ export function WorkItemDetailPage() {
             allWorkflows={allWorkflows}
             onUpdate={(input) => updateMutation.mutate({ itemNumber, input })}
             readOnly={readOnly}
+            updateError={updateMutation.isError}
           />
           {!readOnly && (
             <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">

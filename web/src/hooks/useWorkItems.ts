@@ -57,6 +57,9 @@ export function useUpdateWorkItem(projectKey: string) {
       qc.invalidateQueries({ queryKey: ['projects', projectKey, 'items'] })
       qc.invalidateQueries({ queryKey: ['projects', projectKey, 'items', vars.itemNumber] })
     },
+    onError: (_err, vars) => {
+      qc.invalidateQueries({ queryKey: ['projects', projectKey, 'items', vars.itemNumber] })
+    },
   })
 }
 
