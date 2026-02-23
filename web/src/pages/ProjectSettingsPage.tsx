@@ -283,13 +283,13 @@ export function ProjectSettingsPage() {
           <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('projects.settings.addMember')}</h3>
           <div className="flex gap-2 items-end">
             {selectedUser ? (
-              <div className="flex-1 flex items-center gap-2 rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm bg-white dark:bg-gray-800">
-                <Avatar name={selectedUser.display_name} size="xs" />
-                <span className="text-gray-900 dark:text-gray-100">{selectedUser.display_name}</span>
-                <span className="text-gray-400 text-xs">{selectedUser.email}</span>
+              <div className="flex-1 min-w-0 flex items-center gap-2 rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm bg-white dark:bg-gray-800">
+                <span className="shrink-0"><Avatar name={selectedUser.display_name} size="xs" /></span>
+                <span className="truncate text-gray-900 dark:text-gray-100">{selectedUser.display_name}</span>
+                <span className="truncate text-gray-400 text-xs hidden sm:inline">{selectedUser.email}</span>
                 <button
                   type="button"
-                  className="ml-auto text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  className="shrink-0 ml-auto text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                   onClick={() => setSelectedUser(null)}
                 >
                   &times;
@@ -302,7 +302,7 @@ export function ProjectSettingsPage() {
               />
             )}
             <select
-              className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="shrink-0 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               value={newMemberRole}
               onChange={(e) => setNewMemberRole(e.target.value)}
             >

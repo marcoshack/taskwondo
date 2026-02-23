@@ -1106,7 +1106,7 @@ func TestComputeSLATargetAt_24x7(t *testing.T) {
 	}
 	// Remaining = 3600 - 600 = 3000s, but live elapsed since LastEnteredAt
 	// will have passed a tiny amount. Just check it's roughly 3000s from now.
-	diff := result.Sub(time.Now()).Seconds()
+	diff := time.Until(*result).Seconds()
 	if diff < 2900 || diff > 3100 {
 		t.Fatalf("expected ~3000s from now, got %.0fs", diff)
 	}
