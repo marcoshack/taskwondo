@@ -1954,6 +1954,57 @@ func TestUpdateWorkItem_AssignNonMemberDenied(t *testing.T) {
 	}
 }
 
+func TestCreateWorkItem_AssignViewerDenied(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	viewer := userAuthInfo()
+	project := setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleOwner)
+	s.memberRepo.Add(context.Background(), &model.ProjectMember{
+		ID:        uuid.New(),
+		ProjectID: project.ID,
+		UserID:    viewer.UserID,
+		Role:      model.ProjectRoleViewer,
+	})
+
+	input := validCreateInput()
+	input.AssigneeID = &viewer.UserID
+	_, err := s.svc.Create(context.Background(), info, "TEST", input)
+	if err == nil {
+		t.Fatal("expected error for assigning viewer")
+	}
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation, got %v", err)
+	}
+}
+
+func TestUpdateWorkItem_AssignViewerDenied(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	viewer := userAuthInfo()
+	project := setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleOwner)
+	s.memberRepo.Add(context.Background(), &model.ProjectMember{
+		ID:        uuid.New(),
+		ProjectID: project.ID,
+		UserID:    viewer.UserID,
+		Role:      model.ProjectRoleViewer,
+	})
+
+	created, err := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = s.svc.Update(context.Background(), info, "TEST", created.ItemNumber, UpdateWorkItemInput{
+		AssigneeID: &viewer.UserID,
+	})
+	if err == nil {
+		t.Fatal("expected error for assigning viewer")
+	}
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation, got %v", err)
+	}
+}
+
 func TestUpdateWorkItem_Labels(t *testing.T) {
 	svc, _, _, projectRepo, memberRepo := newTestWorkItemService()
 	info := userAuthInfo()

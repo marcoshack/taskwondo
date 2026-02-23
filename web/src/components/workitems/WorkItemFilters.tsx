@@ -53,7 +53,7 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
     { value: 'low', label: t('workitems.priorities.low') },
   ]
 
-  const otherMembers = members.filter((m) => m.user_id !== user?.id)
+  const otherMembers = members.filter((m) => m.user_id !== user?.id && m.role !== 'viewer')
   const assigneeOptions: MultiSelectOption[] = [
     { value: 'me', label: t('workitems.filters.assignedToMe') },
     { value: 'unassigned', label: t('workitems.filters.unassigned') },

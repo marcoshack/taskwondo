@@ -225,11 +225,14 @@ func (s *WorkItemService) Create(ctx context.Context, info *model.AuthInfo, proj
 		return nil, fmt.Errorf("invalid visibility %q: %w", input.Visibility, model.ErrValidation)
 	}
 
-	// Validate assignee is a project member
+	// Validate assignee is a project member and not a viewer
 	if input.AssigneeID != nil {
-		_, err := s.members.GetByProjectAndUser(ctx, project.ID, *input.AssigneeID)
+		member, err := s.members.GetByProjectAndUser(ctx, project.ID, *input.AssigneeID)
 		if err != nil {
 			return nil, fmt.Errorf("assignee must be a project member: %w", model.ErrValidation)
+		}
+		if member.Role == model.ProjectRoleViewer {
+			return nil, fmt.Errorf("viewers cannot be assigned to work items: %w", model.ErrValidation)
 		}
 	}
 
@@ -534,10 +537,13 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 		}
 		newAssignee := input.AssigneeID.String()
 		if oldAssignee != newAssignee {
-			// Validate assignee is a project member
-			_, err := s.members.GetByProjectAndUser(ctx, project.ID, *input.AssigneeID)
+			// Validate assignee is a project member and not a viewer
+			member, err := s.members.GetByProjectAndUser(ctx, project.ID, *input.AssigneeID)
 			if err != nil {
 				return nil, fmt.Errorf("assignee must be a project member: %w", model.ErrValidation)
+			}
+			if member.Role == model.ProjectRoleViewer {
+				return nil, fmt.Errorf("viewers cannot be assigned to work items: %w", model.ErrValidation)
 			}
 			s.recordEvent(ctx, item.ID, &info.UserID, "assigned", strPtr("assignee_id"), strPtr(oldAssignee), strPtr(newAssignee))
 			item.AssigneeID = input.AssigneeID

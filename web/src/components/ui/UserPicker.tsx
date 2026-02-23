@@ -17,9 +17,12 @@ export function UserPicker({ members, value, onChange, placeholder, disabled }: 
   const ref = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  // Exclude viewers — they cannot be assigned to work items
+  const assignableMembers = members.filter((m) => m.role !== 'viewer')
+  // Use full members list for display in case current assignee was demoted to viewer
   const selected = members.find((m) => m.user_id === value)
 
-  const filtered = members.filter((m) => {
+  const filtered = assignableMembers.filter((m) => {
     if (!search) return true
     const q = search.toLowerCase()
     return m.display_name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q)
