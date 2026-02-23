@@ -115,8 +115,8 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
   return (
     <>
       {/* Desktop: inline layout */}
-      <div className="hidden sm:flex flex-wrap items-end gap-3">
-        <div className="flex-1 min-w-[200px] relative">
+      <div className="hidden sm:flex items-end gap-3">
+        <div className="flex-1 min-w-0 relative">
           <Input
             ref={searchRef}
             placeholder={t('workitems.filters.search')}
