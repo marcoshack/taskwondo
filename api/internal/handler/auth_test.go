@@ -193,9 +193,10 @@ func testSetup(t *testing.T) (*AuthHandler, *service.AuthService, string) {
 	userRepo := newMockUserRepo()
 	apiKeyRepo := newMockAPIKeyRepo()
 	oauthRepo := newMockOAuthAccountRepo()
+	discord := service.NewDiscordProvider("test-client-id", "test-client-secret", "http://localhost:5173/auth/discord/callback", nil)
 	authSvc := service.NewAuthService(userRepo, apiKeyRepo, oauthRepo,
 		"test-secret-that-is-at-least-32!", 1*time.Hour,
-		"test-client-id", "test-client-secret", "http://localhost:5173/auth/discord/callback")
+		[]service.OAuthProvider{discord})
 
 	if err := authSvc.SeedAdminUser(context.Background(), "admin@test.com", "adminpass"); err != nil {
 		t.Fatal(err)
@@ -437,15 +438,18 @@ func TestMeHandler_Unauthenticated(t *testing.T) {
 	}
 }
 
-// --- Discord OAuth handler tests ---
+// --- OAuth handler tests (generic) ---
 
-func TestDiscordAuthHandler_ReturnsURL(t *testing.T) {
+func TestOAuthAuthHandler_ReturnsURL(t *testing.T) {
 	h, _, _ := testSetup(t)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/discord", nil)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("provider", "discord")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 	w := httptest.NewRecorder()
 
-	h.DiscordAuth(w, req)
+	h.OAuthAuth(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
@@ -463,27 +467,49 @@ func TestDiscordAuthHandler_ReturnsURL(t *testing.T) {
 	}
 }
 
-func TestDiscordCallbackHandler_MissingFields(t *testing.T) {
+func TestOAuthAuthHandler_NotConfigured(t *testing.T) {
+	h, _, _ := testSetup(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/google", nil)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("provider", "google")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+	w := httptest.NewRecorder()
+
+	h.OAuthAuth(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestOAuthCallbackHandler_MissingFields(t *testing.T) {
 	h, _, _ := testSetup(t)
 
 	body := `{"code":""}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/discord/callback", bytes.NewBufferString(body))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("provider", "discord")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 	w := httptest.NewRecorder()
 
-	h.DiscordCallback(w, req)
+	h.OAuthCallback(w, req)
 
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
 	}
 }
 
-func TestDiscordCallbackHandler_InvalidBody(t *testing.T) {
+func TestOAuthCallbackHandler_InvalidBody(t *testing.T) {
 	h, _, _ := testSetup(t)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/discord/callback", bytes.NewBufferString("not json"))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("provider", "discord")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 	w := httptest.NewRecorder()
 
-	h.DiscordCallback(w, req)
+	h.OAuthCallback(w, req)
 
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())

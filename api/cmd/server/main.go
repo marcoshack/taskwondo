@@ -133,10 +133,23 @@ func main() {
 	}
 
 	// Initialize services
+	// Build OAuth providers from config
+	var oauthProviders []service.OAuthProvider
+	if cfg.DiscordClientID != "" && cfg.DiscordClientSecret != "" && cfg.DiscordRedirectURI != "" {
+		oauthProviders = append(oauthProviders, service.NewDiscordProvider(
+			cfg.DiscordClientID, cfg.DiscordClientSecret, cfg.DiscordRedirectURI, nil,
+		))
+	}
+	if cfg.GoogleClientID != "" && cfg.GoogleClientSecret != "" && cfg.GoogleRedirectURI != "" {
+		oauthProviders = append(oauthProviders, service.NewGoogleProvider(
+			cfg.GoogleClientID, cfg.GoogleClientSecret, cfg.GoogleRedirectURI, nil,
+		))
+	}
+
 	authService := service.NewAuthService(
 		userRepo, apiKeyRepo, oauthAccountRepo,
 		cfg.JWTSecret, cfg.JWTExpiry,
-		cfg.DiscordClientID, cfg.DiscordClientSecret, cfg.DiscordRedirectURI,
+		oauthProviders,
 	)
 	projectService := service.NewProjectService(projectRepo, projectMemberRepo, userRepo, workflowRepo, typeWorkflowRepo, systemSettingRepo)
 	workflowService := service.NewWorkflowService(workflowRepo)
@@ -199,8 +212,8 @@ func main() {
 		authLimiter := middleware.RateLimit(rate.Limit(cfg.AuthRateLimit)/60, cfg.AuthRateBurst)
 		r.With(authLimiter).Post("/auth/login", auth.Login)
 		r.Get("/auth/providers", auth.AuthProviders)
-		r.Get("/auth/discord", auth.DiscordAuth)
-		r.With(authLimiter).Post("/auth/discord/callback", auth.DiscordCallback)
+		r.Get("/auth/{provider}", auth.OAuthAuth)
+		r.With(authLimiter).Post("/auth/{provider}/callback", auth.OAuthCallback)
 
 		// Public settings (unauthenticated)
 		r.Get("/settings/public", systemSettings.GetPublic)

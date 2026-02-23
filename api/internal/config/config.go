@@ -41,6 +41,11 @@ type Config struct {
 	DiscordClientSecret string
 	DiscordRedirectURI  string
 
+	// Google OAuth
+	GoogleClientID     string
+	GoogleClientSecret string
+	GoogleRedirectURI  string
+
 	// Storage (S3/MinIO)
 	StorageEndpoint  string
 	StorageAccessKey string
@@ -120,6 +125,9 @@ func Load() (*Config, error) {
 		DiscordClientID:     envOrDefault("DISCORD_CLIENT_ID", ""),
 		DiscordClientSecret: envOrDefault("DISCORD_CLIENT_SECRET", ""),
 		DiscordRedirectURI:  envOrDefault("DISCORD_REDIRECT_URI", ""),
+		GoogleClientID:      envOrDefault("GOOGLE_CLIENT_ID", ""),
+		GoogleClientSecret:  envOrDefault("GOOGLE_CLIENT_SECRET", ""),
+		GoogleRedirectURI:   envOrDefault("GOOGLE_REDIRECT_URI", ""),
 		StorageEndpoint:     envOrDefault("STORAGE_ENDPOINT", "localhost:9000"),
 		StorageAccessKey:    storageAccessKey,
 		StorageSecretKey:    storageSecretKey,

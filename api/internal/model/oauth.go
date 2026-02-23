@@ -9,6 +9,7 @@ import (
 // OAuth provider constants.
 const (
 	OAuthProviderDiscord = "discord"
+	OAuthProviderGoogle  = "google"
 )
 
 // OAuthAccount represents a linked external identity.
@@ -22,6 +23,26 @@ type OAuthAccount struct {
 	ProviderAvatar   string    `json:"provider_avatar,omitempty"`
 	CreatedAt        time.Time `json:"created_at"`
 	UpdatedAt        time.Time `json:"updated_at"`
+}
+
+// OAuthUserInfo holds normalized user data from any OAuth provider.
+type OAuthUserInfo struct {
+	ProviderUserID string
+	Email          string
+	EmailVerified  bool
+	DisplayName    string
+	AvatarURL      string
+	Username       string // provider-specific (for OAuthAccount.ProviderUsername)
+	RawAvatar      string // provider-specific (for OAuthAccount.ProviderAvatar)
+}
+
+// GoogleUser is the response from Google's userinfo endpoint.
+type GoogleUser struct {
+	ID            string `json:"id"`
+	Email         string `json:"email"`
+	VerifiedEmail bool   `json:"verified_email"`
+	Name          string `json:"name"`
+	Picture       string `json:"picture"`
 }
 
 // DiscordUser is the response from Discord's /users/@me endpoint.

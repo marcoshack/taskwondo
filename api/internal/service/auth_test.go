@@ -196,7 +196,7 @@ func newTestAuthService() (*AuthService, *mockUserRepo, *mockAPIKeyRepo) {
 	userRepo := newMockUserRepo()
 	apiKeyRepo := newMockAPIKeyRepo()
 	oauthRepo := newMockOAuthAccountRepo()
-	svc := NewAuthService(userRepo, apiKeyRepo, oauthRepo, "test-secret-at-least-32-chars!!", 24*time.Hour, "", "", "")
+	svc := NewAuthService(userRepo, apiKeyRepo, oauthRepo, "test-secret-at-least-32-chars!!", 24*time.Hour, nil)
 	return svc, userRepo, apiKeyRepo
 }
 
@@ -204,8 +204,9 @@ func newTestAuthServiceWithOAuth() (*AuthService, *mockUserRepo, *mockOAuthAccou
 	userRepo := newMockUserRepo()
 	apiKeyRepo := newMockAPIKeyRepo()
 	oauthRepo := newMockOAuthAccountRepo()
+	discord := NewDiscordProvider("test-client-id", "test-client-secret", "http://localhost:5173/auth/discord/callback", nil)
 	svc := NewAuthService(userRepo, apiKeyRepo, oauthRepo, "test-secret-at-least-32-chars!!", 24*time.Hour,
-		"test-client-id", "test-client-secret", "http://localhost:5173/auth/discord/callback")
+		[]OAuthProvider{discord})
 	return svc, userRepo, oauthRepo
 }
 
@@ -316,7 +317,7 @@ func TestValidateJWT_WrongSecret(t *testing.T) {
 	token, _, _ := svc1.Login(context.Background(), "test@example.com", "password123")
 
 	// Different service with different secret
-	svc2 := NewAuthService(newMockUserRepo(), newMockAPIKeyRepo(), newMockOAuthAccountRepo(), "different-secret-at-least-32!!!", 24*time.Hour, "", "", "")
+	svc2 := NewAuthService(newMockUserRepo(), newMockAPIKeyRepo(), newMockOAuthAccountRepo(), "different-secret-at-least-32!!!", 24*time.Hour, nil)
 
 	_, err := svc2.ValidateJWT(token)
 	if err != model.ErrUnauthorized {
@@ -480,7 +481,7 @@ func TestOAuthState_InvalidSignature(t *testing.T) {
 
 	// Create a service with different secret
 	svc2 := NewAuthService(newMockUserRepo(), newMockAPIKeyRepo(), newMockOAuthAccountRepo(),
-		"different-secret-at-least-32!!!", 24*time.Hour, "", "", "")
+		"different-secret-at-least-32!!!", 24*time.Hour, nil)
 
 	state, _ := svc2.generateOAuthState()
 
@@ -499,10 +500,10 @@ func TestOAuthState_InvalidFormat(t *testing.T) {
 	}
 }
 
-func TestDiscordOAuthURL(t *testing.T) {
+func TestOAuthURL_Discord(t *testing.T) {
 	svc, _, _ := newTestAuthServiceWithOAuth()
 
-	authURL, err := svc.DiscordOAuthURL()
+	authURL, err := svc.OAuthURL("discord")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -517,28 +518,47 @@ func TestDiscordOAuthURL(t *testing.T) {
 	}
 }
 
+func TestOAuthURL_NotConfigured(t *testing.T) {
+	svc, _, _ := newTestAuthService()
+	_, err := svc.OAuthURL("discord")
+	if err == nil {
+		t.Fatal("expected error when discord is not configured")
+	}
+}
+
+func TestEnabledProviders(t *testing.T) {
+	svc, _, _ := newTestAuthService()
+	providers := svc.EnabledProviders()
+	if len(providers) != 0 {
+		t.Fatalf("expected no providers, got %v", providers)
+	}
+
+	svc2, _, _ := newTestAuthServiceWithOAuth()
+	providers2 := svc2.EnabledProviders()
+	if !providers2["discord"] {
+		t.Fatal("expected discord to be enabled")
+	}
+}
+
 func TestFindOrCreateOAuthUser_NewUser(t *testing.T) {
 	svc, userRepo, oauthRepo := newTestAuthServiceWithOAuth()
 
-	email := "discord@example.com"
-	verified := true
-	globalName := "DiscordUser"
-	avatar := "abc123"
-	discord := &model.DiscordUser{
-		ID:         "123456789",
-		Username:   "discorduser",
-		GlobalName: &globalName,
-		Avatar:     &avatar,
-		Email:      &email,
-		Verified:   &verified,
+	info := model.OAuthUserInfo{
+		ProviderUserID: "123456789",
+		Email:          "discord@example.com",
+		EmailVerified:  true,
+		DisplayName:    "DiscordUser",
+		AvatarURL:      "https://cdn.discordapp.com/avatars/123456789/abc123.png",
+		Username:       "discorduser",
+		RawAvatar:      "abc123",
 	}
 
-	user, err := svc.findOrCreateOAuthUser(context.Background(), model.OAuthProviderDiscord, discord)
+	user, err := svc.findOrCreateOAuthUser(context.Background(), model.OAuthProviderDiscord, info)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if user.Email != email {
-		t.Fatalf("expected email %s, got %s", email, user.Email)
+	if user.Email != "discord@example.com" {
+		t.Fatalf("expected email discord@example.com, got %s", user.Email)
 	}
 	if user.DisplayName != "DiscordUser" {
 		t.Fatalf("expected display name 'DiscordUser', got %s", user.DisplayName)
@@ -548,7 +568,7 @@ func TestFindOrCreateOAuthUser_NewUser(t *testing.T) {
 	}
 
 	// Verify user was created in repo
-	_, err = userRepo.GetByEmail(context.Background(), email)
+	_, err = userRepo.GetByEmail(context.Background(), "discord@example.com")
 	if err != nil {
 		t.Fatalf("expected user in repo, got %v", err)
 	}
@@ -583,12 +603,13 @@ func TestFindOrCreateOAuthUser_ExistingLink(t *testing.T) {
 		ProviderUserID: "123456789",
 	})
 
-	discord := &model.DiscordUser{
-		ID:       "123456789",
-		Username: "discorduser",
+	info := model.OAuthUserInfo{
+		ProviderUserID: "123456789",
+		Username:       "discorduser",
+		AvatarURL:      "https://cdn.discordapp.com/avatars/123456789/default.png",
 	}
 
-	found, err := svc.findOrCreateOAuthUser(context.Background(), model.OAuthProviderDiscord, discord)
+	found, err := svc.findOrCreateOAuthUser(context.Background(), model.OAuthProviderDiscord, info)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -603,16 +624,14 @@ func TestFindOrCreateOAuthUser_EmailMatch(t *testing.T) {
 	// Create existing user with matching email
 	existingUser := createTestUser(t, userRepo, "shared@example.com", "password123", model.RoleUser)
 
-	email := "shared@example.com"
-	verified := true
-	discord := &model.DiscordUser{
-		ID:       "987654321",
-		Username: "newdiscord",
-		Email:    &email,
-		Verified: &verified,
+	info := model.OAuthUserInfo{
+		ProviderUserID: "987654321",
+		Email:          "shared@example.com",
+		EmailVerified:  true,
+		Username:       "newdiscord",
 	}
 
-	user, err := svc.findOrCreateOAuthUser(context.Background(), model.OAuthProviderDiscord, discord)
+	user, err := svc.findOrCreateOAuthUser(context.Background(), model.OAuthProviderDiscord, info)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -646,12 +665,12 @@ func TestFindOrCreateOAuthUser_DisabledExistingLink(t *testing.T) {
 		ProviderUserID: "111222333",
 	})
 
-	discord := &model.DiscordUser{
-		ID:       "111222333",
-		Username: "disableduser",
+	info := model.OAuthUserInfo{
+		ProviderUserID: "111222333",
+		Username:       "disableduser",
 	}
 
-	_, err := svc.findOrCreateOAuthUser(context.Background(), model.OAuthProviderDiscord, discord)
+	_, err := svc.findOrCreateOAuthUser(context.Background(), model.OAuthProviderDiscord, info)
 	if err != model.ErrAccountDisabled {
 		t.Fatalf("expected ErrAccountDisabled, got %v", err)
 	}
@@ -743,23 +762,23 @@ func TestRefresh_UserNotFound(t *testing.T) {
 	}
 }
 
-func TestDiscordCallback_NotConfigured(t *testing.T) {
-	svc, _, _ := newTestAuthService() // no discord credentials
-	_, _, err := svc.DiscordCallback(context.Background(), "code", "state")
+func TestOAuthCallback_NotConfigured(t *testing.T) {
+	svc, _, _ := newTestAuthService() // no providers
+	_, _, err := svc.OAuthCallback(context.Background(), "discord", "code", "state")
 	if err == nil {
 		t.Fatal("expected error when discord is not configured")
 	}
 }
 
-func TestDiscordCallback_InvalidState(t *testing.T) {
+func TestOAuthCallback_InvalidState(t *testing.T) {
 	svc, _, _ := newTestAuthServiceWithOAuth()
-	_, _, err := svc.DiscordCallback(context.Background(), "code", "invalid-state")
+	_, _, err := svc.OAuthCallback(context.Background(), "discord", "code", "invalid-state")
 	if err == nil {
 		t.Fatal("expected error for invalid state")
 	}
 }
 
-func TestDiscordCallback_FullSuccess(t *testing.T) {
+func TestOAuthCallback_DiscordFullSuccess(t *testing.T) {
 	svc, _, oauthRepo := newTestAuthServiceWithOAuth()
 
 	discordServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -770,13 +789,11 @@ func TestDiscordCallback_FullSuccess(t *testing.T) {
 				"token_type":   "Bearer",
 			})
 		case "/api/v10/users/@me":
-			email := "discord@example.com"
-			verified := true
 			json.NewEncoder(w).Encode(map[string]interface{}{
 				"id":       "999888777",
 				"username": "testuser",
-				"email":    email,
-				"verified": verified,
+				"email":    "discord@example.com",
+				"verified": true,
 			})
 		default:
 			http.NotFound(w, r)
@@ -784,15 +801,17 @@ func TestDiscordCallback_FullSuccess(t *testing.T) {
 	}))
 	defer discordServer.Close()
 
-	svc.httpClient = discordServer.Client()
-	svc.discordBaseURL = discordServer.URL
+	// Override the Discord provider's HTTP client and base URL for testing
+	dp := svc.providers["discord"].(*DiscordProvider)
+	dp.httpClient = discordServer.Client()
+	dp.baseURL = discordServer.URL
 
 	state, err := svc.generateOAuthState()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	token, user, err := svc.DiscordCallback(context.Background(), "valid-code", state)
+	token, user, err := svc.OAuthCallback(context.Background(), "discord", "valid-code", state)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -809,7 +828,7 @@ func TestDiscordCallback_FullSuccess(t *testing.T) {
 	}
 }
 
-func TestDiscordCallback_TokenExchangeFails(t *testing.T) {
+func TestOAuthCallback_TokenExchangeFails(t *testing.T) {
 	svc, _, _ := newTestAuthServiceWithOAuth()
 
 	discordServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -817,17 +836,18 @@ func TestDiscordCallback_TokenExchangeFails(t *testing.T) {
 	}))
 	defer discordServer.Close()
 
-	svc.httpClient = discordServer.Client()
-	svc.discordBaseURL = discordServer.URL
+	dp := svc.providers["discord"].(*DiscordProvider)
+	dp.httpClient = discordServer.Client()
+	dp.baseURL = discordServer.URL
 
 	state, _ := svc.generateOAuthState()
-	_, _, err := svc.DiscordCallback(context.Background(), "bad-code", state)
+	_, _, err := svc.OAuthCallback(context.Background(), "discord", "bad-code", state)
 	if err == nil {
 		t.Fatal("expected error for failed token exchange")
 	}
 }
 
-func TestDiscordCallback_UserFetchFails(t *testing.T) {
+func TestOAuthCallback_UserFetchFails(t *testing.T) {
 	svc, _, _ := newTestAuthServiceWithOAuth()
 
 	discordServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -843,74 +863,27 @@ func TestDiscordCallback_UserFetchFails(t *testing.T) {
 	}))
 	defer discordServer.Close()
 
-	svc.httpClient = discordServer.Client()
-	svc.discordBaseURL = discordServer.URL
+	dp := svc.providers["discord"].(*DiscordProvider)
+	dp.httpClient = discordServer.Client()
+	dp.baseURL = discordServer.URL
 
 	state, _ := svc.generateOAuthState()
-	_, _, err := svc.DiscordCallback(context.Background(), "valid-code", state)
+	_, _, err := svc.OAuthCallback(context.Background(), "discord", "valid-code", state)
 	if err == nil {
 		t.Fatal("expected error for failed user fetch")
-	}
-}
-
-func TestDiscordEnabled(t *testing.T) {
-	svc, _, _ := newTestAuthService()
-	if svc.DiscordEnabled() {
-		t.Fatal("expected discord to be disabled without credentials")
-	}
-
-	svc2, _, _ := newTestAuthServiceWithOAuth()
-	if !svc2.DiscordEnabled() {
-		t.Fatal("expected discord to be enabled with credentials")
-	}
-}
-
-func TestDiscordOAuthURL_NotConfigured(t *testing.T) {
-	svc, _, _ := newTestAuthService()
-	_, err := svc.DiscordOAuthURL()
-	if err == nil {
-		t.Fatal("expected error when discord is not configured")
-	}
-}
-
-func TestLogin_NoPasswordHash(t *testing.T) {
-	svc, userRepo, _ := newTestAuthService()
-	user := &model.User{
-		ID:          uuid.New(),
-		Email:       "oauth-only@example.com",
-		DisplayName: "OAuth User",
-		GlobalRole:  model.RoleUser,
-		IsActive:    true,
-	}
-	userRepo.Create(context.Background(), user)
-
-	_, _, err := svc.Login(context.Background(), "oauth-only@example.com", "anypassword")
-	if err != model.ErrInvalidCredentials {
-		t.Fatalf("expected ErrInvalidCredentials, got %v", err)
-	}
-}
-
-func TestValidateAPIKey_DisabledUser(t *testing.T) {
-	svc, userRepo, _ := newTestAuthService()
-	user := createTestUser(t, userRepo, "disabled@example.com", "pass", model.RoleUser)
-	_, fullKey, _ := svc.CreateAPIKey(context.Background(), user.ID, "Key", nil, nil)
-	user.IsActive = false
-
-	_, err := svc.ValidateAPIKey(context.Background(), fullKey)
-	if err != model.ErrUnauthorized {
-		t.Fatalf("expected ErrUnauthorized, got %v", err)
 	}
 }
 
 func TestFindOrCreateOAuthUser_NoEmail(t *testing.T) {
 	svc, userRepo, _ := newTestAuthServiceWithOAuth()
 
-	discord := &model.DiscordUser{
-		ID:       "555666777",
-		Username: "noemailuser",
+	info := model.OAuthUserInfo{
+		ProviderUserID: "555666777",
+		Username:       "noemailuser",
+		DisplayName:    "noemailuser",
 	}
 
-	user, err := svc.findOrCreateOAuthUser(context.Background(), model.OAuthProviderDiscord, discord)
+	user, err := svc.findOrCreateOAuthUser(context.Background(), model.OAuthProviderDiscord, info)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -937,16 +910,14 @@ func TestFindOrCreateOAuthUser_DisabledEmailMatch(t *testing.T) {
 	}
 	userRepo.Create(context.Background(), user)
 
-	email := "disabled@example.com"
-	verified := true
-	discord := &model.DiscordUser{
-		ID:       "444555666",
-		Username: "disabledmatch",
-		Email:    &email,
-		Verified: &verified,
+	info := model.OAuthUserInfo{
+		ProviderUserID: "444555666",
+		Email:          "disabled@example.com",
+		EmailVerified:  true,
+		Username:       "disabledmatch",
 	}
 
-	_, err := svc.findOrCreateOAuthUser(context.Background(), model.OAuthProviderDiscord, discord)
+	_, err := svc.findOrCreateOAuthUser(context.Background(), model.OAuthProviderDiscord, info)
 	if err != model.ErrAccountDisabled {
 		t.Fatalf("expected ErrAccountDisabled, got %v", err)
 	}
@@ -1015,5 +986,141 @@ func TestLogin_ReturnsForcePasswordChange(t *testing.T) {
 	}
 	if !info.ForcePasswordChange {
 		t.Fatal("expected ForcePasswordChange in JWT claims")
+	}
+}
+
+func TestLogin_NoPasswordHash(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	user := &model.User{
+		ID:          uuid.New(),
+		Email:       "oauth-only@example.com",
+		DisplayName: "OAuth User",
+		GlobalRole:  model.RoleUser,
+		IsActive:    true,
+	}
+	userRepo.Create(context.Background(), user)
+
+	_, _, err := svc.Login(context.Background(), "oauth-only@example.com", "anypassword")
+	if err != model.ErrInvalidCredentials {
+		t.Fatalf("expected ErrInvalidCredentials, got %v", err)
+	}
+}
+
+func TestValidateAPIKey_DisabledUser(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	user := createTestUser(t, userRepo, "disabled@example.com", "pass", model.RoleUser)
+	_, fullKey, _ := svc.CreateAPIKey(context.Background(), user.ID, "Key", nil, nil)
+	user.IsActive = false
+
+	_, err := svc.ValidateAPIKey(context.Background(), fullKey)
+	if err != model.ErrUnauthorized {
+		t.Fatalf("expected ErrUnauthorized, got %v", err)
+	}
+}
+
+// --- Google OAuth tests ---
+
+func TestOAuthURL_Google(t *testing.T) {
+	userRepo := newMockUserRepo()
+	apiKeyRepo := newMockAPIKeyRepo()
+	oauthRepo := newMockOAuthAccountRepo()
+	google := NewGoogleProvider("google-client-id", "google-secret", "http://localhost:3000/auth/google/callback", nil)
+	svc := NewAuthService(userRepo, apiKeyRepo, oauthRepo, "test-secret-at-least-32-chars!!", 24*time.Hour,
+		[]OAuthProvider{google})
+
+	authURL, err := svc.OAuthURL("google")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if !strings.Contains(authURL, "accounts.google.com/o/oauth2/v2/auth") {
+		t.Fatalf("expected google authorize URL, got %s", authURL)
+	}
+	if !strings.Contains(authURL, "client_id=google-client-id") {
+		t.Fatalf("expected client_id in URL, got %s", authURL)
+	}
+	if !strings.Contains(authURL, "scope=openid+email+profile") {
+		t.Fatalf("expected scope in URL, got %s", authURL)
+	}
+}
+
+func TestOAuthCallback_GoogleFullSuccess(t *testing.T) {
+	userRepo := newMockUserRepo()
+	apiKeyRepo := newMockAPIKeyRepo()
+	oauthRepo := newMockOAuthAccountRepo()
+
+	googleServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/token":
+			json.NewEncoder(w).Encode(map[string]string{
+				"access_token": "mock-google-token",
+				"token_type":   "Bearer",
+			})
+		case "/oauth2/v2/userinfo":
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"id":             "google-user-123",
+				"email":          "user@gmail.com",
+				"verified_email": true,
+				"name":           "Google User",
+				"picture":        "https://lh3.googleusercontent.com/photo.jpg",
+			})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer googleServer.Close()
+
+	google := NewGoogleProvider("google-client-id", "google-secret", "http://localhost:3000/auth/google/callback", googleServer.Client())
+	google.tokenURL = googleServer.URL
+	google.apiBaseURL = googleServer.URL
+
+	svc := NewAuthService(userRepo, apiKeyRepo, oauthRepo, "test-secret-at-least-32-chars!!", 24*time.Hour,
+		[]OAuthProvider{google})
+
+	state, err := svc.generateOAuthState()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	token, user, err := svc.OAuthCallback(context.Background(), "google", "valid-code", state)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if token == "" {
+		t.Fatal("expected non-empty token")
+	}
+	if user.Email != "user@gmail.com" {
+		t.Fatalf("expected email user@gmail.com, got %s", user.Email)
+	}
+	if user.DisplayName != "Google User" {
+		t.Fatalf("expected display name 'Google User', got %s", user.DisplayName)
+	}
+
+	accounts, _ := oauthRepo.ListByUserID(context.Background(), user.ID)
+	if len(accounts) != 1 {
+		t.Fatalf("expected 1 oauth account, got %d", len(accounts))
+	}
+	if accounts[0].Provider != model.OAuthProviderGoogle {
+		t.Fatalf("expected provider google, got %s", accounts[0].Provider)
+	}
+}
+
+func TestEnabledProviders_Multiple(t *testing.T) {
+	userRepo := newMockUserRepo()
+	apiKeyRepo := newMockAPIKeyRepo()
+	oauthRepo := newMockOAuthAccountRepo()
+	discord := NewDiscordProvider("dc-id", "dc-secret", "http://localhost/discord", nil)
+	google := NewGoogleProvider("g-id", "g-secret", "http://localhost/google", nil)
+	svc := NewAuthService(userRepo, apiKeyRepo, oauthRepo, "test-secret-at-least-32-chars!!", 24*time.Hour,
+		[]OAuthProvider{discord, google})
+
+	providers := svc.EnabledProviders()
+	if !providers["discord"] {
+		t.Fatal("expected discord to be enabled")
+	}
+	if !providers["google"] {
+		t.Fatal("expected google to be enabled")
+	}
+	if len(providers) != 2 {
+		t.Fatalf("expected 2 providers, got %d", len(providers))
 	}
 }

@@ -54,37 +54,35 @@ export async function searchUsers(query: string) {
 
 // Auth providers
 
-export interface AuthProviders {
-  discord: boolean
-}
+export type AuthProviders = Record<string, boolean>
 
 export async function getAuthProviders() {
   const res = await api.get<{ data: AuthProviders }>('/auth/providers')
   return res.data.data
 }
 
-// Discord OAuth
+// Generic OAuth
 
-interface DiscordAuthResponse {
+interface OAuthAuthResponse {
   data: {
     url: string
   }
 }
 
-export async function getDiscordAuthURL() {
-  const res = await api.get<DiscordAuthResponse>('/auth/discord')
+export async function getOAuthURL(provider: string) {
+  const res = await api.get<OAuthAuthResponse>(`/auth/${provider}`)
   return res.data.data
 }
 
-interface DiscordCallbackResponse {
+interface OAuthCallbackResponse {
   data: {
     token: string
     user: User
   }
 }
 
-export async function discordCallback(code: string, state: string) {
-  const res = await api.post<DiscordCallbackResponse>('/auth/discord/callback', { code, state })
+export async function oauthCallback(provider: string, code: string, state: string) {
+  const res = await api.post<OAuthCallbackResponse>(`/auth/${provider}/callback`, { code, state })
   return res.data.data
 }
 

@@ -129,29 +129,23 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 
 // AuthProviders returns which OAuth providers are enabled.
 func (h *AuthHandler) AuthProviders(w http.ResponseWriter, r *http.Request) {
-	writeData(w, http.StatusOK, map[string]interface{}{
-		"discord": h.auth.DiscordEnabled(),
-	})
+	writeData(w, http.StatusOK, h.auth.EnabledProviders())
 }
 
-// Discord OAuth handlers
+// OAuth handlers (generic for all providers)
 
-type discordCallbackRequest struct {
+type oauthCallbackRequest struct {
 	Code  string `json:"code"`
 	State string `json:"state"`
 }
 
-// DiscordAuth returns the Discord OAuth authorization URL.
-func (h *AuthHandler) DiscordAuth(w http.ResponseWriter, r *http.Request) {
-	if !h.auth.DiscordEnabled() {
-		writeError(w, http.StatusNotFound, "NOT_CONFIGURED", "discord oauth is not configured")
-		return
-	}
+// OAuthAuth returns the OAuth authorization URL for the given provider.
+func (h *AuthHandler) OAuthAuth(w http.ResponseWriter, r *http.Request) {
+	provider := chi.URLParam(r, "provider")
 
-	authURL, err := h.auth.DiscordOAuthURL()
+	authURL, err := h.auth.OAuthURL(provider)
 	if err != nil {
-		log.Ctx(r.Context()).Error().Err(err).Msg("failed to generate discord oauth url")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusNotFound, "NOT_CONFIGURED", provider+" oauth is not configured")
 		return
 	}
 
@@ -160,9 +154,11 @@ func (h *AuthHandler) DiscordAuth(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// DiscordCallback exchanges the authorization code and logs in or registers the user.
-func (h *AuthHandler) DiscordCallback(w http.ResponseWriter, r *http.Request) {
-	var req discordCallbackRequest
+// OAuthCallback exchanges the authorization code and logs in or registers the user.
+func (h *AuthHandler) OAuthCallback(w http.ResponseWriter, r *http.Request) {
+	provider := chi.URLParam(r, "provider")
+
+	var req oauthCallbackRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
 		return
@@ -173,14 +169,14 @@ func (h *AuthHandler) DiscordCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, user, err := h.auth.DiscordCallback(r.Context(), req.Code, req.State)
+	token, user, err := h.auth.OAuthCallback(r.Context(), provider, req.Code, req.State)
 	if err != nil {
 		if errors.Is(err, model.ErrAccountDisabled) {
 			writeError(w, http.StatusForbidden, "FORBIDDEN", "account is disabled")
 			return
 		}
-		log.Ctx(r.Context()).Error().Err(err).Msg("discord oauth callback failed")
-		writeError(w, http.StatusUnauthorized, "OAUTH_ERROR", "discord authentication failed")
+		log.Ctx(r.Context()).Error().Err(err).Msg(provider + " oauth callback failed")
+		writeError(w, http.StatusUnauthorized, "OAUTH_ERROR", provider+" authentication failed")
 		return
 	}
 

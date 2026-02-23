@@ -3,7 +3,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { AdminRoute } from '@/components/AdminRoute'
 import { AppShell } from '@/components/AppShell'
 import { LoginPage } from '@/pages/LoginPage'
-import { DiscordCallbackPage } from '@/pages/DiscordCallbackPage'
+import { OAuthCallbackPage } from '@/pages/OAuthCallbackPage'
 import { ChangePasswordPage } from '@/pages/ChangePasswordPage'
 import { ProjectListPage } from '@/pages/ProjectListPage'
 import { ProjectDetailPage } from '@/pages/ProjectDetailPage'
@@ -14,7 +14,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/auth/discord/callback" element={<DiscordCallbackPage />} />
+      <Route path="/auth/:provider/callback" element={<OAuthCallbackPage />} />
       <Route path="/change-password" element={<ChangePasswordPage />} />
       <Route element={<ProtectedRoute />}>
         <Route element={<AppShell />}>
