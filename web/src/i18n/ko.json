@@ -260,6 +260,7 @@
   "workitems.priorities.high": "높음",
   "workitems.priorities.critical": "긴급",
 
+  "workitems.statuses.backlog": "백로그",
   "workitems.statuses.open": "열림",
   "workitems.statuses.in_progress": "진행 중",
   "workitems.statuses.in_review": "검토 중",

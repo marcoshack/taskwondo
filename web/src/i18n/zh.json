@@ -260,6 +260,7 @@
   "workitems.priorities.high": "高",
   "workitems.priorities.critical": "紧急",
 
+  "workitems.statuses.backlog": "待办列表",
   "workitems.statuses.open": "待处理",
   "workitems.statuses.in_progress": "进行中",
   "workitems.statuses.in_review": "审核中",

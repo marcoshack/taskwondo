@@ -274,6 +274,7 @@
   "workitems.priorities.high": "High",
   "workitems.priorities.critical": "Critical",
 
+  "workitems.statuses.backlog": "Backlog",
   "workitems.statuses.open": "Open",
   "workitems.statuses.in_progress": "In Progress",
   "workitems.statuses.in_review": "In Review",

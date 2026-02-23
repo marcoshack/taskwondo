@@ -261,6 +261,7 @@
   "workitems.priorities.high": "Alta",
   "workitems.priorities.critical": "Crítica",
 
+  "workitems.statuses.backlog": "Backlog",
   "workitems.statuses.open": "Aberto",
   "workitems.statuses.in_progress": "Em progresso",
   "workitems.statuses.in_review": "Em revisão",

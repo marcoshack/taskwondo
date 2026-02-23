@@ -260,6 +260,7 @@
   "workitems.priorities.high": "高",
   "workitems.priorities.critical": "緊急",
 
+  "workitems.statuses.backlog": "バックログ",
   "workitems.statuses.open": "未着手",
   "workitems.statuses.in_progress": "進行中",
   "workitems.statuses.in_review": "レビュー中",

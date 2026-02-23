@@ -260,6 +260,7 @@
   "workitems.priorities.high": "عالية",
   "workitems.priorities.critical": "حرجة",
 
+  "workitems.statuses.backlog": "قائمة الانتظار",
   "workitems.statuses.open": "مفتوح",
   "workitems.statuses.in_progress": "قيد التنفيذ",
   "workitems.statuses.in_review": "قيد المراجعة",
