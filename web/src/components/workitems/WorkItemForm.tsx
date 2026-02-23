@@ -181,6 +181,11 @@ export function WorkItemForm({
           <option value={initialValues.status}>{t(`workitems.statuses.${initialValues.status}`, { defaultValue: statuses.find((s) => s.name === initialValues.status)?.display_name ?? initialValues.status })}</option>
           {allowedTransitions
             .filter((tr) => tr !== initialValues.status)
+            .sort((a, b) => {
+              const posA = statuses.find((s) => s.name === a)?.position ?? 0
+              const posB = statuses.find((s) => s.name === b)?.position ?? 0
+              return posA - posB
+            })
             .map((tr) => {
               const ws = statuses.find((s) => s.name === tr)
               return <option key={tr} value={tr}>{t(`workitems.statuses.${tr}`, { defaultValue: ws?.display_name ?? tr })}</option>

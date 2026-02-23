@@ -87,7 +87,7 @@ export function DetailSidebar({ item, statuses, allowedTransitions, members, mil
     : [
         // Current status first, then allowed transitions
         ...(currentWs ? [currentWs] : []),
-        ...displayStatuses.filter((s) => allowedTransitions.includes(s.name) && s.name !== item.status),
+        ...displayStatuses.filter((s) => allowedTransitions.includes(s.name) && s.name !== item.status).sort((a, b) => a.position - b.position),
       ]
 
   return (

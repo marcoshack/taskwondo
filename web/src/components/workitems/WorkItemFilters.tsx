@@ -61,8 +61,9 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
   ]
 
   function buildStatusOptions(ss: WorkflowStatus[]): MultiSelectOption[] {
-    const open = ss.filter((s) => !closedCategories.has(s.category))
-    const closed = ss.filter((s) => closedCategories.has(s.category))
+    const byPos = (a: WorkflowStatus, b: WorkflowStatus) => a.position - b.position
+    const open = ss.filter((s) => !closedCategories.has(s.category)).sort(byPos)
+    const closed = ss.filter((s) => closedCategories.has(s.category)).sort(byPos)
     return [...open, ...closed].map((s) => ({
       value: s.name,
       label: t(`workitems.statuses.${s.name}`, { defaultValue: s.display_name }),
