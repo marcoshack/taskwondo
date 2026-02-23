@@ -23,6 +23,7 @@ type AdminUserRepository interface {
 	UpdateGlobalRole(ctx context.Context, id uuid.UUID, role string) error
 	UpdateIsActive(ctx context.Context, id uuid.UUID, isActive bool) error
 	UpdatePasswordHash(ctx context.Context, id uuid.UUID, hash string, forceChange bool) error
+	UpdateMaxProjects(ctx context.Context, id uuid.UUID, maxProjects *int) error
 	CountByRole(ctx context.Context, role string) (int, error)
 }
 
@@ -58,8 +59,8 @@ func (s *AdminService) ListUsers(ctx context.Context) ([]model.User, error) {
 	return s.users.ListAll(ctx)
 }
 
-// UpdateUser updates a user's global role and/or active status.
-func (s *AdminService) UpdateUser(ctx context.Context, callerID, targetID uuid.UUID, role *string, isActive *bool) (*model.User, error) {
+// UpdateUser updates a user's global role, active status, and/or project limit.
+func (s *AdminService) UpdateUser(ctx context.Context, callerID, targetID uuid.UUID, role *string, isActive *bool, maxProjects *int) (*model.User, error) {
 	// Prevent self-modification for role and active status
 	if callerID == targetID {
 		if role != nil {
@@ -97,6 +98,20 @@ func (s *AdminService) UpdateUser(ctx context.Context, callerID, targetID uuid.U
 
 	if isActive != nil {
 		if err := s.users.UpdateIsActive(ctx, targetID, *isActive); err != nil {
+			return nil, err
+		}
+	}
+
+	if maxProjects != nil {
+		if *maxProjects < -1 {
+			return nil, fmt.Errorf("%w: max_projects must be -1 (default), 0 (unlimited), or a positive number", model.ErrValidation)
+		}
+		var dbVal *int
+		if *maxProjects >= 0 {
+			dbVal = maxProjects
+		}
+		// *maxProjects == -1 means clear (reset to global default), dbVal stays nil
+		if err := s.users.UpdateMaxProjects(ctx, targetID, dbVal); err != nil {
 			return nil, err
 		}
 	}

@@ -60,6 +60,8 @@
   "projects.notFound": "Project not found.",
   "projects.loadError": "Failed to load projects.",
   "projects.createError": "Failed to create project",
+  "projects.limitCounter": "{{count}}/{{limit}}",
+  "projects.limitReached": "Project ownership limit reached. Contact an administrator to increase your limit.",
   "projects.noProjectsFound": "No projects found.",
   "projects.table.key": "Key",
   "projects.table.name": "Name",
@@ -412,6 +414,11 @@
   "admin.general.brand.nameHelp": "The name displayed in the navigation bar and login page. Leave empty to use the default.",
   "admin.general.brand.saved": "Brand name saved.",
 
+  "admin.general.projectLimit.title": "Project Limits",
+  "admin.general.projectLimit.label": "Max projects per user",
+  "admin.general.projectLimit.help": "Default limit for non-admin users. Set to 0 for unlimited. Admins are always exempt. Override per user in the list below.",
+  "admin.general.projectLimit.saved": "Project limit saved.",
+
   "admin.users.title": "Users",
   "admin.users.description": "Manage user accounts, roles, and project access.",
   "admin.users.name": "Name",
@@ -442,6 +449,8 @@
   "admin.users.addToProjectError": "Failed to add user to project.",
   "admin.users.removeFromProjectError": "Failed to remove user from project.",
   "admin.users.updateError": "Failed to update user.",
+  "admin.users.maxProjectsDefault": "default",
+  "admin.users.maxProjectsHelp": "Per-user project limit. Empty = default, 0 = unlimited.",
   "admin.users.alreadyMember": "User is already a member of this project.",
 
   "admin.users.disableConfirmTitle": "Disable User",

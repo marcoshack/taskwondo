@@ -108,6 +108,16 @@ func (m *mockProjectRepo) GetSummaries(_ context.Context, projectIDs []uuid.UUID
 	return result, nil
 }
 
+func (m *mockProjectRepo) CountByOwner(_ context.Context, _ uuid.UUID) (int, error) {
+	count := 0
+	for _, p := range m.projects {
+		if p.DeletedAt == nil {
+			count++
+		}
+	}
+	return count, nil
+}
+
 type mockProjectMemberRepo struct {
 	members map[string]*model.ProjectMember
 }
@@ -194,7 +204,7 @@ func projectTestSetup(t *testing.T) (*ProjectHandler, *model.AuthInfo) {
 	userRepo := newMockUserRepo()
 	workflowRepo := newMockWorkflowRepo()
 	typeWorkflowRepo := newMockTypeWorkflowRepo()
-	projectSvc := service.NewProjectService(projectRepo, memberRepo, userRepo, workflowRepo, typeWorkflowRepo)
+	projectSvc := service.NewProjectService(projectRepo, memberRepo, userRepo, workflowRepo, typeWorkflowRepo, newMockSystemSettingRepo())
 	h := NewProjectHandler(projectSvc)
 
 	info := &model.AuthInfo{

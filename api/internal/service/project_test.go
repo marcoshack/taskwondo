@@ -2,7 +2,9 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -106,6 +108,18 @@ func (m *mockProjectRepo) GetSummaries(_ context.Context, projectIDs []uuid.UUID
 	return result, nil
 }
 
+func (m *mockProjectRepo) CountByOwner(_ context.Context, userID uuid.UUID) (int, error) {
+	count := 0
+	for _, p := range m.projects {
+		if p.DeletedAt == nil {
+			count++
+		}
+	}
+	// This mock counts all non-deleted projects as owned by the user.
+	// For more precise testing, the caller can pre-populate the repo.
+	return count, nil
+}
+
 type mockProjectMemberRepo struct {
 	members map[string]*model.ProjectMember // key: "projectID:userID"
 }
@@ -191,6 +205,7 @@ type testProjectSetup struct {
 	userRepo         *mockUserRepo
 	workflowRepo     *mockWorkflowRepo
 	typeWorkflowRepo *mockTypeWorkflowRepo
+	settingsRepo     *mockSystemSettingRepo
 }
 
 func newTestProjectSetup() *testProjectSetup {
@@ -199,7 +214,8 @@ func newTestProjectSetup() *testProjectSetup {
 	userRepo := newMockUserRepo()
 	workflowRepo := newMockWorkflowRepo()
 	typeWorkflowRepo := newMockTypeWorkflowRepo()
-	svc := NewProjectService(projectRepo, memberRepo, userRepo, workflowRepo, typeWorkflowRepo)
+	settingsRepo := newMockSystemSettingRepo()
+	svc := NewProjectService(projectRepo, memberRepo, userRepo, workflowRepo, typeWorkflowRepo, settingsRepo)
 	return &testProjectSetup{
 		svc:              svc,
 		projectRepo:      projectRepo,
@@ -207,6 +223,7 @@ func newTestProjectSetup() *testProjectSetup {
 		userRepo:         userRepo,
 		workflowRepo:     workflowRepo,
 		typeWorkflowRepo: typeWorkflowRepo,
+		settingsRepo:     settingsRepo,
 	}
 }
 
@@ -1199,6 +1216,419 @@ func TestUpdateProject_AllowedComplexityValues_InvalidValues(t *testing.T) {
 	_, err = svc.Update(context.Background(), info, "TT", nil, nil, nil, false, nil, []int{1, 3, 3}, false, nil, false)
 	if !errors.Is(err, model.ErrValidation) {
 		t.Fatalf("expected ErrValidation for duplicate values, got %v", err)
+	}
+}
+
+// --- Project Limit Tests ---
+
+func TestCreateProject_LimitEnforced(t *testing.T) {
+	s := newTestProjectSetup()
+	info := userAuthInfo()
+	ctx := context.Background()
+
+	// Set limit to 2
+	s.settingsRepo.Upsert(ctx, &model.SystemSetting{
+		Key:   model.SettingMaxProjectsPerUser,
+		Value: json.RawMessage(`2`),
+	})
+
+	// First two should succeed
+	_, err := s.svc.Create(ctx, info, "Project 1", "P1", nil, nil)
+	if err != nil {
+		t.Fatalf("expected no error for project 1, got %v", err)
+	}
+	_, err = s.svc.Create(ctx, info, "Project 2", "P2", nil, nil)
+	if err != nil {
+		t.Fatalf("expected no error for project 2, got %v", err)
+	}
+
+	// Third should fail
+	_, err = s.svc.Create(ctx, info, "Project 3", "P3", nil, nil)
+	if err == nil {
+		t.Fatal("expected error for project 3 exceeding limit")
+	}
+	if !errors.Is(err, model.ErrForbidden) {
+		t.Fatalf("expected ErrForbidden, got %v", err)
+	}
+}
+
+func TestCreateProject_LimitAtExactBoundary(t *testing.T) {
+	s := newTestProjectSetup()
+	info := userAuthInfo()
+	ctx := context.Background()
+
+	// Set limit to 1
+	s.settingsRepo.Upsert(ctx, &model.SystemSetting{
+		Key:   model.SettingMaxProjectsPerUser,
+		Value: json.RawMessage(`1`),
+	})
+
+	// First project at the boundary — should succeed
+	_, err := s.svc.Create(ctx, info, "Project 1", "P1", nil, nil)
+	if err != nil {
+		t.Fatalf("expected no error at boundary, got %v", err)
+	}
+
+	// Second project exceeds — should fail
+	_, err = s.svc.Create(ctx, info, "Project 2", "P2", nil, nil)
+	if err == nil {
+		t.Fatal("expected error exceeding limit of 1")
+	}
+	if !errors.Is(err, model.ErrForbidden) {
+		t.Fatalf("expected ErrForbidden, got %v", err)
+	}
+}
+
+func TestCreateProject_LimitErrorMessageContainsCount(t *testing.T) {
+	s := newTestProjectSetup()
+	info := userAuthInfo()
+	ctx := context.Background()
+
+	s.settingsRepo.Upsert(ctx, &model.SystemSetting{
+		Key:   model.SettingMaxProjectsPerUser,
+		Value: json.RawMessage(`1`),
+	})
+
+	_, _ = s.svc.Create(ctx, info, "Project 1", "P1", nil, nil)
+	_, err := s.svc.Create(ctx, info, "Project 2", "P2", nil, nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	// Error message should mention limit reached and tell user to contact admin
+	errMsg := err.Error()
+	if !strings.Contains(errMsg, "ownership limit reached") || !strings.Contains(errMsg, "administrator") {
+		t.Fatalf("expected error message with limit and admin contact info, got: %s", errMsg)
+	}
+}
+
+func TestCreateProject_AdminBypassesLimit(t *testing.T) {
+	s := newTestProjectSetup()
+	admin := adminAuthInfo()
+	ctx := context.Background()
+
+	// Set limit to 1
+	s.settingsRepo.Upsert(ctx, &model.SystemSetting{
+		Key:   model.SettingMaxProjectsPerUser,
+		Value: json.RawMessage(`1`),
+	})
+
+	// Admin should bypass the limit entirely
+	_, err := s.svc.Create(ctx, admin, "Project 1", "P1", nil, nil)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	_, err = s.svc.Create(ctx, admin, "Project 2", "P2", nil, nil)
+	if err != nil {
+		t.Fatalf("expected admin to bypass limit, got %v", err)
+	}
+	_, err = s.svc.Create(ctx, admin, "Project 3", "P3", nil, nil)
+	if err != nil {
+		t.Fatalf("expected admin to bypass limit, got %v", err)
+	}
+}
+
+func TestCreateProject_DefaultLimitWhenSettingNotConfigured(t *testing.T) {
+	s := newTestProjectSetup()
+	info := userAuthInfo()
+	ctx := context.Background()
+
+	// No setting configured — default is 5
+	for i := range 5 {
+		key := string(rune('A'+i)) + "A"
+		_, err := s.svc.Create(ctx, info, "Project", key, nil, nil)
+		if err != nil {
+			t.Fatalf("expected no error for project %d, got %v", i+1, err)
+		}
+	}
+
+	// 6th should fail with default limit
+	_, err := s.svc.Create(ctx, info, "Project 6", "FA", nil, nil)
+	if err == nil {
+		t.Fatal("expected error for project exceeding default limit of 5")
+	}
+	if !errors.Is(err, model.ErrForbidden) {
+		t.Fatalf("expected ErrForbidden, got %v", err)
+	}
+}
+
+func TestCreateProject_ZeroLimitMeansUnlimited(t *testing.T) {
+	s := newTestProjectSetup()
+	info := userAuthInfo()
+	ctx := context.Background()
+
+	// Set limit to 0 — should mean unlimited
+	s.settingsRepo.Upsert(ctx, &model.SystemSetting{
+		Key:   model.SettingMaxProjectsPerUser,
+		Value: json.RawMessage(`0`),
+	})
+
+	// Should be able to create many projects
+	for i := range 10 {
+		key := string(rune('A'+i)) + "A"
+		_, err := s.svc.Create(ctx, info, "Project", key, nil, nil)
+		if err != nil {
+			t.Fatalf("expected no error with unlimited (0) limit for project %d, got %v", i+1, err)
+		}
+	}
+}
+
+func TestCreateProject_LimitUpdatedDynamically(t *testing.T) {
+	s := newTestProjectSetup()
+	info := userAuthInfo()
+	ctx := context.Background()
+
+	// Start with limit of 2
+	s.settingsRepo.Upsert(ctx, &model.SystemSetting{
+		Key:   model.SettingMaxProjectsPerUser,
+		Value: json.RawMessage(`2`),
+	})
+
+	_, err := s.svc.Create(ctx, info, "Project 1", "P1", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = s.svc.Create(ctx, info, "Project 2", "P2", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// At limit — should fail
+	_, err = s.svc.Create(ctx, info, "Project 3", "P3", nil, nil)
+	if !errors.Is(err, model.ErrForbidden) {
+		t.Fatalf("expected ErrForbidden at limit, got %v", err)
+	}
+
+	// Admin raises the limit to 5
+	s.settingsRepo.Upsert(ctx, &model.SystemSetting{
+		Key:   model.SettingMaxProjectsPerUser,
+		Value: json.RawMessage(`5`),
+	})
+
+	// Now creation should succeed again
+	_, err = s.svc.Create(ctx, info, "Project 3", "P3", nil, nil)
+	if err != nil {
+		t.Fatalf("expected creation to succeed after limit increase, got %v", err)
+	}
+}
+
+func TestCreateProject_InvalidSettingValueUsesDefault(t *testing.T) {
+	s := newTestProjectSetup()
+	info := userAuthInfo()
+	ctx := context.Background()
+
+	// Set an invalid (non-numeric) JSON value
+	s.settingsRepo.Upsert(ctx, &model.SystemSetting{
+		Key:   model.SettingMaxProjectsPerUser,
+		Value: json.RawMessage(`"not a number"`),
+	})
+
+	// Should fall back to default (5)
+	for i := range 5 {
+		key := string(rune('A'+i)) + "A"
+		_, err := s.svc.Create(ctx, info, "Project", key, nil, nil)
+		if err != nil {
+			t.Fatalf("expected no error for project %d with invalid setting, got %v", i+1, err)
+		}
+	}
+
+	_, err := s.svc.Create(ctx, info, "Project 6", "FA", nil, nil)
+	if !errors.Is(err, model.ErrForbidden) {
+		t.Fatalf("expected ErrForbidden with default limit after invalid setting, got %v", err)
+	}
+}
+
+func TestCreateProject_NegativeSettingValueUsesDefault(t *testing.T) {
+	s := newTestProjectSetup()
+	info := userAuthInfo()
+	ctx := context.Background()
+
+	// Set a negative value — should be ignored, use default (5)
+	s.settingsRepo.Upsert(ctx, &model.SystemSetting{
+		Key:   model.SettingMaxProjectsPerUser,
+		Value: json.RawMessage(`-3`),
+	})
+
+	for i := range 5 {
+		key := string(rune('A'+i)) + "A"
+		_, err := s.svc.Create(ctx, info, "Project", key, nil, nil)
+		if err != nil {
+			t.Fatalf("expected no error for project %d, got %v", i+1, err)
+		}
+	}
+
+	_, err := s.svc.Create(ctx, info, "Project 6", "FA", nil, nil)
+	if !errors.Is(err, model.ErrForbidden) {
+		t.Fatalf("expected ErrForbidden with default limit, got %v", err)
+	}
+}
+
+func TestCreateProject_DeletedProjectsDoNotCountTowardLimit(t *testing.T) {
+	s := newTestProjectSetup()
+	info := userAuthInfo()
+	ctx := context.Background()
+
+	s.settingsRepo.Upsert(ctx, &model.SystemSetting{
+		Key:   model.SettingMaxProjectsPerUser,
+		Value: json.RawMessage(`2`),
+	})
+
+	// Create 2 projects (at limit)
+	_, err := s.svc.Create(ctx, info, "Project 1", "P1", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = s.svc.Create(ctx, info, "Project 2", "P2", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Delete one
+	err = s.svc.Delete(ctx, info, "P1")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Now should be able to create again (1 active, limit 2)
+	_, err = s.svc.Create(ctx, info, "Project 3", "P3", nil, nil)
+	if err != nil {
+		t.Fatalf("expected creation to succeed after deleting a project, got %v", err)
+	}
+}
+
+
+func TestCreateProject_PerUserLimitOverridesGlobal(t *testing.T) {
+	s := newTestProjectSetup()
+	info := userAuthInfo()
+	ctx := context.Background()
+
+	// Register user in user repo with per-user limit of 2
+	perUserLimit := 2
+	s.userRepo.Create(ctx, &model.User{
+		ID:          info.UserID,
+		Email:       info.Email,
+		IsActive:    true,
+		MaxProjects: &perUserLimit,
+	})
+
+	// Set global limit to 10 — should be ignored because per-user limit takes precedence
+	s.settingsRepo.Upsert(ctx, &model.SystemSetting{
+		Key:   model.SettingMaxProjectsPerUser,
+		Value: json.RawMessage(`10`),
+	})
+
+	// First two should succeed (per-user limit is 2)
+	_, err := s.svc.Create(ctx, info, "Project 1", "P1", nil, nil)
+	if err != nil {
+		t.Fatalf("expected no error for project 1, got %v", err)
+	}
+	_, err = s.svc.Create(ctx, info, "Project 2", "P2", nil, nil)
+	if err != nil {
+		t.Fatalf("expected no error for project 2, got %v", err)
+	}
+
+	// Third should fail (per-user limit of 2 overrides global 10)
+	_, err = s.svc.Create(ctx, info, "Project 3", "P3", nil, nil)
+	if !errors.Is(err, model.ErrForbidden) {
+		t.Fatalf("expected ErrForbidden with per-user limit override, got %v", err)
+	}
+}
+
+func TestCreateProject_PerUserLimitZeroMeansUnlimited(t *testing.T) {
+	s := newTestProjectSetup()
+	info := userAuthInfo()
+	ctx := context.Background()
+
+	// Register user with per-user limit of 0 (unlimited)
+	perUserLimit := 0
+	s.userRepo.Create(ctx, &model.User{
+		ID:          info.UserID,
+		Email:       info.Email,
+		IsActive:    true,
+		MaxProjects: &perUserLimit,
+	})
+
+	// Set global limit to 1
+	s.settingsRepo.Upsert(ctx, &model.SystemSetting{
+		Key:   model.SettingMaxProjectsPerUser,
+		Value: json.RawMessage(`1`),
+	})
+
+	// Should be able to create many projects (per-user 0 = unlimited overrides global 1)
+	for i := range 5 {
+		key := string(rune('A'+i)) + "A"
+		_, err := s.svc.Create(ctx, info, "Project", key, nil, nil)
+		if err != nil {
+			t.Fatalf("expected no error with per-user unlimited limit for project %d, got %v", i+1, err)
+		}
+	}
+}
+
+func TestResolveEffectiveLimit_AdminGetsUnlimited(t *testing.T) {
+	s := newTestProjectSetup()
+	admin := adminAuthInfo()
+	ctx := context.Background()
+
+	// Set a restrictive global limit
+	s.settingsRepo.Upsert(ctx, &model.SystemSetting{
+		Key:   model.SettingMaxProjectsPerUser,
+		Value: json.RawMessage(`1`),
+	})
+
+	limit, err := s.svc.ResolveEffectiveLimit(ctx, admin)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if limit != 0 {
+		t.Fatalf("expected 0 (unlimited) for admin, got %d", limit)
+	}
+}
+
+func TestResolveEffectiveLimit_UserGetsPerUserLimit(t *testing.T) {
+	s := newTestProjectSetup()
+	info := userAuthInfo()
+	ctx := context.Background()
+
+	perUserLimit := 8
+	s.userRepo.Create(ctx, &model.User{
+		ID:          info.UserID,
+		Email:       info.Email,
+		IsActive:    true,
+		MaxProjects: &perUserLimit,
+	})
+
+	// Global limit of 3 should be overridden
+	s.settingsRepo.Upsert(ctx, &model.SystemSetting{
+		Key:   model.SettingMaxProjectsPerUser,
+		Value: json.RawMessage(`3`),
+	})
+
+	limit, err := s.svc.ResolveEffectiveLimit(ctx, info)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if limit != 8 {
+		t.Fatalf("expected 8 (per-user limit), got %d", limit)
+	}
+}
+
+func TestResolveEffectiveLimit_UserGetsGlobalDefault(t *testing.T) {
+	s := newTestProjectSetup()
+	info := userAuthInfo()
+	ctx := context.Background()
+
+	// User without per-user limit
+	s.userRepo.Create(ctx, &model.User{
+		ID:       info.UserID,
+		Email:    info.Email,
+		IsActive: true,
+	})
+
+	limit, err := s.svc.ResolveEffectiveLimit(ctx, info)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if limit != model.DefaultMaxProjectsPerUser {
+		t.Fatalf("expected default %d, got %d", model.DefaultMaxProjectsPerUser, limit)
 	}
 }
 

@@ -138,7 +138,7 @@ func main() {
 		cfg.JWTSecret, cfg.JWTExpiry,
 		cfg.DiscordClientID, cfg.DiscordClientSecret, cfg.DiscordRedirectURI,
 	)
-	projectService := service.NewProjectService(projectRepo, projectMemberRepo, userRepo, workflowRepo, typeWorkflowRepo)
+	projectService := service.NewProjectService(projectRepo, projectMemberRepo, userRepo, workflowRepo, typeWorkflowRepo, systemSettingRepo)
 	workflowService := service.NewWorkflowService(workflowRepo)
 	queueService := service.NewQueueService(queueRepo, projectRepo, projectMemberRepo)
 	milestoneService := service.NewMilestoneService(milestoneRepo, projectRepo, projectMemberRepo)

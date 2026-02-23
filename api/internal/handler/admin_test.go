@@ -98,6 +98,16 @@ func (m *mockAdminUserRepo) UpdatePasswordHash(_ context.Context, id uuid.UUID, 
 	return nil
 }
 
+func (m *mockAdminUserRepo) UpdateMaxProjects(_ context.Context, id uuid.UUID, maxProjects *int) error {
+	u, ok := m.byID[id]
+	if !ok {
+		return model.ErrNotFound
+	}
+	u.MaxProjects = maxProjects
+	u.UpdatedAt = time.Now()
+	return nil
+}
+
 type mockAdminProjectRepo struct {
 	byID map[uuid.UUID]*model.Project
 }
@@ -555,6 +565,32 @@ func TestCreateUser_Handler_400_MissingFields(t *testing.T) {
 }
 
 // --- ResetUserPassword handler tests ---
+
+func TestAdminUpdateUserHandler_SetMaxProjects(t *testing.T) {
+	h, userRepo, _, _ := adminTestSetup(t)
+	admin := addTestUser(userRepo, model.RoleAdmin, true)
+	target := addTestUser(userRepo, model.RoleUser, true)
+
+	body := `{"max_projects":10}`
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/admin/users/"+target.ID.String(), bytes.NewBufferString(body))
+	ctx := adminCtx(admin.ID)
+	ctx = withChiParam(ctx, "userId", target.ID.String())
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	h.UpdateUser(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data := resp["data"].(map[string]interface{})
+	if data["max_projects"] != float64(10) {
+		t.Fatalf("expected max_projects 10, got %v", data["max_projects"])
+	}
+}
 
 func TestResetUserPassword_Handler_200(t *testing.T) {
 	h, userRepo, _, _ := adminTestSetup(t)

@@ -25,15 +25,29 @@ export interface Project {
 
 interface ProjectListResponse {
   data: Project[]
+  meta: {
+    owned_project_count: number
+    max_projects: number
+  }
 }
 
 interface ProjectResponse {
   data: Project
 }
 
-export async function listProjects() {
+export interface ProjectListResult {
+  projects: Project[]
+  ownedProjectCount: number
+  maxProjects: number
+}
+
+export async function listProjects(): Promise<ProjectListResult> {
   const res = await api.get<ProjectListResponse>('/projects')
-  return res.data.data
+  return {
+    projects: res.data.data,
+    ownedProjectCount: res.data.meta.owned_project_count,
+    maxProjects: res.data.meta.max_projects,
+  }
 }
 
 export async function getProject(projectKey: string) {

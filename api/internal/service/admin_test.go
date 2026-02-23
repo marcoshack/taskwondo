@@ -95,6 +95,16 @@ func (m *mockAdminUserRepo) UpdatePasswordHash(_ context.Context, id uuid.UUID, 
 	return nil
 }
 
+func (m *mockAdminUserRepo) UpdateMaxProjects(_ context.Context, id uuid.UUID, maxProjects *int) error {
+	u, ok := m.byID[id]
+	if !ok {
+		return model.ErrNotFound
+	}
+	u.MaxProjects = maxProjects
+	u.UpdatedAt = time.Now()
+	return nil
+}
+
 func (m *mockAdminUserRepo) addUser(role string, active bool) *model.User {
 	u := &model.User{
 		ID:          uuid.New(),
@@ -256,7 +266,7 @@ func TestAdminUpdateUser_ChangeRole(t *testing.T) {
 	target := userRepo.addUser(model.RoleUser, true)
 
 	role := model.RoleAdmin
-	updated, err := svc.UpdateUser(ctx, caller.ID, target.ID, &role, nil)
+	updated, err := svc.UpdateUser(ctx, caller.ID, target.ID, &role, nil, nil)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -273,7 +283,7 @@ func TestAdminUpdateUser_InvalidRole(t *testing.T) {
 	target := userRepo.addUser(model.RoleUser, true)
 
 	role := "superadmin"
-	_, err := svc.UpdateUser(ctx, caller.ID, target.ID, &role, nil)
+	_, err := svc.UpdateUser(ctx, caller.ID, target.ID, &role, nil, nil)
 	if !errors.Is(err, model.ErrValidation) {
 		t.Fatalf("expected ErrValidation, got %v", err)
 	}
@@ -286,7 +296,7 @@ func TestAdminUpdateUser_CannotChangeOwnRole(t *testing.T) {
 	caller := userRepo.addUser(model.RoleAdmin, true)
 
 	role := model.RoleUser
-	_, err := svc.UpdateUser(ctx, caller.ID, caller.ID, &role, nil)
+	_, err := svc.UpdateUser(ctx, caller.ID, caller.ID, &role, nil, nil)
 	if !errors.Is(err, model.ErrValidation) {
 		t.Fatalf("expected ErrValidation, got %v", err)
 	}
@@ -299,7 +309,7 @@ func TestAdminUpdateUser_CannotDisableSelf(t *testing.T) {
 	caller := userRepo.addUser(model.RoleAdmin, true)
 
 	active := false
-	_, err := svc.UpdateUser(ctx, caller.ID, caller.ID, nil, &active)
+	_, err := svc.UpdateUser(ctx, caller.ID, caller.ID, nil, &active, nil)
 	if !errors.Is(err, model.ErrValidation) {
 		t.Fatalf("expected ErrValidation, got %v", err)
 	}
@@ -315,13 +325,13 @@ func TestAdminUpdateUser_CannotRemoveLastAdmin(t *testing.T) {
 	// Demote caller (but we're calling as target, so demoting caller)
 	role := model.RoleUser
 	// First demote one admin — should succeed since there are 2
-	_, err := svc.UpdateUser(ctx, target.ID, caller.ID, &role, nil)
+	_, err := svc.UpdateUser(ctx, target.ID, caller.ID, &role, nil, nil)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
 	// Now try to demote the last admin — should fail
-	_, err = svc.UpdateUser(ctx, target.ID, target.ID, &role, nil)
+	_, err = svc.UpdateUser(ctx, target.ID, target.ID, &role, nil, nil)
 	if !errors.Is(err, model.ErrValidation) {
 		t.Fatalf("expected ErrValidation for last admin, got %v", err)
 	}
@@ -335,7 +345,7 @@ func TestAdminUpdateUser_DisableUser(t *testing.T) {
 	target := userRepo.addUser(model.RoleUser, true)
 
 	active := false
-	updated, err := svc.UpdateUser(ctx, caller.ID, target.ID, nil, &active)
+	updated, err := svc.UpdateUser(ctx, caller.ID, target.ID, nil, &active, nil)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -351,7 +361,7 @@ func TestAdminUpdateUser_NotFound(t *testing.T) {
 	caller := userRepo.addUser(model.RoleAdmin, true)
 
 	role := model.RoleAdmin
-	_, err := svc.UpdateUser(ctx, caller.ID, uuid.New(), &role, nil)
+	_, err := svc.UpdateUser(ctx, caller.ID, uuid.New(), &role, nil, nil)
 	if !errors.Is(err, model.ErrNotFound) {
 		t.Fatalf("expected ErrNotFound, got %v", err)
 	}
@@ -578,6 +588,81 @@ func TestResetUserPassword_Success(t *testing.T) {
 	updated, _ := userRepo.GetByID(ctx, user.ID)
 	if !updated.ForcePasswordChange {
 		t.Fatal("expected ForcePasswordChange to be true after reset")
+	}
+}
+
+// --- MaxProjects tests ---
+
+func TestAdminUpdateUser_SetMaxProjects(t *testing.T) {
+	svc, userRepo, _, _ := newTestAdminService()
+	ctx := context.Background()
+
+	caller := userRepo.addUser(model.RoleAdmin, true)
+	target := userRepo.addUser(model.RoleUser, true)
+
+	limit := 10
+	updated, err := svc.UpdateUser(ctx, caller.ID, target.ID, nil, nil, &limit)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if updated.MaxProjects == nil || *updated.MaxProjects != 10 {
+		t.Fatalf("expected max_projects=10, got %v", updated.MaxProjects)
+	}
+}
+
+func TestAdminUpdateUser_ClearMaxProjects(t *testing.T) {
+	svc, userRepo, _, _ := newTestAdminService()
+	ctx := context.Background()
+
+	caller := userRepo.addUser(model.RoleAdmin, true)
+	target := userRepo.addUser(model.RoleUser, true)
+
+	// First set it
+	limit := 10
+	_, err := svc.UpdateUser(ctx, caller.ID, target.ID, nil, nil, &limit)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Clear it with -1
+	clear := -1
+	updated, err := svc.UpdateUser(ctx, caller.ID, target.ID, nil, nil, &clear)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if updated.MaxProjects != nil {
+		t.Fatalf("expected max_projects=nil after clear, got %v", updated.MaxProjects)
+	}
+}
+
+func TestAdminUpdateUser_SetMaxProjectsZero(t *testing.T) {
+	svc, userRepo, _, _ := newTestAdminService()
+	ctx := context.Background()
+
+	caller := userRepo.addUser(model.RoleAdmin, true)
+	target := userRepo.addUser(model.RoleUser, true)
+
+	limit := 0
+	updated, err := svc.UpdateUser(ctx, caller.ID, target.ID, nil, nil, &limit)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if updated.MaxProjects == nil || *updated.MaxProjects != 0 {
+		t.Fatalf("expected max_projects=0 (unlimited), got %v", updated.MaxProjects)
+	}
+}
+
+func TestAdminUpdateUser_InvalidMaxProjects(t *testing.T) {
+	svc, userRepo, _, _ := newTestAdminService()
+	ctx := context.Background()
+
+	caller := userRepo.addUser(model.RoleAdmin, true)
+	target := userRepo.addUser(model.RoleUser, true)
+
+	invalid := -2
+	_, err := svc.UpdateUser(ctx, caller.ID, target.ID, nil, nil, &invalid)
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation for -2, got %v", err)
 	}
 }
 

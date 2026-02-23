@@ -12,7 +12,7 @@ export function useAdminUsers() {
 export function useUpdateUser() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ userId, input }: { userId: string; input: { global_role?: string; is_active?: boolean } }) =>
+    mutationFn: ({ userId, input }: { userId: string; input: { global_role?: string; is_active?: boolean; max_projects?: number } }) =>
       updateUser(userId, input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin', 'users'] })

@@ -20,6 +20,23 @@ export function useProjects() {
   return useQuery({
     queryKey: ['projects'],
     queryFn: listProjects,
+    select: (data) => data.projects,
+  })
+}
+
+export function useOwnedProjectCount() {
+  return useQuery({
+    queryKey: ['projects'],
+    queryFn: listProjects,
+    select: (data) => data.ownedProjectCount,
+  })
+}
+
+export function useMaxProjects() {
+  return useQuery({
+    queryKey: ['projects'],
+    queryFn: listProjects,
+    select: (data) => data.maxProjects,
   })
 }
 

@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
-import { Check, ChevronDown, ChevronRight, Copy, KeyRound, Plus, Trash2 } from 'lucide-react'
+import { Check, ChevronDown, ChevronRight, Copy, KeyRound, Plus, Save, Trash2 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAdminUsers, useUpdateUser, useCreateUser, useResetUserPassword, useUserProjects, useAddUserToProject, useUpdateUserProjectRole, useRemoveUserFromProject } from '@/hooks/useAdmin'
 import { usePreference, useSetPreference } from '@/hooks/usePreferences'
 import { useProjects } from '@/hooks/useProjects'
+import { useSystemSetting, useSetSystemSetting } from '@/hooks/useSystemSettings'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import { ProjectKeyBadge } from '@/components/ui/ProjectKeyBadge'
@@ -63,6 +64,74 @@ export function AdminUsersPage() {
   const [revealedUserName, setRevealedUserName] = useState('')
   const [resetTarget, setResetTarget] = useState<AdminUser | null>(null)
   const [copied, setCopied] = useState(false)
+
+  // Global default project limit
+  const { data: savedProjectLimit, isLoading: limitLoading } = useSystemSetting<number>('max_projects_per_user')
+  const setSettingMutation = useSetSystemSetting()
+  const [projectLimit, setProjectLimit] = useState('')
+  const [limitSaved, setLimitSaved] = useState(false)
+
+  useEffect(() => {
+    if (savedProjectLimit !== undefined) {
+      setProjectLimit(savedProjectLimit != null ? String(savedProjectLimit) : '5')
+    }
+  }, [savedProjectLimit])
+
+  const limitDirty = projectLimit !== (savedProjectLimit != null ? String(savedProjectLimit) : '5')
+
+  function handleLimitSave() {
+    setLimitSaved(false)
+    const value = parseInt(projectLimit, 10)
+    if (isNaN(value) || value < 0) return
+    setSettingMutation.mutate(
+      { key: 'max_projects_per_user', value },
+      { onSuccess: () => setLimitSaved(true) },
+    )
+  }
+
+  // Per-user project limit
+  const [userLimitInputs, setUserLimitInputs] = useState<Record<string, string>>({})
+
+  function handleUserLimitChange(userId: string, value: string) {
+    setUserLimitInputs((prev) => ({ ...prev, [userId]: value }))
+  }
+
+  function handleUserLimitSave(userId: string, currentMaxProjects: number | null | undefined) {
+    const raw = userLimitInputs[userId]
+    if (raw === undefined) return
+    const trimmed = raw.trim()
+
+    // Empty means "reset to default" (send -1)
+    if (trimmed === '') {
+      if (currentMaxProjects == null) return // already default, no-op
+      updateUserMutation.mutate(
+        { userId, input: { max_projects: -1 } },
+        { onSuccess: () => showSaved(`limit:${userId}`) },
+      )
+      return
+    }
+
+    const value = parseInt(trimmed, 10)
+    if (isNaN(value) || value < 0) return
+    if (currentMaxProjects != null && value === currentMaxProjects) return // unchanged
+    updateUserMutation.mutate(
+      { userId, input: { max_projects: value } },
+      { onSuccess: () => showSaved(`limit:${userId}`) },
+    )
+  }
+
+  function getUserLimitDisplay(u: AdminUser): string {
+    if (userLimitInputs[u.id] !== undefined) return userLimitInputs[u.id]
+    if (u.max_projects != null) return String(u.max_projects)
+    return ''
+  }
+
+  function isUserLimitDirty(u: AdminUser): boolean {
+    const raw = userLimitInputs[u.id]
+    if (raw === undefined) return false
+    const current = u.max_projects != null ? String(u.max_projects) : ''
+    return raw !== current
+  }
 
   function showSaved(key: string) {
     setSaved((prev) => ({ ...prev, [key]: true }))
@@ -209,6 +278,38 @@ export function AdminUsersPage() {
         </div>
       </div>
 
+      {/* Global default project limit */}
+      <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+        <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
+          {t('admin.general.projectLimit.title')}
+        </h3>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+          {t('admin.general.projectLimit.help')}
+        </p>
+        <div className="flex items-end gap-3">
+          <Input
+            label={t('admin.general.projectLimit.label')}
+            type="number"
+            min={0}
+            value={projectLimit}
+            onChange={(e) => { setProjectLimit(e.target.value); setLimitSaved(false) }}
+            className="w-24"
+            disabled={limitLoading}
+          />
+          <Button
+            onClick={handleLimitSave}
+            disabled={!limitDirty || setSettingMutation.isPending}
+          >
+            {setSettingMutation.isPending ? t('common.saving') : t('common.save')}
+          </Button>
+          {limitSaved && (
+            <span className="text-sm text-green-600 dark:text-green-400 pb-2">
+              {t('admin.general.projectLimit.saved')}
+            </span>
+          )}
+        </div>
+      </div>
+
       {error && (
         <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
       )}
@@ -241,8 +342,30 @@ export function AdminUsersPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                    {(saved[`role:${u.id}`] || saved[`status:${u.id}`]) && (
+                    {(saved[`role:${u.id}`] || saved[`status:${u.id}`] || saved[`limit:${u.id}`]) && (
                       <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
+                    )}
+                    {u.global_role !== 'admin' && (
+                      <Tooltip content={t('admin.users.maxProjectsHelp')}>
+                        <span className="inline-flex items-center gap-1">
+                          <input
+                            type="number"
+                            min={0}
+                            className="w-[5.2rem] rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-1.5 py-1 text-xs text-center shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            placeholder={t('admin.users.maxProjectsDefault')}
+                            value={getUserLimitDisplay(u)}
+                            onChange={(e) => handleUserLimitChange(u.id, e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') handleUserLimitSave(u.id, u.max_projects) }}
+                          />
+                          <button
+                            className={`px-1 py-1 rounded-md border ${isUserLimitDirty(u) ? 'border-indigo-400 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-500 dark:text-indigo-400 dark:hover:bg-indigo-900/30' : 'border-gray-300 text-gray-300 cursor-default dark:border-gray-600 dark:text-gray-600'}`}
+                            onClick={() => isUserLimitDirty(u) && handleUserLimitSave(u.id, u.max_projects)}
+                            disabled={!isUserLimitDirty(u)}
+                          >
+                            <Save className="h-3.5 w-3.5" />
+                          </button>
+                        </span>
+                      </Tooltip>
                     )}
                     {!isSelf ? (
                       <select

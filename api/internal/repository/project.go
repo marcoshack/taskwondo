@@ -130,6 +130,20 @@ func (r *ProjectRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
+// CountByOwner returns the number of non-deleted projects where the given user is the owner.
+func (r *ProjectRepository) CountByOwner(ctx context.Context, userID uuid.UUID) (int, error) {
+	var count int
+	err := r.db.QueryRowContext(ctx,
+		`SELECT COUNT(*)
+		 FROM projects p
+		 INNER JOIN project_members pm ON pm.project_id = p.id
+		 WHERE pm.user_id = $1 AND pm.role = 'owner' AND p.deleted_at IS NULL`, userID).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("counting projects by user: %w", err)
+	}
+	return count, nil
+}
+
 // GetSummaries returns aggregate counts (members, open, in_progress) for the given project IDs.
 // Open counts items whose status belongs to the "todo" category; in_progress counts the "in_progress" category.
 func (r *ProjectRepository) GetSummaries(ctx context.Context, projectIDs []uuid.UUID) (map[uuid.UUID]model.ProjectSummary, error) {

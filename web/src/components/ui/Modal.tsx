@@ -7,7 +7,7 @@ import { useKeyboardShortcutContext } from '@/contexts/KeyboardShortcutContext'
 interface ModalProps {
   open: boolean
   onClose: () => void
-  title?: string
+  title?: ReactNode
   position?: 'center' | 'top'
   size?: 'default' | 'full'
   className?: string

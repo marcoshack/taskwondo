@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"time"
@@ -22,6 +23,7 @@ type ProjectRepository interface {
 	ListByUser(ctx context.Context, userID uuid.UUID) ([]model.Project, error)
 	ListAll(ctx context.Context) ([]model.Project, error)
 	GetSummaries(ctx context.Context, projectIDs []uuid.UUID) (map[uuid.UUID]model.ProjectSummary, error)
+	CountByOwner(ctx context.Context, userID uuid.UUID) (int, error)
 	Update(ctx context.Context, project *model.Project) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }
@@ -45,26 +47,47 @@ type ProjectTypeWorkflowRepository interface {
 
 // ProjectService handles project business logic and authorization.
 type ProjectService struct {
-	projects      ProjectRepository
-	members       ProjectMemberRepository
-	users         UserRepository
-	workflows     WorkflowRepository
-	typeWorkflows ProjectTypeWorkflowRepository
+	projects       ProjectRepository
+	members        ProjectMemberRepository
+	users          UserRepository
+	workflows      WorkflowRepository
+	typeWorkflows  ProjectTypeWorkflowRepository
+	systemSettings SystemSettingRepositoryInterface
 }
 
 // NewProjectService creates a new ProjectService.
-func NewProjectService(projects ProjectRepository, members ProjectMemberRepository, users UserRepository, workflows WorkflowRepository, typeWorkflows ProjectTypeWorkflowRepository) *ProjectService {
+func NewProjectService(projects ProjectRepository, members ProjectMemberRepository, users UserRepository, workflows WorkflowRepository, typeWorkflows ProjectTypeWorkflowRepository, systemSettings SystemSettingRepositoryInterface) *ProjectService {
 	return &ProjectService{
-		projects:      projects,
-		members:       members,
-		users:         users,
-		workflows:     workflows,
-		typeWorkflows: typeWorkflows,
+		projects:       projects,
+		members:        members,
+		users:          users,
+		workflows:      workflows,
+		typeWorkflows:  typeWorkflows,
+		systemSettings: systemSettings,
 	}
 }
 
 // Create creates a new project and adds the creator as owner.
 func (s *ProjectService) Create(ctx context.Context, info *model.AuthInfo, name, key string, description *string, defaultWorkflowID *uuid.UUID) (*model.Project, error) {
+	// Enforce per-user project limit (admins are exempt)
+	if info.GlobalRole != model.RoleAdmin {
+		limit, err := s.resolveProjectLimit(ctx, info.UserID)
+		if err != nil {
+			return nil, fmt.Errorf("resolving project limit: %w", err)
+		}
+
+		// limit == 0 means unlimited
+		if limit > 0 {
+			count, err := s.projects.CountByOwner(ctx, info.UserID)
+			if err != nil {
+				return nil, fmt.Errorf("counting user projects: %w", err)
+			}
+			if count >= limit {
+				return nil, fmt.Errorf("project ownership limit reached; contact an administrator to increase your limit: %w", model.ErrForbidden)
+			}
+		}
+	}
+
 	if !projectKeyRegexp.MatchString(key) {
 		return nil, fmt.Errorf("project key must be 2-5 uppercase alphanumeric characters starting with a letter: %w", model.ErrConflict)
 	}
@@ -182,6 +205,46 @@ func (s *ProjectService) ListWithSummary(ctx context.Context, info *model.AuthIn
 		}
 	}
 	return result, nil
+}
+
+// CountOwnedByUser returns the number of projects owned by the given user.
+func (s *ProjectService) CountOwnedByUser(ctx context.Context, userID uuid.UUID) (int, error) {
+	return s.projects.CountByOwner(ctx, userID)
+}
+
+// resolveProjectLimit returns the effective project limit for a user.
+// Priority: per-user MaxProjects > global system setting > hardcoded default.
+func (s *ProjectService) resolveProjectLimit(ctx context.Context, userID uuid.UUID) (int, error) {
+	user, err := s.users.GetByID(ctx, userID)
+	if err != nil {
+		// If user not found, fall back to global limit
+		log.Ctx(ctx).Warn().Err(err).Msg("could not fetch user for project limit; using global default")
+		return s.globalProjectLimit(ctx), nil
+	}
+	if user.MaxProjects != nil {
+		return *user.MaxProjects, nil
+	}
+	return s.globalProjectLimit(ctx), nil
+}
+
+// globalProjectLimit returns the global max_projects_per_user setting, or the default.
+func (s *ProjectService) globalProjectLimit(ctx context.Context) int {
+	if setting, err := s.systemSettings.Get(ctx, model.SettingMaxProjectsPerUser); err == nil {
+		var v int
+		if json.Unmarshal(setting.Value, &v) == nil && v >= 0 {
+			return v
+		}
+	}
+	return model.DefaultMaxProjectsPerUser
+}
+
+// ResolveEffectiveLimit returns the effective project limit for the given auth info.
+// Admins get 0 (unlimited).
+func (s *ProjectService) ResolveEffectiveLimit(ctx context.Context, info *model.AuthInfo) (int, error) {
+	if info.GlobalRole == model.RoleAdmin {
+		return 0, nil
+	}
+	return s.resolveProjectLimit(ctx, info.UserID)
 }
 
 // Update modifies a project. Requires owner or admin role.

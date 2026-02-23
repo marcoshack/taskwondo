@@ -22,6 +22,7 @@ type User struct {
 	AvatarURL           *string    `json:"avatar_url,omitempty"`
 	IsActive            bool       `json:"is_active"`
 	ForcePasswordChange bool       `json:"force_password_change"`
+	MaxProjects         *int       `json:"max_projects,omitempty"`
 	LastLoginAt         *time.Time `json:"last_login_at,omitempty"`
 	CreatedAt    time.Time  `json:"created_at"`
 	UpdatedAt    time.Time  `json:"updated_at"`

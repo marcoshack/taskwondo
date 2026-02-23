@@ -11,7 +11,7 @@ export function SystemGeneralPage() {
   const setSettingMutation = useSetSystemSetting()
 
   const [brandName, setBrandName] = useState('')
-  const [saved, setSaved] = useState(false)
+  const [brandSaved, setBrandSaved] = useState(false)
 
   useEffect(() => {
     if (savedBrandName !== undefined) {
@@ -19,17 +19,17 @@ export function SystemGeneralPage() {
     }
   }, [savedBrandName])
 
-  const handleSave = () => {
-    setSaved(false)
+  const handleBrandSave = () => {
+    setBrandSaved(false)
     setSettingMutation.mutate(
       { key: 'brand_name', value: brandName.trim() || null },
       {
-        onSuccess: () => setSaved(true),
+        onSuccess: () => setBrandSaved(true),
       },
     )
   }
 
-  const isDirty = brandName !== (savedBrandName ?? '')
+  const brandDirty = brandName !== (savedBrandName ?? '')
 
   if (isLoading) {
     return (
@@ -40,7 +40,7 @@ export function SystemGeneralPage() {
   }
 
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-3xl space-y-6">
       <div className="mb-6">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
           {t('admin.general.title')}
@@ -61,7 +61,7 @@ export function SystemGeneralPage() {
             value={brandName}
             onChange={(e) => {
               setBrandName(e.target.value)
-              setSaved(false)
+              setBrandSaved(false)
             }}
             placeholder="Taskwondo"
           />
@@ -71,12 +71,12 @@ export function SystemGeneralPage() {
 
           <div className="flex items-center gap-3">
             <Button
-              onClick={handleSave}
-              disabled={!isDirty || setSettingMutation.isPending}
+              onClick={handleBrandSave}
+              disabled={!brandDirty || setSettingMutation.isPending}
             >
               {setSettingMutation.isPending ? t('common.saving') : t('common.save')}
             </Button>
-            {saved && (
+            {brandSaved && (
               <span className="text-sm text-green-600 dark:text-green-400">
                 {t('admin.general.brand.saved')}
               </span>

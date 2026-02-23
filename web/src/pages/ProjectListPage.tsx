@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
-import { useProjects, useCreateProject } from '@/hooks/useProjects'
+import { useProjects, useCreateProject, useOwnedProjectCount, useMaxProjects } from '@/hooks/useProjects'
+import { useAuth } from '@/contexts/AuthContext'
 import { DataTable } from '@/components/ui/DataTable'
 import { Spinner } from '@/components/ui/Spinner'
 import { Button } from '@/components/ui/Button'
@@ -55,8 +56,16 @@ function IconMembers({ className }: { className?: string }) {
 export function ProjectListPage() {
   const { t } = useTranslation()
   const { data: projects, isLoading, error } = useProjects()
+  const { data: ownedCount } = useOwnedProjectCount()
+  const { data: maxProjectsValue } = useMaxProjects()
+  const { user } = useAuth()
   const navigate = useNavigate()
   const createMutation = useCreateProject()
+
+  const isAdmin = user?.global_role === 'admin'
+  const maxProjects = maxProjectsValue ?? 5
+  const projectCount = ownedCount ?? 0
+  const atLimit = !isAdmin && maxProjects > 0 && projectCount >= maxProjects
 
   const [showCreate, setShowCreate] = useState(false)
   const [activeRow, setActiveRow] = useState(-1)
@@ -228,7 +237,23 @@ export function ProjectListPage() {
         />
       </div>
 
-      <Modal open={showCreate} onClose={() => setShowCreate(false)} title={t('projects.create.title')}>
+      <Modal
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+        title={
+          <span className="flex items-center gap-3">
+            {t('projects.create.title')}
+            {!isAdmin && maxProjects > 0 && (
+              <span className={`text-sm font-normal ${atLimit ? 'text-amber-500 dark:text-amber-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                {t('projects.limitCounter', { count: projectCount, limit: maxProjects })}
+              </span>
+            )}
+          </span>
+        }
+      >
+        {atLimit && (
+          <p className="text-sm text-amber-600 dark:text-amber-400 mb-4">{t('projects.limitReached')}</p>
+        )}
         <form onSubmit={handleCreate} className="space-y-4">
           <Input
             label={t('projects.create.name')}
@@ -236,6 +261,7 @@ export function ProjectListPage() {
             onChange={(e) => setName(e.target.value)}
             placeholder={t('projects.create.namePlaceholder')}
             required
+            disabled={atLimit}
           />
           <Input
             label={t('projects.create.key')}
@@ -244,6 +270,7 @@ export function ProjectListPage() {
             placeholder={t('projects.create.keyPlaceholder')}
             maxLength={5}
             required
+            disabled={atLimit}
           />
           <p className="text-xs text-gray-400 dark:text-gray-500 -mt-3">{t('projects.create.keyHint')}</p>
           <Input
@@ -251,11 +278,12 @@ export function ProjectListPage() {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder={t('projects.create.descriptionPlaceholder')}
+            disabled={atLimit}
           />
           {formError && <p className="text-sm text-red-600 dark:text-red-400">{formError}</p>}
           <div className="flex justify-end gap-3 pt-2">
             <Button type="button" variant="secondary" onClick={() => setShowCreate(false)}>{t('common.cancel')}</Button>
-            <Button type="submit" disabled={createMutation.isPending || !name.trim() || !key.trim()}>
+            <Button type="submit" disabled={atLimit || createMutation.isPending || !name.trim() || !key.trim()}>
               {createMutation.isPending ? t('common.creating') : t('common.create')}
             </Button>
           </div>

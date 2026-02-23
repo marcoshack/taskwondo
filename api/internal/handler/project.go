@@ -171,6 +171,20 @@ func (h *ProjectHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ownedCount, err := h.projects.CountOwnedByUser(r.Context(), info.UserID)
+	if err != nil {
+		log.Ctx(r.Context()).Error().Err(err).Msg("failed to count owned projects")
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		return
+	}
+
+	effectiveLimit, err := h.projects.ResolveEffectiveLimit(r.Context(), info)
+	if err != nil {
+		log.Ctx(r.Context()).Error().Err(err).Msg("failed to resolve project limit")
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		return
+	}
+
 	resp := make([]projectListItemResponse, len(projects))
 	for i := range projects {
 		resp[i] = projectListItemResponse{
@@ -181,7 +195,13 @@ func (h *ProjectHandler) List(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	writeData(w, http.StatusOK, resp)
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"data": resp,
+		"meta": map[string]interface{}{
+			"owned_project_count": ownedCount,
+			"max_projects":        effectiveLimit,
+		},
+	})
 }
 
 // Get handles GET /api/v1/projects/{projectKey}

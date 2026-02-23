@@ -5,6 +5,14 @@ import (
 	"time"
 )
 
+// Well-known system setting keys.
+const (
+	SettingMaxProjectsPerUser = "max_projects_per_user"
+)
+
+// DefaultMaxProjectsPerUser is the fallback when the setting is not configured.
+const DefaultMaxProjectsPerUser = 5
+
 // SystemSetting stores a global key-value setting (not scoped to any user or project).
 type SystemSetting struct {
 	Key       string          `json:"key"`
