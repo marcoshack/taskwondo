@@ -157,7 +157,7 @@ export function ProjectWorkflowsPage() {
                 <div className="flex flex-wrap gap-1.5">
                   {wf.statuses.map((s) => (
                     <Badge key={s.name} color={CATEGORY_COLORS[s.category] ?? 'gray'}>
-                      {s.display_name}
+                      {t(`workitems.statuses.${s.name}`, { defaultValue: s.display_name })}
                     </Badge>
                   ))}
                 </div>
@@ -219,7 +219,7 @@ export function ProjectWorkflowsPage() {
                 <div className="flex flex-wrap gap-1.5">
                   {wf.statuses.map((s) => (
                     <Badge key={s.name} color={CATEGORY_COLORS[s.category] ?? 'gray'}>
-                      {s.display_name}
+                      {t(`workitems.statuses.${s.name}`, { defaultValue: s.display_name })}
                     </Badge>
                   ))}
                 </div>
@@ -554,7 +554,7 @@ function WorkflowDetailModal({
             <div className="flex flex-wrap gap-1.5">
               {workflow.statuses.map((s) => (
                 <Badge key={s.name} color={CATEGORY_COLORS[s.category] ?? 'gray'}>
-                  {s.display_name}
+                  {t(`workitems.statuses.${s.name}`, { defaultValue: s.display_name })}
                 </Badge>
               ))}
             </div>
@@ -572,11 +572,11 @@ function WorkflowDetailModal({
                   return (
                     <div key={tr.id} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                       <Badge color={CATEGORY_COLORS[fromStatus?.category ?? ''] ?? 'gray'}>
-                        {fromStatus?.display_name ?? tr.from_status}
+                        {t(`workitems.statuses.${tr.from_status}`, { defaultValue: fromStatus?.display_name ?? tr.from_status })}
                       </Badge>
                       <ArrowRight className="h-3.5 w-3.5 text-gray-400 shrink-0" />
                       <Badge color={CATEGORY_COLORS[toStatus?.category ?? ''] ?? 'gray'}>
-                        {toStatus?.display_name ?? tr.to_status}
+                        {t(`workitems.statuses.${tr.to_status}`, { defaultValue: toStatus?.display_name ?? tr.to_status })}
                       </Badge>
                       {tr.name && (
                         <span className="text-xs text-gray-400 ml-1">({tr.name})</span>
@@ -822,7 +822,7 @@ function WorkflowEditorModal({
                   }`}
                 >
                   {isSelected && <span className="text-indigo-500">&#10003;</span>}
-                  {status.display_name}
+                  {t(`workitems.statuses.${status.name}`, { defaultValue: status.display_name })}
                   <span className="text-[10px] opacity-60">({status.category})</span>
                 </button>
               )
@@ -836,7 +836,7 @@ function WorkflowEditorModal({
               <div className="flex flex-wrap gap-1.5">
                 {[...statuses].sort((a, b) => a.position - b.position).map((s, idx) => (
                   <Badge key={s.name} color={CATEGORY_COLORS[s.category] ?? 'gray'}>
-                    {idx + 1}. {s.display_name}
+                    {idx + 1}. {t(`workitems.statuses.${s.name}`, { defaultValue: s.display_name })}
                   </Badge>
                 ))}
               </div>
@@ -873,7 +873,7 @@ function WorkflowEditorModal({
                     onChange={(e) => updateTransition(idx, 'from_status', e.target.value)}
                   >
                     {statuses.map((s) => (
-                      <option key={s.name} value={s.name}>{s.display_name}</option>
+                      <option key={s.name} value={s.name}>{t(`workitems.statuses.${s.name}`, { defaultValue: s.display_name })}</option>
                     ))}
                   </select>
                   <ArrowRight className="h-3.5 w-3.5 text-gray-400 shrink-0" />
@@ -883,7 +883,7 @@ function WorkflowEditorModal({
                     onChange={(e) => updateTransition(idx, 'to_status', e.target.value)}
                   >
                     {statuses.map((s) => (
-                      <option key={s.name} value={s.name}>{s.display_name}</option>
+                      <option key={s.name} value={s.name}>{t(`workitems.statuses.${s.name}`, { defaultValue: s.display_name })}</option>
                     ))}
                   </select>
                   <input
