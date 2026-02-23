@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { usePreference, useSetPreference } from '@/hooks/usePreferences'
 import { useAuth } from '@/contexts/AuthContext'
-import { LANGUAGE_KEY } from '@/i18n'
+import i18n, { LANGUAGE_KEY } from '@/i18n'
 
 export type Language = 'en' | 'pt' | 'es' | 'fr' | 'de' | 'ja' | 'ko' | 'zh' | 'ar'
 
@@ -33,16 +33,21 @@ function isValidLanguage(v: unknown): v is Language {
   return SUPPORTED_LANGUAGES.some((l) => l.value === v)
 }
 
-function getStoredLanguage(): Language {
+function getInitialLanguage(): Language {
   const stored = localStorage.getItem(LANGUAGE_KEY)
   if (isValidLanguage(stored)) return stored
+
+  // Use the language i18next detected from the browser (navigator.language)
+  const detected = i18n.language?.split('-')[0]
+  if (isValidLanguage(detected)) return detected
+
   return 'en'
 }
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
   const { i18n } = useTranslation()
-  const [language, setLanguageState] = useState<Language>(getStoredLanguage)
+  const [language, setLanguageState] = useState<Language>(getInitialLanguage)
 
   const { data: apiLanguage } = usePreference<string>(user ? 'language' : '')
   const setPreferenceMutation = useSetPreference()
