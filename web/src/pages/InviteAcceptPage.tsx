@@ -35,9 +35,15 @@ export function InviteAcceptPage() {
     setAutoAccepting(true)
 
     acceptMutation.mutateAsync(code)
-      .then((project) => {
-        showNotification(t('invite.accepted', { projectName: inviteInfo.project_name }))
-        navigate(`/projects/${project.key}`, { replace: true })
+      .then((result) => {
+        if (result.role_not_applied) {
+          const existingRole = t(`projects.settings.roles.${result.existing_role}`)
+          const inviteRole = t(`projects.settings.roles.${result.invite_role}`)
+          showNotification(t('invite.roleNotApplied', { existingRole, inviteRole }))
+        } else {
+          showNotification(t('invite.accepted', { projectName: inviteInfo.project_name }))
+        }
+        navigate(`/projects/${result.key}`, { replace: true })
       })
       .catch((err) => {
         setAutoAccepting(false)
@@ -119,10 +125,16 @@ export function InviteAcceptPage() {
 
   const handleAccept = async () => {
     try {
-      const project = await acceptMutation.mutateAsync(code ?? '')
+      const result = await acceptMutation.mutateAsync(code ?? '')
       localStorage.removeItem(PENDING_INVITE_KEY)
-      showNotification(t('invite.accepted', { projectName: inviteInfo.project_name }))
-      navigate(`/projects/${project.key}`, { replace: true })
+      if (result.role_not_applied) {
+        const existingRole = t(`projects.settings.roles.${result.existing_role}`)
+        const inviteRole = t(`projects.settings.roles.${result.invite_role}`)
+        showNotification(t('invite.roleNotApplied', { existingRole, inviteRole }))
+      } else {
+        showNotification(t('invite.accepted', { projectName: inviteInfo.project_name }))
+      }
+      navigate(`/projects/${result.key}`, { replace: true })
     } catch (err) {
       if (isAxiosError(err) && err.response?.status === 409) {
         showNotification(t('invite.alreadyMember'), 'error')

@@ -183,7 +183,13 @@ export async function getInviteInfo(code: string) {
   return res.data.data
 }
 
+export interface AcceptInviteResult extends Project {
+  role_not_applied?: boolean
+  existing_role?: string
+  invite_role?: string
+}
+
 export async function acceptInvite(code: string) {
-  const res = await api.post<{ data: Project }>(`/invites/${code}/accept`)
+  const res = await api.post<{ data: AcceptInviteResult }>(`/invites/${code}/accept`)
   return res.data.data
 }

@@ -820,8 +820,32 @@ func (s *ProjectService) GetInviteInfo(ctx context.Context, code string) (*model
 	return info, nil
 }
 
+// AcceptInviteResult contains the result of accepting an invite.
+type AcceptInviteResult struct {
+	Project        *model.Project
+	RoleNotApplied bool   // true if user already had a higher role
+	ExistingRole   string // populated when RoleNotApplied is true
+	InviteRole     string // populated when RoleNotApplied is true
+}
+
+// roleRank returns a numeric rank for project roles (higher = more access).
+func roleRank(role string) int {
+	switch role {
+	case model.ProjectRoleOwner:
+		return 4
+	case model.ProjectRoleAdmin:
+		return 3
+	case model.ProjectRoleMember:
+		return 2
+	case model.ProjectRoleViewer:
+		return 1
+	default:
+		return 0
+	}
+}
+
 // AcceptInvite uses an invite code to join a project. Requires authentication.
-func (s *ProjectService) AcceptInvite(ctx context.Context, info *model.AuthInfo, code string) (*model.Project, error) {
+func (s *ProjectService) AcceptInvite(ctx context.Context, info *model.AuthInfo, code string) (*AcceptInviteResult, error) {
 	invite, err := s.invites.GetByCode(ctx, code)
 	if err != nil {
 		return nil, err
@@ -846,13 +870,15 @@ func (s *ProjectService) AcceptInvite(ctx context.Context, info *model.AuthInfo,
 		return nil, fmt.Errorf("invite has reached maximum uses: %w", model.ErrValidation)
 	}
 
-	// Check if already a member — upgrade role if invite grants a different one
+	// Check if already a member — only upgrade, never downgrade
+	result := &AcceptInviteResult{Project: project}
 	existing, err := s.members.GetByProjectAndUser(ctx, project.ID, info.UserID)
 	if err != nil && err != model.ErrNotFound {
 		return nil, fmt.Errorf("checking membership: %w", err)
 	}
 	if existing != nil {
-		if existing.Role != invite.Role {
+		if roleRank(invite.Role) > roleRank(existing.Role) {
+			// Upgrade to the higher role from the invite
 			if err := s.members.UpdateRole(ctx, project.ID, info.UserID, invite.Role); err != nil {
 				return nil, fmt.Errorf("updating member role: %w", err)
 			}
@@ -862,7 +888,19 @@ func (s *ProjectService) AcceptInvite(ctx context.Context, info *model.AuthInfo,
 				Str("old_role", existing.Role).
 				Str("new_role", invite.Role).
 				Msg("upgraded member role via invite")
+		} else if roleRank(invite.Role) < roleRank(existing.Role) {
+			// Invite would downgrade — ignore but inform the caller
+			result.RoleNotApplied = true
+			result.ExistingRole = existing.Role
+			result.InviteRole = invite.Role
+			log.Ctx(ctx).Info().
+				Str("project_key", project.Key).
+				Str("user_id", info.UserID.String()).
+				Str("existing_role", existing.Role).
+				Str("invite_role", invite.Role).
+				Msg("invite role not applied: user already has higher access")
 		}
+		// Same role: no-op
 	} else {
 		// Add as new member
 		member := &model.ProjectMember{
@@ -888,7 +926,7 @@ func (s *ProjectService) AcceptInvite(ctx context.Context, info *model.AuthInfo,
 		Str("invite_code", code).
 		Msg("user joined project via invite")
 
-	return project, nil
+	return result, nil
 }
 
 const base62Chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"

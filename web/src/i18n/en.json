@@ -678,5 +678,6 @@
   "invite.goToProject": "Go to project",
   "invite.joining": "Joining...",
   "invite.error": "Failed to join. Please try again.",
-  "invite.accepted": "Invite to {{projectName}} accepted"
+  "invite.accepted": "Invite to {{projectName}} accepted",
+  "invite.roleNotApplied": "You already have {{existingRole}} access — the {{inviteRole}} invite was not applied."
 }

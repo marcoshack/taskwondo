@@ -540,6 +540,13 @@ type inviteInfoResponse struct {
 	Full        bool   `json:"full"`
 }
 
+type acceptInviteResponse struct {
+	projectResponse
+	RoleNotApplied bool   `json:"role_not_applied,omitempty"`
+	ExistingRole   string `json:"existing_role,omitempty"`
+	InviteRole     string `json:"invite_role,omitempty"`
+}
+
 func (h *ProjectHandler) toInviteResponse(inv *model.ProjectInvite) inviteResponse {
 	return inviteResponse{
 		ID:            inv.ID,
@@ -677,13 +684,22 @@ func (h *ProjectHandler) AcceptInvite(w http.ResponseWriter, r *http.Request) {
 
 	code := chi.URLParam(r, "code")
 
-	project, err := h.projects.AcceptInvite(r.Context(), info, code)
+	result, err := h.projects.AcceptInvite(r.Context(), info, code)
 	if err != nil {
 		handleProjectError(w, r, err, "failed to accept invite")
 		return
 	}
 
-	writeData(w, http.StatusOK, toProjectResponse(project))
+	resp := acceptInviteResponse{
+		projectResponse: toProjectResponse(result.Project),
+	}
+	if result.RoleNotApplied {
+		resp.RoleNotApplied = true
+		resp.ExistingRole = result.ExistingRole
+		resp.InviteRole = result.InviteRole
+	}
+
+	writeData(w, http.StatusOK, resp)
 }
 
 func parseExpiresIn(s string) (time.Duration, error) {

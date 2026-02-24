@@ -24,7 +24,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     setNotifications((prev) => [...prev, { id, message, type }])
     setTimeout(() => {
       setNotifications((prev) => prev.filter((n) => n.id !== id))
-    }, 4000)
+    }, 10000)
   }, [])
 
   const dismiss = useCallback((id: number) => {

@@ -2035,12 +2035,12 @@ func TestAcceptInvite_Success(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	project, err := s.svc.AcceptInvite(ctx, joiner, invite.Code)
+	result, err := s.svc.AcceptInvite(ctx, joiner, invite.Code)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if project.Key != "TT" {
-		t.Fatalf("expected project key 'TT', got %s", project.Key)
+	if result.Project.Key != "TT" {
+		t.Fatalf("expected project key 'TT', got %s", result.Project.Key)
 	}
 
 	// Verify membership was created
@@ -2189,6 +2189,64 @@ func TestAcceptInvite_AlreadyMember_RoleUpgrade(t *testing.T) {
 		if m.UserID == joiner.UserID {
 			if m.Role != model.ProjectRoleMember {
 				t.Fatalf("expected role %q after upgrade, got %q", model.ProjectRoleMember, m.Role)
+			}
+			return
+		}
+	}
+	t.Fatal("joiner not found in members list")
+}
+
+func TestAcceptInvite_AlreadyMember_NoDowngrade(t *testing.T) {
+	s := newTestProjectSetup()
+	owner := userAuthInfo()
+	joiner := userAuthInfo()
+	ctx := context.Background()
+
+	_, err := s.svc.Create(ctx, owner, "Test", "TT", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Join as admin first
+	adminInvite, err := s.svc.CreateInvite(ctx, owner, "TT", model.ProjectRoleAdmin, nil, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = s.svc.AcceptInvite(ctx, joiner, adminInvite.Code)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	// Now accept a viewer invite — role should NOT be downgraded
+	viewerInvite, err := s.svc.CreateInvite(ctx, owner, "TT", model.ProjectRoleViewer, nil, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := s.svc.AcceptInvite(ctx, joiner, viewerInvite.Code)
+	if err != nil {
+		t.Fatalf("expected no error for no-downgrade, got %v", err)
+	}
+
+	// Verify the result indicates role was not applied
+	if !result.RoleNotApplied {
+		t.Fatal("expected RoleNotApplied to be true")
+	}
+	if result.ExistingRole != model.ProjectRoleAdmin {
+		t.Fatalf("expected existing role %q, got %q", model.ProjectRoleAdmin, result.ExistingRole)
+	}
+	if result.InviteRole != model.ProjectRoleViewer {
+		t.Fatalf("expected invite role %q, got %q", model.ProjectRoleViewer, result.InviteRole)
+	}
+
+	// Verify the role was NOT changed
+	members, _, err := s.svc.ListMembers(ctx, owner, "TT")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, m := range members {
+		if m.UserID == joiner.UserID {
+			if m.Role != model.ProjectRoleAdmin {
+				t.Fatalf("expected role %q preserved, got %q", model.ProjectRoleAdmin, m.Role)
 			}
 			return
 		}
