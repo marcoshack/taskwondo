@@ -10,6 +10,7 @@ import { ProjectDetailPage } from '@/pages/ProjectDetailPage'
 import { PreferencesPage } from '@/pages/PreferencesPage'
 import { SystemSettingsPage } from '@/pages/SystemSettingsPage'
 import { InviteAcceptPage } from '@/pages/InviteAcceptPage'
+import { CliAuthorizePage } from '@/pages/CliAuthorizePage'
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
       <Route path="/auth/:provider/callback" element={<OAuthCallbackPage />} />
       <Route path="/change-password" element={<ChangePasswordPage />} />
       <Route path="/invite/:code" element={<InviteAcceptPage />} />
+      <Route path="/auth/cli/authorize" element={<CliAuthorizePage />} />
       <Route element={<ProtectedRoute />}>
         <Route element={<AppShell />}>
           <Route path="/projects" element={<ProjectListPage />} />

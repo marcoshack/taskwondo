@@ -1,4 +1,4 @@
-.PHONY: build push help dev dev-db dev-api dev-web up down logs logs-api migrate migrate-new test test-e2e test-e2e-dev test-e2e-report check-env export import release
+.PHONY: build push help dev dev-db dev-api dev-web up down logs logs-api migrate migrate-new test test-e2e test-e2e-dev test-e2e-report check-env export import release build-mcp
 
 # Required environment variables (checked by sourcing .env)
 REQUIRED_VARS := POSTGRES_USER POSTGRES_PASSWORD MINIO_ROOT_USER MINIO_ROOT_PASSWORD JWT_SECRET DATABASE_URL STORAGE_ACCESS_KEY STORAGE_SECRET_KEY
@@ -123,6 +123,12 @@ _release:
 	@echo ""
 	@echo "Contents:"
 	@tar -tzf build/release/taskwondo-$(VERSION).tar.gz | head -20
+
+# --- MCP Server ---
+
+build-mcp: ## Build the MCP server binary
+	mkdir -p build/mcp
+	cd mcp && go build -o ../build/mcp/taskwondo-mcp .
 
 # --- Testing ---
 

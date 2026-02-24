@@ -86,6 +86,28 @@ export async function oauthCallback(provider: string, code: string, state: strin
   return res.data.data
 }
 
+// API keys
+
+interface CreateAPIKeyResponse {
+  data: {
+    id: string
+    name: string
+    key: string
+    key_prefix: string
+    permissions: string[]
+    expires_at?: string
+    created_at: string
+  }
+}
+
+export async function createAPIKey(name: string, permissions: string[] = []) {
+  const res = await api.post<CreateAPIKeyResponse>('/user/api-keys', {
+    name,
+    permissions,
+  })
+  return res.data.data
+}
+
 // Password management
 
 export async function changePassword(oldPassword: string, newPassword: string) {

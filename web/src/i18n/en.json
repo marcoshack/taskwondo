@@ -690,5 +690,17 @@
   "invite.joining": "Joining...",
   "invite.error": "Failed to join. Please try again.",
   "invite.accepted": "Invite to {{projectName}} accepted",
-  "invite.roleNotApplied": "You already have {{existingRole}} access — the {{inviteRole}} invite was not applied."
+  "invite.roleNotApplied": "You already have {{existingRole}} access — the {{inviteRole}} invite was not applied.",
+
+  "cliAuth.title": "Authorize CLI Access",
+  "cliAuth.description": "'{{clientName}}' wants to access your account.",
+  "cliAuth.loggedInAs": "Logged in as {{displayName}} ({{email}})",
+  "cliAuth.permissions": "This will create an API key with full access to your account.",
+  "cliAuth.allow": "Allow",
+  "cliAuth.deny": "Deny",
+  "cliAuth.authorizing": "Authorizing...",
+  "cliAuth.success": "Authorization successful! You can close this tab.",
+  "cliAuth.denied": "Authorization denied. You can close this tab.",
+  "cliAuth.error": "Authorization failed. Please try again.",
+  "cliAuth.missingParams": "Missing required parameters. Please start the login flow from your CLI tool."
 }

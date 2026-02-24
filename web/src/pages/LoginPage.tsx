@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import type { FormEvent } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/Button'
@@ -37,6 +37,7 @@ export function LoginPage() {
   const { t } = useTranslation()
   const { brandName } = useBrand()
   const { user, login } = useAuth()
+  const [searchParams] = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -48,6 +49,10 @@ export function LoginPage() {
   }, [])
 
   if (user) {
+    const next = searchParams.get('next')
+    if (next && next.startsWith('/') && !next.startsWith('//')) {
+      return <Navigate to={next} replace />
+    }
     const pendingInvite = localStorage.getItem(PENDING_INVITE_KEY)
     if (pendingInvite) {
       // Don't remove here — InviteAcceptPage will clean up after accepting.
