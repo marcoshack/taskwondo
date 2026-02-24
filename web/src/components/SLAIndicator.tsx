@@ -10,12 +10,11 @@ interface Props {
   compact?: boolean
 }
 
-const STATUS_COLORS = {
+const STATUS_COLORS: Record<string, string> = {
   on_track: 'text-green-600 dark:text-green-400',
   warning: 'text-yellow-600 dark:text-yellow-400',
   breached: 'text-red-600 dark:text-red-400',
-  paused: 'text-gray-400 dark:text-gray-500',
-} as const
+}
 
 const STATUS_I18N_KEYS: Record<string, string> = {
   on_track: 'sla.onTrack',
@@ -89,15 +88,17 @@ export function SLAIndicator({ sla, compact = false }: Props) {
 
   if (!sla) return null
 
-  const displayStatus = sla.paused ? 'paused' : sla.status
-  const colorClass = STATUS_COLORS[displayStatus] || STATUS_COLORS.on_track
+  const colorClass = STATUS_COLORS[sla.status] || STATUS_COLORS.on_track
   const remaining = sla.remaining_seconds
   const duration = formatDuration(Math.abs(remaining))
   const label = remaining >= 0
     ? t('sla.left', { duration })
     : t('sla.overdue', { duration })
 
-  const tooltipContent = `SLA: ${t(STATUS_I18N_KEYS[displayStatus] ?? sla.status)} — ${label} (${sla.percentage}%)`
+  const statusLabel = t(STATUS_I18N_KEYS[sla.status] ?? sla.status)
+  const tooltipContent = sla.paused
+    ? `SLA: ${t(STATUS_I18N_KEYS.paused)} (${statusLabel}) — ${label} (${sla.percentage}%)`
+    : `SLA: ${statusLabel} — ${label} (${sla.percentage}%)`
   const Icon = sla.paused ? Pause : Clock
 
   if (compact) {
