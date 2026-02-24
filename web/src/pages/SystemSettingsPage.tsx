@@ -10,7 +10,7 @@ import { SystemWorkflowsPage } from './SystemWorkflowsPage'
 
 export function SystemSettingsPage() {
   const { t } = useTranslation()
-  const { collapsed } = useSidebar()
+  const { collapsed } = useSidebar('settings')
   const { guardRef, guardedNavigate } = useNavigationGuard()
 
   const navItems = [

@@ -13,7 +13,7 @@ import type { LucideIcon } from 'lucide-react'
 
 export function SystemSettingsSidebar() {
   const { t } = useTranslation()
-  const { collapsed, toggleCollapsed } = useSidebar()
+  const { collapsed, toggleCollapsed } = useSidebar('settings')
   const { guardRef, guardedNavigate } = useNavigationGuard()
   const base = '/admin'
 

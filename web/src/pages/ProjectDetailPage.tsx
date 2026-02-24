@@ -18,7 +18,7 @@ function PlaceholderPage({ title }: { title: string }) {
 
 export function ProjectDetailPage() {
   const { t } = useTranslation()
-  const { collapsed } = useSidebar()
+  const { collapsed } = useSidebar('project')
   const { projectKey } = useParams<{ projectKey: string }>()
   const { data: project, isLoading, error } = useProject(projectKey ?? '')
 

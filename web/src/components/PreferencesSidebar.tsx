@@ -11,7 +11,7 @@ import type { LucideIcon } from 'lucide-react'
 
 export function PreferencesSidebar() {
   const { t } = useTranslation()
-  const { collapsed, toggleCollapsed } = useSidebar()
+  const { collapsed, toggleCollapsed } = useSidebar('settings')
   const base = '/preferences'
 
   const navItems: { to: string; label: string; icon: LucideIcon; end: boolean }[] = [

@@ -8,7 +8,7 @@ import { APIKeysPage } from './APIKeysPage'
 
 export function PreferencesPage() {
   const { t } = useTranslation()
-  const { collapsed } = useSidebar()
+  const { collapsed } = useSidebar('settings')
 
   const navItems = [
     { to: 'appearance', label: t('preferences.sidebar.appearance'), icon: Palette },

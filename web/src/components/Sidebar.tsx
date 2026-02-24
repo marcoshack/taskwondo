@@ -21,7 +21,7 @@ interface SidebarProps {
 
 export function Sidebar({ projectKey }: SidebarProps) {
   const { t } = useTranslation()
-  const { collapsed, toggleCollapsed, mobileOpen, closeMobile } = useSidebar()
+  const { collapsed, toggleCollapsed, mobileOpen, closeMobile } = useSidebar('project')
   const { guardRef, guardedNavigate } = useNavigationGuard()
   const location = useLocation()
   const base = `/projects/${projectKey}`
