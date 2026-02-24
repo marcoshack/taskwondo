@@ -4,6 +4,8 @@ import type { TFunction } from 'i18next'
 import { useEvents } from '@/hooks/useWorkItems'
 import { useMembers } from '@/hooks/useProjects'
 import { Spinner } from '@/components/ui/Spinner'
+import { DiffPreviewModal } from '@/components/workitems/DiffPreviewModal'
+import type { DiffPreviewTarget } from '@/components/workitems/DiffPreviewModal'
 import type { WorkItemEvent } from '@/api/workitems'
 import type { ProjectMember } from '@/api/projects'
 
@@ -52,6 +54,7 @@ export function ActivityTimeline({ projectKey, itemNumber, sortOrder = 'desc', o
   const { t } = useTranslation()
   const { data: events, isLoading } = useEvents(projectKey, itemNumber)
   const { data: members } = useMembers(projectKey)
+  const [diffTarget, setDiffTarget] = useState<DiffPreviewTarget | null>(null)
 
   if (isLoading) return <Spinner size="sm" />
 
@@ -62,28 +65,37 @@ export function ActivityTimeline({ projectKey, itemNumber, sortOrder = 'desc', o
   const sorted = sortOrder === 'desc' ? [...events].reverse() : events
 
   return (
-    <div className="border-l-2 border-gray-200 dark:border-gray-700 pl-4 space-y-4">
-      {sorted.map((event) => (
-        <div key={event.id} className="relative">
-          <div className="absolute -left-[21px] top-1.5 w-2.5 h-2.5 rounded-full bg-gray-300 dark:bg-gray-600 border-2 border-white dark:border-gray-900" />
-          <div className="text-sm">
-            <span className="font-medium text-gray-700 dark:text-gray-300">{event.actor?.display_name ?? t('common.system')}</span>
-            {' '}
-            <span className="text-gray-500 dark:text-gray-400">{formatEventLabel(event, t)}</span>
-            <CommentLink event={event} onClick={onCommentClick} t={t} />
-            <AttachmentLink event={event} onClick={onAttachmentClick} />
+    <>
+      <div className="border-l-2 border-gray-200 dark:border-gray-700 pl-4 space-y-4">
+        {sorted.map((event) => (
+          <div key={event.id} className="relative">
+            <div className="absolute -left-[21px] top-1.5 w-2.5 h-2.5 rounded-full bg-gray-300 dark:bg-gray-600 border-2 border-white dark:border-gray-900" />
+            <div className="text-sm">
+              <span className="font-medium text-gray-700 dark:text-gray-300">{event.actor?.display_name ?? t('common.system')}</span>
+              {' '}
+              <span className="text-gray-500 dark:text-gray-400">{formatEventLabel(event, t)}</span>
+              <CommentLink event={event} onClick={onCommentClick} t={t} />
+              <AttachmentLink event={event} onClick={onAttachmentClick} />
+            </div>
+            <FieldChangeDiff event={event} members={members} t={t} onExpand={setDiffTarget} />
+            <CommentPreview event={event} t={t} onExpand={setDiffTarget} />
+            <span className="text-xs text-gray-400 dark:text-gray-500">{new Date(event.created_at).toLocaleString()}</span>
           </div>
-          <FieldChangeDiff event={event} members={members} t={t} />
-          <CommentPreview event={event} t={t} />
-          <span className="text-xs text-gray-400 dark:text-gray-500">{new Date(event.created_at).toLocaleString()}</span>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+      <DiffPreviewModal target={diffTarget} onClose={() => setDiffTarget(null)} />
+    </>
   )
 }
 
-function truncate(value: string, max: number = 120): string {
+const TRUNCATE_MAX = 120
+
+function truncate(value: string, max: number = TRUNCATE_MAX): string {
   return value.length > max ? value.slice(0, max) + '\u2026' : value
+}
+
+function isTruncated(value: string, max: number = TRUNCATE_MAX): boolean {
+  return value.length > max
 }
 
 function resolveValue(fieldName: string, value: string, members: ProjectMember[] | undefined, t: TFunction): string {
@@ -98,22 +110,42 @@ function resolveValue(fieldName: string, value: string, members: ProjectMember[]
   return value
 }
 
-function FieldChangeDiff({ event, members, t }: { event: WorkItemEvent; members?: ProjectMember[]; t: TFunction }) {
+function FieldChangeDiff({ event, members, t, onExpand }: { event: WorkItemEvent; members?: ProjectMember[]; t: TFunction; onExpand: (target: DiffPreviewTarget) => void }) {
   if (!event.field_name) return null
   if (!event.old_value && !event.new_value) return null
 
+  const resolvedOld = event.old_value ? resolveValue(event.field_name, event.old_value, members, t) : undefined
+  const resolvedNew = event.new_value ? resolveValue(event.field_name, event.new_value, members, t) : undefined
+  const expandable = (resolvedOld && isTruncated(resolvedOld)) || (resolvedNew && isTruncated(resolvedNew))
+
+  function handleClick() {
+    if (!expandable) return
+    onExpand({
+      kind: 'field',
+      fieldLabel: fieldLabel(event.field_name!, t),
+      oldValue: resolvedOld,
+      newValue: resolvedNew,
+    })
+  }
+
   return (
-    <div className="mt-1 mb-1 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs font-mono overflow-hidden">
-      {event.old_value && (
+    <div
+      className={`mt-1 mb-1 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs font-mono overflow-hidden ${expandable ? 'cursor-pointer hover:border-gray-300 dark:hover:border-gray-600' : ''}`}
+      onClick={handleClick}
+      role={expandable ? 'button' : undefined}
+      tabIndex={expandable ? 0 : undefined}
+      onKeyDown={expandable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClick() } } : undefined}
+    >
+      {resolvedOld && (
         <div className="px-3 py-1.5 bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300 border-b border-gray-200 dark:border-gray-700">
           <span className="select-none text-red-400 mr-2">&minus;</span>
-          {truncate(resolveValue(event.field_name, event.old_value, members, t))}
+          {truncate(resolvedOld)}
         </div>
       )}
-      {event.new_value && (
+      {resolvedNew && (
         <div className="px-3 py-1.5 bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300">
           <span className="select-none text-green-400 mr-2">+</span>
-          {truncate(resolveValue(event.field_name, event.new_value, members, t))}
+          {truncate(resolvedNew)}
         </div>
       )}
     </div>
@@ -167,7 +199,7 @@ function firstLines(text: string, n: number): string {
 
 const COLLAPSED_LINES = 4
 
-function CommentPreview({ event, t }: { event: WorkItemEvent; t: TFunction }) {
+function CommentPreview({ event, t, onExpand }: { event: WorkItemEvent; t: TFunction; onExpand: (target: DiffPreviewTarget) => void }) {
   const [expanded, setExpanded] = useState(false)
 
   const isCommentEvent = event.event_type === 'comment_added' || event.event_type === 'comment_updated'
@@ -189,8 +221,18 @@ function CommentPreview({ event, t }: { event: WorkItemEvent; t: TFunction }) {
     const displayLines = expanded ? changedLines : changedLines.slice(0, COLLAPSED_LINES)
     const hasMore = changedLines.length > COLLAPSED_LINES
 
+    function handleExpandModal() {
+      onExpand({ kind: 'comment', lines: allLines })
+    }
+
     return (
-      <div className="mt-1 mb-1 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs font-mono overflow-hidden">
+      <div
+        className={`mt-1 mb-1 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs font-mono overflow-hidden ${hasMore ? 'cursor-pointer hover:border-gray-300 dark:hover:border-gray-600' : ''}`}
+        onClick={hasMore ? handleExpandModal : undefined}
+        role={hasMore ? 'button' : undefined}
+        tabIndex={hasMore ? 0 : undefined}
+        onKeyDown={hasMore ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleExpandModal() } } : undefined}
+      >
         {displayLines.map((line, idx) => (
           <div
             key={idx}
@@ -207,12 +249,9 @@ function CommentPreview({ event, t }: { event: WorkItemEvent; t: TFunction }) {
           </div>
         ))}
         {hasMore && (
-          <button
-            className="w-full px-3 py-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 text-left"
-            onClick={() => setExpanded(!expanded)}
-          >
-            {expanded ? t('common.showLess') : t('common.showMoreLines', { count: changedLines.length - COLLAPSED_LINES })}
-          </button>
+          <div className="px-3 py-1 text-xs text-gray-500 dark:text-gray-400 text-left">
+            {t('common.showMoreLines', { count: changedLines.length - COLLAPSED_LINES })}
+          </div>
         )}
       </div>
     )

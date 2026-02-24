@@ -105,3 +105,63 @@ export async function deactivateUser(
   });
   if (!res.ok()) throw new Error(`Deactivate user failed (${res.status()}): ${await res.text()}`);
 }
+
+export async function createWorkItem(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  data: { title: string; type: string; description?: string },
+): Promise<{ id: string; item_number: number; display_id: string }> {
+  const res = await request.post(`${BASE_URL}/api/v1/projects/${projectKey}/items`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data,
+  });
+  if (!res.ok()) throw new Error(`Create work item failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function updateWorkItem(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  itemNumber: number,
+  data: Record<string, unknown>,
+): Promise<void> {
+  const res = await request.patch(`${BASE_URL}/api/v1/projects/${projectKey}/items/${itemNumber}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data,
+  });
+  if (!res.ok()) throw new Error(`Update work item failed (${res.status()}): ${await res.text()}`);
+}
+
+export async function addComment(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  itemNumber: number,
+  body: string,
+): Promise<{ id: string }> {
+  const res = await request.post(`${BASE_URL}/api/v1/projects/${projectKey}/items/${itemNumber}/comments`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { body },
+  });
+  if (!res.ok()) throw new Error(`Add comment failed (${res.status()}): ${await res.text()}`);
+  const json = await res.json();
+  return json.data;
+}
+
+export async function updateComment(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  itemNumber: number,
+  commentId: string,
+  body: string,
+): Promise<void> {
+  const res = await request.patch(`${BASE_URL}/api/v1/projects/${projectKey}/items/${itemNumber}/comments/${commentId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { body },
+  });
+  if (!res.ok()) throw new Error(`Update comment failed (${res.status()}): ${await res.text()}`);
+}

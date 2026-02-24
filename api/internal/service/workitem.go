@@ -745,13 +745,9 @@ func (s *WorkItemService) CreateComment(ctx context.Context, info *model.AuthInf
 	}
 
 	// Record "comment_added" event
-	preview := input.Body
-	if len(preview) > 100 {
-		preview = preview[:100] + "..."
-	}
 	s.recordEventWithMetadata(ctx, item.ID, &info.UserID, "comment_added", input.Visibility, map[string]interface{}{
 		"comment_id": comment.ID.String(),
-		"preview":    preview,
+		"preview":    input.Body,
 	})
 
 	// Re-fetch to get DB-assigned timestamps
@@ -814,18 +810,10 @@ func (s *WorkItemService) UpdateComment(ctx context.Context, info *model.AuthInf
 	}
 
 	// Record "comment_updated" event
-	oldPreview := oldBody
-	if len(oldPreview) > 100 {
-		oldPreview = oldPreview[:100] + "..."
-	}
-	newPreview := body
-	if len(newPreview) > 100 {
-		newPreview = newPreview[:100] + "..."
-	}
 	s.recordEventWithMetadata(ctx, item.ID, &info.UserID, "comment_updated", comment.Visibility, map[string]interface{}{
 		"comment_id":  commentID.String(),
-		"old_preview": oldPreview,
-		"preview":     newPreview,
+		"old_preview": oldBody,
+		"preview":     body,
 	})
 
 	return s.comments.GetByID(ctx, commentID)

@@ -336,6 +336,11 @@
   "activity.fields.queue_id": "Queue",
   "activity.fields.complexity": "Complexity",
 
+  "activity.diff.title": "{{field}} change",
+  "activity.diff.commentTitle": "Comment edit diff",
+  "activity.diff.removed": "Removed",
+  "activity.diff.added": "Added",
+
   "relations.types.blocks": "blocks",
   "relations.types.blocked_by": "blocked by",
   "relations.types.relates_to": "relates to",
