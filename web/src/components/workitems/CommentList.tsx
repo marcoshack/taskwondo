@@ -108,6 +108,14 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
     onTextChange: (updater) => setNewBody(updater),
   })
 
+  const editBodyRef = useRef(editBody)
+  editBodyRef.current = editBody
+  const editPaste = usePasteUpload({
+    projectKey,
+    itemNumber,
+    onTextChange: (updater) => setEditBody(updater(editBodyRef.current)),
+  })
+
   const newCommentRef = useRef<HTMLTextAreaElement>(null)
   const newMention = useMentionAutocomplete({
     value: newBody,
@@ -204,6 +212,9 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
                   }
                   if (e.key === 'Escape') setEditingId(null)
                 }}
+                onPaste={editPaste.handlePaste}
+                onDrop={editPaste.handleDrop}
+                onDragOver={editPaste.handleDragOver}
               />
               <div className="flex gap-2">
                 <Button
