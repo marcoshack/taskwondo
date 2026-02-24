@@ -480,6 +480,84 @@ func (c *Client) UploadAttachment(projectKey string, itemNumber int, filePath, c
 	return &attachment, nil
 }
 
+type Event struct {
+	ID        string                 `json:"id"`
+	EventType string                 `json:"event_type"`
+	Actor     *EventActor            `json:"actor,omitempty"`
+	FieldName *string                `json:"field_name,omitempty"`
+	OldValue  *string                `json:"old_value,omitempty"`
+	NewValue  *string                `json:"new_value,omitempty"`
+	Metadata  map[string]interface{} `json:"metadata"`
+	CreatedAt string                 `json:"created_at"`
+}
+
+type EventActor struct {
+	ID          string `json:"id"`
+	DisplayName string `json:"display_name"`
+}
+
+type Relation struct {
+	ID              string `json:"id"`
+	SourceDisplayID string `json:"source_display_id"`
+	SourceTitle     string `json:"source_title"`
+	TargetDisplayID string `json:"target_display_id"`
+	TargetTitle     string `json:"target_title"`
+	RelationType    string `json:"relation_type"`
+	CreatedBy       string `json:"created_by"`
+	CreatedAt       string `json:"created_at"`
+}
+
+func (c *Client) ListEvents(projectKey string, itemNumber int) ([]Event, error) {
+	path := fmt.Sprintf("/api/v1/projects/%s/items/%d/events", url.PathEscape(projectKey), itemNumber)
+	data, err := c.doRequest("GET", path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var resp apiResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+	var events []Event
+	if err := json.Unmarshal(resp.Data, &events); err != nil {
+		return nil, fmt.Errorf("decode events: %w", err)
+	}
+	return events, nil
+}
+
+func (c *Client) ListRelations(projectKey string, itemNumber int) ([]Relation, error) {
+	path := fmt.Sprintf("/api/v1/projects/%s/items/%d/relations", url.PathEscape(projectKey), itemNumber)
+	data, err := c.doRequest("GET", path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var resp apiResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+	var relations []Relation
+	if err := json.Unmarshal(resp.Data, &relations); err != nil {
+		return nil, fmt.Errorf("decode relations: %w", err)
+	}
+	return relations, nil
+}
+
+func (c *Client) ListAttachments(projectKey string, itemNumber int) ([]Attachment, error) {
+	path := fmt.Sprintf("/api/v1/projects/%s/items/%d/attachments", url.PathEscape(projectKey), itemNumber)
+	data, err := c.doRequest("GET", path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var resp apiResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+	var attachments []Attachment
+	if err := json.Unmarshal(resp.Data, &attachments); err != nil {
+		return nil, fmt.Errorf("decode attachments: %w", err)
+	}
+	return attachments, nil
+}
+
 func (c *Client) ListProjectStatuses(projectKey string) ([]WorkflowStatus, error) {
 	path := fmt.Sprintf("/api/v1/projects/%s/workflows/statuses", url.PathEscape(projectKey))
 	data, err := c.doRequest("GET", path, nil)

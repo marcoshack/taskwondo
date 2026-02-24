@@ -141,6 +141,27 @@ func listStatusesTool() mcp.Tool {
 	)
 }
 
+func listEventsTool() mcp.Tool {
+	return mcp.NewTool("list_events",
+		mcp.WithDescription("List activity events on a work item. Shows status changes, field updates, comments added/removed, and other tracked changes."),
+		mcp.WithString("display_id", mcp.Required(), mcp.Description("Work item display ID, e.g. TF-141")),
+	)
+}
+
+func listRelationsTool() mcp.Tool {
+	return mcp.NewTool("list_relations",
+		mcp.WithDescription("List relations on a work item. Shows links to other work items (e.g. blocks, is blocked by, relates to)."),
+		mcp.WithString("display_id", mcp.Required(), mcp.Description("Work item display ID, e.g. TF-141")),
+	)
+}
+
+func listAttachmentsTool() mcp.Tool {
+	return mcp.NewTool("list_attachments",
+		mcp.WithDescription("List file attachments on a work item."),
+		mcp.WithString("display_id", mcp.Required(), mcp.Description("Work item display ID, e.g. TF-141")),
+	)
+}
+
 func uploadAttachmentTool() mcp.Tool {
 	return mcp.NewTool("upload_attachment",
 		mcp.WithDescription("Upload a file attachment to a work item"),
@@ -552,6 +573,128 @@ func handleUploadAttachment(_ context.Context, request mcp.CallToolRequest) (*mc
 	return mcp.NewToolResultText(fmt.Sprintf("Uploaded %s to %s (%s, %d bytes)\nID: %s\nDownload: %s",
 		attachment.Filename, displayID, attachment.ContentType, attachment.SizeBytes,
 		attachment.ID, attachment.DownloadURL)), nil
+}
+
+func handleListEvents(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := getClient()
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	displayID, err := request.RequireString("display_id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	projectKey, itemNumber, err := parseDisplayID(displayID)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	events, err := client.ListEvents(projectKey, itemNumber)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to list events: %v", err)), nil
+	}
+
+	if len(events) == 0 {
+		return mcp.NewToolResultText(fmt.Sprintf("No activity events on %s", displayID)), nil
+	}
+
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "Activity on %s (%d events):\n\n", displayID, len(events))
+	for _, e := range events {
+		actor := "system"
+		if e.Actor != nil && e.Actor.DisplayName != "" {
+			actor = e.Actor.DisplayName
+		}
+		fmt.Fprintf(&sb, "- **%s** %s by %s", e.CreatedAt, e.EventType, actor)
+		if e.FieldName != nil {
+			old := "<empty>"
+			if e.OldValue != nil {
+				old = *e.OldValue
+			}
+			new := "<empty>"
+			if e.NewValue != nil {
+				new = *e.NewValue
+			}
+			fmt.Fprintf(&sb, " (%s: %s → %s)", *e.FieldName, old, new)
+		}
+		sb.WriteString("\n")
+	}
+	return mcp.NewToolResultText(sb.String()), nil
+}
+
+func handleListRelations(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := getClient()
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	displayID, err := request.RequireString("display_id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	projectKey, itemNumber, err := parseDisplayID(displayID)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	relations, err := client.ListRelations(projectKey, itemNumber)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to list relations: %v", err)), nil
+	}
+
+	if len(relations) == 0 {
+		return mcp.NewToolResultText(fmt.Sprintf("No relations on %s", displayID)), nil
+	}
+
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "Relations on %s (%d):\n\n", displayID, len(relations))
+	for _, r := range relations {
+		fmt.Fprintf(&sb, "- %s **%s** %s (%s → %s)\n",
+			r.SourceDisplayID, r.RelationType, r.TargetDisplayID,
+			r.SourceTitle, r.TargetTitle)
+	}
+	return mcp.NewToolResultText(sb.String()), nil
+}
+
+func handleListAttachments(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := getClient()
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	displayID, err := request.RequireString("display_id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	projectKey, itemNumber, err := parseDisplayID(displayID)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	attachments, err := client.ListAttachments(projectKey, itemNumber)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to list attachments: %v", err)), nil
+	}
+
+	if len(attachments) == 0 {
+		return mcp.NewToolResultText(fmt.Sprintf("No attachments on %s", displayID)), nil
+	}
+
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "Attachments on %s (%d):\n\n", displayID, len(attachments))
+	for _, a := range attachments {
+		comment := ""
+		if a.Comment != "" {
+			comment = fmt.Sprintf(" — %s", a.Comment)
+		}
+		fmt.Fprintf(&sb, "- **%s** (%s, %d bytes)%s\n  ID: %s | Download: %s\n",
+			a.Filename, a.ContentType, a.SizeBytes, comment, a.ID, a.DownloadURL)
+	}
+	return mcp.NewToolResultText(sb.String()), nil
 }
 
 // --- Formatting helpers ---

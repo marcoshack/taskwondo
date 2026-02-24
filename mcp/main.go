@@ -29,7 +29,12 @@ func main() {
 	s.AddTool(addCommentTool(), handleAddComment)
 	s.AddTool(listCommentsTool(), handleListComments)
 
+	// Activity / relation tools
+	s.AddTool(listEventsTool(), handleListEvents)
+	s.AddTool(listRelationsTool(), handleListRelations)
+
 	// Attachment tools
+	s.AddTool(listAttachmentsTool(), handleListAttachments)
 	s.AddTool(uploadAttachmentTool(), handleUploadAttachment)
 
 	// Project tools
