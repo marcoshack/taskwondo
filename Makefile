@@ -1,4 +1,4 @@
-.PHONY: build push help dev dev-db dev-api dev-web up down logs logs-api migrate migrate-new test check-env export import release
+.PHONY: build push help dev dev-db dev-api dev-web up down logs logs-api migrate migrate-new test test-e2e test-e2e-report check-env export import release
 
 # Required environment variables (checked by sourcing .env)
 REQUIRED_VARS := POSTGRES_USER POSTGRES_PASSWORD MINIO_ROOT_USER MINIO_ROOT_PASSWORD JWT_SECRET DATABASE_URL STORAGE_ACCESS_KEY STORAGE_SECRET_KEY
@@ -128,3 +128,9 @@ _release:
 
 test: ## Run all tests
 	cd api && go test ./... -v -race
+
+test-e2e: ## Run end-to-end tests (headless)
+	cd e2e && npx playwright test
+
+test-e2e-report: ## Open the last e2e test HTML report
+	cd e2e && npx playwright show-report
