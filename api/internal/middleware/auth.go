@@ -51,6 +51,11 @@ func Auth(authenticator Authenticator) func(http.Handler) http.Handler {
 				return
 			}
 
+			if !authInfo.HasPermission(r.Method) {
+				writeAuthError(w, http.StatusForbidden, "api key does not have sufficient permissions")
+				return
+			}
+
 			ctx := model.ContextWithAuthInfo(r.Context(), authInfo)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})

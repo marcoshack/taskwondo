@@ -580,3 +580,53 @@ func TestLogin_Handler_ReturnsForcePasswordChange(t *testing.T) {
 		t.Fatalf("expected force_password_change=false for seeded admin, got %v", data["force_password_change"])
 	}
 }
+
+func TestCreateAPIKey_InvalidPermission(t *testing.T) {
+	h, authSvc, token := testSetup(t)
+
+	info, _ := authSvc.ValidateJWT(token)
+	body := `{"name":"Bad Key","permissions":["admin"]}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/user/api-keys", bytes.NewBufferString(body))
+	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), info))
+	w := httptest.NewRecorder()
+
+	h.CreateAPIKey(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for invalid permission, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestCreateAPIKey_ExpiredDate(t *testing.T) {
+	h, authSvc, token := testSetup(t)
+
+	info, _ := authSvc.ValidateJWT(token)
+	past := time.Now().Add(-24 * time.Hour).Format(time.RFC3339)
+	body := `{"name":"Expired Key","expires_at":"` + past + `"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/user/api-keys", bytes.NewBufferString(body))
+	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), info))
+	w := httptest.NewRecorder()
+
+	h.CreateAPIKey(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for past expiration, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestCreateAPIKey_WithExpiration(t *testing.T) {
+	h, authSvc, token := testSetup(t)
+
+	info, _ := authSvc.ValidateJWT(token)
+	future := time.Now().Add(30 * 24 * time.Hour).Format(time.RFC3339)
+	body := `{"name":"Future Key","expires_at":"` + future + `"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/user/api-keys", bytes.NewBufferString(body))
+	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), info))
+	w := httptest.NewRecorder()
+
+	h.CreateAPIKey(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+	}
+}

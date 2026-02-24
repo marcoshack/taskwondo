@@ -219,14 +219,21 @@ func (s *AuthService) ValidateAPIKey(ctx context.Context, key string) (*model.Au
 	}
 
 	return &model.AuthInfo{
-		UserID:     user.ID,
-		Email:      user.Email,
-		GlobalRole: user.GlobalRole,
+		UserID:      user.ID,
+		Email:       user.Email,
+		GlobalRole:  user.GlobalRole,
+		Permissions: apiKey.Permissions,
 	}, nil
 }
 
 // CreateAPIKey generates a new API key for a user.
 func (s *AuthService) CreateAPIKey(ctx context.Context, userID uuid.UUID, name string, permissions []string, expiresAt *time.Time) (*model.APIKey, string, error) {
+	for _, p := range permissions {
+		if !model.ValidPermissions[p] {
+			return nil, "", fmt.Errorf("%w: invalid permission: %s", model.ErrValidation, p)
+		}
+	}
+
 	raw := make([]byte, 32)
 	if _, err := rand.Read(raw); err != nil {
 		return nil, "", fmt.Errorf("generating random bytes: %w", err)

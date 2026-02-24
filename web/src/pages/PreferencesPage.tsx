@@ -1,4 +1,6 @@
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
+import { Key } from 'lucide-react'
 import { useTheme, type Theme, type FontSize } from '@/contexts/ThemeContext'
 import { useLanguage } from '@/contexts/LanguageContext'
 
@@ -125,6 +127,22 @@ export function PreferencesPage() {
               </button>
             ))}
           </div>
+        </div>
+
+        <div>
+          <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
+            {t('preferences.apiKeys')}
+          </h2>
+          <Link
+            to="/preferences/api-keys"
+            className="flex items-center gap-3 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 p-4 transition-colors"
+          >
+            <Key className="h-5 w-5 text-gray-400 dark:text-gray-500" />
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('preferences.apiKeys.manage')}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{t('preferences.apiKeys.description')}</p>
+            </div>
+          </Link>
         </div>
       </div>
     </div>

@@ -257,6 +257,10 @@ func (h *AuthHandler) CreateAPIKey(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "expires_at must be in RFC3339 format")
 			return
 		}
+		if t.Before(time.Now()) {
+			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "expires_at must be in the future")
+			return
+		}
 		expiresAt = &t
 	}
 
@@ -266,6 +270,10 @@ func (h *AuthHandler) CreateAPIKey(w http.ResponseWriter, r *http.Request) {
 
 	apiKey, fullKey, err := h.auth.CreateAPIKey(r.Context(), info.UserID, req.Name, req.Permissions, expiresAt)
 	if err != nil {
+		if errors.Is(err, model.ErrValidation) {
+			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+			return
+		}
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to create api key")
 		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
 		return

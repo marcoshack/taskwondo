@@ -1124,3 +1124,65 @@ func TestEnabledProviders_Multiple(t *testing.T) {
 		t.Fatalf("expected 2 providers, got %d", len(providers))
 	}
 }
+
+func TestCreateAPIKey_InvalidPermission(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	user := createTestUser(t, userRepo, "test@example.com", "password123", model.RoleUser)
+
+	_, _, err := svc.CreateAPIKey(context.Background(), user.ID, "Bad Key", []string{"admin"}, nil)
+	if err == nil {
+		t.Fatal("expected error for invalid permission")
+	}
+	if !strings.Contains(err.Error(), "invalid permission") {
+		t.Fatalf("expected validation error, got %v", err)
+	}
+}
+
+func TestCreateAPIKey_ValidPermissions(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	user := createTestUser(t, userRepo, "test@example.com", "password123", model.RoleUser)
+
+	apiKey, _, err := svc.CreateAPIKey(context.Background(), user.ID, "RW Key", []string{"read", "write"}, nil)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(apiKey.Permissions) != 2 {
+		t.Fatalf("expected 2 permissions, got %d", len(apiKey.Permissions))
+	}
+}
+
+func TestValidateAPIKey_PermissionsPassedThrough(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	user := createTestUser(t, userRepo, "test@example.com", "password123", model.RoleUser)
+
+	_, fullKey, err := svc.CreateAPIKey(context.Background(), user.ID, "Read Key", []string{"read"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	info, err := svc.ValidateAPIKey(context.Background(), fullKey)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(info.Permissions) != 1 || info.Permissions[0] != "read" {
+		t.Fatalf("expected permissions [read], got %v", info.Permissions)
+	}
+}
+
+func TestValidateAPIKey_EmptyPermissions(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	user := createTestUser(t, userRepo, "test@example.com", "password123", model.RoleUser)
+
+	_, fullKey, err := svc.CreateAPIKey(context.Background(), user.ID, "Full Key", []string{}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	info, err := svc.ValidateAPIKey(context.Background(), fullKey)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(info.Permissions) != 0 {
+		t.Fatalf("expected empty permissions, got %v", info.Permissions)
+	}
+}

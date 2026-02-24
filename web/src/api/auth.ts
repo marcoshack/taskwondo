@@ -88,24 +88,36 @@ export async function oauthCallback(provider: string, code: string, state: strin
 
 // API keys
 
-interface CreateAPIKeyResponse {
-  data: {
-    id: string
-    name: string
-    key: string
-    key_prefix: string
-    permissions: string[]
-    expires_at?: string
-    created_at: string
-  }
+export interface APIKey {
+  id: string
+  name: string
+  key_prefix: string
+  permissions: string[]
+  last_used_at?: string
+  expires_at?: string
+  created_at: string
 }
 
-export async function createAPIKey(name: string, permissions: string[] = []) {
-  const res = await api.post<CreateAPIKeyResponse>('/user/api-keys', {
+export interface CreatedAPIKey extends APIKey {
+  key: string
+}
+
+export async function createAPIKey(name: string, permissions: string[] = [], expiresAt?: string) {
+  const res = await api.post<{ data: CreatedAPIKey }>('/user/api-keys', {
     name,
     permissions,
+    expires_at: expiresAt,
   })
   return res.data.data
+}
+
+export async function listAPIKeys() {
+  const res = await api.get<{ data: APIKey[] }>('/user/api-keys')
+  return res.data.data
+}
+
+export async function deleteAPIKey(id: string) {
+  await api.delete(`/user/api-keys/${id}`)
 }
 
 // Password management
