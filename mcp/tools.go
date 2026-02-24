@@ -358,6 +358,12 @@ func handleUpdateWorkItem(_ context.Context, request mcp.CallToolRequest) (*mcp.
 	if v := request.GetString("assignee", ""); v != "" {
 		if v == "none" {
 			updates["assignee_id"] = nil
+		} else if v == "me" {
+			me, err := client.GetMe()
+			if err != nil {
+				return mcp.NewToolResultError(fmt.Sprintf("Failed to resolve 'me': %v", err)), nil
+			}
+			updates["assignee_id"] = me.ID
 		} else {
 			updates["assignee_id"] = v
 		}
