@@ -68,6 +68,27 @@ export async function getTransitionsMap(workflowId: string) {
   return res.data.data
 }
 
+// --- System Workflow API Functions ---
+
+export async function createSystemWorkflow(input: CreateWorkflowInput) {
+  const res = await api.post<DataResponse<WorkflowDetail>>('/workflows', input)
+  return res.data.data
+}
+
+export async function updateSystemWorkflow(workflowId: string, input: UpdateWorkflowInput) {
+  const res = await api.patch<DataResponse<WorkflowDetail>>(`/workflows/${workflowId}`, input)
+  return res.data.data
+}
+
+export async function deleteSystemWorkflow(workflowId: string) {
+  await api.delete(`/workflows/${workflowId}`)
+}
+
+export async function listSystemStatuses() {
+  const res = await api.get<DataResponse<WorkflowStatus[]>>('/workflows/statuses')
+  return res.data.data
+}
+
 // --- Project Workflow API Functions ---
 
 export async function listProjectWorkflows(projectKey: string) {

@@ -7,7 +7,8 @@ import (
 
 // Well-known system setting keys.
 const (
-	SettingMaxProjectsPerUser = "max_projects_per_user"
+	SettingMaxProjectsPerUser     = "max_projects_per_user"
+	SettingDefaultTypeWorkflows   = "default_type_workflows"
 )
 
 // DefaultMaxProjectsPerUser is the fallback when the setting is not configured.

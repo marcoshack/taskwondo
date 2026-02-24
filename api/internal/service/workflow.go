@@ -29,6 +29,7 @@ type WorkflowRepository interface {
 	ListTransitions(ctx context.Context, workflowID uuid.UUID) ([]model.WorkflowTransition, error)
 	ListStatuses(ctx context.Context, workflowID uuid.UUID) ([]model.WorkflowStatus, error)
 	ListAllStatuses(ctx context.Context) ([]model.WorkflowStatus, error)
+	IsInUse(ctx context.Context, id uuid.UUID) (bool, error)
 }
 
 // WorkflowService handles workflow business logic.
@@ -131,11 +132,12 @@ func (s *WorkflowService) Create(ctx context.Context, input CreateWorkflowInput)
 		return nil, fmt.Errorf("workflow must have a todo-category status at position 0: %w", model.ErrValidation)
 	}
 
-	// Validate transitions reference existing status names
+	// Validate transitions reference existing status names and are unique
 	statusNames := make(map[string]bool)
 	for _, s := range input.Statuses {
 		statusNames[s.Name] = true
 	}
+	seenTransitions := make(map[string]bool)
 	for _, t := range input.Transitions {
 		if !statusNames[t.FromStatus] {
 			return nil, fmt.Errorf("transition references unknown from_status %q: %w", t.FromStatus, model.ErrValidation)
@@ -143,6 +145,11 @@ func (s *WorkflowService) Create(ctx context.Context, input CreateWorkflowInput)
 		if !statusNames[t.ToStatus] {
 			return nil, fmt.Errorf("transition references unknown to_status %q: %w", t.ToStatus, model.ErrValidation)
 		}
+		key := t.FromStatus + "->" + t.ToStatus
+		if seenTransitions[key] {
+			return nil, fmt.Errorf("duplicate transition %s: %w", key, model.ErrValidation)
+		}
+		seenTransitions[key] = true
 	}
 
 	wf := &model.Workflow{
@@ -206,6 +213,27 @@ func (s *WorkflowService) Update(ctx context.Context, id uuid.UUID, input Update
 		if len(input.Transitions) > 500 {
 			return nil, fmt.Errorf("workflow cannot have more than 500 transitions: %w", model.ErrValidation)
 		}
+
+		// Validate transitions reference valid statuses and are unique
+		statusNames := make(map[string]bool)
+		for _, s := range input.Statuses {
+			statusNames[s.Name] = true
+		}
+		seenTransitions := make(map[string]bool)
+		for _, t := range input.Transitions {
+			if !statusNames[t.FromStatus] {
+				return nil, fmt.Errorf("transition references unknown from_status %q: %w", t.FromStatus, model.ErrValidation)
+			}
+			if !statusNames[t.ToStatus] {
+				return nil, fmt.Errorf("transition references unknown to_status %q: %w", t.ToStatus, model.ErrValidation)
+			}
+			key := t.FromStatus + "->" + t.ToStatus
+			if seenTransitions[key] {
+				return nil, fmt.Errorf("duplicate transition %s: %w", key, model.ErrValidation)
+			}
+			seenTransitions[key] = true
+		}
+
 		wf.Statuses = input.Statuses
 		wf.Transitions = input.Transitions
 
@@ -233,6 +261,32 @@ func (s *WorkflowService) DeleteProjectWorkflow(ctx context.Context, id uuid.UUI
 	}
 	if wf.ProjectID == nil {
 		return fmt.Errorf("cannot delete a system workflow: %w", model.ErrForbidden)
+	}
+
+	return s.workflows.Delete(ctx, id)
+}
+
+// DeleteSystemWorkflow deletes a system-scoped workflow if it is not in use by any project.
+func (s *WorkflowService) DeleteSystemWorkflow(ctx context.Context, id uuid.UUID) error {
+	wf, err := s.workflows.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	if wf.ProjectID != nil {
+		return fmt.Errorf("use project endpoint to delete project workflows: %w", model.ErrValidation)
+	}
+
+	if wf.IsDefault {
+		return fmt.Errorf("cannot delete a default workflow: %w", model.ErrForbidden)
+	}
+
+	inUse, err := s.workflows.IsInUse(ctx, id)
+	if err != nil {
+		return fmt.Errorf("checking workflow usage: %w", err)
+	}
+	if inUse {
+		return fmt.Errorf("workflow is in use by one or more projects: %w", model.ErrValidation)
 	}
 
 	return s.workflows.Delete(ctx, id)

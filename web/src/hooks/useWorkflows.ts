@@ -3,6 +3,10 @@ import {
   listWorkflows,
   getWorkflow,
   getTransitionsMap,
+  createSystemWorkflow,
+  updateSystemWorkflow,
+  deleteSystemWorkflow,
+  listSystemStatuses,
   listProjectWorkflows,
   getProjectWorkflow,
   createProjectWorkflow,
@@ -67,6 +71,46 @@ export function useProjectWorkflow(projectKey: string, workItemType?: string) {
     statuses: workflowQuery.data?.statuses ?? [],
     transitionsMap: transitionsQuery.data,
   }
+}
+
+// --- System workflow hooks ---
+
+export function useSystemStatuses() {
+  return useQuery({
+    queryKey: ['workflows', 'statuses'],
+    queryFn: listSystemStatuses,
+  })
+}
+
+export function useCreateSystemWorkflow() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: CreateWorkflowInput) => createSystemWorkflow(input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['workflows'] })
+    },
+  })
+}
+
+export function useUpdateSystemWorkflow() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ workflowId, input }: { workflowId: string; input: UpdateWorkflowInput }) =>
+      updateSystemWorkflow(workflowId, input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['workflows'] })
+    },
+  })
+}
+
+export function useDeleteSystemWorkflow() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (workflowId: string) => deleteSystemWorkflow(workflowId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['workflows'] })
+    },
+  })
 }
 
 // --- Project workflow hooks ---

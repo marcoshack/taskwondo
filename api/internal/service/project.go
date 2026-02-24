@@ -608,6 +608,74 @@ func (s *ProjectService) UpdateTypeWorkflow(ctx context.Context, info *model.Aut
 	return mapping, nil
 }
 
+// SeedDefaultTypeWorkflows ensures the default_type_workflows system setting exists.
+// If the setting is absent, it builds the default mapping from the seeded Task and Ticket workflows.
+// This is idempotent and safe to call on every startup.
+func (s *ProjectService) SeedDefaultTypeWorkflows(ctx context.Context) error {
+	// Check if the setting already exists
+	_, err := s.systemSettings.Get(ctx, model.SettingDefaultTypeWorkflows)
+	if err == nil {
+		return nil // already set
+	}
+	if err != model.ErrNotFound {
+		return fmt.Errorf("checking default type workflows setting: %w", err)
+	}
+
+	workflows, err := s.workflows.List(ctx)
+	if err != nil {
+		return fmt.Errorf("listing workflows: %w", err)
+	}
+
+	// Find Task Workflow and Ticket Workflow by name
+	var taskWfID, ticketWfID uuid.UUID
+	for _, wf := range workflows {
+		switch wf.Name {
+		case "Task Workflow":
+			taskWfID = wf.ID
+		case "Ticket Workflow":
+			ticketWfID = wf.ID
+		}
+	}
+	if taskWfID == uuid.Nil {
+		for _, wf := range workflows {
+			if wf.IsDefault {
+				taskWfID = wf.ID
+				break
+			}
+		}
+	}
+	if ticketWfID == uuid.Nil {
+		ticketWfID = taskWfID
+	}
+	if taskWfID == uuid.Nil {
+		return nil // no workflows available
+	}
+
+	typeMapping := map[string]string{
+		model.WorkItemTypeTask:     taskWfID.String(),
+		model.WorkItemTypeBug:      taskWfID.String(),
+		model.WorkItemTypeEpic:     taskWfID.String(),
+		model.WorkItemTypeTicket:   ticketWfID.String(),
+		model.WorkItemTypeFeedback: ticketWfID.String(),
+	}
+
+	value, err := json.Marshal(typeMapping)
+	if err != nil {
+		return fmt.Errorf("marshalling default type workflows: %w", err)
+	}
+
+	setting := &model.SystemSetting{
+		Key:   model.SettingDefaultTypeWorkflows,
+		Value: value,
+	}
+	if err := s.systemSettings.Upsert(ctx, setting); err != nil {
+		return fmt.Errorf("saving default type workflows setting: %w", err)
+	}
+
+	log.Ctx(ctx).Info().Msg("seeded default type-workflow mappings")
+	return nil
+}
+
 // SeedExistingProjectTypeWorkflows backfills type-workflow mappings for projects
 // created before the per-type workflow feature. Projects that already have mappings
 // are skipped. This is idempotent and safe to call on every startup.
@@ -646,45 +714,54 @@ func (s *ProjectService) SeedExistingProjectTypeWorkflows(ctx context.Context) e
 }
 
 // seedTypeWorkflows populates default type-workflow mappings for a new project.
+// It reads the default_type_workflows system setting first, falling back to
+// hardcoded name-based lookup if the setting is absent or invalid.
 func (s *ProjectService) seedTypeWorkflows(ctx context.Context, projectID uuid.UUID, workflows []model.Workflow) {
 	if len(workflows) == 0 {
 		return
 	}
 
-	// Find Task Workflow and Ticket Workflow by name
-	var taskWfID, ticketWfID uuid.UUID
+	// Build a lookup of available workflow IDs for validation
+	wfByID := make(map[string]bool, len(workflows))
 	for _, wf := range workflows {
-		switch wf.Name {
-		case "Task Workflow":
-			taskWfID = wf.ID
-		case "Ticket Workflow":
-			ticketWfID = wf.ID
-		}
+		wfByID[wf.ID.String()] = true
 	}
 
-	// Fallback: use the first default workflow for all types
-	if taskWfID == uuid.Nil {
+	// Try to use the system setting
+	typeMapping := s.resolveDefaultTypeWorkflows(ctx, wfByID)
+
+	// Fallback: hardcoded name-based lookup
+	if len(typeMapping) == 0 {
+		var taskWfID, ticketWfID uuid.UUID
 		for _, wf := range workflows {
-			if wf.IsDefault {
+			switch wf.Name {
+			case "Task Workflow":
 				taskWfID = wf.ID
-				break
+			case "Ticket Workflow":
+				ticketWfID = wf.ID
 			}
 		}
-	}
-	if ticketWfID == uuid.Nil {
-		ticketWfID = taskWfID
-	}
-	if taskWfID == uuid.Nil {
-		return
-	}
-
-	// Map types to workflows
-	typeMapping := map[string]uuid.UUID{
-		model.WorkItemTypeTask:     taskWfID,
-		model.WorkItemTypeBug:      taskWfID,
-		model.WorkItemTypeEpic:     taskWfID,
-		model.WorkItemTypeTicket:   ticketWfID,
-		model.WorkItemTypeFeedback: ticketWfID,
+		if taskWfID == uuid.Nil {
+			for _, wf := range workflows {
+				if wf.IsDefault {
+					taskWfID = wf.ID
+					break
+				}
+			}
+		}
+		if ticketWfID == uuid.Nil {
+			ticketWfID = taskWfID
+		}
+		if taskWfID == uuid.Nil {
+			return
+		}
+		typeMapping = map[string]uuid.UUID{
+			model.WorkItemTypeTask:     taskWfID,
+			model.WorkItemTypeBug:      taskWfID,
+			model.WorkItemTypeEpic:     taskWfID,
+			model.WorkItemTypeTicket:   ticketWfID,
+			model.WorkItemTypeFeedback: ticketWfID,
+		}
 	}
 
 	for itemType, wfID := range typeMapping {
@@ -700,6 +777,40 @@ func (s *ProjectService) seedTypeWorkflows(ctx context.Context, projectID uuid.U
 				Msg("failed to seed type workflow mapping")
 		}
 	}
+}
+
+// resolveDefaultTypeWorkflows reads the default_type_workflows system setting and
+// returns a validated map of type → workflow UUID. Returns nil if the setting is absent or invalid.
+func (s *ProjectService) resolveDefaultTypeWorkflows(ctx context.Context, validWfIDs map[string]bool) map[string]uuid.UUID {
+	setting, err := s.systemSettings.Get(ctx, model.SettingDefaultTypeWorkflows)
+	if err != nil {
+		return nil
+	}
+
+	var raw map[string]string
+	if err := json.Unmarshal(setting.Value, &raw); err != nil {
+		log.Ctx(ctx).Warn().Err(err).Msg("invalid default_type_workflows setting")
+		return nil
+	}
+
+	result := make(map[string]uuid.UUID, len(raw))
+	for itemType, wfIDStr := range raw {
+		if !validWfIDs[wfIDStr] {
+			log.Ctx(ctx).Warn().Str("work_item_type", itemType).Str("workflow_id", wfIDStr).
+				Msg("default_type_workflows references unknown workflow, skipping")
+			continue
+		}
+		wfID, err := uuid.Parse(wfIDStr)
+		if err != nil {
+			continue
+		}
+		result[itemType] = wfID
+	}
+
+	if len(result) == 0 {
+		return nil
+	}
+	return result
 }
 
 // CreateInvite creates a new invite link for a project. Requires owner or admin role.

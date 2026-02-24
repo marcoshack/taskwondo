@@ -275,16 +275,94 @@ func (h *WorkflowHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wf, err := h.workflows.Update(r.Context(), workflowID, service.UpdateWorkflowInput{
+	input := service.UpdateWorkflowInput{
 		Name:        req.Name,
 		Description: req.Description,
-	})
+	}
+
+	if req.Statuses != nil {
+		statuses := make([]model.WorkflowStatus, len(req.Statuses))
+		for i, s := range req.Statuses {
+			statuses[i] = model.WorkflowStatus{
+				Name:        s.Name,
+				DisplayName: s.DisplayName,
+				Category:    s.Category,
+				Position:    s.Position,
+				Color:       s.Color,
+			}
+		}
+		input.Statuses = statuses
+
+		transitions := make([]model.WorkflowTransition, len(req.Transitions))
+		for i, t := range req.Transitions {
+			transitions[i] = model.WorkflowTransition{
+				FromStatus: t.FromStatus,
+				ToStatus:   t.ToStatus,
+				Name:       t.Name,
+			}
+		}
+		input.Transitions = transitions
+	}
+
+	wf, err := h.workflows.Update(r.Context(), workflowID, input)
 	if err != nil {
 		handleWorkflowError(w, r, err, "failed to update workflow")
 		return
 	}
 
 	writeData(w, http.StatusOK, toWorkflowDetailResponse(wf))
+}
+
+// Delete handles DELETE /api/v1/workflows/{workflowId}
+func (h *WorkflowHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	workflowID, err := uuid.Parse(chi.URLParam(r, "workflowId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid workflow ID")
+		return
+	}
+
+	if err := h.workflows.DeleteSystemWorkflow(r.Context(), workflowID); err != nil {
+		handleWorkflowError(w, r, err, "failed to delete workflow")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// ListSystemStatuses handles GET /api/v1/workflows/statuses
+func (h *WorkflowHandler) ListSystemStatuses(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	statuses, err := h.workflows.ListAllStatuses(r.Context())
+	if err != nil {
+		log.Ctx(r.Context()).Error().Err(err).Msg("failed to list available statuses")
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		return
+	}
+
+	resp := make([]workflowStatusResponse, len(statuses))
+	for i, s := range statuses {
+		resp[i] = workflowStatusResponse{
+			ID:          s.ID,
+			Name:        s.Name,
+			DisplayName: s.DisplayName,
+			Category:    s.Category,
+			Position:    s.Position,
+			Color:       s.Color,
+		}
+	}
+
+	writeData(w, http.StatusOK, resp)
 }
 
 // ListTransitions handles GET /api/v1/workflows/{workflowId}/transitions

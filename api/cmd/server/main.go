@@ -174,6 +174,11 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to seed default workflows")
 	}
 
+	// Seed default type-workflow setting
+	if err := projectService.SeedDefaultTypeWorkflows(ctx); err != nil {
+		log.Fatal().Err(err).Msg("failed to seed default type workflows")
+	}
+
 	// Backfill type-workflow mappings for existing projects
 	if err := projectService.SeedExistingProjectTypeWorkflows(ctx); err != nil {
 		log.Fatal().Err(err).Msg("failed to seed existing project type workflows")
@@ -255,15 +260,17 @@ func main() {
 			// Workflows
 			r.Route("/workflows", func(r chi.Router) {
 				r.Get("/", workflows.List)
+				r.Get("/statuses", workflows.ListSystemStatuses)
 				r.Route("/{workflowId}", func(r chi.Router) {
 					r.Get("/", workflows.Get)
 					r.Get("/transitions", workflows.ListTransitions)
 				})
-				// Create/Update require admin role
+				// Create/Update/Delete require admin role
 				r.Group(func(r chi.Router) {
 					r.Use(middleware.RequireAdmin)
 					r.Post("/", workflows.Create)
 					r.Patch("/{workflowId}", workflows.Update)
+					r.Delete("/{workflowId}", workflows.Delete)
 				})
 			})
 

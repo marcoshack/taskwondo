@@ -713,6 +713,19 @@ function WorkflowEditorModal({
       return
     }
 
+    // Check for duplicate transitions
+    const seenTransitions = new Set<string>()
+    for (const tr of transitions) {
+      const key = `${tr.from_status}->${tr.to_status}`
+      if (seenTransitions.has(key)) {
+        const fromLabel = t(`workitems.statuses.${tr.from_status}`, { defaultValue: tr.from_status })
+        const toLabel = t(`workitems.statuses.${tr.to_status}`, { defaultValue: tr.to_status })
+        setValidationError(t('workflows.duplicateTransition', { from: fromLabel, to: toLabel }))
+        return
+      }
+      seenTransitions.add(key)
+    }
+
     // Ensure position 0 is a todo status
     const sortedStatuses = [...statuses].sort((a, b) => a.position - b.position)
     if (sortedStatuses[0]?.category !== 'todo') {
@@ -777,6 +790,7 @@ function WorkflowEditorModal({
       open
       onClose={onClose}
       title={isEdit ? t('workflows.editWorkflow') : t('workflows.createWorkflow')}
+      className="!max-w-2xl overflow-x-hidden"
     >
       <div className="space-y-5">
         {validationError && (
@@ -871,7 +885,7 @@ function WorkflowEditorModal({
               {transitions.map((tr, idx) => (
                 <div key={idx} className="flex items-center gap-2">
                   <select
-                    className="flex-1 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1.5 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="min-w-0 flex-1 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1.5 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     value={tr.from_status}
                     onChange={(e) => updateTransition(idx, 'from_status', e.target.value)}
                   >
@@ -881,7 +895,7 @@ function WorkflowEditorModal({
                   </select>
                   <ArrowRight className="h-3.5 w-3.5 text-gray-400 shrink-0" />
                   <select
-                    className="flex-1 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1.5 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="min-w-0 flex-1 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1.5 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     value={tr.to_status}
                     onChange={(e) => updateTransition(idx, 'to_status', e.target.value)}
                   >
@@ -891,7 +905,7 @@ function WorkflowEditorModal({
                   </select>
                   <input
                     type="text"
-                    className="w-28 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1.5 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="min-w-0 w-16 sm:w-28 shrink rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1.5 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     placeholder={t('workflows.transitionName')}
                     value={tr.name}
                     onChange={(e) => updateTransition(idx, 'name', e.target.value)}

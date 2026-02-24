@@ -266,6 +266,19 @@ func (r *WorkflowRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
+// IsInUse checks whether a workflow is referenced by any project default or type mapping.
+func (r *WorkflowRepository) IsInUse(ctx context.Context, id uuid.UUID) (bool, error) {
+	var count int
+	err := r.db.QueryRowContext(ctx,
+		`SELECT (SELECT COUNT(*) FROM projects WHERE default_workflow_id = $1 AND deleted_at IS NULL) +
+		        (SELECT COUNT(*) FROM project_type_workflows WHERE workflow_id = $1)`,
+		id).Scan(&count)
+	if err != nil {
+		return false, fmt.Errorf("checking workflow usage: %w", err)
+	}
+	return count > 0, nil
+}
+
 // GetDefaultByName returns a default workflow by name, or ErrNotFound.
 func (r *WorkflowRepository) GetDefaultByName(ctx context.Context, name string) (*model.Workflow, error) {
 	row := r.db.QueryRowContext(ctx,

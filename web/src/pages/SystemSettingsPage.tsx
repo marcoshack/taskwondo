@@ -3,6 +3,7 @@ import { useSidebar } from '@/contexts/SidebarContext'
 import { SystemSettingsSidebar } from '@/components/SystemSettingsSidebar'
 import { AdminUsersPage } from './AdminUsersPage'
 import { SystemGeneralPage } from './SystemGeneralPage'
+import { SystemWorkflowsPage } from './SystemWorkflowsPage'
 
 export function SystemSettingsPage() {
   const { collapsed } = useSidebar()
@@ -16,6 +17,7 @@ export function SystemSettingsPage() {
             <Route index element={<Navigate to="general" replace />} />
             <Route path="general" element={<SystemGeneralPage />} />
             <Route path="users" element={<AdminUsersPage />} />
+            <Route path="workflows" element={<SystemWorkflowsPage />} />
           </Routes>
         </div>
       </div>

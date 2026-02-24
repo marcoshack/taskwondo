@@ -222,6 +222,10 @@ func (m *mockWorkflowRepo) ListAllStatuses(_ context.Context) ([]model.WorkflowS
 	return result, nil
 }
 
+func (m *mockWorkflowRepo) IsInUse(_ context.Context, _ uuid.UUID) (bool, error) {
+	return false, nil
+}
+
 // --- Mock work item repository ---
 
 type mockWorkItemRepo struct {

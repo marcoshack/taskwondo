@@ -6,6 +6,7 @@ import { useNavigationGuard } from '@/contexts/NavigationGuardContext'
 import {
   Settings,
   Users,
+  Route,
   PanelLeftClose,
   PanelLeftOpen,
 } from 'lucide-react'
@@ -26,6 +27,7 @@ export function SystemSettingsSidebar() {
   const navItems: { to: string; label: string; icon: LucideIcon; end: boolean }[] = [
     { to: 'general', label: t('admin.sidebar.general'), icon: Settings, end: false },
     { to: 'users', label: t('admin.sidebar.users'), icon: Users, end: false },
+    { to: 'workflows', label: t('admin.sidebar.workflows'), icon: Route, end: false },
   ]
 
   function renderNavItems(showLabels: boolean) {
