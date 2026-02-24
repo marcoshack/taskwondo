@@ -23,7 +23,7 @@ test.describe('Theme Preferences', () => {
     await dismissWelcomeModal(page);
 
     // --- Light theme ---
-    await page.goto('/preferences');
+    await page.goto('/preferences/appearance');
     await page.getByRole('button', { name: /Light Always light/i }).click();
     const isLight = await page.evaluate(() => !document.documentElement.classList.contains('dark'));
     expect(isLight).toBe(true);
@@ -41,7 +41,7 @@ test.describe('Theme Preferences', () => {
     await attach(page, testInfo, '03-items-light');
 
     // --- Dark theme ---
-    await page.goto('/preferences');
+    await page.goto('/preferences/appearance');
     await page.getByRole('button', { name: /Dark Always dark/i }).click();
     const isDark = await page.evaluate(() => document.documentElement.classList.contains('dark'));
     expect(isDark).toBe(true);

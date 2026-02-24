@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useTranslation, Trans } from 'react-i18next'
-import { Link } from 'react-router-dom'
-import { ArrowLeft, Trash2, Key, AlertTriangle } from 'lucide-react'
+import { Trash2, Key, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
@@ -89,15 +88,8 @@ export function APIKeysPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div>
       <div className="mb-6">
-        <Link
-          to="/preferences"
-          className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 mb-3"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          {t('preferences.apiKeys.backToPreferences')}
-        </Link>
         <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{t('preferences.apiKeys.title')}</h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('preferences.apiKeys.description')}</p>
       </div>

@@ -1,26 +1,22 @@
 import { NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useSidebar } from '@/contexts/SidebarContext'
-import { useNavigationGuard } from '@/contexts/NavigationGuardContext'
 import {
-  Settings,
-  Users,
-  Route,
+  Palette,
+  Key,
   PanelLeftClose,
   PanelLeftOpen,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
-export function SystemSettingsSidebar() {
+export function PreferencesSidebar() {
   const { t } = useTranslation()
   const { collapsed, toggleCollapsed } = useSidebar()
-  const { guardRef, guardedNavigate } = useNavigationGuard()
-  const base = '/admin'
+  const base = '/preferences'
 
   const navItems: { to: string; label: string; icon: LucideIcon; end: boolean }[] = [
-    { to: 'general', label: t('admin.sidebar.general'), icon: Settings, end: false },
-    { to: 'users', label: t('admin.sidebar.users'), icon: Users, end: false },
-    { to: 'workflows', label: t('admin.sidebar.workflows'), icon: Route, end: false },
+    { to: 'appearance', label: t('preferences.sidebar.appearance'), icon: Palette, end: false },
+    { to: 'api-keys', label: t('preferences.sidebar.apiKeys'), icon: Key, end: false },
   ]
 
   function renderNavItems(showLabels: boolean) {
@@ -31,12 +27,6 @@ export function SystemSettingsSidebar() {
             <NavLink
               to={`${base}/${item.to}`}
               end={item.end}
-              onClick={(e) => {
-                if (guardRef.current?.()) {
-                  e.preventDefault()
-                  guardedNavigate(`${base}/${item.to}`)
-                }
-              }}
               className={({ isActive }) =>
                 `group/nav relative flex items-center gap-3 rounded-md text-sm font-medium transition-colors ${
                   !showLabels ? 'justify-center px-0 py-2' : 'px-3 py-2'

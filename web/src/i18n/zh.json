@@ -359,6 +359,10 @@
   "mention.noResults": "未找到结果",
 
   "preferences.title": "偏好设置",
+  "preferences.navTitle": "用户偏好设置",
+  "preferences.sidebar.appearance": "外观",
+  "preferences.sidebar.apiKeys": "API 密钥",
+  "preferences.appearance": "外观",
   "preferences.theme": "主题",
   "preferences.fontSize": "字体大小",
   "preferences.language": "语言",
@@ -380,6 +384,7 @@
   "shortcuts.navigation": "导航",
   "shortcuts.navigation.switchProject": "切换项目",
   "shortcuts.navigation.goToItems": "前往项目",
+  "shortcuts.navigation.preferences": "用户偏好设置",
   "shortcuts.navigation.toggleSidebar": "切换侧边栏",
   "shortcuts.lists": "列表",
   "shortcuts.lists.moveDown": "向下移动",

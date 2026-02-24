@@ -359,6 +359,10 @@
   "mention.noResults": "No se encontraron resultados",
 
   "preferences.title": "Preferencias",
+  "preferences.navTitle": "Preferencias del Usuario",
+  "preferences.sidebar.appearance": "Apariencia",
+  "preferences.sidebar.apiKeys": "Claves API",
+  "preferences.appearance": "Apariencia",
   "preferences.theme": "Tema",
   "preferences.fontSize": "Tamaño de Fuente",
   "preferences.language": "Idioma",
@@ -380,6 +384,7 @@
   "shortcuts.navigation": "Navegación",
   "shortcuts.navigation.switchProject": "Cambiar proyecto",
   "shortcuts.navigation.goToItems": "Ir a elementos",
+  "shortcuts.navigation.preferences": "Preferencias del usuario",
   "shortcuts.navigation.toggleSidebar": "Alternar barra lateral",
   "shortcuts.lists": "Listas",
   "shortcuts.lists.moveDown": "Mover abajo",

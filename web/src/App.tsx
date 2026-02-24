@@ -8,7 +8,6 @@ import { ChangePasswordPage } from '@/pages/ChangePasswordPage'
 import { ProjectListPage } from '@/pages/ProjectListPage'
 import { ProjectDetailPage } from '@/pages/ProjectDetailPage'
 import { PreferencesPage } from '@/pages/PreferencesPage'
-import { APIKeysPage } from '@/pages/APIKeysPage'
 import { SystemSettingsPage } from '@/pages/SystemSettingsPage'
 import { InviteAcceptPage } from '@/pages/InviteAcceptPage'
 import { CliAuthorizePage } from '@/pages/CliAuthorizePage'
@@ -25,8 +24,7 @@ export default function App() {
         <Route element={<AppShell />}>
           <Route path="/projects" element={<ProjectListPage />} />
           <Route path="/projects/:projectKey/*" element={<ProjectDetailPage />} />
-          <Route path="/preferences" element={<PreferencesPage />} />
-          <Route path="/preferences/api-keys" element={<APIKeysPage />} />
+          <Route path="/preferences/*" element={<PreferencesPage />} />
           <Route path="/admin/*" element={<AdminRoute><SystemSettingsPage /></AdminRoute>} />
         </Route>
       </Route>

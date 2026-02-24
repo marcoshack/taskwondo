@@ -31,15 +31,17 @@ async function createKey(page: any, name: string) {
 }
 
 test.describe('API Key Management', () => {
-  test('navigate from preferences to API keys page', async ({ page }, testInfo) => {
+  test('navigate to API keys via sidebar', async ({ page }, testInfo) => {
     await page.goto('/');
     await dismissWelcomeModal(page);
 
     await page.goto('/preferences');
-    await attach(page, testInfo, '01-preferences-page');
+    // Should redirect to /preferences/appearance
+    await expect(page).toHaveURL(/preferences\/appearance/);
+    await attach(page, testInfo, '01-appearance-page');
 
-    // Click the API Keys link
-    await page.getByText('Manage API Keys').click();
+    // Click the API Keys sidebar link
+    await page.getByRole('link', { name: 'API Keys' }).click();
     await expect(page).toHaveURL(/preferences\/api-keys/);
     await attach(page, testInfo, '02-api-keys-page');
 
@@ -133,10 +135,20 @@ test.describe('API Key Management', () => {
     await attach(page, testInfo, '01-validation-error');
   });
 
-  test('back to preferences link works', async ({ page }, testInfo) => {
+  test('navigate between appearance and API keys via sidebar', async ({ page }, testInfo) => {
     await navigateToAPIKeys(page);
-    await page.getByText('Back to Preferences').click();
-    await expect(page).toHaveURL(/\/preferences$/);
-    await attach(page, testInfo, '01-back-to-preferences');
+    await attach(page, testInfo, '01-api-keys-page');
+
+    // Click Appearance in sidebar
+    await page.getByRole('link', { name: 'Appearance' }).click();
+    await expect(page).toHaveURL(/preferences\/appearance/);
+    await expect(page.getByRole('heading', { name: 'Appearance' })).toBeVisible();
+    await attach(page, testInfo, '02-appearance-page');
+
+    // Navigate back to API Keys
+    await page.getByRole('link', { name: 'API Keys' }).click();
+    await expect(page).toHaveURL(/preferences\/api-keys/);
+    await expect(page.getByRole('heading', { name: 'API Keys' })).toBeVisible();
+    await attach(page, testInfo, '03-back-to-api-keys');
   });
 });

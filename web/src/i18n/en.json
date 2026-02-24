@@ -374,6 +374,10 @@
   "mention.noResults": "No results found",
 
   "preferences.title": "Preferences",
+  "preferences.navTitle": "User Preferences",
+  "preferences.sidebar.appearance": "Appearance",
+  "preferences.sidebar.apiKeys": "API Keys",
+  "preferences.appearance": "Appearance",
   "preferences.theme": "Theme",
   "preferences.fontSize": "Font Size",
   "preferences.language": "Language",
@@ -432,6 +436,7 @@
   "shortcuts.navigation": "Navigation",
   "shortcuts.navigation.switchProject": "Switch project",
   "shortcuts.navigation.goToItems": "Go to items",
+  "shortcuts.navigation.preferences": "User preferences",
   "shortcuts.navigation.toggleSidebar": "Toggle sidebar",
   "shortcuts.lists": "Lists",
   "shortcuts.lists.moveDown": "Move down",

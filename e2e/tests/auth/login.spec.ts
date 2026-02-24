@@ -4,14 +4,11 @@ test.describe('Login', () => {
   // Login tests need a fresh browser with no stored auth
   test.use({ storageState: { cookies: [], origins: [] } });
 
-  test('successful login with email and password', async ({ testUser, page }, testInfo) => {
+  test('successful login with email and password', async ({ testUser, page }) => {
     await page.goto('/');
 
     await page.getByLabel('Email').fill(testUser.email);
     await page.getByLabel('Password').fill(testUser.password);
-    const screenshot = await page.screenshot();
-    await testInfo.attach('login-form', { body: screenshot, contentType: 'image/png' });
-
     await page.getByRole('button', { name: 'Sign in', exact: true }).click();
     await expect(page).not.toHaveURL(/login/, { timeout: 10000 });
   });

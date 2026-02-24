@@ -359,6 +359,10 @@
   "mention.noResults": "لم يتم العثور على نتائج",
 
   "preferences.title": "التفضيلات",
+  "preferences.navTitle": "تفضيلات المستخدم",
+  "preferences.sidebar.appearance": "المظهر",
+  "preferences.sidebar.apiKeys": "مفاتيح API",
+  "preferences.appearance": "المظهر",
   "preferences.theme": "المظهر",
   "preferences.fontSize": "حجم الخط",
   "preferences.language": "اللغة",
@@ -380,6 +384,7 @@
   "shortcuts.navigation": "التنقل",
   "shortcuts.navigation.switchProject": "تبديل المشروع",
   "shortcuts.navigation.goToItems": "الانتقال إلى العناصر",
+  "shortcuts.navigation.preferences": "تفضيلات المستخدم",
   "shortcuts.navigation.toggleSidebar": "تبديل الشريط الجانبي",
   "shortcuts.lists": "القوائم",
   "shortcuts.lists.moveDown": "التحرك للأسفل",

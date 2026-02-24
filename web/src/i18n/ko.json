@@ -359,6 +359,10 @@
   "mention.noResults": "결과를 찾을 수 없습니다",
 
   "preferences.title": "환경설정",
+  "preferences.navTitle": "사용자 환경설정",
+  "preferences.sidebar.appearance": "외관",
+  "preferences.sidebar.apiKeys": "API 키",
+  "preferences.appearance": "외관",
   "preferences.theme": "테마",
   "preferences.fontSize": "글꼴 크기",
   "preferences.language": "언어",
@@ -380,6 +384,7 @@
   "shortcuts.navigation": "탐색",
   "shortcuts.navigation.switchProject": "프로젝트 전환",
   "shortcuts.navigation.goToItems": "항목으로 이동",
+  "shortcuts.navigation.preferences": "사용자 환경설정",
   "shortcuts.navigation.toggleSidebar": "사이드바 전환",
   "shortcuts.lists": "목록",
   "shortcuts.lists.moveDown": "아래로 이동",

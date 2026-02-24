@@ -359,6 +359,10 @@
   "mention.noResults": "結果が見つかりません",
 
   "preferences.title": "設定",
+  "preferences.navTitle": "ユーザー設定",
+  "preferences.sidebar.appearance": "外観",
+  "preferences.sidebar.apiKeys": "APIキー",
+  "preferences.appearance": "外観",
   "preferences.theme": "テーマ",
   "preferences.fontSize": "文字サイズ",
   "preferences.language": "言語",
@@ -380,6 +384,7 @@
   "shortcuts.navigation": "ナビゲーション",
   "shortcuts.navigation.switchProject": "プロジェクト切替",
   "shortcuts.navigation.goToItems": "アイテムへ移動",
+  "shortcuts.navigation.preferences": "ユーザー設定",
   "shortcuts.navigation.toggleSidebar": "サイドバー切替",
   "shortcuts.lists": "リスト",
   "shortcuts.lists.moveDown": "下へ移動",

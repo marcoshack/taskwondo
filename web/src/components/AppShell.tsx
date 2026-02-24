@@ -1,7 +1,7 @@
 import { Outlet, useNavigate, useMatch } from 'react-router-dom'
 
 import { useTranslation } from 'react-i18next'
-import { Settings, Menu, HelpCircle } from 'lucide-react'
+import { Settings, UserCog, Menu, HelpCircle } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSidebar } from '@/contexts/SidebarContext'
 import { useNavigationGuard } from '@/contexts/NavigationGuardContext'
@@ -48,6 +48,7 @@ export function AppShell() {
 
   const projectMatch = useMatch('/projects/:projectKey/*')
   const adminMatch = useMatch('/admin/*')
+  const preferencesMatch = useMatch('/preferences/*')
   const activeProjectKey = projectMatch?.params.projectKey
   const { data: activeProject } = useProject(activeProjectKey ?? '')
 
@@ -81,6 +82,7 @@ export function AppShell() {
   }, [activeProjectKey, navigate, registerSequentialCombo])
 
   useKeyboardShortcut({ key: '?' }, () => setShortcutsOpen(true))
+  useKeyboardShortcut({ key: ',', ctrlKey: true }, () => guardedNavigate('/preferences'))
 
   const handleLogout = () => {
     logout()
@@ -101,6 +103,11 @@ export function AppShell() {
                   <Settings className="h-5 w-5 text-gray-500 dark:text-gray-400 shrink-0" />
                   <span className="text-base font-semibold text-gray-900 dark:text-gray-100 sm:hidden">{t('admin.titleShort')}</span>
                   <span className="text-base font-semibold text-gray-900 dark:text-gray-100 hidden sm:inline">{t('admin.title')}</span>
+                </div>
+              ) : preferencesMatch ? (
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <UserCog className="h-5 w-5 text-gray-500 dark:text-gray-400 shrink-0" />
+                  <span className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">{t('preferences.navTitle')}</span>
                 </div>
               ) : activeProject ? (
                 <button
@@ -130,7 +137,7 @@ export function AppShell() {
               >
                 <HelpCircle className="h-5 w-5" />
               </button>
-              {(activeProjectKey || adminMatch) && (
+              {activeProjectKey && (
                 <button
                   onClick={toggleMobileOpen}
                   className="sm:hidden p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"

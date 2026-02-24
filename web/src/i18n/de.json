@@ -359,6 +359,10 @@
   "mention.noResults": "Keine Ergebnisse gefunden",
 
   "preferences.title": "Einstellungen",
+  "preferences.navTitle": "Benutzereinstellungen",
+  "preferences.sidebar.appearance": "Erscheinungsbild",
+  "preferences.sidebar.apiKeys": "API-Schlüssel",
+  "preferences.appearance": "Erscheinungsbild",
   "preferences.theme": "Design",
   "preferences.fontSize": "Schriftgröße",
   "preferences.language": "Sprache",
@@ -380,6 +384,7 @@
   "shortcuts.navigation": "Navigation",
   "shortcuts.navigation.switchProject": "Projekt wechseln",
   "shortcuts.navigation.goToItems": "Zu Elementen gehen",
+  "shortcuts.navigation.preferences": "Benutzereinstellungen",
   "shortcuts.navigation.toggleSidebar": "Seitenleiste umschalten",
   "shortcuts.lists": "Listen",
   "shortcuts.lists.moveDown": "Nach unten",
