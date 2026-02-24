@@ -524,6 +524,27 @@ func (c *Client) ListEvents(projectKey string, itemNumber int) ([]Event, error) 
 	return events, nil
 }
 
+func (c *Client) CreateRelation(projectKey string, itemNumber int, targetDisplayID, relationType string) (*Relation, error) {
+	path := fmt.Sprintf("/api/v1/projects/%s/items/%d/relations", url.PathEscape(projectKey), itemNumber)
+	params := map[string]string{
+		"target_display_id": targetDisplayID,
+		"relation_type":     relationType,
+	}
+	data, err := c.doRequest("POST", path, params)
+	if err != nil {
+		return nil, err
+	}
+	var resp apiResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+	var relation Relation
+	if err := json.Unmarshal(resp.Data, &relation); err != nil {
+		return nil, fmt.Errorf("decode relation: %w", err)
+	}
+	return &relation, nil
+}
+
 func (c *Client) ListRelations(projectKey string, itemNumber int) ([]Relation, error) {
 	path := fmt.Sprintf("/api/v1/projects/%s/items/%d/relations", url.PathEscape(projectKey), itemNumber)
 	data, err := c.doRequest("GET", path, nil)

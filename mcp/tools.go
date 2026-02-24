@@ -148,6 +148,15 @@ func listEventsTool() mcp.Tool {
 	)
 }
 
+func createRelationTool() mcp.Tool {
+	return mcp.NewTool("create_relation",
+		mcp.WithDescription("Create a relation between two work items. Use after creating related work items to link them together."),
+		mcp.WithString("display_id", mcp.Required(), mcp.Description("Source work item display ID, e.g. TF-141")),
+		mcp.WithString("target_display_id", mcp.Required(), mcp.Description("Target work item display ID, e.g. TF-143")),
+		mcp.WithString("relation_type", mcp.Required(), mcp.Description("Relation type: blocks, blocked_by, relates_to, duplicates, caused_by, parent_of, child_of")),
+	)
+}
+
 func listRelationsTool() mcp.Tool {
 	return mcp.NewTool("list_relations",
 		mcp.WithDescription("List relations on a work item. Shows links to other work items (e.g. blocks, is blocked by, relates to)."),
@@ -628,6 +637,41 @@ func handleListEvents(_ context.Context, request mcp.CallToolRequest) (*mcp.Call
 		sb.WriteString("\n")
 	}
 	return mcp.NewToolResultText(sb.String()), nil
+}
+
+func handleCreateRelation(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := getClient()
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	displayID, err := request.RequireString("display_id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	targetDisplayID, err := request.RequireString("target_display_id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	relationType, err := request.RequireString("relation_type")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	projectKey, itemNumber, err := parseDisplayID(displayID)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	relation, err := client.CreateRelation(projectKey, itemNumber, targetDisplayID, relationType)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to create relation: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText(fmt.Sprintf("Created relation: %s **%s** %s",
+		relation.SourceDisplayID, relation.RelationType, relation.TargetDisplayID)), nil
 }
 
 func handleListRelations(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {

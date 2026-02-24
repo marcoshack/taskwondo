@@ -31,6 +31,7 @@ func main() {
 
 	// Activity / relation tools
 	s.AddTool(listEventsTool(), handleListEvents)
+	s.AddTool(createRelationTool(), handleCreateRelation)
 	s.AddTool(listRelationsTool(), handleListRelations)
 
 	// Attachment tools
