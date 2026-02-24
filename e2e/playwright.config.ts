@@ -17,7 +17,7 @@ export default defineConfig({
     ['list'],
   ],
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: process.env.BASE_URL || 'http://localhost:5173',
     screenshot: 'on',
     trace: 'on-first-retry',
   },

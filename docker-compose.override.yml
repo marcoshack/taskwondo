@@ -1,9 +1,6 @@
 # Development overrides — automatically merged by `docker compose up`.
 # Production deploys should use: docker compose -f docker-compose.yml up -d
 services:
-  api:
-    ports:
-      - "${API_PORT:-8080}:8080"
       
   postgres:
     ports:

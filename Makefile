@@ -1,4 +1,4 @@
-.PHONY: build push help dev dev-db dev-api dev-web up down logs logs-api migrate migrate-new test test-e2e test-e2e-report check-env export import release
+.PHONY: build push help dev dev-db dev-api dev-web up down logs logs-api migrate migrate-new test test-e2e test-e2e-dev test-e2e-report check-env export import release
 
 # Required environment variables (checked by sourcing .env)
 REQUIRED_VARS := POSTGRES_USER POSTGRES_PASSWORD MINIO_ROOT_USER MINIO_ROOT_PASSWORD JWT_SECRET DATABASE_URL STORAGE_ACCESS_KEY STORAGE_SECRET_KEY
@@ -129,8 +129,13 @@ _release:
 test: ## Run all tests
 	cd api && go test ./... -v -race
 
-test-e2e: ## Run end-to-end tests (headless)
+test-e2e: ## Run E2E tests in isolated Docker stack (no host deps)
+	bash scripts/e2e-docker.sh
+
+test-e2e-dev: ## Run E2E tests against local dev server (localhost:5173)
 	cd e2e && npx playwright test
 
-test-e2e-report: ## Open the last e2e test HTML report
-	cd e2e && npx playwright show-report
+test-e2e-report: ## Serve the last E2E HTML report at http://localhost:9323
+	@echo "Serving report at http://localhost:9323"
+	@echo "Press Ctrl+C to stop"
+	docker run --rm -p 9323:80 -v "$$(pwd)/e2e/playwright-report:/usr/share/nginx/html:ro" nginx:alpine

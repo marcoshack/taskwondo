@@ -1,0 +1,103 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: e2euser
+      POSTGRES_PASSWORD: e2epass
+      POSTGRES_DB: e2edb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U e2euser"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: "no"
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: e2eminioaccess
+      MINIO_ROOT_PASSWORD: e2eminiosecret
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+    restart: "no"
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 e2eminioaccess e2eminiosecret;
+      mc mb --ignore-existing local/taskwondo-attachments;
+      exit 0;
+      "
+    restart: "no"
+
+  api:
+    image: ghcr.io/marcoshack/taskwondo/api:e2e
+    build:
+      context: ./api
+      dockerfile: ../docker/Dockerfile.api
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    environment:
+      API_PORT: "8080"
+      DATABASE_URL: "postgres://e2euser:e2epass@postgres:5432/e2edb?sslmode=disable"
+      JWT_SECRET: "e2e-test-jwt-secret-at-least-32-chars-long"
+      STORAGE_ENDPOINT: "minio:9000"
+      STORAGE_ACCESS_KEY: "e2eminioaccess"
+      STORAGE_SECRET_KEY: "e2eminiosecret"
+      STORAGE_BUCKET: "taskwondo-attachments"
+      STORAGE_USE_SSL: "false"
+      ADMIN_EMAIL: "admin@e2e.test"
+      ADMIN_PASSWORD: "E2eAdminPass123!"
+      AUTH_RATE_LIMIT: "1000"
+      AUTH_RATE_BURST: "100"
+      LOG_LEVEL: "info"
+      LOG_FORMAT: "text"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/healthz"]
+      interval: 3s
+      timeout: 5s
+      retries: 15
+      start_period: 10s
+    restart: "no"
+
+  web:
+    image: ghcr.io/marcoshack/taskwondo/web:e2e
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.web
+    ports:
+      - "3001:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: "no"
+
+  playwright:
+    build:
+      context: ./e2e
+      dockerfile: Dockerfile
+    depends_on:
+      web:
+        condition: service_started
+      api:
+        condition: service_healthy
+    environment:
+      BASE_URL: "http://web:80"
+      ADMIN_EMAIL: "admin@e2e.test"
+      ADMIN_PASSWORD: "E2eAdminPass123!"
+    volumes:
+      - ./e2e/test-results:/e2e/test-results
+      - ./e2e/playwright-report:/e2e/playwright-report
+    restart: "no"
