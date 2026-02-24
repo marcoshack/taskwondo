@@ -1,5 +1,6 @@
 import type { Components } from 'react-markdown'
 import { AuthImage } from './AuthImage'
+import { Mermaid } from './Mermaid'
 import { getToken } from '@/api/client'
 
 interface MarkdownComponentOptions {
@@ -51,6 +52,13 @@ export function getMarkdownComponents(opts?: MarkdownComponentOptions | ((src: s
   const { onImageClick, onAttachmentLinkClick } = options
 
   return {
+    code: ({ className, children, ...props }) => {
+      if (className === 'language-mermaid') {
+        const chart = String(children).replace(/\n$/, '')
+        return <Mermaid chart={chart} />
+      }
+      return <code className={className} {...props}>{children}</code>
+    },
     img: ({ src, alt, ...props }) => {
       const img = <AuthImage src={src} alt={alt} {...props} />
       if (onImageClick && src) {
