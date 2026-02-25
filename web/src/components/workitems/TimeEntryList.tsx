@@ -180,8 +180,47 @@ export function TimeEntryList({ projectKey, itemNumber, sortOrder = 'desc', read
           key={entry.id}
           className="group/entry border-b border-gray-100 dark:border-gray-700 pb-3"
         >
-          {editingId === entry.id ? (
-            <div className="space-y-2">
+          <div className="flex items-center gap-2 mb-1">
+            <Avatar name={authorName(entry.user_id)} size="xs" />
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{authorName(entry.user_id)}</span>
+            <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">
+              {formatDuration(entry.duration_seconds)}
+            </span>
+            <span className="text-xs text-gray-400 dark:text-gray-500">
+              {new Date(entry.started_at).toLocaleDateString()}
+            </span>
+            {user && entry.user_id === user.id && !readOnly && editingId !== entry.id && (
+              <>
+                <button
+                  className="group/edit relative inline-flex items-center justify-center w-7 h-7 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-gray-700 transition-colors opacity-0 group-hover/entry:opacity-100"
+                  onClick={() => startEdit(entry)}
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M11.5 2.5a1.5 1.5 0 012.121 2.121L6.5 11.743l-2.5.757.757-2.5L11.5 2.5z" />
+                  </svg>
+                  <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs text-white bg-gray-900 dark:bg-gray-700 rounded whitespace-nowrap opacity-0 group-hover/edit:opacity-100 transition-opacity">
+                    {t('common.edit')}
+                  </span>
+                </button>
+                <button
+                  className="group/del relative inline-flex items-center justify-center w-7 h-7 rounded-md text-red-400 hover:text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/30 transition-colors opacity-0 group-hover/entry:opacity-100"
+                  onClick={() => setDeletingId(entry.id)}
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 4.5h10M6.5 4.5V3a1 1 0 011-1h1a1 1 0 011 1v1.5M5 4.5v8a1 1 0 001 1h4a1 1 0 001-1v-8" />
+                  </svg>
+                  <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs text-white bg-gray-900 dark:bg-gray-700 rounded whitespace-nowrap opacity-0 group-hover/del:opacity-100 transition-opacity">
+                    {t('common.delete')}
+                  </span>
+                </button>
+              </>
+            )}
+          </div>
+          {entry.description && editingId !== entry.id && (
+            <p className="text-sm text-gray-600 dark:text-gray-400 pl-8">{entry.description}</p>
+          )}
+          {editingId === entry.id && (
+            <div className="mt-2 space-y-2">
               <div className="flex gap-2 items-center">
                 <Input
                   type="text"
@@ -199,9 +238,37 @@ export function TimeEntryList({ projectKey, itemNumber, sortOrder = 'desc', read
                   className="shrink-0"
                   value={editStartedAt}
                   onChange={(e) => setEditStartedAt(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') setEditingId(null)
+                  }}
                 />
+                <Input
+                  className="hidden sm:block flex-1 min-w-0"
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  placeholder={t('timeTracking.descriptionPlaceholder')}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') { e.preventDefault(); handleUpdate() }
+                    if (e.key === 'Escape') setEditingId(null)
+                  }}
+                />
+                <Button
+                  className="py-2 text-sm shrink-0 w-20"
+                  onClick={handleUpdate}
+                  disabled={!parseDurationString(editDuration) || updateMutation.isPending}
+                >
+                  {updateMutation.isPending ? t('common.saving') : t('common.save')}
+                </Button>
+                <Button
+                  className="py-2 text-sm shrink-0 w-20"
+                  variant="ghost"
+                  onClick={() => setEditingId(null)}
+                >
+                  {t('common.cancel')}
+                </Button>
               </div>
               <Input
+                className="sm:hidden"
                 value={editDescription}
                 onChange={(e) => setEditDescription(e.target.value)}
                 placeholder={t('timeTracking.descriptionPlaceholder')}
@@ -210,53 +277,7 @@ export function TimeEntryList({ projectKey, itemNumber, sortOrder = 'desc', read
                   if (e.key === 'Escape') setEditingId(null)
                 }}
               />
-              <div className="flex gap-2">
-                <Button size="sm" onClick={handleUpdate} disabled={updateMutation.isPending}>{t('common.save')}</Button>
-                <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>{t('common.cancel')}</Button>
-              </div>
             </div>
-          ) : (
-            <>
-              <div className="flex items-center gap-2 mb-1">
-                <Avatar name={authorName(entry.user_id)} size="xs" />
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{authorName(entry.user_id)}</span>
-                <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">
-                  {formatDuration(entry.duration_seconds)}
-                </span>
-                <span className="text-xs text-gray-400 dark:text-gray-500">
-                  {new Date(entry.started_at).toLocaleDateString()}
-                </span>
-                {user && entry.user_id === user.id && !readOnly && (
-                  <>
-                    <button
-                      className="group/edit relative inline-flex items-center justify-center w-7 h-7 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-gray-700 transition-colors opacity-0 group-hover/entry:opacity-100"
-                      onClick={() => startEdit(entry)}
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M11.5 2.5a1.5 1.5 0 012.121 2.121L6.5 11.743l-2.5.757.757-2.5L11.5 2.5z" />
-                      </svg>
-                      <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs text-white bg-gray-900 dark:bg-gray-700 rounded whitespace-nowrap opacity-0 group-hover/edit:opacity-100 transition-opacity">
-                        {t('common.edit')}
-                      </span>
-                    </button>
-                    <button
-                      className="group/del relative inline-flex items-center justify-center w-7 h-7 rounded-md text-red-400 hover:text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/30 transition-colors opacity-0 group-hover/entry:opacity-100"
-                      onClick={() => setDeletingId(entry.id)}
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 4.5h10M6.5 4.5V3a1 1 0 011-1h1a1 1 0 011 1v1.5M5 4.5v8a1 1 0 001 1h4a1 1 0 001-1v-8" />
-                      </svg>
-                      <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs text-white bg-gray-900 dark:bg-gray-700 rounded whitespace-nowrap opacity-0 group-hover/del:opacity-100 transition-opacity">
-                        {t('common.delete')}
-                      </span>
-                    </button>
-                  </>
-                )}
-              </div>
-              {entry.description && (
-                <p className="text-sm text-gray-600 dark:text-gray-400 pl-8">{entry.description}</p>
-              )}
-            </>
           )}
         </div>
       ))}
