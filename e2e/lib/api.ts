@@ -165,3 +165,46 @@ export async function updateComment(
   });
   if (!res.ok()) throw new Error(`Update comment failed (${res.status()}): ${await res.text()}`);
 }
+
+export async function createTimeEntry(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  itemNumber: number,
+  data: { started_at: string; duration_seconds: number; description?: string },
+): Promise<{ id: string; duration_seconds: number }> {
+  const res = await request.post(`${BASE_URL}/api/v1/projects/${projectKey}/items/${itemNumber}/time-entries`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data,
+  });
+  if (!res.ok()) throw new Error(`Create time entry failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function listTimeEntries(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  itemNumber: number,
+): Promise<{ entries: { id: string; duration_seconds: number; description?: string }[]; total_logged_seconds: number }> {
+  const res = await request.get(`${BASE_URL}/api/v1/projects/${projectKey}/items/${itemNumber}/time-entries`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`List time entries failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function deleteTimeEntry(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  itemNumber: number,
+  entryId: string,
+): Promise<void> {
+  const res = await request.delete(`${BASE_URL}/api/v1/projects/${projectKey}/items/${itemNumber}/time-entries/${entryId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`Delete time entry failed (${res.status()}): ${await res.text()}`);
+}

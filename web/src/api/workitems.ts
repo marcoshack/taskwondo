@@ -30,6 +30,7 @@ export interface WorkItem {
   complexity: number | null
   custom_fields: Record<string, unknown>
   due_date: string | null
+  estimated_seconds: number | null
   sla: SLAInfo | null
   sla_target_at: string | null
   resolved_at: string | null
@@ -87,6 +88,7 @@ export interface UpdateWorkItemInput {
   parent_id?: string | null
   queue_id?: string | null
   milestone_id?: string | null
+  estimated_seconds?: number | null
 }
 
 export interface Comment {
@@ -286,4 +288,77 @@ export function getAttachmentDownloadURL(
   attachmentId: string
 ): string {
   return `/api/v1/projects/${projectKey}/items/${itemNumber}/attachments/${attachmentId}`
+}
+
+// --- Time Entry Types ---
+
+export interface TimeEntry {
+  id: string
+  user_id: string
+  started_at: string
+  duration_seconds: number
+  description: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface TimeEntrySummary {
+  entries: TimeEntry[]
+  total_logged_seconds: number
+}
+
+export interface CreateTimeEntryInput {
+  started_at: string
+  duration_seconds: number
+  description?: string
+}
+
+export interface UpdateTimeEntryInput {
+  started_at?: string
+  duration_seconds?: number
+  description?: string | null
+}
+
+// --- Time Entry API Functions ---
+
+export async function listTimeEntries(projectKey: string, itemNumber: number) {
+  const res = await api.get<DataResponse<TimeEntrySummary>>(
+    `/projects/${projectKey}/items/${itemNumber}/time-entries`
+  )
+  return res.data.data
+}
+
+export async function createTimeEntry(
+  projectKey: string,
+  itemNumber: number,
+  input: CreateTimeEntryInput
+) {
+  const res = await api.post<DataResponse<TimeEntry>>(
+    `/projects/${projectKey}/items/${itemNumber}/time-entries`,
+    input
+  )
+  return res.data.data
+}
+
+export async function updateTimeEntry(
+  projectKey: string,
+  itemNumber: number,
+  entryId: string,
+  input: UpdateTimeEntryInput
+) {
+  const res = await api.patch<DataResponse<TimeEntry>>(
+    `/projects/${projectKey}/items/${itemNumber}/time-entries/${entryId}`,
+    input
+  )
+  return res.data.data
+}
+
+export async function deleteTimeEntry(
+  projectKey: string,
+  itemNumber: number,
+  entryId: string
+) {
+  await api.delete(
+    `/projects/${projectKey}/items/${itemNumber}/time-entries/${entryId}`
+  )
 }

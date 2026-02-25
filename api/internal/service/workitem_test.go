@@ -756,6 +756,69 @@ func (m *mockStorage) Delete(_ context.Context, key string) error {
 	return nil
 }
 
+// --- Mock time entry repository ---
+
+type mockTimeEntryRepo struct {
+	entries map[uuid.UUID]*model.TimeEntry
+}
+
+func newMockTimeEntryRepo() *mockTimeEntryRepo {
+	return &mockTimeEntryRepo{entries: make(map[uuid.UUID]*model.TimeEntry)}
+}
+
+func (m *mockTimeEntryRepo) Create(_ context.Context, entry *model.TimeEntry) error {
+	now := time.Now()
+	entry.CreatedAt = now
+	entry.UpdatedAt = now
+	m.entries[entry.ID] = entry
+	return nil
+}
+
+func (m *mockTimeEntryRepo) GetByID(_ context.Context, id uuid.UUID) (*model.TimeEntry, error) {
+	e, ok := m.entries[id]
+	if !ok {
+		return nil, model.ErrNotFound
+	}
+	return e, nil
+}
+
+func (m *mockTimeEntryRepo) ListByWorkItem(_ context.Context, workItemID uuid.UUID) ([]model.TimeEntry, error) {
+	var result []model.TimeEntry
+	for _, e := range m.entries {
+		if e.WorkItemID == workItemID {
+			result = append(result, *e)
+		}
+	}
+	return result, nil
+}
+
+func (m *mockTimeEntryRepo) Update(_ context.Context, entry *model.TimeEntry) error {
+	if _, ok := m.entries[entry.ID]; !ok {
+		return model.ErrNotFound
+	}
+	entry.UpdatedAt = time.Now()
+	m.entries[entry.ID] = entry
+	return nil
+}
+
+func (m *mockTimeEntryRepo) Delete(_ context.Context, id uuid.UUID) error {
+	if _, ok := m.entries[id]; !ok {
+		return model.ErrNotFound
+	}
+	delete(m.entries, id)
+	return nil
+}
+
+func (m *mockTimeEntryRepo) SumByWorkItem(_ context.Context, workItemID uuid.UUID) (int, error) {
+	total := 0
+	for _, e := range m.entries {
+		if e.WorkItemID == workItemID {
+			total += e.DurationSeconds
+		}
+	}
+	return total, nil
+}
+
 // --- Test helpers ---
 
 type testWorkItemSetup struct {
@@ -771,6 +834,7 @@ type testWorkItemSetup struct {
 	queueRepo        *mockQueueRepo
 	milestoneRepo    *mockMilestoneRepo
 	attachRepo       *mockAttachmentRepo
+	timeEntryRepo    *mockTimeEntryRepo
 	storage          *mockStorage
 }
 
@@ -791,10 +855,11 @@ func newTestWorkItemSetup() *testWorkItemSetup {
 	queueRepo := newMockQueueRepo()
 	milestoneRepo := newMockMilestoneRepo()
 	attachRepo := newMockAttachmentRepo()
+	timeEntryRepo := newMockTimeEntryRepo()
 	slaRepo := newMockSLARepo()
 	slaService := NewSLAService(slaRepo, projectRepo, memberRepo, workflowRepo)
 	store := newMockStorage()
-	svc := NewWorkItemService(itemRepo, eventRepo, commentRepo, relationRepo, attachRepo, projectRepo, memberRepo, workflowRepo, typeWorkflowRepo, queueRepo, milestoneRepo, slaRepo, slaService, store, 50*1024*1024)
+	svc := NewWorkItemService(itemRepo, eventRepo, commentRepo, relationRepo, attachRepo, timeEntryRepo, projectRepo, memberRepo, workflowRepo, typeWorkflowRepo, queueRepo, milestoneRepo, slaRepo, slaService, store, 50*1024*1024)
 	return &testWorkItemSetup{
 		svc:              svc,
 		itemRepo:         itemRepo,
@@ -808,6 +873,7 @@ func newTestWorkItemSetup() *testWorkItemSetup {
 		queueRepo:        queueRepo,
 		milestoneRepo:    milestoneRepo,
 		attachRepo:       attachRepo,
+		timeEntryRepo:    timeEntryRepo,
 		storage:          store,
 	}
 }
@@ -827,6 +893,15 @@ func setupProjectWithMember(t *testing.T, projectRepo *mockProjectRepo, memberRe
 		Role:      role,
 	})
 	return project
+}
+
+func createTestWorkItem(t *testing.T, setup *testWorkItemSetup, info *model.AuthInfo, projectKey string) *model.WorkItem {
+	t.Helper()
+	item, err := setup.svc.Create(context.Background(), info, projectKey, validCreateInput())
+	if err != nil {
+		t.Fatalf("failed to create test work item: %v", err)
+	}
+	return item
 }
 
 func validCreateInput() CreateWorkItemInput {
@@ -3081,5 +3156,232 @@ func TestUpdateWorkItem_ComplexityValidatedAgainstProject(t *testing.T) {
 	_, err = svc.Update(context.Background(), info, "TEST", item.ItemNumber, UpdateWorkItemInput{Complexity: &badComplexity})
 	if !errors.Is(err, model.ErrValidation) {
 		t.Fatalf("expected ErrValidation for disallowed complexity, got %v", err)
+	}
+}
+
+// --- Time entry tests ---
+
+func TestLogTime(t *testing.T) {
+	setup := newTestWorkItemSetup()
+	info := &model.AuthInfo{UserID: uuid.New(), Email: "user@test.com", GlobalRole: model.RoleUser}
+	project := setupProjectWithMember(t, setup.projectRepo, setup.memberRepo, info, model.ProjectRoleMember)
+	item := createTestWorkItem(t, setup, info, project.Key)
+
+	entry, err := setup.svc.LogTime(context.Background(), info, project.Key, item.ItemNumber, CreateTimeEntryInput{
+		StartedAt:       time.Now().Add(-time.Hour),
+		DurationSeconds: 3600,
+		Description:     "worked on feature",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if entry.DurationSeconds != 3600 {
+		t.Errorf("expected duration 3600, got %d", entry.DurationSeconds)
+	}
+	if entry.Description == nil || *entry.Description != "worked on feature" {
+		t.Errorf("expected description 'worked on feature', got %v", entry.Description)
+	}
+}
+
+func TestLogTimeValidation(t *testing.T) {
+	setup := newTestWorkItemSetup()
+	info := &model.AuthInfo{UserID: uuid.New(), Email: "user@test.com", GlobalRole: model.RoleUser}
+	project := setupProjectWithMember(t, setup.projectRepo, setup.memberRepo, info, model.ProjectRoleMember)
+	item := createTestWorkItem(t, setup, info, project.Key)
+
+	// Zero duration should fail
+	_, err := setup.svc.LogTime(context.Background(), info, project.Key, item.ItemNumber, CreateTimeEntryInput{
+		StartedAt:       time.Now(),
+		DurationSeconds: 0,
+	})
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation for zero duration, got %v", err)
+	}
+
+	// Zero time should fail
+	_, err = setup.svc.LogTime(context.Background(), info, project.Key, item.ItemNumber, CreateTimeEntryInput{
+		DurationSeconds: 3600,
+	})
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation for zero started_at, got %v", err)
+	}
+}
+
+func TestListTimeEntries(t *testing.T) {
+	setup := newTestWorkItemSetup()
+	info := &model.AuthInfo{UserID: uuid.New(), Email: "user@test.com", GlobalRole: model.RoleUser}
+	project := setupProjectWithMember(t, setup.projectRepo, setup.memberRepo, info, model.ProjectRoleMember)
+	item := createTestWorkItem(t, setup, info, project.Key)
+
+	// Log two entries
+	for i := range 2 {
+		_, err := setup.svc.LogTime(context.Background(), info, project.Key, item.ItemNumber, CreateTimeEntryInput{
+			StartedAt:       time.Now().Add(-time.Duration(i+1) * time.Hour),
+			DurationSeconds: 1800 * (i + 1),
+		})
+		if err != nil {
+			t.Fatalf("unexpected error logging time %d: %v", i, err)
+		}
+	}
+
+	entries, err := setup.svc.ListTimeEntries(context.Background(), info, project.Key, item.ItemNumber)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(entries) != 2 {
+		t.Fatalf("expected 2 entries, got %d", len(entries))
+	}
+}
+
+func TestGetTimeEntrySummary(t *testing.T) {
+	setup := newTestWorkItemSetup()
+	info := &model.AuthInfo{UserID: uuid.New(), Email: "user@test.com", GlobalRole: model.RoleUser}
+	project := setupProjectWithMember(t, setup.projectRepo, setup.memberRepo, info, model.ProjectRoleMember)
+	item := createTestWorkItem(t, setup, info, project.Key)
+
+	// Log 1h + 30m
+	setup.svc.LogTime(context.Background(), info, project.Key, item.ItemNumber, CreateTimeEntryInput{
+		StartedAt: time.Now().Add(-2 * time.Hour), DurationSeconds: 3600,
+	})
+	setup.svc.LogTime(context.Background(), info, project.Key, item.ItemNumber, CreateTimeEntryInput{
+		StartedAt: time.Now().Add(-time.Hour), DurationSeconds: 1800,
+	})
+
+	total, err := setup.svc.GetTimeEntrySummary(context.Background(), info, project.Key, item.ItemNumber)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if total != 5400 {
+		t.Errorf("expected total 5400, got %d", total)
+	}
+}
+
+func TestUpdateTimeEntry(t *testing.T) {
+	setup := newTestWorkItemSetup()
+	info := &model.AuthInfo{UserID: uuid.New(), Email: "user@test.com", GlobalRole: model.RoleUser}
+	project := setupProjectWithMember(t, setup.projectRepo, setup.memberRepo, info, model.ProjectRoleMember)
+	item := createTestWorkItem(t, setup, info, project.Key)
+
+	entry, _ := setup.svc.LogTime(context.Background(), info, project.Key, item.ItemNumber, CreateTimeEntryInput{
+		StartedAt: time.Now().Add(-time.Hour), DurationSeconds: 3600,
+	})
+
+	newDur := 7200
+	updated, err := setup.svc.UpdateTimeEntry(context.Background(), info, project.Key, item.ItemNumber, entry.ID, UpdateTimeEntryInput{
+		DurationSeconds: &newDur,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated.DurationSeconds != 7200 {
+		t.Errorf("expected duration 7200, got %d", updated.DurationSeconds)
+	}
+}
+
+func TestUpdateTimeEntryForbiddenForNonAuthor(t *testing.T) {
+	setup := newTestWorkItemSetup()
+	owner := &model.AuthInfo{UserID: uuid.New(), Email: "owner@test.com", GlobalRole: model.RoleUser}
+	other := &model.AuthInfo{UserID: uuid.New(), Email: "other@test.com", GlobalRole: model.RoleUser}
+	project := setupProjectWithMember(t, setup.projectRepo, setup.memberRepo, owner, model.ProjectRoleOwner)
+	setup.memberRepo.Add(context.Background(), &model.ProjectMember{
+		ID: uuid.New(), ProjectID: project.ID, UserID: other.UserID, Role: model.ProjectRoleMember,
+	})
+	item := createTestWorkItem(t, setup, owner, project.Key)
+
+	// Owner creates entry
+	entry, _ := setup.svc.LogTime(context.Background(), owner, project.Key, item.ItemNumber, CreateTimeEntryInput{
+		StartedAt: time.Now().Add(-time.Hour), DurationSeconds: 3600,
+	})
+
+	// Other member tries to update — should fail
+	newDur := 7200
+	_, err := setup.svc.UpdateTimeEntry(context.Background(), other, project.Key, item.ItemNumber, entry.ID, UpdateTimeEntryInput{
+		DurationSeconds: &newDur,
+	})
+	if !errors.Is(err, model.ErrForbidden) {
+		t.Fatalf("expected ErrForbidden, got %v", err)
+	}
+}
+
+func TestDeleteTimeEntry(t *testing.T) {
+	setup := newTestWorkItemSetup()
+	info := &model.AuthInfo{UserID: uuid.New(), Email: "user@test.com", GlobalRole: model.RoleUser}
+	project := setupProjectWithMember(t, setup.projectRepo, setup.memberRepo, info, model.ProjectRoleMember)
+	item := createTestWorkItem(t, setup, info, project.Key)
+
+	entry, _ := setup.svc.LogTime(context.Background(), info, project.Key, item.ItemNumber, CreateTimeEntryInput{
+		StartedAt: time.Now().Add(-time.Hour), DurationSeconds: 3600,
+	})
+
+	err := setup.svc.DeleteTimeEntry(context.Background(), info, project.Key, item.ItemNumber, entry.ID)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Verify it's gone
+	entries, _ := setup.svc.ListTimeEntries(context.Background(), info, project.Key, item.ItemNumber)
+	if len(entries) != 0 {
+		t.Errorf("expected 0 entries after delete, got %d", len(entries))
+	}
+}
+
+func TestDeleteTimeEntryAdminCanDeleteOthers(t *testing.T) {
+	setup := newTestWorkItemSetup()
+	member := &model.AuthInfo{UserID: uuid.New(), Email: "member@test.com", GlobalRole: model.RoleUser}
+	admin := &model.AuthInfo{UserID: uuid.New(), Email: "admin@test.com", GlobalRole: model.RoleUser}
+	project := setupProjectWithMember(t, setup.projectRepo, setup.memberRepo, member, model.ProjectRoleMember)
+	setup.memberRepo.Add(context.Background(), &model.ProjectMember{
+		ID: uuid.New(), ProjectID: project.ID, UserID: admin.UserID, Role: model.ProjectRoleAdmin,
+	})
+	item := createTestWorkItem(t, setup, member, project.Key)
+
+	// Member creates entry
+	entry, _ := setup.svc.LogTime(context.Background(), member, project.Key, item.ItemNumber, CreateTimeEntryInput{
+		StartedAt: time.Now().Add(-time.Hour), DurationSeconds: 3600,
+	})
+
+	// Admin deletes it
+	err := setup.svc.DeleteTimeEntry(context.Background(), admin, project.Key, item.ItemNumber, entry.ID)
+	if err != nil {
+		t.Fatalf("expected admin to delete, got %v", err)
+	}
+}
+
+func TestUpdateEstimatedSeconds(t *testing.T) {
+	setup := newTestWorkItemSetup()
+	info := &model.AuthInfo{UserID: uuid.New(), Email: "user@test.com", GlobalRole: model.RoleUser}
+	project := setupProjectWithMember(t, setup.projectRepo, setup.memberRepo, info, model.ProjectRoleMember)
+	item := createTestWorkItem(t, setup, info, project.Key)
+
+	// Set estimate
+	est := 7200
+	updated, err := setup.svc.Update(context.Background(), info, project.Key, item.ItemNumber, UpdateWorkItemInput{
+		EstimatedSeconds: &est,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated.EstimatedSeconds == nil || *updated.EstimatedSeconds != 7200 {
+		t.Errorf("expected estimated_seconds 7200, got %v", updated.EstimatedSeconds)
+	}
+
+	// Clear estimate
+	updated, err = setup.svc.Update(context.Background(), info, project.Key, item.ItemNumber, UpdateWorkItemInput{
+		ClearEstimate: true,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated.EstimatedSeconds != nil {
+		t.Errorf("expected nil estimated_seconds, got %v", updated.EstimatedSeconds)
+	}
+
+	// Invalid estimate (zero)
+	badEst := 0
+	_, err = setup.svc.Update(context.Background(), info, project.Key, item.ItemNumber, UpdateWorkItemInput{
+		EstimatedSeconds: &badEst,
+	})
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation for zero estimate, got %v", err)
 	}
 }

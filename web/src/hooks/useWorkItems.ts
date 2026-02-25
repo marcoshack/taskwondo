@@ -20,6 +20,12 @@ import {
   type WorkItemFilter,
   type CreateWorkItemInput,
   type UpdateWorkItemInput,
+  listTimeEntries,
+  createTimeEntry,
+  updateTimeEntry,
+  deleteTimeEntry,
+  type CreateTimeEntryInput,
+  type UpdateTimeEntryInput,
 } from '@/api/workitems'
 
 export function useWorkItems(projectKey: string, filter: WorkItemFilter = {}) {
@@ -223,6 +229,52 @@ export function useDeleteAttachment(projectKey: string, itemNumber: number) {
       deleteAttachment(projectKey, itemNumber, attachmentId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['projects', projectKey, 'items', itemNumber, 'attachments'] })
+      qc.invalidateQueries({ queryKey: ['projects', projectKey, 'items', itemNumber, 'events'] })
+    },
+  })
+}
+
+// --- Time entry hooks ---
+
+export function useTimeEntries(projectKey: string, itemNumber: number) {
+  return useQuery({
+    queryKey: ['projects', projectKey, 'items', itemNumber, 'timeEntries'],
+    queryFn: () => listTimeEntries(projectKey, itemNumber),
+    enabled: !!projectKey && itemNumber > 0,
+  })
+}
+
+export function useCreateTimeEntry(projectKey: string, itemNumber: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: CreateTimeEntryInput) =>
+      createTimeEntry(projectKey, itemNumber, input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['projects', projectKey, 'items', itemNumber, 'timeEntries'] })
+      qc.invalidateQueries({ queryKey: ['projects', projectKey, 'items', itemNumber, 'events'] })
+    },
+  })
+}
+
+export function useUpdateTimeEntry(projectKey: string, itemNumber: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ entryId, input }: { entryId: string; input: UpdateTimeEntryInput }) =>
+      updateTimeEntry(projectKey, itemNumber, entryId, input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['projects', projectKey, 'items', itemNumber, 'timeEntries'] })
+      qc.invalidateQueries({ queryKey: ['projects', projectKey, 'items', itemNumber, 'events'] })
+    },
+  })
+}
+
+export function useDeleteTimeEntry(projectKey: string, itemNumber: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (entryId: string) =>
+      deleteTimeEntry(projectKey, itemNumber, entryId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['projects', projectKey, 'items', itemNumber, 'timeEntries'] })
       qc.invalidateQueries({ queryKey: ['projects', projectKey, 'items', itemNumber, 'events'] })
     },
   })

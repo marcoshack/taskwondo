@@ -91,7 +91,7 @@ export function RelationList({ projectKey, itemNumber, readOnly = false }: Relat
       })}
 
       {!readOnly && (
-        <div className="flex items-end gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+        <div className="flex items-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
           <div className="flex-1">
             <WorkItemPicker
               projectKey={projectKey}
@@ -109,7 +109,7 @@ export function RelationList({ projectKey, itemNumber, readOnly = false }: Relat
             </Select>
           </div>
           <Button
-            size="sm"
+            className="py-2 text-sm"
             onClick={() => {
               createMutation.mutate({ targetDisplayId: targetId, relationType }, {
                 onSuccess: () => setTargetId(''),

@@ -59,6 +59,16 @@ type AttachmentRepository interface {
 	Delete(ctx context.Context, id uuid.UUID) error
 }
 
+// TimeEntryRepository defines persistence operations for time entries.
+type TimeEntryRepository interface {
+	Create(ctx context.Context, entry *model.TimeEntry) error
+	GetByID(ctx context.Context, id uuid.UUID) (*model.TimeEntry, error)
+	ListByWorkItem(ctx context.Context, workItemID uuid.UUID) ([]model.TimeEntry, error)
+	Update(ctx context.Context, entry *model.TimeEntry) error
+	Delete(ctx context.Context, id uuid.UUID) error
+	SumByWorkItem(ctx context.Context, workItemID uuid.UUID) (int, error)
+}
+
 // CreateWorkItemInput holds the input for creating a work item.
 type CreateWorkItemInput struct {
 	Type         string
@@ -98,7 +108,24 @@ type UpdateWorkItemInput struct {
 	ClearQueue       bool
 	MilestoneID      *uuid.UUID
 	ClearMilestone   bool
+	EstimatedSeconds *int
+	ClearEstimate    bool
 	CustomFields     map[string]interface{}
+}
+
+// CreateTimeEntryInput holds the input for logging a time entry.
+type CreateTimeEntryInput struct {
+	StartedAt       time.Time
+	DurationSeconds int
+	Description     string
+}
+
+// UpdateTimeEntryInput holds the input for updating a time entry.
+type UpdateTimeEntryInput struct {
+	StartedAt       *time.Time
+	DurationSeconds *int
+	Description     *string
+	ClearDescription bool
 }
 
 // CreateCommentInput holds the input for creating a comment.
@@ -138,6 +165,7 @@ type WorkItemService struct {
 	comments      CommentRepository
 	relations     WorkItemRelationRepository
 	attachments   AttachmentRepository
+	timeEntries   TimeEntryRepository
 	projects      ProjectRepository
 	members       ProjectMemberRepository
 	workflows     WorkflowRepository
@@ -157,6 +185,7 @@ func NewWorkItemService(
 	comments CommentRepository,
 	relations WorkItemRelationRepository,
 	attachments AttachmentRepository,
+	timeEntries TimeEntryRepository,
 	projects ProjectRepository,
 	members ProjectMemberRepository,
 	workflows WorkflowRepository,
@@ -174,6 +203,7 @@ func NewWorkItemService(
 		comments:      comments,
 		relations:     relations,
 		attachments:   attachments,
+		timeEntries:   timeEntries,
 		projects:      projects,
 		members:       members,
 		workflows:     workflows,
@@ -662,6 +692,26 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 
 	if input.CustomFields != nil {
 		item.CustomFields = input.CustomFields
+	}
+
+	if input.ClearEstimate {
+		if item.EstimatedSeconds != nil {
+			s.recordEvent(ctx, item.ID, &info.UserID, "estimate_cleared", strPtr("estimated_seconds"), strPtr(strconv.Itoa(*item.EstimatedSeconds)), nil)
+			item.EstimatedSeconds = nil
+		}
+	} else if input.EstimatedSeconds != nil {
+		if *input.EstimatedSeconds <= 0 {
+			return nil, fmt.Errorf("estimated_seconds must be positive: %w", model.ErrValidation)
+		}
+		oldVal := ""
+		if item.EstimatedSeconds != nil {
+			oldVal = strconv.Itoa(*item.EstimatedSeconds)
+		}
+		newVal := strconv.Itoa(*input.EstimatedSeconds)
+		if oldVal != newVal {
+			s.recordEvent(ctx, item.ID, &info.UserID, "estimate_set", strPtr("estimated_seconds"), strPtr(oldVal), strPtr(newVal))
+			item.EstimatedSeconds = input.EstimatedSeconds
+		}
 	}
 
 	if err := s.items.Update(ctx, item); err != nil {
@@ -1276,6 +1326,199 @@ func (s *WorkItemService) requireRole(ctx context.Context, info *model.AuthInfo,
 		}
 	}
 	return model.ErrForbidden
+}
+
+// --- Time entry methods ---
+
+// LogTime creates a new time entry on a work item.
+func (s *WorkItemService) LogTime(ctx context.Context, info *model.AuthInfo, projectKey string, itemNumber int, input CreateTimeEntryInput) (*model.TimeEntry, error) {
+	project, err := s.projects.GetByKey(ctx, projectKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.requireRole(ctx, info, project.ID,
+		model.ProjectRoleOwner, model.ProjectRoleAdmin, model.ProjectRoleMember); err != nil {
+		return nil, err
+	}
+
+	item, err := s.items.GetByProjectAndNumber(ctx, project.ID, itemNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	if input.DurationSeconds <= 0 {
+		return nil, fmt.Errorf("duration_seconds must be positive: %w", model.ErrValidation)
+	}
+
+	if input.StartedAt.IsZero() {
+		return nil, fmt.Errorf("started_at is required: %w", model.ErrValidation)
+	}
+
+	entry := &model.TimeEntry{
+		ID:              uuid.Must(uuid.NewV7()),
+		WorkItemID:      item.ID,
+		UserID:          info.UserID,
+		StartedAt:       input.StartedAt,
+		DurationSeconds: input.DurationSeconds,
+	}
+
+	if strings.TrimSpace(input.Description) != "" {
+		desc := input.Description
+		entry.Description = &desc
+	}
+
+	if err := s.timeEntries.Create(ctx, entry); err != nil {
+		return nil, fmt.Errorf("creating time entry: %w", err)
+	}
+
+	s.recordEventWithMetadata(ctx, item.ID, &info.UserID, "time_logged", model.VisibilityInternal, map[string]interface{}{
+		"time_entry_id":    entry.ID.String(),
+		"duration_seconds": input.DurationSeconds,
+	})
+
+	return s.timeEntries.GetByID(ctx, entry.ID)
+}
+
+// ListTimeEntries returns all time entries for a work item.
+func (s *WorkItemService) ListTimeEntries(ctx context.Context, info *model.AuthInfo, projectKey string, itemNumber int) ([]model.TimeEntry, error) {
+	project, err := s.projects.GetByKey(ctx, projectKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.requireMembership(ctx, info, project.ID); err != nil {
+		return nil, err
+	}
+
+	item, err := s.items.GetByProjectAndNumber(ctx, project.ID, itemNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.timeEntries.ListByWorkItem(ctx, item.ID)
+}
+
+// GetTimeEntrySummary returns the total logged seconds for a work item.
+func (s *WorkItemService) GetTimeEntrySummary(ctx context.Context, info *model.AuthInfo, projectKey string, itemNumber int) (int, error) {
+	project, err := s.projects.GetByKey(ctx, projectKey)
+	if err != nil {
+		return 0, err
+	}
+
+	if err := s.requireMembership(ctx, info, project.ID); err != nil {
+		return 0, err
+	}
+
+	item, err := s.items.GetByProjectAndNumber(ctx, project.ID, itemNumber)
+	if err != nil {
+		return 0, err
+	}
+
+	return s.timeEntries.SumByWorkItem(ctx, item.ID)
+}
+
+// UpdateTimeEntry updates a time entry. Only the author or project owner/admin can edit.
+func (s *WorkItemService) UpdateTimeEntry(ctx context.Context, info *model.AuthInfo, projectKey string, itemNumber int, entryID uuid.UUID, input UpdateTimeEntryInput) (*model.TimeEntry, error) {
+	project, err := s.projects.GetByKey(ctx, projectKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.requireMembership(ctx, info, project.ID); err != nil {
+		return nil, err
+	}
+
+	item, err := s.items.GetByProjectAndNumber(ctx, project.ID, itemNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	entry, err := s.timeEntries.GetByID(ctx, entryID)
+	if err != nil {
+		return nil, err
+	}
+
+	if entry.WorkItemID != item.ID {
+		return nil, model.ErrNotFound
+	}
+
+	// Author can edit, otherwise need owner/admin
+	if entry.UserID != info.UserID {
+		if err := s.requireRole(ctx, info, project.ID,
+			model.ProjectRoleOwner, model.ProjectRoleAdmin); err != nil {
+			return nil, model.ErrForbidden
+		}
+	}
+
+	if input.StartedAt != nil {
+		entry.StartedAt = *input.StartedAt
+	}
+	if input.DurationSeconds != nil {
+		if *input.DurationSeconds <= 0 {
+			return nil, fmt.Errorf("duration_seconds must be positive: %w", model.ErrValidation)
+		}
+		entry.DurationSeconds = *input.DurationSeconds
+	}
+	if input.ClearDescription {
+		entry.Description = nil
+	} else if input.Description != nil {
+		entry.Description = input.Description
+	}
+
+	if err := s.timeEntries.Update(ctx, entry); err != nil {
+		return nil, fmt.Errorf("updating time entry: %w", err)
+	}
+
+	s.recordEventWithMetadata(ctx, item.ID, &info.UserID, "time_entry_updated", model.VisibilityInternal, map[string]interface{}{
+		"time_entry_id": entryID.String(),
+	})
+
+	return s.timeEntries.GetByID(ctx, entryID)
+}
+
+// DeleteTimeEntry soft-deletes a time entry. Only the author or project owner/admin can delete.
+func (s *WorkItemService) DeleteTimeEntry(ctx context.Context, info *model.AuthInfo, projectKey string, itemNumber int, entryID uuid.UUID) error {
+	project, err := s.projects.GetByKey(ctx, projectKey)
+	if err != nil {
+		return err
+	}
+
+	if err := s.requireMembership(ctx, info, project.ID); err != nil {
+		return err
+	}
+
+	item, err := s.items.GetByProjectAndNumber(ctx, project.ID, itemNumber)
+	if err != nil {
+		return err
+	}
+
+	entry, err := s.timeEntries.GetByID(ctx, entryID)
+	if err != nil {
+		return err
+	}
+
+	if entry.WorkItemID != item.ID {
+		return model.ErrNotFound
+	}
+
+	// Author can delete, otherwise need owner/admin
+	if entry.UserID != info.UserID {
+		if err := s.requireRole(ctx, info, project.ID,
+			model.ProjectRoleOwner, model.ProjectRoleAdmin); err != nil {
+			return model.ErrForbidden
+		}
+	}
+
+	if err := s.timeEntries.Delete(ctx, entryID); err != nil {
+		return fmt.Errorf("deleting time entry: %w", err)
+	}
+
+	s.recordEventWithMetadata(ctx, item.ID, &info.UserID, "time_entry_deleted", model.VisibilityInternal, map[string]interface{}{
+		"time_entry_id": entryID.String(),
+	})
+
+	return nil
 }
 
 // --- Event recording helpers ---

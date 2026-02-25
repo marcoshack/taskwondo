@@ -665,6 +665,69 @@ func (m *mockAttachmentRepo) Delete(_ context.Context, id uuid.UUID) error {
 	return nil
 }
 
+// --- Mock time entry repo ---
+
+type mockTimeEntryRepo struct {
+	entries map[uuid.UUID]*model.TimeEntry
+}
+
+func newMockTimeEntryRepo() *mockTimeEntryRepo {
+	return &mockTimeEntryRepo{entries: make(map[uuid.UUID]*model.TimeEntry)}
+}
+
+func (m *mockTimeEntryRepo) Create(_ context.Context, entry *model.TimeEntry) error {
+	now := time.Now()
+	entry.CreatedAt = now
+	entry.UpdatedAt = now
+	m.entries[entry.ID] = entry
+	return nil
+}
+
+func (m *mockTimeEntryRepo) GetByID(_ context.Context, id uuid.UUID) (*model.TimeEntry, error) {
+	e, ok := m.entries[id]
+	if !ok {
+		return nil, model.ErrNotFound
+	}
+	return e, nil
+}
+
+func (m *mockTimeEntryRepo) ListByWorkItem(_ context.Context, workItemID uuid.UUID) ([]model.TimeEntry, error) {
+	var result []model.TimeEntry
+	for _, e := range m.entries {
+		if e.WorkItemID == workItemID {
+			result = append(result, *e)
+		}
+	}
+	return result, nil
+}
+
+func (m *mockTimeEntryRepo) Update(_ context.Context, entry *model.TimeEntry) error {
+	if _, ok := m.entries[entry.ID]; !ok {
+		return model.ErrNotFound
+	}
+	entry.UpdatedAt = time.Now()
+	m.entries[entry.ID] = entry
+	return nil
+}
+
+func (m *mockTimeEntryRepo) Delete(_ context.Context, id uuid.UUID) error {
+	if _, ok := m.entries[id]; !ok {
+		return model.ErrNotFound
+	}
+	delete(m.entries, id)
+	return nil
+}
+
+func (m *mockTimeEntryRepo) SumByWorkItem(_ context.Context, workItemID uuid.UUID) (int, error) {
+	total := 0
+	for _, e := range m.entries {
+		if e.WorkItemID == workItemID {
+			total += e.DurationSeconds
+		}
+	}
+	return total, nil
+}
+
 // --- Mock storage ---
 
 type mockStorage struct {
@@ -850,10 +913,11 @@ func workItemTestSetup(t *testing.T) (*WorkItemHandler, *model.AuthInfo, string)
 	queueRepo := newMockQueueRepo()
 	milestoneRepo := newMockMilestoneRepo()
 	attachRepo := newMockAttachmentRepo()
+	timeEntryRepo := newMockTimeEntryRepo()
 	slaRepo := newMockSLARepo()
 	store := newMockStorage()
 	slaSvc := service.NewSLAService(slaRepo, projectRepo, memberRepo, workflowRepo)
-	svc := service.NewWorkItemService(itemRepo, eventRepo, commentRepo, relationRepo, attachRepo, projectRepo, memberRepo, workflowRepo, typeWorkflowRepo, queueRepo, milestoneRepo, slaRepo, slaSvc, store, 50*1024*1024)
+	svc := service.NewWorkItemService(itemRepo, eventRepo, commentRepo, relationRepo, attachRepo, timeEntryRepo, projectRepo, memberRepo, workflowRepo, typeWorkflowRepo, queueRepo, milestoneRepo, slaRepo, slaSvc, store, 50*1024*1024)
 	h := NewWorkItemHandler(svc, slaSvc, 50*1024*1024)
 
 	info := &model.AuthInfo{
@@ -899,10 +963,11 @@ func workItemTestSetupWithSLA(t *testing.T) *workItemSLASetup {
 	queueRepo := newMockQueueRepo()
 	milestoneRepo := newMockMilestoneRepo()
 	attachRepo := newMockAttachmentRepo()
+	timeEntryRepo := newMockTimeEntryRepo()
 	slaRepo := newMockSLARepo()
 	store := newMockStorage()
 	slaSvc := service.NewSLAService(slaRepo, projectRepo, memberRepo, workflowRepo)
-	svc := service.NewWorkItemService(itemRepo, eventRepo, commentRepo, relationRepo, attachRepo, projectRepo, memberRepo, workflowRepo, typeWorkflowRepo, queueRepo, milestoneRepo, slaRepo, slaSvc, store, 50*1024*1024)
+	svc := service.NewWorkItemService(itemRepo, eventRepo, commentRepo, relationRepo, attachRepo, timeEntryRepo, projectRepo, memberRepo, workflowRepo, typeWorkflowRepo, queueRepo, milestoneRepo, slaRepo, slaSvc, store, 50*1024*1024)
 	h := NewWorkItemHandler(svc, slaSvc, 50*1024*1024)
 
 	info := &model.AuthInfo{
@@ -1904,5 +1969,141 @@ func TestListWorkItems_MixedSLA(t *testing.T) {
 	}
 	if noSLA != 1 {
 		t.Fatalf("expected 1 item without SLA, got %d", noSLA)
+	}
+}
+
+// --- Time entry handler tests ---
+
+func TestCreateTimeEntry_Handler_Success(t *testing.T) {
+	h, info, projectKey := workItemTestSetup(t)
+	createTestWorkItem(t, h, info, projectKey)
+
+	body := `{"started_at":"2025-01-15T10:00:00Z","duration_seconds":3600,"description":"worked on stuff"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/items/1/time-entries", bytes.NewBufferString(body))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", projectKey)
+	rctx.URLParams.Add("itemNumber", "1")
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	h.CreateTimeEntry(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data := resp["data"].(map[string]interface{})
+	if data["duration_seconds"].(float64) != 3600 {
+		t.Fatalf("expected duration 3600, got %v", data["duration_seconds"])
+	}
+	if data["description"] != "worked on stuff" {
+		t.Fatalf("expected description, got %v", data["description"])
+	}
+}
+
+func TestCreateTimeEntry_Handler_InvalidDuration(t *testing.T) {
+	h, info, projectKey := workItemTestSetup(t)
+	createTestWorkItem(t, h, info, projectKey)
+
+	body := `{"started_at":"2025-01-15T10:00:00Z","duration_seconds":0}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/items/1/time-entries", bytes.NewBufferString(body))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", projectKey)
+	rctx.URLParams.Add("itemNumber", "1")
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	h.CreateTimeEntry(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestListTimeEntries_Handler_Success(t *testing.T) {
+	h, info, projectKey := workItemTestSetup(t)
+	createTestWorkItem(t, h, info, projectKey)
+
+	// Create a time entry first
+	body := `{"started_at":"2025-01-15T10:00:00Z","duration_seconds":1800}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/items/1/time-entries", bytes.NewBufferString(body))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", projectKey)
+	rctx.URLParams.Add("itemNumber", "1")
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+	h.CreateTimeEntry(w, req)
+
+	// List
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/projects/TEST/items/1/time-entries", nil)
+	rctx = chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", projectKey)
+	rctx.URLParams.Add("itemNumber", "1")
+	ctx = context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w = httptest.NewRecorder()
+
+	h.ListTimeEntries(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data := resp["data"].(map[string]interface{})
+	entries := data["entries"].([]interface{})
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(entries))
+	}
+	if data["total_logged_seconds"].(float64) != 1800 {
+		t.Fatalf("expected total 1800, got %v", data["total_logged_seconds"])
+	}
+}
+
+func TestDeleteTimeEntry_Handler_Success(t *testing.T) {
+	h, info, projectKey := workItemTestSetup(t)
+	createTestWorkItem(t, h, info, projectKey)
+
+	// Create a time entry
+	body := `{"started_at":"2025-01-15T10:00:00Z","duration_seconds":3600}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/items/1/time-entries", bytes.NewBufferString(body))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", projectKey)
+	rctx.URLParams.Add("itemNumber", "1")
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+	h.CreateTimeEntry(w, req)
+
+	var createResp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &createResp)
+	entryID := createResp["data"].(map[string]interface{})["id"].(string)
+
+	// Delete
+	req = httptest.NewRequest(http.MethodDelete, "/api/v1/projects/TEST/items/1/time-entries/"+entryID, nil)
+	rctx = chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", projectKey)
+	rctx.URLParams.Add("itemNumber", "1")
+	rctx.URLParams.Add("timeEntryId", entryID)
+	ctx = context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w = httptest.NewRecorder()
+
+	h.DeleteTimeEntry(w, req)
+
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("expected 204, got %d: %s", w.Code, w.Body.String())
 	}
 }

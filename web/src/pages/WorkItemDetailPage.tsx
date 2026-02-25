@@ -16,6 +16,7 @@ import { CommentList } from '@/components/workitems/CommentList'
 import { ActivityTimeline } from '@/components/workitems/ActivityTimeline'
 import { RelationList } from '@/components/workitems/RelationList'
 import { AttachmentList } from '@/components/workitems/AttachmentList'
+import { TimeEntryList } from '@/components/workitems/TimeEntryList'
 import { FilePreviewModal } from '@/components/workitems/FilePreviewModal'
 import type { PreviewTarget } from '@/components/workitems/FilePreviewModal'
 import { usePasteUpload } from '@/hooks/usePasteUpload'
@@ -35,7 +36,7 @@ import remarkGfm from 'remark-gfm'
 import { getMarkdownComponents } from '@/components/ui/markdownComponents'
 import { useNavigationGuard } from '@/contexts/NavigationGuardContext'
 
-type Tab = 'comments' | 'activity' | 'relations' | 'attachments'
+type Tab = 'comments' | 'activity' | 'relations' | 'attachments' | 'time'
 
 export function WorkItemDetailPage() {
   const { t } = useTranslation()
@@ -204,6 +205,7 @@ export function WorkItemDetailPage() {
   const tabs: { key: Tab; label: string }[] = [
     { key: 'comments', label: t('tabs.comments') },
     { key: 'activity', label: t('tabs.activity') },
+    { key: 'time', label: t('tabs.time') },
     { key: 'relations', label: t('tabs.relations') },
     { key: 'attachments', label: t('tabs.attachments') },
   ]
@@ -418,11 +420,11 @@ export function WorkItemDetailPage() {
           {/* Tabs */}
           <div>
             <div className="border-b border-gray-200 dark:border-gray-700 mb-4 flex items-center justify-between">
-              <nav className="flex gap-6">
+              <nav className="flex gap-6 pr-8 overflow-x-auto scrollbar-none">
                 {tabs.map((tab) => (
                   <button
                     key={tab.key}
-                    className={`pb-2 text-sm font-medium border-b-2 ${
+                    className={`pb-2 text-sm font-medium border-b-2 whitespace-nowrap ${
                       activeTab === tab.key
                         ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
                         : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
@@ -433,7 +435,7 @@ export function WorkItemDetailPage() {
                   </button>
                 ))}
               </nav>
-              {(activeTab === 'comments' || activeTab === 'activity' || activeTab === 'attachments') && (
+              {(activeTab === 'comments' || activeTab === 'activity' || activeTab === 'attachments' || activeTab === 'time') && (
                 <Tooltip content={sortOrder === 'desc' ? t('common.showingNewestFirst') : t('common.showingOldestFirst')}>
                   <button
                     className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 pb-2 flex items-center gap-1"
@@ -450,6 +452,7 @@ export function WorkItemDetailPage() {
             {activeTab === 'activity' && <ActivityTimeline projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} onAttachmentClick={(id) => { setActiveTab('attachments'); setHighlightedAttachmentId(id) }} onCommentClick={(id) => { setActiveTab('comments'); setHighlightedCommentId(id) }} />}
             {activeTab === 'relations' && <RelationList projectKey={projectKey ?? ''} itemNumber={itemNumber} readOnly={readOnly} />}
             {activeTab === 'attachments' && <AttachmentList projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} highlightedAttachmentId={highlightedAttachmentId} onHighlightClear={() => setHighlightedAttachmentId(null)} onPreview={(a) => setPreviewTarget({ kind: 'attachment', attachment: a, projectKey: projectKey ?? '', itemNumber })} readOnly={readOnly} />}
+            {activeTab === 'time' && <TimeEntryList projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} readOnly={readOnly} />}
           </div>
         </div>
 
@@ -457,6 +460,8 @@ export function WorkItemDetailPage() {
         <div className="hidden sm:block w-52 shrink-0">
           <DetailSidebar
             item={item}
+            projectKey={projectKey ?? ''}
+            itemNumber={itemNumber}
             statuses={statuses}
             allowedTransitions={allowed}
             members={members ?? []}
@@ -465,14 +470,10 @@ export function WorkItemDetailPage() {
             typeWorkflows={typeWorkflows}
             allWorkflows={allWorkflows}
             onUpdate={(input) => updateMutation.mutate({ itemNumber, input })}
+            onDelete={() => setShowDelete(true)}
             readOnly={readOnly}
             updateError={updateMutation.isError}
           />
-          {!readOnly && (
-            <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-              <Button variant="danger" size="sm" onClick={() => setShowDelete(true)}>{t('workitems.detail.deleteItem')}</Button>
-            </div>
-          )}
         </div>
       </div>
 
@@ -488,6 +489,8 @@ export function WorkItemDetailPage() {
       <Modal open={showProperties} onClose={() => setShowProperties(false)} title={t('workitems.detail.properties')}>
         <DetailSidebar
           item={item}
+          projectKey={projectKey ?? ''}
+          itemNumber={itemNumber}
           statuses={statuses}
           allowedTransitions={allowed}
           members={members ?? []}
@@ -496,13 +499,9 @@ export function WorkItemDetailPage() {
           typeWorkflows={typeWorkflows}
           allWorkflows={allWorkflows}
           onUpdate={(input) => updateMutation.mutate({ itemNumber, input })}
+          onDelete={() => { setShowProperties(false); setShowDelete(true) }}
           readOnly={readOnly}
         />
-        {!readOnly && (
-          <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-            <Button variant="danger" size="sm" onClick={() => { setShowProperties(false); setShowDelete(true) }}>{t('workitems.detail.deleteItem')}</Button>
-          </div>
-        )}
       </Modal>
 
       {/* Delete confirmation */}

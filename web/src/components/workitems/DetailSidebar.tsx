@@ -2,14 +2,21 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Select } from '@/components/ui/Select'
 import { Input } from '@/components/ui/Input'
+import { Button } from '@/components/ui/Button'
 import { UserPicker } from '@/components/ui/UserPicker'
+import { Tooltip } from '@/components/ui/Tooltip'
 import type { WorkItem, UpdateWorkItemInput } from '@/api/workitems'
+import { useTimeEntries } from '@/hooks/useWorkItems'
 import type { WorkflowStatus, Workflow } from '@/api/workflows'
 import type { ProjectMember, ProjectTypeWorkflow } from '@/api/projects'
 import type { Milestone } from '@/api/milestones'
+import { Megaphone, CalendarPlus, History, CheckCircle } from 'lucide-react'
+import { formatRelativeTime } from '@/utils/duration'
 
 interface DetailSidebarProps {
   item: WorkItem
+  projectKey: string
+  itemNumber: number
   statuses: WorkflowStatus[]
   allowedTransitions: string[]
   members: ProjectMember[]
@@ -18,6 +25,7 @@ interface DetailSidebarProps {
   typeWorkflows?: ProjectTypeWorkflow[]
   allWorkflows?: Workflow[]
   onUpdate: (input: UpdateWorkItemInput) => void
+  onDelete?: () => void
   readOnly?: boolean
   updateError?: boolean
 }
@@ -28,11 +36,36 @@ const VISIBILITIES = ['internal', 'portal', 'public']
 
 const MAX_COMPLEXITY = 1000000
 
-export function DetailSidebar({ item, statuses, allowedTransitions, members, milestones = [], allowedComplexityValues = [], typeWorkflows, allWorkflows, onUpdate, readOnly = false, updateError = false }: DetailSidebarProps) {
+function formatDuration(totalSeconds: number): string {
+  const h = Math.floor(totalSeconds / 3600)
+  const m = Math.floor((totalSeconds % 3600) / 60)
+  if (h === 0) return `${m}m`
+  if (m === 0) return `${h}h`
+  return `${h}h ${m}m`
+}
+
+function parseDurationString(input: string): number | null {
+  const regex = /^(?:(\d+)h)?\s*(?:(\d+)m)?$/i
+  const match = input.match(regex)
+  if (!match) {
+    // Try plain number as hours
+    const num = parseFloat(input)
+    if (!isNaN(num) && num > 0) return Math.round(num * 3600)
+    return null
+  }
+  const h = match[1] ? parseInt(match[1], 10) : 0
+  const m = match[2] ? parseInt(match[2], 10) : 0
+  if (h === 0 && m === 0) return null
+  return h * 3600 + m * 60
+}
+
+export function DetailSidebar({ item, projectKey, itemNumber, statuses, allowedTransitions, members, milestones = [], allowedComplexityValues = [], typeWorkflows, allWorkflows, onUpdate, onDelete, readOnly = false, updateError = false }: DetailSidebarProps) {
   const { t } = useTranslation()
   const [pendingType, setPendingType] = useState<string | null>(null)
   const [statusWarning, setStatusWarning] = useState(false)
   const [complexityError, setComplexityError] = useState<string | undefined>(undefined)
+  const [estimateError, setEstimateError] = useState<string | undefined>(undefined)
+  const { data: timeData } = useTimeEntries(projectKey, itemNumber)
 
   // Resolve statuses to show: either from pending type's workflow or current workflow
   let displayStatuses = statuses
@@ -95,6 +128,94 @@ export function DetailSidebar({ item, statuses, allowedTransitions, members, mil
       {updateError && (
         <p className="text-xs text-red-600 dark:text-red-400">{t('workitems.detail.updateError')}</p>
       )}
+
+      <div className="space-y-2 pb-4 border-b border-gray-100 dark:border-gray-700">
+        <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+          <Tooltip content={t('workitems.detail.reporter')}>
+            <Megaphone className="h-4 w-4 shrink-0" />
+          </Tooltip>
+          <span className="truncate">{members.find((m) => m.user_id === item.reporter_id)?.display_name ?? item.reporter_id}</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+          <Tooltip content={t('workitems.detail.created')}>
+            <CalendarPlus className="h-4 w-4 shrink-0" />
+          </Tooltip>
+          <span>{formatRelativeTime(item.created_at)}</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+          <Tooltip content={t('workitems.detail.updated')}>
+            <History className="h-4 w-4 shrink-0" />
+          </Tooltip>
+          <span>{formatRelativeTime(item.updated_at)}</span>
+        </div>
+        {item.resolved_at && (
+          <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+            <Tooltip content={t('workitems.detail.resolved')}>
+              <CheckCircle className="h-4 w-4 shrink-0" />
+            </Tooltip>
+            <span>{formatRelativeTime(item.resolved_at)}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-2 pb-4 border-b border-gray-100 dark:border-gray-700">
+        <Field label={t('timeTracking.estimate')}>
+          <Input
+            type="text"
+            defaultValue={item.estimated_seconds != null ? formatDuration(item.estimated_seconds) : ''}
+            placeholder={t('timeTracking.estimatePlaceholder')}
+            error={estimateError}
+            disabled={readOnly}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+              if (e.key === 'Escape') {
+                (e.target as HTMLInputElement).value = item.estimated_seconds != null ? formatDuration(item.estimated_seconds) : ''
+                setEstimateError(undefined)
+                ;(e.target as HTMLInputElement).blur()
+              }
+            }}
+            onBlur={(e) => {
+              const raw = e.target.value.trim()
+              if (!raw) {
+                setEstimateError(undefined)
+                if (item.estimated_seconds != null) onUpdate({ estimated_seconds: null })
+                return
+              }
+              const seconds = parseDurationString(raw)
+              if (seconds == null) {
+                setEstimateError(t('timeTracking.estimateInvalid'))
+                return
+              }
+              setEstimateError(undefined)
+              if (seconds !== item.estimated_seconds) {
+                onUpdate({ estimated_seconds: seconds })
+              }
+            }}
+          />
+        </Field>
+        <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+          <div className="flex justify-between">
+            <span>{t('timeTracking.logged')}</span>
+            <span className="font-medium text-gray-700 dark:text-gray-300">
+              {formatDuration(timeData?.total_logged_seconds ?? 0)}
+            </span>
+          </div>
+          {item.estimated_seconds != null && item.estimated_seconds > 0 && (() => {
+            const logged = timeData?.total_logged_seconds ?? 0
+            const pct = Math.min((logged / item.estimated_seconds) * 100, 100)
+            const over = logged > item.estimated_seconds
+            return (
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                <div
+                  className={`h-1.5 rounded-full transition-all ${over ? 'bg-red-500' : 'bg-indigo-500'}`}
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+            )
+          })()}
+        </div>
+      </div>
+
       <Field label={t('workitems.form.type')}>
         <Select value={pendingType ?? item.type} onChange={(e) => handleTypeChange(e.target.value)} disabled={readOnly}>
           {TYPES.map((tp) => <option key={tp} value={tp}>{t(`workitems.types.${tp}`)}</option>)}
@@ -241,12 +362,11 @@ export function DetailSidebar({ item, statuses, allowedTransitions, members, mil
         />
       </Field>
 
-      <div className="border-t border-gray-100 dark:border-gray-700 pt-4 space-y-2 text-xs text-gray-400 dark:text-gray-500">
-        <div>{t('workitems.detail.reporter')}: {members.find((m) => m.user_id === item.reporter_id)?.display_name ?? item.reporter_id}</div>
-        <div>{t('workitems.detail.created')}: {new Date(item.created_at).toLocaleString()}</div>
-        <div>{t('workitems.detail.updated')}: {new Date(item.updated_at).toLocaleString()}</div>
-        {item.resolved_at && <div>{t('workitems.detail.resolved')}: {new Date(item.resolved_at).toLocaleString()}</div>}
-      </div>
+      {!readOnly && onDelete && (
+        <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
+          <Button variant="danger" size="sm" onClick={onDelete}>{t('workitems.detail.deleteItem')}</Button>
+        </div>
+      )}
     </div>
   )
 }

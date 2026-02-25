@@ -301,6 +301,7 @@
   "tabs.activity": "Activity",
   "tabs.relations": "Relations",
   "tabs.attachments": "Attachments",
+  "tabs.time": "Time",
 
   "comments.add": "Add Comment",
   "comments.adding": "Adding...",
@@ -335,6 +336,7 @@
   "activity.fields.milestone_id": "Milestone",
   "activity.fields.queue_id": "Queue",
   "activity.fields.complexity": "Complexity",
+  "activity.fields.estimated_seconds": "Estimate",
 
   "activity.diff.title": "{{field}} change",
   "activity.diff.commentTitle": "Comment edit diff",
@@ -357,6 +359,21 @@
   "attachments.deleteTitle": "Delete Attachment",
   "attachments.deleteConfirm": "Are you sure you want to delete this attachment?",
   "attachments.editDescription": "Edit description",
+
+  "timeTracking.logTime": "Log Time",
+  "timeTracking.logging": "Logging...",
+  "timeTracking.hours": "Hours",
+  "timeTracking.minutes": "Minutes",
+  "timeTracking.date": "Date",
+  "timeTracking.durationPlaceholder": "e.g. 30m, 2h",
+  "timeTracking.descriptionPlaceholder": "What did you work on?",
+  "timeTracking.noEntries": "No time entries yet.",
+  "timeTracking.deleteTitle": "Delete Time Entry",
+  "timeTracking.deleteConfirm": "This time entry will be permanently deleted. This action cannot be undone.",
+  "timeTracking.estimate": "Estimate",
+  "timeTracking.estimatePlaceholder": "e.g. 2h 30m",
+  "timeTracking.estimateInvalid": "Use formats like 2h, 30m, or 2h 30m.",
+  "timeTracking.logged": "Logged",
 
   "preview.download": "Download",
   "preview.close": "Close",

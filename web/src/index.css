@@ -15,6 +15,14 @@ html:where(.dark) {
   color-scheme: dark;
 }
 
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 @keyframes confirm-fade {
   0% { opacity: 0; transform: scale(0.8); }
   15% { opacity: 1; transform: scale(1); }

@@ -53,6 +53,7 @@ type WorkItem struct {
 	CustomFields    map[string]interface{} `json:"custom_fields"`
 	DueDate         *time.Time             `json:"due_date,omitempty"`
 	ResolvedAt      *time.Time             `json:"resolved_at,omitempty"`
+	EstimatedSeconds *int                  `json:"estimated_seconds,omitempty"`
 	SLATargetAt     *time.Time             `json:"sla_target_at,omitempty"`
 	CreatedAt       time.Time              `json:"created_at"`
 	UpdatedAt       time.Time              `json:"updated_at"`

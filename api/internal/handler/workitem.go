@@ -71,6 +71,7 @@ type workItemResponse struct {
 	Complexity   *int                   `json:"complexity,omitempty"`
 	CustomFields map[string]interface{} `json:"custom_fields"`
 	DueDate      *string                `json:"due_date,omitempty"`
+	EstimatedSeconds *int                 `json:"estimated_seconds,omitempty"`
 	SLA          *model.SLAInfo         `json:"sla,omitempty"`
 	SLATargetAt  *time.Time             `json:"sla_target_at,omitempty"`
 	ResolvedAt   *time.Time             `json:"resolved_at,omitempty"`
@@ -96,8 +97,9 @@ func toWorkItemResponse(item *model.WorkItem, projectKey string) workItemRespons
 		Visibility:   item.Visibility,
 		Labels:       item.Labels,
 		Complexity:   item.Complexity,
-		CustomFields: item.CustomFields,
-		SLATargetAt:  item.SLATargetAt,
+		CustomFields:     item.CustomFields,
+		EstimatedSeconds: item.EstimatedSeconds,
+		SLATargetAt:      item.SLATargetAt,
 		ResolvedAt:   item.ResolvedAt,
 		CreatedAt:    item.CreatedAt,
 		UpdatedAt:    item.UpdatedAt,
@@ -568,6 +570,19 @@ func (h *WorkItemHandler) Update(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			input.Complexity = &complexity
+		}
+	}
+
+	if v, ok := raw["estimated_seconds"]; ok {
+		if string(v) == "null" {
+			input.ClearEstimate = true
+		} else {
+			var est int
+			if err := json.Unmarshal(v, &est); err != nil {
+				writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "estimated_seconds must be an integer")
+				return
+			}
+			input.EstimatedSeconds = &est
 		}
 	}
 
@@ -1288,6 +1303,232 @@ func safeDownloadContentType(ct string) string {
 		}
 	}
 	return "application/octet-stream"
+}
+
+// --- Time entry DTOs ---
+
+type createTimeEntryRequest struct {
+	StartedAt       string  `json:"started_at"`
+	DurationSeconds int     `json:"duration_seconds"`
+	Description     string  `json:"description,omitempty"`
+}
+
+type updateTimeEntryRequest struct {
+	StartedAt       *string `json:"started_at,omitempty"`
+	DurationSeconds *int    `json:"duration_seconds,omitempty"`
+	Description     *string `json:"description,omitempty"`
+}
+
+type timeEntryResponse struct {
+	ID              uuid.UUID `json:"id"`
+	UserID          uuid.UUID `json:"user_id"`
+	StartedAt       time.Time `json:"started_at"`
+	DurationSeconds int       `json:"duration_seconds"`
+	Description     *string   `json:"description,omitempty"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
+}
+
+func toTimeEntryResponse(e *model.TimeEntry) timeEntryResponse {
+	return timeEntryResponse{
+		ID:              e.ID,
+		UserID:          e.UserID,
+		StartedAt:       e.StartedAt,
+		DurationSeconds: e.DurationSeconds,
+		Description:     e.Description,
+		CreatedAt:       e.CreatedAt,
+		UpdatedAt:       e.UpdatedAt,
+	}
+}
+
+type timeEntrySummaryResponse struct {
+	Entries            []timeEntryResponse `json:"entries"`
+	TotalLoggedSeconds int                `json:"total_logged_seconds"`
+}
+
+// --- Time entry handlers ---
+
+// CreateTimeEntry handles POST /api/v1/projects/{projectKey}/items/{itemNumber}/time-entries
+func (h *WorkItemHandler) CreateTimeEntry(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	projectKey := chi.URLParam(r, "projectKey")
+	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		return
+	}
+
+	var req createTimeEntryRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		return
+	}
+
+	if req.DurationSeconds <= 0 {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "duration_seconds must be positive")
+		return
+	}
+
+	startedAt, err := time.Parse(time.RFC3339, req.StartedAt)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid started_at format, expected RFC3339")
+		return
+	}
+
+	entry, err := h.items.LogTime(r.Context(), info, projectKey, itemNumber, service.CreateTimeEntryInput{
+		StartedAt:       startedAt,
+		DurationSeconds: req.DurationSeconds,
+		Description:     req.Description,
+	})
+	if err != nil {
+		handleWorkItemError(w, r, err, "failed to create time entry")
+		return
+	}
+
+	writeData(w, http.StatusCreated, toTimeEntryResponse(entry))
+}
+
+// ListTimeEntries handles GET /api/v1/projects/{projectKey}/items/{itemNumber}/time-entries
+func (h *WorkItemHandler) ListTimeEntries(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	projectKey := chi.URLParam(r, "projectKey")
+	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		return
+	}
+
+	entries, err := h.items.ListTimeEntries(r.Context(), info, projectKey, itemNumber)
+	if err != nil {
+		handleWorkItemError(w, r, err, "failed to list time entries")
+		return
+	}
+
+	totalLogged, err := h.items.GetTimeEntrySummary(r.Context(), info, projectKey, itemNumber)
+	if err != nil {
+		handleWorkItemError(w, r, err, "failed to get time entry summary")
+		return
+	}
+
+	resp := make([]timeEntryResponse, len(entries))
+	for i := range entries {
+		resp[i] = toTimeEntryResponse(&entries[i])
+	}
+
+	writeData(w, http.StatusOK, timeEntrySummaryResponse{
+		Entries:            resp,
+		TotalLoggedSeconds: totalLogged,
+	})
+}
+
+// UpdateTimeEntry handles PATCH /api/v1/projects/{projectKey}/items/{itemNumber}/time-entries/{timeEntryId}
+func (h *WorkItemHandler) UpdateTimeEntry(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	projectKey := chi.URLParam(r, "projectKey")
+	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		return
+	}
+
+	entryID, err := uuid.Parse(chi.URLParam(r, "timeEntryId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid time entry ID")
+		return
+	}
+
+	// Decode into raw JSON to detect explicit nulls
+	var raw map[string]json.RawMessage
+	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		return
+	}
+
+	var input service.UpdateTimeEntryInput
+
+	if v, ok := raw["started_at"]; ok {
+		var s string
+		if err := json.Unmarshal(v, &s); err == nil {
+			t, err := time.Parse(time.RFC3339, s)
+			if err != nil {
+				writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid started_at format, expected RFC3339")
+				return
+			}
+			input.StartedAt = &t
+		}
+	}
+
+	if v, ok := raw["duration_seconds"]; ok {
+		var dur int
+		if err := json.Unmarshal(v, &dur); err != nil {
+			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "duration_seconds must be an integer")
+			return
+		}
+		input.DurationSeconds = &dur
+	}
+
+	if v, ok := raw["description"]; ok {
+		if string(v) == "null" {
+			input.ClearDescription = true
+		} else {
+			var desc string
+			if err := json.Unmarshal(v, &desc); err == nil {
+				input.Description = &desc
+			}
+		}
+	}
+
+	entry, err := h.items.UpdateTimeEntry(r.Context(), info, projectKey, itemNumber, entryID, input)
+	if err != nil {
+		handleWorkItemError(w, r, err, "failed to update time entry")
+		return
+	}
+
+	writeData(w, http.StatusOK, toTimeEntryResponse(entry))
+}
+
+// DeleteTimeEntry handles DELETE /api/v1/projects/{projectKey}/items/{itemNumber}/time-entries/{timeEntryId}
+func (h *WorkItemHandler) DeleteTimeEntry(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	projectKey := chi.URLParam(r, "projectKey")
+	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		return
+	}
+
+	entryID, err := uuid.Parse(chi.URLParam(r, "timeEntryId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid time entry ID")
+		return
+	}
+
+	if err := h.items.DeleteTimeEntry(r.Context(), info, projectKey, itemNumber, entryID); err != nil {
+		handleWorkItemError(w, r, err, "failed to delete time entry")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // safeContentDisposition builds a sanitized Content-Disposition header value.
