@@ -3,8 +3,16 @@
 # Required environment variables (checked by sourcing .env)
 REQUIRED_VARS := POSTGRES_USER POSTGRES_PASSWORD MINIO_ROOT_USER MINIO_ROOT_PASSWORD JWT_SECRET DATABASE_URL STORAGE_ACCESS_KEY STORAGE_SECRET_KEY
 
-build: test ## Build all Docker images
+# Colors
+CYAN := \033[36m
+GREEN := \033[32m
+RESET := \033[0m
+
+build: test build-mcp ## Build all Docker images and MCP server
+	@echo ""
+	@printf "$(CYAN)## Building Docker images...$(RESET)\n"
 	docker compose build
+	@printf "$(GREEN)## Docker images built successfully$(RESET)\n"
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -36,7 +44,10 @@ dev: check-env dev-services ## Start all services for development (API + Web)
 	wait
 
 dev-services: check-env ## Start PostgreSQL and MinIO
+	@echo ""
+	@printf "$(CYAN)## Starting dev services (PostgreSQL + MinIO)...$(RESET)\n"
 	docker compose up postgres minio minio-init -d
+	@printf "$(GREEN)## Dev services started$(RESET)\n"
 
 dev-db: dev-services ## Alias for dev-services (legacy)
 
@@ -49,10 +60,16 @@ dev-web: ## Start frontend dev server (Vite on :5173, proxies /api to :8080)
 # --- Docker ---
 
 up: check-env ## Start all services
+	@echo ""
+	@printf "$(CYAN)## Starting all services...$(RESET)\n"
 	docker compose up -d
+	@printf "$(GREEN)## All services started$(RESET)\n"
 
 down: ## Stop all services
+	@echo ""
+	@printf "$(CYAN)## Stopping all services...$(RESET)\n"
 	docker compose down
+	@printf "$(GREEN)## All services stopped$(RESET)\n"
 
 logs: ## Tail logs from all services
 	docker compose logs -f
@@ -61,12 +78,18 @@ logs-api: ## Tail API logs
 	docker compose logs -f api
 
 push: ## Push images to GHCR (usage: make push or IMAGE_TAG=v1.0.0 make push)
+	@echo ""
+	@printf "$(CYAN)## Pushing images to registry...$(RESET)\n"
 	docker compose push api web
+	@printf "$(GREEN)## Images pushed successfully$(RESET)\n"
 
 # --- Database ---
 
 migrate: check-env ## Run database migrations
+	@echo ""
+	@printf "$(CYAN)## Running database migrations...$(RESET)\n"
 	set -a && . ./.env && set +a && cd api && go run ./cmd/server -migrate-only
+	@printf "$(GREEN)## Migrations completed$(RESET)\n"
 
 migrate-new: ## Create a new migration (usage: make migrate-new name=create_users)
 	@if [ -z "$(name)" ]; then echo "Usage: make migrate-new name=create_users"; exit 1; fi
@@ -78,11 +101,17 @@ migrate-new: ## Create a new migration (usage: make migrate-new name=create_user
 # --- Data Export/Import ---
 
 export: check-env ## Export all data to backups/taskwondo-export.tar.gz
+	@echo ""
+	@printf "$(CYAN)## Exporting data...$(RESET)\n"
 	mkdir -p backups
 	docker compose run --rm export
+	@printf "$(GREEN)## Export completed$(RESET)\n"
 
 import: check-env ## Import data from backups/ (IMPORT_FILE=filename.tar.gz)
+	@echo ""
+	@printf "$(CYAN)## Importing data...$(RESET)\n"
 	docker compose run --rm import
+	@printf "$(GREEN)## Import completed$(RESET)\n"
 
 # --- Release ---
 
@@ -99,15 +128,16 @@ release: ## Build release tarballs (usage: make release or RELEASE_VERSION=1.0.0
 	fi
 
 _release:
-	@echo "==> Building release v$(VERSION)..."
+	@echo ""
+	@printf "$(CYAN)## Building release v$(VERSION)...$(RESET)\n"
 	rm -rf build/release
 	mkdir -p build/release/taskwondo-$(VERSION)/bin build/release/taskwondo-$(VERSION)/html
-	@echo "==> Building API binary (Docker)..."
+	@printf "$(CYAN)## Building API binary (Docker)...$(RESET)\n"
 	docker build -f docker/Dockerfile.api --target builder -t taskwondo-api-builder api
 	docker create --name taskwondo-api-extract taskwondo-api-builder true
 	docker cp taskwondo-api-extract:/bin/taskwondo build/release/taskwondo-$(VERSION)/bin/taskwondo
 	docker rm taskwondo-api-extract
-	@echo "==> Building Web bundle (Docker)..."
+	@printf "$(CYAN)## Building Web bundle (Docker)...$(RESET)\n"
 	docker build -f docker/Dockerfile.web --target builder -t taskwondo-web-builder .
 	docker create --name taskwondo-web-extract taskwondo-web-builder true
 	docker cp taskwondo-web-extract:/src/dist/. build/release/taskwondo-$(VERSION)/html/
@@ -115,7 +145,7 @@ _release:
 	cp .env.template build/release/taskwondo-$(VERSION)/.env.template
 	cp docker/nginx.conf build/release/taskwondo-$(VERSION)/nginx.conf
 	cp docs/install/manual-install.md build/release/taskwondo-$(VERSION)/README.md
-	@echo "==> Packaging tarball..."
+	@printf "$(CYAN)## Packaging tarball...$(RESET)\n"
 	tar -czf build/release/taskwondo-$(VERSION).tar.gz -C build/release taskwondo-$(VERSION)
 	@echo ""
 	@echo "Release artifact:"
@@ -123,23 +153,35 @@ _release:
 	@echo ""
 	@echo "Contents:"
 	@tar -tzf build/release/taskwondo-$(VERSION).tar.gz | head -20
+	@printf "$(GREEN)## Release v$(VERSION) built successfully$(RESET)\n"
 
 # --- MCP Server ---
 
 build-mcp: ## Build the MCP server binary
-	mkdir -p build/mcp
-	cd mcp && go build -o ../build/mcp/taskwondo-mcp .
+	@echo ""
+	@printf "$(CYAN)## Building MCP server...$(RESET)\n"
+	$(MAKE) -C mcp build
+	@printf "$(GREEN)## MCP server built successfully$(RESET)\n"
 
 # --- Testing ---
 
 test: ## Run all tests
+	@echo ""
+	@printf "$(CYAN)## Running Go tests...$(RESET)\n"
 	cd api && go test ./... -v -race
+	@printf "$(GREEN)## All tests passed$(RESET)\n"
 
 test-e2e: ## Run E2E tests in isolated Docker stack (no host deps)
+	@echo ""
+	@printf "$(CYAN)## Running E2E tests (Docker)...$(RESET)\n"
 	bash scripts/e2e-docker.sh
+	@printf "$(GREEN)## E2E tests passed$(RESET)\n"
 
 test-e2e-dev: ## Run E2E tests against local dev server (localhost:5173)
+	@echo ""
+	@printf "$(CYAN)## Running E2E tests (dev)...$(RESET)\n"
 	cd e2e && npx playwright test
+	@printf "$(GREEN)## E2E tests passed$(RESET)\n"
 
 test-e2e-report: ## Serve the last E2E HTML report at http://localhost:9323
 	@echo "Serving report at http://localhost:9323"

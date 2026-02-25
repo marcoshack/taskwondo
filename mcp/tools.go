@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
 )
@@ -177,6 +178,42 @@ func uploadAttachmentTool() mcp.Tool {
 		mcp.WithString("display_id", mcp.Required(), mcp.Description("Work item display ID, e.g. TF-141")),
 		mcp.WithString("file_path", mcp.Required(), mcp.Description("Absolute path to the local file to upload")),
 		mcp.WithString("comment", mcp.Description("Optional comment describing the attachment")),
+	)
+}
+
+func logTimeTool() mcp.Tool {
+	return mcp.NewTool("log_time",
+		mcp.WithDescription("Log a time entry on a work item. Used to track time spent working on tasks."),
+		mcp.WithString("display_id", mcp.Required(), mcp.Description("Work item display ID, e.g. TF-141")),
+		mcp.WithNumber("duration_seconds", mcp.Required(), mcp.Description("Duration in seconds (minimum 60)")),
+		mcp.WithString("started_at", mcp.Description("When work started, in RFC3339 format (e.g. 2026-02-24T10:00:00Z). Defaults to now minus duration.")),
+		mcp.WithString("description", mcp.Description("Brief description of the work done")),
+	)
+}
+
+func listTimeEntriesTool() mcp.Tool {
+	return mcp.NewTool("list_time_entries",
+		mcp.WithDescription("List time entries on a work item. Returns individual entries and total logged seconds."),
+		mcp.WithString("display_id", mcp.Required(), mcp.Description("Work item display ID, e.g. TF-141")),
+	)
+}
+
+func updateTimeEntryTool() mcp.Tool {
+	return mcp.NewTool("update_time_entry",
+		mcp.WithDescription("Update an existing time entry. Only provided fields are changed."),
+		mcp.WithString("display_id", mcp.Required(), mcp.Description("Work item display ID, e.g. TF-141")),
+		mcp.WithString("time_entry_id", mcp.Required(), mcp.Description("Time entry UUID to update")),
+		mcp.WithNumber("duration_seconds", mcp.Description("New duration in seconds")),
+		mcp.WithString("started_at", mcp.Description("New start time in RFC3339 format")),
+		mcp.WithString("description", mcp.Description("New description, or empty string to clear")),
+	)
+}
+
+func deleteTimeEntryTool() mcp.Tool {
+	return mcp.NewTool("delete_time_entry",
+		mcp.WithDescription("Delete a time entry from a work item"),
+		mcp.WithString("display_id", mcp.Required(), mcp.Description("Work item display ID, e.g. TF-141")),
+		mcp.WithString("time_entry_id", mcp.Required(), mcp.Description("Time entry UUID to delete")),
 	)
 }
 
@@ -747,7 +784,170 @@ func handleListAttachments(_ context.Context, request mcp.CallToolRequest) (*mcp
 	return mcp.NewToolResultText(sb.String()), nil
 }
 
+func handleLogTime(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := getClient()
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	displayID, err := request.RequireString("display_id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	projectKey, itemNumber, err := parseDisplayID(displayID)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	durationSeconds := request.GetInt("duration_seconds", 0)
+	if durationSeconds < 60 {
+		return mcp.NewToolResultError("duration_seconds must be at least 60"), nil
+	}
+
+	startedAt := request.GetString("started_at", "")
+	if startedAt == "" {
+		startedAt = time.Now().Add(-time.Duration(durationSeconds) * time.Second).UTC().Format(time.RFC3339)
+	}
+
+	params := CreateTimeEntryParams{
+		StartedAt:       startedAt,
+		DurationSeconds: durationSeconds,
+		Description:     request.GetString("description", ""),
+	}
+
+	entry, err := client.CreateTimeEntry(projectKey, itemNumber, params)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to log time: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText(fmt.Sprintf("Logged %s on %s (id: %s)",
+		formatDuration(entry.DurationSeconds), displayID, entry.ID)), nil
+}
+
+func handleListTimeEntries(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := getClient()
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	displayID, err := request.RequireString("display_id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	projectKey, itemNumber, err := parseDisplayID(displayID)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	result, err := client.ListTimeEntries(projectKey, itemNumber)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to list time entries: %v", err)), nil
+	}
+
+	if len(result.Entries) == 0 {
+		return mcp.NewToolResultText(fmt.Sprintf("No time entries on %s", displayID)), nil
+	}
+
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "Time entries on %s (%d entries, total: %s):\n\n",
+		displayID, len(result.Entries), formatDuration(result.TotalLoggedSeconds))
+	for _, e := range result.Entries {
+		desc := ""
+		if e.Description != nil && *e.Description != "" {
+			desc = fmt.Sprintf(" — %s", *e.Description)
+		}
+		fmt.Fprintf(&sb, "- **%s** %s (started: %s)%s\n  ID: %s\n",
+			formatDuration(e.DurationSeconds), e.UserID, e.StartedAt, desc, e.ID)
+	}
+	return mcp.NewToolResultText(sb.String()), nil
+}
+
+func handleUpdateTimeEntry(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := getClient()
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	displayID, err := request.RequireString("display_id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	entryID, err := request.RequireString("time_entry_id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	projectKey, itemNumber, err := parseDisplayID(displayID)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	updates := make(map[string]interface{})
+	if v := request.GetInt("duration_seconds", 0); v > 0 {
+		updates["duration_seconds"] = v
+	}
+	if v := request.GetString("started_at", ""); v != "" {
+		updates["started_at"] = v
+	}
+	// Allow setting description to empty string to clear it
+	if desc, ok := request.GetArguments()["description"]; ok {
+		updates["description"] = desc
+	}
+
+	if len(updates) == 0 {
+		return mcp.NewToolResultError("No fields to update. Provide at least one of: duration_seconds, started_at, description."), nil
+	}
+
+	entry, err := client.UpdateTimeEntry(projectKey, itemNumber, entryID, updates)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to update time entry: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText(fmt.Sprintf("Updated time entry %s on %s (%s)",
+		entry.ID, displayID, formatDuration(entry.DurationSeconds))), nil
+}
+
+func handleDeleteTimeEntry(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := getClient()
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	displayID, err := request.RequireString("display_id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	entryID, err := request.RequireString("time_entry_id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	projectKey, itemNumber, err := parseDisplayID(displayID)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	if err := client.DeleteTimeEntry(projectKey, itemNumber, entryID); err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to delete time entry: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText(fmt.Sprintf("Deleted time entry %s from %s", entryID, displayID)), nil
+}
+
 // --- Formatting helpers ---
+
+func formatDuration(seconds int) string {
+	h := seconds / 3600
+	m := (seconds % 3600) / 60
+	if h > 0 && m > 0 {
+		return fmt.Sprintf("%dh %dm", h, m)
+	} else if h > 0 {
+		return fmt.Sprintf("%dh", h)
+	}
+	return fmt.Sprintf("%dm", m)
+}
 
 func formatWorkItem(item *WorkItem) string {
 	var sb strings.Builder

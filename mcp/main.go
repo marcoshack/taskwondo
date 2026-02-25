@@ -42,6 +42,12 @@ func main() {
 	s.AddTool(listProjectsTool(), handleListProjects)
 	s.AddTool(getProjectTool(), handleGetProject)
 
+	// Time tracking tools
+	s.AddTool(logTimeTool(), handleLogTime)
+	s.AddTool(listTimeEntriesTool(), handleListTimeEntries)
+	s.AddTool(updateTimeEntryTool(), handleUpdateTimeEntry)
+	s.AddTool(deleteTimeEntryTool(), handleDeleteTimeEntry)
+
 	// Workflow tools
 	s.AddTool(listStatusesTool(), handleListStatuses)
 

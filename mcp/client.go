@@ -579,6 +579,89 @@ func (c *Client) ListAttachments(projectKey string, itemNumber int) ([]Attachmen
 	return attachments, nil
 }
 
+type TimeEntry struct {
+	ID              string  `json:"id"`
+	UserID          string  `json:"user_id"`
+	StartedAt       string  `json:"started_at"`
+	DurationSeconds int     `json:"duration_seconds"`
+	Description     *string `json:"description,omitempty"`
+	CreatedAt       string  `json:"created_at"`
+	UpdatedAt       string  `json:"updated_at"`
+}
+
+type TimeEntryList struct {
+	Entries            []TimeEntry `json:"entries"`
+	TotalLoggedSeconds int         `json:"total_logged_seconds"`
+}
+
+type CreateTimeEntryParams struct {
+	StartedAt       string `json:"started_at"`
+	DurationSeconds int    `json:"duration_seconds"`
+	Description     string `json:"description,omitempty"`
+}
+
+func (c *Client) CreateTimeEntry(projectKey string, itemNumber int, params CreateTimeEntryParams) (*TimeEntry, error) {
+	path := fmt.Sprintf("/api/v1/projects/%s/items/%d/time-entries", url.PathEscape(projectKey), itemNumber)
+	data, err := c.doRequest("POST", path, params)
+	if err != nil {
+		return nil, err
+	}
+	var resp apiResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+	var entry TimeEntry
+	if err := json.Unmarshal(resp.Data, &entry); err != nil {
+		return nil, fmt.Errorf("decode time entry: %w", err)
+	}
+	return &entry, nil
+}
+
+func (c *Client) ListTimeEntries(projectKey string, itemNumber int) (*TimeEntryList, error) {
+	path := fmt.Sprintf("/api/v1/projects/%s/items/%d/time-entries", url.PathEscape(projectKey), itemNumber)
+	data, err := c.doRequest("GET", path, nil)
+	if err != nil {
+		return nil, err
+	}
+	// The list endpoint returns {data: [...], meta: {total_logged_seconds: N}}
+	var raw struct {
+		Data []TimeEntry `json:"data"`
+		Meta struct {
+			TotalLoggedSeconds int `json:"total_logged_seconds"`
+		} `json:"meta"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return nil, fmt.Errorf("decode time entries: %w", err)
+	}
+	return &TimeEntryList{
+		Entries:            raw.Data,
+		TotalLoggedSeconds: raw.Meta.TotalLoggedSeconds,
+	}, nil
+}
+
+func (c *Client) UpdateTimeEntry(projectKey string, itemNumber int, entryID string, updates map[string]interface{}) (*TimeEntry, error) {
+	path := fmt.Sprintf("/api/v1/projects/%s/items/%d/time-entries/%s", url.PathEscape(projectKey), itemNumber, url.PathEscape(entryID))
+	data, err := c.doRequest("PATCH", path, updates)
+	if err != nil {
+		return nil, err
+	}
+	var resp apiResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+	var entry TimeEntry
+	if err := json.Unmarshal(resp.Data, &entry); err != nil {
+		return nil, fmt.Errorf("decode time entry: %w", err)
+	}
+	return &entry, nil
+}
+
+func (c *Client) DeleteTimeEntry(projectKey string, itemNumber int, entryID string) error {
+	path := fmt.Sprintf("/api/v1/projects/%s/items/%d/time-entries/%s", url.PathEscape(projectKey), itemNumber, url.PathEscape(entryID))
+	_, err := c.doRequest("DELETE", path, nil)
+	return err
+}
+
 func (c *Client) ListProjectStatuses(projectKey string) ([]WorkflowStatus, error) {
 	path := fmt.Sprintf("/api/v1/projects/%s/workflows/statuses", url.PathEscape(projectKey))
 	data, err := c.doRequest("GET", path, nil)
