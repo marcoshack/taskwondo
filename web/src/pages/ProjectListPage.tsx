@@ -1,9 +1,12 @@
-import { useState } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { Search } from 'lucide-react'
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
 import { useProjects, useCreateProject, useOwnedProjectCount, useMaxProjects } from '@/hooks/useProjects'
 import { useAuth } from '@/contexts/AuthContext'
+import { useSidebar } from '@/contexts/SidebarContext'
+import { AppSidebar } from '@/components/AppSidebar'
 import { DataTable } from '@/components/ui/DataTable'
 import { Spinner } from '@/components/ui/Spinner'
 import { Button } from '@/components/ui/Button'
@@ -55,6 +58,7 @@ function IconMembers({ className }: { className?: string }) {
 
 export function ProjectListPage() {
   const { t } = useTranslation()
+  const { collapsed } = useSidebar('app')
   const { data: projects, isLoading, error } = useProjects()
   const { data: ownedCount } = useOwnedProjectCount()
   const { data: maxProjectsValue } = useMaxProjects()
@@ -69,10 +73,18 @@ export function ProjectListPage() {
 
   const [showCreate, setShowCreate] = useState(false)
   const [activeRow, setActiveRow] = useState(-1)
+  const [searchInput, setSearchInput] = useState('')
+  const searchRef = useRef<HTMLInputElement>(null)
 
   useKeyboardShortcut({ key: 'n' }, () => setShowCreate(true))
+  useKeyboardShortcut({ key: '/' }, () => searchRef.current?.focus())
 
-  const projectList = projects ?? []
+  const projectList = useMemo(() => {
+    const all = projects ?? []
+    if (!searchInput.trim()) return all
+    const q = searchInput.trim().toLowerCase()
+    return all.filter((p) => p.name.toLowerCase().includes(q) || p.key.toLowerCase().includes(q))
+  }, [projects, searchInput])
   useKeyboardShortcut([{ key: 'ArrowDown' }, { key: 'j' }], () => setActiveRow((prev) => Math.min(prev + 1, projectList.length - 1)))
   useKeyboardShortcut([{ key: 'ArrowUp' }, { key: 'k' }], () => setActiveRow((prev) => Math.max(prev - 1, 0)))
   useKeyboardShortcut([{ key: 'Enter' }, { key: 'o' }], () => {
@@ -159,25 +171,51 @@ export function ProjectListPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-24">
-        <Spinner size="lg" />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className={`flex transition-all duration-200 ${collapsed ? 'gap-4' : 'gap-8'}`}>
+          <AppSidebar />
+          <div className="flex-1 min-w-0 flex items-center justify-center py-24">
+            <Spinner size="lg" />
+          </div>
+        </div>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <p className="text-red-600">{t('projects.loadError')}</p>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className={`flex transition-all duration-200 ${collapsed ? 'gap-4' : 'gap-8'}`}>
+          <AppSidebar />
+          <div className="flex-1 min-w-0">
+            <p className="text-red-600">{t('projects.loadError')}</p>
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{t('projects.title')}</h1>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className={`flex transition-all duration-200 ${collapsed ? 'gap-4' : 'gap-8'}`}>
+        <AppSidebar />
+        <div className="flex-1 min-w-0">
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('projects.title')}</h1>
         <Button onClick={() => setShowCreate(true)}>{t('projects.new')}</Button>
+      </div>
+
+      {/* Search */}
+      <div className="relative mb-4">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <Input
+          ref={searchRef}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          placeholder={t('projects.searchPlaceholder')}
+          className="pl-10"
+          onKeyDown={(e) => { if (e.key === 'Escape') searchRef.current?.blur() }}
+        />
       </div>
 
       {/* Mobile card view */}
@@ -289,6 +327,8 @@ export function ProjectListPage() {
           </div>
         </form>
       </Modal>
+        </div>
+      </div>
     </div>
   )
 }

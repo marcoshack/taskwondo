@@ -2,6 +2,7 @@ const sizeClasses = {
   default: 'text-sm px-2.5 py-0.5 min-w-[4.5rem]',
   nav: 'text-sm px-2.5 py-1',
   'nav-mobile': 'text-base px-2.5 py-1',
+  icon: 'text-xs leading-none px-1.5 py-0.5',
 } as const
 
 interface ProjectKeyBadgeProps {

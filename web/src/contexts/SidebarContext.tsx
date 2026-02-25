@@ -5,7 +5,7 @@ import type { ReactNode } from 'react'
 import { usePreference, useSetPreference } from '@/hooks/usePreferences'
 import { useAuth } from '@/contexts/AuthContext'
 
-export type SidebarType = 'project' | 'settings' | 'user'
+export type SidebarType = 'app' | 'settings'
 
 interface SidebarState {
   collapsed: boolean
@@ -20,15 +20,13 @@ interface SidebarContextValue {
 }
 
 const STORAGE_KEYS: Record<SidebarType, string> = {
-  project: 'taskwondo_sidebar_project_collapsed',
+  app: 'taskwondo_sidebar_app_collapsed',
   settings: 'taskwondo_sidebar_settings_collapsed',
-  user: 'taskwondo_sidebar_user_collapsed',
 }
 
 const PREF_KEYS: Record<SidebarType, string> = {
-  project: 'sidebarProjectCollapsed',
+  app: 'sidebarAppCollapsed',
   settings: 'sidebarSettingsCollapsed',
-  user: 'sidebarUserCollapsed',
 }
 
 const OLD_STORAGE_KEY = 'taskwondo_sidebar_collapsed'
@@ -37,15 +35,32 @@ const OLD_PREF_KEY = 'sidebarCollapsed'
 const SidebarContext = createContext<SidebarContextValue | null>(null)
 
 function migrateOldStorage(): void {
+  // Migrate legacy single-key storage
   const old = localStorage.getItem(OLD_STORAGE_KEY)
   if (old !== null) {
-    // Migrate old value to project and settings keys (only if new keys don't exist yet)
-    for (const key of [STORAGE_KEYS.project, STORAGE_KEYS.settings]) {
+    for (const key of [STORAGE_KEYS.app, STORAGE_KEYS.settings]) {
       if (localStorage.getItem(key) === null) {
         localStorage.setItem(key, old)
       }
     }
     localStorage.removeItem(OLD_STORAGE_KEY)
+  }
+
+  // Migrate per-type keys (project/user) to unified app key
+  const oldProject = localStorage.getItem('taskwondo_sidebar_project_collapsed')
+  const oldUser = localStorage.getItem('taskwondo_sidebar_user_collapsed')
+  if (oldProject !== null || oldUser !== null) {
+    if (localStorage.getItem(STORAGE_KEYS.app) === null) {
+      // Prefer project sidebar's state since it was more commonly used
+      localStorage.setItem(STORAGE_KEYS.app, oldProject ?? oldUser ?? 'false')
+    }
+    // Migrate settings key if it used the old name
+    const oldSettings = localStorage.getItem('taskwondo_sidebar_settings_collapsed')
+    if (oldSettings !== null && localStorage.getItem(STORAGE_KEYS.settings) === null) {
+      localStorage.setItem(STORAGE_KEYS.settings, oldSettings)
+    }
+    localStorage.removeItem('taskwondo_sidebar_project_collapsed')
+    localStorage.removeItem('taskwondo_sidebar_user_collapsed')
   }
 }
 
@@ -62,23 +77,23 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
     migrateOldStorage()
   }, [])
 
-  const [projectCollapsed, setProjectCollapsed] = useState<boolean>(() => getStoredCollapsed('project'))
+  const [appCollapsed, setAppCollapsed] = useState<boolean>(() => getStoredCollapsed('app'))
   const [settingsCollapsed, setSettingsCollapsed] = useState<boolean>(() => getStoredCollapsed('settings'))
-  const [userCollapsed, setUserCollapsed] = useState<boolean>(() => getStoredCollapsed('user'))
 
   // API preference sync
-  const { data: apiProjectCollapsed } = usePreference<string>(user ? PREF_KEYS.project : '')
+  const { data: apiAppCollapsed } = usePreference<string>(user ? PREF_KEYS.app : '')
   const { data: apiSettingsCollapsed } = usePreference<string>(user ? PREF_KEYS.settings : '')
-  const { data: apiUserCollapsed } = usePreference<string>(user ? PREF_KEYS.user : '')
   const { data: apiOldCollapsed } = usePreference<string>(user ? OLD_PREF_KEY : '')
+  // Read old per-type API prefs for migration
+  const { data: apiOldProjectCollapsed } = usePreference<string>(user ? 'sidebarProjectCollapsed' : '')
+  const { data: apiOldUserCollapsed } = usePreference<string>(user ? 'sidebarUserCollapsed' : '')
   const setPreferenceMutation = useSetPreference()
 
-  // Migrate old API preference
+  // Migrate old API preference (single key)
   useEffect(() => {
     if (apiOldCollapsed === 'true' || apiOldCollapsed === 'false') {
-      // Migrate old pref to new keys if they don't have values yet
-      if (apiProjectCollapsed === undefined || apiProjectCollapsed === null) {
-        setPreferenceMutation.mutate({ key: PREF_KEYS.project, value: apiOldCollapsed })
+      if (apiAppCollapsed === undefined || apiAppCollapsed === null) {
+        setPreferenceMutation.mutate({ key: PREF_KEYS.app, value: apiOldCollapsed })
       }
       if (apiSettingsCollapsed === undefined || apiSettingsCollapsed === null) {
         setPreferenceMutation.mutate({ key: PREF_KEYS.settings, value: apiOldCollapsed })
@@ -87,14 +102,23 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiOldCollapsed])
 
+  // Migrate old per-type API prefs (project/user → app)
+  useEffect(() => {
+    const oldVal = apiOldProjectCollapsed ?? apiOldUserCollapsed
+    if ((oldVal === 'true' || oldVal === 'false') && (apiAppCollapsed === undefined || apiAppCollapsed === null)) {
+      setPreferenceMutation.mutate({ key: PREF_KEYS.app, value: oldVal })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apiOldProjectCollapsed, apiOldUserCollapsed])
+
   // Sync API preferences to local state
   useEffect(() => {
-    if (apiProjectCollapsed === 'true' || apiProjectCollapsed === 'false') {
-      const val = apiProjectCollapsed === 'true'
-      setProjectCollapsed(val)
-      localStorage.setItem(STORAGE_KEYS.project, String(val))
+    if (apiAppCollapsed === 'true' || apiAppCollapsed === 'false') {
+      const val = apiAppCollapsed === 'true'
+      setAppCollapsed(val)
+      localStorage.setItem(STORAGE_KEYS.app, String(val))
     }
-  }, [apiProjectCollapsed])
+  }, [apiAppCollapsed])
 
   useEffect(() => {
     if (apiSettingsCollapsed === 'true' || apiSettingsCollapsed === 'false') {
@@ -104,17 +128,9 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
     }
   }, [apiSettingsCollapsed])
 
-  useEffect(() => {
-    if (apiUserCollapsed === 'true' || apiUserCollapsed === 'false') {
-      const val = apiUserCollapsed === 'true'
-      setUserCollapsed(val)
-      localStorage.setItem(STORAGE_KEYS.user, String(val))
-    }
-  }, [apiUserCollapsed])
-
   const setCollapsed = useCallback(
     (type: SidebarType, newCollapsed: boolean) => {
-      const setter = type === 'project' ? setProjectCollapsed : type === 'settings' ? setSettingsCollapsed : setUserCollapsed
+      const setter = type === 'app' ? setAppCollapsed : setSettingsCollapsed
       setter(newCollapsed)
       localStorage.setItem(STORAGE_KEYS[type], String(newCollapsed))
       if (user) {
@@ -126,13 +142,13 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
 
   const getSidebar = useCallback(
     (type: SidebarType): SidebarState => {
-      const collapsed = type === 'project' ? projectCollapsed : type === 'settings' ? settingsCollapsed : userCollapsed
+      const collapsed = type === 'app' ? appCollapsed : settingsCollapsed
       return {
         collapsed,
         toggleCollapsed: () => setCollapsed(type, !collapsed),
       }
     },
-    [projectCollapsed, settingsCollapsed, userCollapsed, setCollapsed],
+    [appCollapsed, settingsCollapsed, setCollapsed],
   )
 
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -144,14 +160,11 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
     if (location.pathname.startsWith('/preferences') || location.pathname.startsWith('/admin')) {
       return 'settings'
     }
-    if (location.pathname.startsWith('/user')) {
-      return 'user'
-    }
-    return 'project'
+    return 'app'
   }, [location.pathname])
 
   useKeyboardShortcut({ key: '[' }, () => {
-    const current = activeSidebarType === 'project' ? projectCollapsed : activeSidebarType === 'settings' ? settingsCollapsed : userCollapsed
+    const current = activeSidebarType === 'app' ? appCollapsed : settingsCollapsed
     setCollapsed(activeSidebarType, !current)
   })
 
@@ -162,7 +175,7 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
   )
 }
 
-export function useSidebar(type: SidebarType = 'project') {
+export function useSidebar(type: SidebarType = 'app') {
   const ctx = useContext(SidebarContext)
   if (!ctx) throw new Error('useSidebar must be used within SidebarProvider')
   const { collapsed, toggleCollapsed } = ctx.getSidebar(type)

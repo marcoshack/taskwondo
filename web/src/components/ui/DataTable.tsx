@@ -75,7 +75,7 @@ export function DataTable<T>({
                 <th
                   key={col.key}
                   style={col.width ? { width: col.width } : undefined}
-                  className={`px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider ${col.className ?? ''} ${isSortable ? 'cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200' : ''}`}
+                  className={`px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap ${col.className ?? ''} ${isSortable ? 'cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200' : ''}`}
                   onClick={isSortable ? () => onSort!(col.sortKey!) : undefined}
                 >
                   <span className="inline-flex items-center gap-1">

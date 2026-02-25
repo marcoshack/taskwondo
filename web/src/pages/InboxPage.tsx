@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useRef } from 'react'
 import { Routes, Route, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ChevronUp, ChevronDown, X, Search, BrushCleaning, Inbox, Check, Rss, Bookmark, Settings, User, History } from 'lucide-react'
@@ -11,10 +11,11 @@ import { PriorityBadge } from '@/components/workitems/PriorityBadge'
 import { TypeBadge } from '@/components/workitems/TypeBadge'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { SLAIndicator } from '@/components/SLAIndicator'
-import { UserSidebar } from '@/components/UserSidebar'
+import { AppSidebar } from '@/components/AppSidebar'
 import { useSidebar } from '@/contexts/SidebarContext'
 import { useInboxItems, useRemoveFromInbox, useReorderInboxItem, useClearCompletedInbox } from '@/hooks/useInbox'
 import { usePreference, useSetPreference } from '@/hooks/usePreferences'
+import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
 import { useDebounce } from '@/hooks/useDebounce'
 import { listInboxItems, type InboxItem } from '@/api/inbox'
 import { formatRelativeTime } from '@/utils/duration'
@@ -232,7 +233,10 @@ function InboxListPage() {
   const navigate = useNavigate()
 
   const [searchInput, setSearchInput] = useState('')
+  const searchRef = useRef<HTMLInputElement>(null)
   const debouncedSearch = useDebounce(searchInput, 300)
+
+  useKeyboardShortcut({ key: '/' }, () => searchRef.current?.focus())
 
   const { data: autoRemovePref } = usePreference<boolean>('inbox_auto_remove')
   const autoRemove = autoRemovePref ?? true
@@ -385,10 +389,12 @@ function InboxListPage() {
         <div className="relative flex-1 min-w-0">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
+            ref={searchRef}
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder={t('inbox.searchPlaceholder')}
             className="pl-10"
+            onKeyDown={(e) => { if (e.key === 'Escape') searchRef.current?.blur() }}
           />
         </div>
         {/* Clear completed */}
@@ -539,12 +545,12 @@ function WatchlistPage() {
 // --- Layout Page ---
 
 export default function UserPage() {
-  const { collapsed } = useSidebar('user')
+  const { collapsed } = useSidebar('app')
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 h-full flex flex-col">
       <div className={`flex flex-1 min-h-0 transition-all duration-200 ${collapsed ? 'gap-4' : 'gap-8'}`}>
-        <UserSidebar />
+        <AppSidebar />
         <div className="flex-1 min-w-0">
           <Routes>
             <Route path="inbox" element={<InboxListPage />} />

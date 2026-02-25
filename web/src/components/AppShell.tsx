@@ -49,10 +49,13 @@ export function AppShell() {
 
   const { data: inboxCount } = useInboxCount()
   const projectMatch = useMatch('/projects/:projectKey/*')
+  const projectListMatch = useMatch('/projects')
   const userMatch = useMatch('/user/*')
   const adminMatch = useMatch('/admin/*')
   const preferencesMatch = useMatch('/preferences/*')
-  const activeProjectKey = projectMatch?.params.projectKey
+  const routeProjectKey = projectMatch?.params.projectKey
+  const lastProjectKey = localStorage.getItem('taskwondo_last_project_key') ?? undefined
+  const activeProjectKey = routeProjectKey ?? lastProjectKey
   const { data: activeProject } = useProject(activeProjectKey ?? '')
 
   useEffect(() => {
@@ -124,7 +127,7 @@ export function AppShell() {
                 </button>
               ) : null}
             </div>
-            {activeProject && (
+            {activeProject && !adminMatch && !preferencesMatch && (
               <button
                 onClick={() => setSwitcherOpen(true)}
                 className="sm:hidden absolute left-1/2 -translate-x-1/2 top-0 h-full flex items-center hover:opacity-80 transition-opacity"
@@ -145,7 +148,7 @@ export function AppShell() {
                   </span>
                 )}
               </button>
-              {(activeProjectKey || userMatch) && (
+              {(activeProjectKey || projectListMatch || userMatch) && (
                 <button
                   onClick={toggleMobileOpen}
                   className="sm:hidden p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
