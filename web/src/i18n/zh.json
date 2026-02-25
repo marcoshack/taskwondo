@@ -781,6 +781,7 @@
   "savedSearches.save": "保存搜索",
   "savedSearches.saveNew": "另存为新搜索",
   "savedSearches.updateExisting": "更新 \"{{name}}\"",
+  "savedSearches.updateSharedAdminOnly": "只有管理员可以更新共享搜索",
   "savedSearches.saveAsNew": "另存为新搜索",
   "savedSearches.nameLabel": "搜索名称",
   "savedSearches.namePlaceholder": "例如：我的未解决缺陷",

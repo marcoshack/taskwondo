@@ -6,6 +6,7 @@ import {
   Settings,
   Users,
   Route,
+  Plug,
   PanelLeftClose,
   PanelLeftOpen,
 } from 'lucide-react'
@@ -21,6 +22,7 @@ export function SystemSettingsSidebar() {
     { to: 'general', label: t('admin.sidebar.general'), icon: Settings, end: false },
     { to: 'users', label: t('admin.sidebar.users'), icon: Users, end: false },
     { to: 'workflows', label: t('admin.sidebar.workflows'), icon: Route, end: false },
+    { to: 'integrations', label: t('admin.sidebar.integrations'), icon: Plug, end: false },
   ]
 
   function renderNavItems(showLabels: boolean) {

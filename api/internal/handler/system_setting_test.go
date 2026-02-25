@@ -11,6 +11,8 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/marcoshack/taskwondo/internal/crypto"
+	"github.com/marcoshack/taskwondo/internal/email"
 	"github.com/marcoshack/taskwondo/internal/model"
 	"github.com/marcoshack/taskwondo/internal/service"
 )
@@ -60,11 +62,26 @@ func (m *mockSystemSettingRepo) Delete(_ context.Context, key string) error {
 
 // --- Test setup ---
 
+func testEncryptor(t *testing.T) *crypto.Encryptor {
+	t.Helper()
+	key, err := crypto.DeriveKey("test-secret-key-that-is-long-enough-32chars")
+	if err != nil {
+		t.Fatal(err)
+	}
+	enc, err := crypto.NewEncryptor(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return enc
+}
+
 func systemSettingTestSetup(t *testing.T) (*SystemSettingHandler, *mockSystemSettingRepo) {
 	t.Helper()
 	repo := newMockSystemSettingRepo()
 	svc := service.NewSystemSettingService(repo)
-	h := NewSystemSettingHandler(svc)
+	enc := testEncryptor(t)
+	sender := email.NewSender(enc, repo)
+	h := NewSystemSettingHandler(svc, enc, sender)
 	return h, repo
 }
 
@@ -288,5 +305,232 @@ func TestSystemSettingGetPublicHandler_NoAuth(t *testing.T) {
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+// --- SMTP handler tests ---
+
+func TestGetSMTP_DefaultWhenNotConfigured(t *testing.T) {
+	h, _ := systemSettingTestSetup(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/settings/smtp_config", nil)
+	req = req.WithContext(sysAdminCtx())
+	w := httptest.NewRecorder()
+
+	h.GetSMTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp struct {
+		Data model.SMTPConfig `json:"data"`
+	}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+
+	if resp.Data.SMTPPort != 587 {
+		t.Errorf("expected default smtp_port 587, got %d", resp.Data.SMTPPort)
+	}
+	if resp.Data.IMAPPort != 993 {
+		t.Errorf("expected default imap_port 993, got %d", resp.Data.IMAPPort)
+	}
+	if resp.Data.Encryption != model.SMTPEncryptionSTARTTLS {
+		t.Errorf("expected default encryption starttls, got %s", resp.Data.Encryption)
+	}
+}
+
+func TestSetSMTP_SaveAndMaskPassword(t *testing.T) {
+	h, repo := systemSettingTestSetup(t)
+
+	cfg := model.SMTPConfig{
+		Enabled:     true,
+		SMTPHost:    "smtp.example.com",
+		SMTPPort:    587,
+		Username:    "user@example.com",
+		Password:    "secret123",
+		Encryption:  "starttls",
+		FromAddress: "noreply@example.com",
+		FromName:    "Test",
+	}
+	body, _ := json.Marshal(cfg)
+
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/admin/settings/smtp_config", bytes.NewBuffer(body))
+	req = req.WithContext(sysAdminCtx())
+	w := httptest.NewRecorder()
+
+	h.SetSMTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	// Response should have masked password
+	var resp struct {
+		Data model.SMTPConfig `json:"data"`
+	}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	if resp.Data.Password != model.PasswordMask {
+		t.Errorf("expected masked password in response, got %q", resp.Data.Password)
+	}
+
+	// Stored value should have encrypted password (not plaintext)
+	stored := repo.settings[model.SettingSMTPConfig]
+	if stored == nil {
+		t.Fatal("smtp_config not stored in repo")
+	}
+	var storedCfg model.SMTPConfig
+	json.Unmarshal(stored.Value, &storedCfg)
+	if storedCfg.Password == "secret123" {
+		t.Error("password should be encrypted in storage, not plaintext")
+	}
+	if storedCfg.Password == "" {
+		t.Error("encrypted password should not be empty")
+	}
+}
+
+func TestSetSMTP_PreservesExistingPassword(t *testing.T) {
+	h, repo := systemSettingTestSetup(t)
+
+	// First save with real password
+	enc := testEncryptor(t)
+	encrypted, _ := enc.Encrypt("original-pass")
+	existing := model.SMTPConfig{
+		Enabled:     true,
+		SMTPHost:    "smtp.example.com",
+		SMTPPort:    587,
+		Username:    "user@example.com",
+		Password:    encrypted,
+		Encryption:  "starttls",
+		FromAddress: "noreply@example.com",
+	}
+	raw, _ := json.Marshal(existing)
+	repo.settings[model.SettingSMTPConfig] = &model.SystemSetting{Key: model.SettingSMTPConfig, Value: raw, UpdatedAt: time.Now()}
+
+	// Update with masked password (should preserve original)
+	cfg := model.SMTPConfig{
+		Enabled:     true,
+		SMTPHost:    "smtp.new.com",
+		SMTPPort:    587,
+		Username:    "user@example.com",
+		Password:    model.PasswordMask,
+		Encryption:  "starttls",
+		FromAddress: "noreply@example.com",
+	}
+	body, _ := json.Marshal(cfg)
+
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/admin/settings/smtp_config", bytes.NewBuffer(body))
+	req = req.WithContext(sysAdminCtx())
+	w := httptest.NewRecorder()
+
+	h.SetSMTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	// Verify password was preserved
+	stored := repo.settings[model.SettingSMTPConfig]
+	var storedCfg model.SMTPConfig
+	json.Unmarshal(stored.Value, &storedCfg)
+	if storedCfg.Password != encrypted {
+		t.Error("password should be preserved when masked value is sent")
+	}
+	// Verify host was updated
+	if storedCfg.SMTPHost != "smtp.new.com" {
+		t.Errorf("expected updated host smtp.new.com, got %s", storedCfg.SMTPHost)
+	}
+}
+
+func TestSetSMTP_ValidationError(t *testing.T) {
+	h, _ := systemSettingTestSetup(t)
+
+	// Enabled but missing required fields
+	cfg := model.SMTPConfig{
+		Enabled: true,
+		// Missing smtp_host, username, from_address, etc.
+		SMTPPort:   587,
+		Encryption: "starttls",
+	}
+	body, _ := json.Marshal(cfg)
+
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/admin/settings/smtp_config", bytes.NewBuffer(body))
+	req = req.WithContext(sysAdminCtx())
+	w := httptest.NewRecorder()
+
+	h.SetSMTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestSetSMTP_DisabledSkipsValidation(t *testing.T) {
+	h, _ := systemSettingTestSetup(t)
+
+	// Disabled - should save even with empty fields
+	cfg := model.SMTPConfig{Enabled: false}
+	body, _ := json.Marshal(cfg)
+
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/admin/settings/smtp_config", bytes.NewBuffer(body))
+	req = req.WithContext(sysAdminCtx())
+	w := httptest.NewRecorder()
+
+	h.SetSMTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestGetSMTP_MasksPassword(t *testing.T) {
+	h, repo := systemSettingTestSetup(t)
+
+	enc := testEncryptor(t)
+	encrypted, _ := enc.Encrypt("secret-pass")
+	cfg := model.SMTPConfig{
+		Enabled:     true,
+		SMTPHost:    "smtp.example.com",
+		SMTPPort:    587,
+		Username:    "user",
+		Password:    encrypted,
+		Encryption:  "starttls",
+		FromAddress: "test@example.com",
+	}
+	raw, _ := json.Marshal(cfg)
+	repo.settings[model.SettingSMTPConfig] = &model.SystemSetting{Key: model.SettingSMTPConfig, Value: raw, UpdatedAt: time.Now()}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/settings/smtp_config", nil)
+	req = req.WithContext(sysAdminCtx())
+	w := httptest.NewRecorder()
+
+	h.GetSMTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp struct {
+		Data model.SMTPConfig `json:"data"`
+	}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	if resp.Data.Password != model.PasswordMask {
+		t.Errorf("expected masked password, got %q", resp.Data.Password)
+	}
+	if resp.Data.SMTPHost != "smtp.example.com" {
+		t.Errorf("expected smtp host, got %q", resp.Data.SMTPHost)
+	}
+}
+
+func TestTestSMTP_Forbidden(t *testing.T) {
+	h, _ := systemSettingTestSetup(t)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/settings/smtp_config/test", nil)
+	req = req.WithContext(sysUserCtx())
+	w := httptest.NewRecorder()
+
+	h.TestSMTP(w, req)
+
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d: %s", w.Code, w.Body.String())
 	}
 }

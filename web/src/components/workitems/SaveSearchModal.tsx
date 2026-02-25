@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
+import { Tooltip } from '@/components/ui/Tooltip'
 import type { SavedSearch } from '@/api/savedSearches'
 
 interface SaveSearchModalProps {
@@ -46,15 +47,18 @@ export function SaveSearchModal({
   }
 
   const showUpdateOption = activeSearch && hasUnsavedChanges
+  const canUpdateActive = activeSearch?.scope === 'shared' ? canManageShared : true
 
   return (
     <Modal open={open} onClose={handleClose} title={t('savedSearches.save')}>
       <div className="space-y-4">
         {showUpdateOption && (
           <>
-            <Button onClick={handleUpdate} className="w-full">
-              {t('savedSearches.updateExisting', { name: activeSearch.name })}
-            </Button>
+            <Tooltip content={!canUpdateActive ? t('savedSearches.updateSharedAdminOnly') : undefined}>
+              <Button onClick={handleUpdate} className="w-full" disabled={!canUpdateActive}>
+                {t('savedSearches.updateExisting', { name: activeSearch.name })}
+              </Button>
+            </Tooltip>
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-200 dark:border-gray-700" />

@@ -55,6 +55,9 @@ type Config struct {
 	StorageUseSSL    bool
 	MaxUploadSize    int64 // bytes
 
+	// Encryption
+	EncryptionKey string // optional, derived from JWTSecret if empty
+
 	// Rate limiting
 	AuthRateLimit int // requests per minute for auth endpoints
 	AuthRateBurst int // max burst for auth endpoints
@@ -135,6 +138,7 @@ func Load() (*Config, error) {
 		StorageRegion:       envOrDefault("STORAGE_REGION", "us-east-1"),
 		StorageUseSSL:       envOrDefault("STORAGE_USE_SSL", "false") == "true",
 		MaxUploadSize:       maxUpload,
+		EncryptionKey:       envOrDefault("ENCRYPTION_KEY", ""),
 		AuthRateLimit:       authRateLimit,
 		AuthRateBurst:       authRateBurst,
 	}

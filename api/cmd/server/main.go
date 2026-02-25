@@ -15,8 +15,10 @@ import (
 	"golang.org/x/time/rate"
 
 	"github.com/marcoshack/taskwondo/internal/config"
+	"github.com/marcoshack/taskwondo/internal/crypto"
 	"github.com/marcoshack/taskwondo/internal/database"
 	"github.com/marcoshack/taskwondo/internal/dataport"
+	"github.com/marcoshack/taskwondo/internal/email"
 	"github.com/marcoshack/taskwondo/internal/handler"
 	"github.com/marcoshack/taskwondo/internal/middleware"
 	"github.com/marcoshack/taskwondo/internal/repository"
@@ -189,6 +191,28 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to seed existing project type workflows")
 	}
 
+	// Initialize encryption
+	var encKey []byte
+	if cfg.EncryptionKey != "" {
+		encKey = []byte(cfg.EncryptionKey)
+		if len(encKey) != 32 {
+			log.Fatal().Msg("ENCRYPTION_KEY must be exactly 32 bytes")
+		}
+	} else {
+		var err error
+		encKey, err = crypto.DeriveKey(cfg.JWTSecret)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to derive encryption key")
+		}
+	}
+	encryptor, err := crypto.NewEncryptor(encKey)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to create encryptor")
+	}
+
+	// Initialize email sender
+	emailSender := email.NewSender(encryptor, systemSettingRepo)
+
 	// Initialize handlers
 	health := handler.NewHealthHandler(db)
 	auth := handler.NewAuthHandler(authService)
@@ -199,7 +223,7 @@ func main() {
 	milestones := handler.NewMilestoneHandler(milestoneService)
 	items := handler.NewWorkItemHandler(workItemService, slaService, cfg.MaxUploadSize)
 	userSettings := handler.NewUserSettingHandler(userSettingService)
-	systemSettings := handler.NewSystemSettingHandler(systemSettingService)
+	systemSettings := handler.NewSystemSettingHandler(systemSettingService, encryptor, emailSender)
 	admin := handler.NewAdminHandler(adminService)
 	sla := handler.NewSLAHandler(slaService)
 	inbox := handler.NewInboxHandler(inboxService, slaService)
@@ -421,6 +445,11 @@ func main() {
 				})
 				r.Route("/settings", func(r chi.Router) {
 					r.Get("/", systemSettings.List)
+					r.Route("/smtp_config", func(r chi.Router) {
+						r.Get("/", systemSettings.GetSMTP)
+						r.Put("/", systemSettings.SetSMTP)
+						r.Post("/test", systemSettings.TestSMTP)
+					})
 					r.Route("/{key}", func(r chi.Router) {
 						r.Get("/", systemSettings.Get)
 						r.Put("/", systemSettings.Set)

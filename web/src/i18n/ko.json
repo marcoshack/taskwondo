@@ -782,6 +782,7 @@
   "savedSearches.save": "검색 저장",
   "savedSearches.saveNew": "새로 저장",
   "savedSearches.updateExisting": "\"{{name}}\" 업데이트",
+  "savedSearches.updateSharedAdminOnly": "관리자만 공유 검색을 업데이트할 수 있습니다",
   "savedSearches.saveAsNew": "새 검색으로 저장",
   "savedSearches.nameLabel": "검색 이름",
   "savedSearches.namePlaceholder": "예: 내 미해결 버그",

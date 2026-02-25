@@ -785,6 +785,7 @@
   "savedSearches.save": "Enregistrer la recherche",
   "savedSearches.saveNew": "Enregistrer comme nouvelle",
   "savedSearches.updateExisting": "Mettre à jour \"{{name}}\"",
+  "savedSearches.updateSharedAdminOnly": "Seuls les administrateurs peuvent modifier les recherches partagées",
   "savedSearches.saveAsNew": "Enregistrer comme nouvelle recherche",
   "savedSearches.nameLabel": "Nom de la recherche",
   "savedSearches.namePlaceholder": "ex. Mes bugs ouverts",

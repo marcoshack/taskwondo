@@ -33,3 +33,33 @@ export async function getPublicSettings(): Promise<Record<string, unknown>> {
   const res = await axios.get<DataResponse<Record<string, unknown>>>('/api/v1/settings/public')
   return res.data.data ?? {}
 }
+
+// SMTP Configuration
+
+export interface SMTPConfig {
+  enabled: boolean
+  smtp_host: string
+  smtp_port: number
+  imap_host: string
+  imap_port: number
+  username: string
+  password: string
+  encryption: 'starttls' | 'tls' | 'none'
+  from_address: string
+  from_name: string
+}
+
+export async function getSMTPConfig(): Promise<SMTPConfig> {
+  const res = await api.get<DataResponse<SMTPConfig>>('/admin/settings/smtp_config')
+  return res.data.data
+}
+
+export async function setSMTPConfig(config: SMTPConfig): Promise<SMTPConfig> {
+  const res = await api.put<DataResponse<SMTPConfig>>('/admin/settings/smtp_config', config)
+  return res.data.data
+}
+
+export async function testSMTPConfig(): Promise<{ message: string }> {
+  const res = await api.post<DataResponse<{ message: string }>>('/admin/settings/smtp_config/test')
+  return res.data.data
+}

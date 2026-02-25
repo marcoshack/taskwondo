@@ -8,18 +8,22 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 
+	"github.com/marcoshack/taskwondo/internal/crypto"
+	"github.com/marcoshack/taskwondo/internal/email"
 	"github.com/marcoshack/taskwondo/internal/model"
 	"github.com/marcoshack/taskwondo/internal/service"
 )
 
 // SystemSettingHandler handles system setting endpoints.
 type SystemSettingHandler struct {
-	settings *service.SystemSettingService
+	settings  *service.SystemSettingService
+	encryptor *crypto.Encryptor
+	email     *email.Sender
 }
 
 // NewSystemSettingHandler creates a new SystemSettingHandler.
-func NewSystemSettingHandler(settings *service.SystemSettingService) *SystemSettingHandler {
-	return &SystemSettingHandler{settings: settings}
+func NewSystemSettingHandler(settings *service.SystemSettingService, encryptor *crypto.Encryptor, emailSender *email.Sender) *SystemSettingHandler {
+	return &SystemSettingHandler{settings: settings, encryptor: encryptor, email: emailSender}
 }
 
 type systemSettingResponse struct {
@@ -133,6 +137,123 @@ func (h *SystemSettingHandler) GetPublic(w http.ResponseWriter, r *http.Request)
 	}
 
 	writeData(w, http.StatusOK, settings)
+}
+
+// GetSMTP handles GET /api/v1/admin/settings/smtp_config
+func (h *SystemSettingHandler) GetSMTP(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	setting, err := h.settings.Get(r.Context(), info, model.SettingSMTPConfig)
+	if err != nil {
+		if errors.Is(err, model.ErrNotFound) {
+			// Return empty default config
+			writeData(w, http.StatusOK, &model.SMTPConfig{
+				SMTPPort:   587,
+				IMAPPort:   993,
+				Encryption: model.SMTPEncryptionSTARTTLS,
+			})
+			return
+		}
+		handleSystemSettingError(w, r, err, "failed to get smtp config")
+		return
+	}
+
+	var cfg model.SMTPConfig
+	if err := json.Unmarshal(setting.Value, &cfg); err != nil {
+		log.Ctx(r.Context()).Error().Err(err).Msg("failed to parse smtp config")
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		return
+	}
+
+	// Mask the password
+	if cfg.Password != "" {
+		cfg.Password = model.PasswordMask
+	}
+
+	writeData(w, http.StatusOK, cfg)
+}
+
+// SetSMTP handles PUT /api/v1/admin/settings/smtp_config
+func (h *SystemSettingHandler) SetSMTP(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	var cfg model.SMTPConfig
+	if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		return
+	}
+
+	if err := cfg.Validate(); err != nil {
+		handleSystemSettingError(w, r, err, "smtp config validation failed")
+		return
+	}
+
+	// Handle password: if masked or empty, preserve the existing encrypted password
+	if cfg.Password == "" || cfg.Password == model.PasswordMask {
+		existing, err := h.settings.Get(r.Context(), info, model.SettingSMTPConfig)
+		if err == nil {
+			var existingCfg model.SMTPConfig
+			if err := json.Unmarshal(existing.Value, &existingCfg); err == nil {
+				cfg.Password = existingCfg.Password
+			}
+		}
+		// If no existing config, password stays empty
+	} else {
+		// Encrypt the new password
+		encrypted, err := h.encryptor.Encrypt(cfg.Password)
+		if err != nil {
+			log.Ctx(r.Context()).Error().Err(err).Msg("failed to encrypt smtp password")
+			writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+			return
+		}
+		cfg.Password = encrypted
+	}
+
+	value, err := json.Marshal(cfg)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		return
+	}
+
+	if _, err := h.settings.Set(r.Context(), info, model.SettingSMTPConfig, value); err != nil {
+		handleSystemSettingError(w, r, err, "failed to save smtp config")
+		return
+	}
+
+	// Return the config with masked password
+	if cfg.Password != "" {
+		cfg.Password = model.PasswordMask
+	}
+	writeData(w, http.StatusOK, cfg)
+}
+
+// TestSMTP handles POST /api/v1/admin/settings/smtp_config/test
+func (h *SystemSettingHandler) TestSMTP(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+	if info.GlobalRole != model.RoleAdmin {
+		writeError(w, http.StatusForbidden, "FORBIDDEN", "insufficient permissions")
+		return
+	}
+
+	if err := h.email.SendTest(r.Context(), info.Email); err != nil {
+		log.Ctx(r.Context()).Error().Err(err).Msg("smtp test email failed")
+		writeError(w, http.StatusBadRequest, "SMTP_ERROR", err.Error())
+		return
+	}
+
+	writeData(w, http.StatusOK, map[string]string{"message": "test email sent successfully"})
 }
 
 func handleSystemSettingError(w http.ResponseWriter, r *http.Request, err error, logMsg string) {

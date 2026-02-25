@@ -782,6 +782,7 @@
   "savedSearches.save": "検索を保存",
   "savedSearches.saveNew": "新規として保存",
   "savedSearches.updateExisting": "\"{{name}}\" を更新",
+  "savedSearches.updateSharedAdminOnly": "共有検索を更新できるのは管理者のみです",
   "savedSearches.saveAsNew": "新しい検索として保存",
   "savedSearches.nameLabel": "検索名",
   "savedSearches.namePlaceholder": "例：未解決のバグ",

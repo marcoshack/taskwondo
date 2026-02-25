@@ -781,6 +781,7 @@
   "savedSearches.save": "حفظ البحث",
   "savedSearches.saveNew": "حفظ كجديد",
   "savedSearches.updateExisting": "تحديث \"{{name}}\"",
+  "savedSearches.updateSharedAdminOnly": "يمكن للمسؤولين فقط تحديث عمليات البحث المشتركة",
   "savedSearches.saveAsNew": "حفظ كبحث جديد",
   "savedSearches.nameLabel": "اسم البحث",
   "savedSearches.namePlaceholder": "مثال: أخطائي المفتوحة",

@@ -781,6 +781,7 @@
   "savedSearches.save": "Suche Speichern",
   "savedSearches.saveNew": "Als Neue Speichern",
   "savedSearches.updateExisting": "\"{{name}}\" Aktualisieren",
+  "savedSearches.updateSharedAdminOnly": "Nur Administratoren können geteilte Suchen aktualisieren",
   "savedSearches.saveAsNew": "Als Neue Suche Speichern",
   "savedSearches.nameLabel": "Name der Suche",
   "savedSearches.namePlaceholder": "z.B. Meine offenen Bugs",

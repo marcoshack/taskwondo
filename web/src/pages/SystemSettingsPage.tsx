@@ -1,12 +1,13 @@
 import { NavLink, Routes, Route, Navigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Settings, Users, Route as RouteIcon } from 'lucide-react'
+import { Settings, Users, Route as RouteIcon, Plug } from 'lucide-react'
 import { useSidebar } from '@/contexts/SidebarContext'
 import { useNavigationGuard } from '@/contexts/NavigationGuardContext'
 import { SystemSettingsSidebar } from '@/components/SystemSettingsSidebar'
 import { AdminUsersPage } from './AdminUsersPage'
 import { SystemGeneralPage } from './SystemGeneralPage'
 import { SystemWorkflowsPage } from './SystemWorkflowsPage'
+import { SystemIntegrationsPage } from './SystemIntegrationsPage'
 
 export function SystemSettingsPage() {
   const { t } = useTranslation()
@@ -17,6 +18,7 @@ export function SystemSettingsPage() {
     { to: 'general', label: t('admin.sidebar.general'), icon: Settings },
     { to: 'users', label: t('admin.sidebar.users'), icon: Users },
     { to: 'workflows', label: t('admin.sidebar.workflows'), icon: RouteIcon },
+    { to: 'integrations', label: t('admin.sidebar.integrations'), icon: Plug },
   ]
 
   return (
@@ -55,6 +57,7 @@ export function SystemSettingsPage() {
             <Route path="general" element={<SystemGeneralPage />} />
             <Route path="users" element={<AdminUsersPage />} />
             <Route path="workflows" element={<SystemWorkflowsPage />} />
+            <Route path="integrations" element={<SystemIntegrationsPage />} />
           </Routes>
         </div>
       </div>

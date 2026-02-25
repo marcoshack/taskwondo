@@ -330,3 +330,76 @@ export async function deleteSavedSearch(
   });
   if (!res.ok()) throw new Error(`Delete saved search failed (${res.status()}): ${await res.text()}`);
 }
+
+// --- SMTP Config ---
+
+export interface SMTPConfig {
+  enabled: boolean;
+  smtp_host: string;
+  smtp_port: number;
+  imap_host: string;
+  imap_port: number;
+  username: string;
+  password: string;
+  encryption: 'starttls' | 'tls' | 'none';
+  from_address: string;
+  from_name: string;
+}
+
+export async function setSMTPConfig(
+  request: APIRequestContext,
+  adminToken: string,
+  config: SMTPConfig,
+): Promise<SMTPConfig> {
+  const res = await request.put(`${BASE_URL}/api/v1/admin/settings/smtp_config`, {
+    headers: { Authorization: `Bearer ${adminToken}` },
+    data: config,
+  });
+  if (!res.ok()) throw new Error(`Set SMTP config failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function getSMTPConfig(
+  request: APIRequestContext,
+  adminToken: string,
+): Promise<SMTPConfig> {
+  const res = await request.get(`${BASE_URL}/api/v1/admin/settings/smtp_config`, {
+    headers: { Authorization: `Bearer ${adminToken}` },
+  });
+  if (!res.ok()) throw new Error(`Get SMTP config failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function deleteSMTPConfig(
+  request: APIRequestContext,
+  adminToken: string,
+): Promise<void> {
+  const res = await request.delete(`${BASE_URL}/api/v1/admin/settings/smtp_config`, {
+    headers: { Authorization: `Bearer ${adminToken}` },
+  });
+  // 404 is OK — means it was already gone
+  if (!res.ok() && res.status() !== 404) {
+    throw new Error(`Delete SMTP config failed (${res.status()}): ${await res.text()}`);
+  }
+}
+
+export async function resetSMTPConfig(
+  request: APIRequestContext,
+  adminToken: string,
+): Promise<void> {
+  // Reset to a clean disabled state
+  await setSMTPConfig(request, adminToken, {
+    enabled: false,
+    smtp_host: '',
+    smtp_port: 587,
+    imap_host: '',
+    imap_port: 993,
+    username: '',
+    password: '',
+    encryption: 'starttls',
+    from_address: '',
+    from_name: '',
+  });
+}
