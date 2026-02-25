@@ -69,13 +69,8 @@ export function MultiSelect({ options, selected, onChange, placeholder = 'All', 
     onChange([])
   }
 
-  const label = selected.length === 0
-    ? placeholder
-    : selected.length === options.length
-      ? placeholder
-      : selected.length === 1
-        ? options.find((o) => o.value === selected[0])?.label ?? selected[0]
-        : t('multiSelect.selected', { count: selected.length })
+  const hasSelection = selected.length > 0 && selected.length < options.length
+  const selectionCount = hasSelection ? selected.length : 0
 
   // Group options if any have a group
   const hasGroups = filteredOptions.some((o) => o.group)
@@ -96,12 +91,17 @@ export function MultiSelect({ options, selected, onChange, placeholder = 'All', 
     <div ref={ref} className={`relative ${className}`}>
       <button
         type="button"
-        className={`flex items-center justify-between w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
-          selected.length > 0 && selected.length < options.length ? 'text-gray-900 dark:text-gray-100' : 'text-gray-500 dark:text-gray-400'
+        className={`flex items-center justify-between w-full h-[39px] rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 text-sm shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
+          hasSelection ? 'text-gray-900 dark:text-gray-100' : 'text-gray-500 dark:text-gray-400'
         }`}
         onClick={() => setOpen(!open)}
       >
-        <span className="truncate">{label}</span>
+        <span className="truncate">{placeholder}</span>
+        {selectionCount > 0 && (
+          <span className="ml-1.5 inline-flex items-center justify-center h-4.5 min-w-4.5 px-1 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300 text-[11px] font-semibold leading-none">
+            {selectionCount}
+          </span>
+        )}
         <svg className="ml-1 h-4 w-4 shrink-0 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>

@@ -288,3 +288,45 @@ export async function clearCompletedInbox(
   const body = await res.json();
   return body.data.removed;
 }
+
+// --- Saved Searches ---
+
+export async function createSavedSearch(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  data: { name: string; filters: Record<string, unknown>; view_mode: string; shared: boolean },
+): Promise<{ id: string; name: string; scope: string }> {
+  const res = await request.post(`${BASE_URL}/api/v1/projects/${projectKey}/saved-searches`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data,
+  });
+  if (!res.ok()) throw new Error(`Create saved search failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function listSavedSearches(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+): Promise<{ id: string; name: string; scope: string; filters: Record<string, unknown>; view_mode: string }[]> {
+  const res = await request.get(`${BASE_URL}/api/v1/projects/${projectKey}/saved-searches`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`List saved searches failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function deleteSavedSearch(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  searchId: string,
+): Promise<void> {
+  const res = await request.delete(`${BASE_URL}/api/v1/projects/${projectKey}/saved-searches/${searchId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`Delete saved search failed (${res.status()}): ${await res.text()}`);
+}

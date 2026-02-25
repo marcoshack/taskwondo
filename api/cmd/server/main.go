@@ -115,6 +115,7 @@ func main() {
 	relationRepo := repository.NewWorkItemRelationRepository(db)
 	workflowRepo := repository.NewWorkflowRepository(db)
 	queueRepo := repository.NewQueueRepository(db)
+	savedSearchRepo := repository.NewSavedSearchRepository(db)
 	milestoneRepo := repository.NewMilestoneRepository(db)
 	userSettingRepo := repository.NewUserSettingRepository(db)
 	systemSettingRepo := repository.NewSystemSettingRepository(db)
@@ -157,6 +158,7 @@ func main() {
 	projectService := service.NewProjectService(projectRepo, projectMemberRepo, userRepo, workflowRepo, typeWorkflowRepo, systemSettingRepo, inviteRepo)
 	workflowService := service.NewWorkflowService(workflowRepo)
 	queueService := service.NewQueueService(queueRepo, projectRepo, projectMemberRepo)
+	savedSearchService := service.NewSavedSearchService(savedSearchRepo, projectRepo, projectMemberRepo)
 	milestoneService := service.NewMilestoneService(milestoneRepo, projectRepo, projectMemberRepo)
 	slaService := service.NewSLAService(slaRepo, projectRepo, projectMemberRepo, workflowRepo)
 	workItemService := service.NewWorkItemService(workItemRepo, workItemEventRepo, commentRepo, relationRepo, attachmentRepo, timeEntryRepo, projectRepo, projectMemberRepo, workflowRepo, typeWorkflowRepo, queueRepo, milestoneRepo, slaRepo, slaService, store, cfg.MaxUploadSize)
@@ -193,6 +195,7 @@ func main() {
 	projects := handler.NewProjectHandler(projectService, cfg.BaseURL)
 	workflows := handler.NewWorkflowHandler(workflowService, projectService)
 	queues := handler.NewQueueHandler(queueService)
+	savedSearches := handler.NewSavedSearchHandler(savedSearchService)
 	milestones := handler.NewMilestoneHandler(milestoneService)
 	items := handler.NewWorkItemHandler(workItemService, slaService, cfg.MaxUploadSize)
 	userSettings := handler.NewUserSettingHandler(userSettingService)
@@ -330,6 +333,14 @@ func main() {
 							r.Get("/", queues.Get)
 							r.Patch("/", queues.Update)
 							r.Delete("/", queues.Delete)
+						})
+					})
+					r.Route("/saved-searches", func(r chi.Router) {
+						r.Get("/", savedSearches.List)
+						r.Post("/", savedSearches.Create)
+						r.Route("/{searchId}", func(r chi.Router) {
+							r.Patch("/", savedSearches.Update)
+							r.Delete("/", savedSearches.Delete)
 						})
 					})
 					r.Route("/sla-targets", func(r chi.Router) {

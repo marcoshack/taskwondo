@@ -9,6 +9,7 @@
   "common.deleting": "Deleting...",
   "common.remove": "Remove",
   "common.add": "Add",
+  "common.or": "or",
   "common.clear": "Clear",
   "common.all": "All",
   "common.none": "None",
@@ -241,10 +242,10 @@
 
   "workitems.filters.title": "Filters",
   "workitems.filters.search": "Search items... ( / )",
-  "workitems.filters.allTypes": "All types",
-  "workitems.filters.allPriorities": "All priorities",
-  "workitems.filters.allStatuses": "All statuses",
-  "workitems.filters.allAssignees": "All assignees",
+  "workitems.filters.allTypes": "Type",
+  "workitems.filters.allPriorities": "Priority",
+  "workitems.filters.allStatuses": "Status",
+  "workitems.filters.allAssignees": "Assignee",
   "workitems.filters.assignedToMe": "Assigned to me",
   "workitems.filters.unassigned": "Unassigned",
   "workitems.filters.members": "Members",
@@ -611,7 +612,7 @@
   "milestones.dueToday": "Due today",
 
   "workitems.form.milestone": "Milestone",
-  "workitems.filters.allMilestones": "All milestones",
+  "workitems.filters.allMilestones": "Milestone",
   "workitems.filters.noMilestone": "No milestone",
 
   "workflows.title": "Workflows",
@@ -786,5 +787,25 @@
   "user.sidebar.feed": "Feed",
   "user.sidebar.watchlist": "Watchlist",
   "user.feedComingSoon": "Feeds coming soon",
-  "user.watchlistComingSoon": "Watchlist coming soon"
+  "user.watchlistComingSoon": "Watchlist coming soon",
+
+  "savedSearches.title": "Saved Searches",
+  "savedSearches.mySearches": "My Searches",
+  "savedSearches.shared": "Shared",
+  "savedSearches.placeholder": "Saved Searches",
+  "savedSearches.searchPlaceholder": "Search...",
+  "savedSearches.empty": "No saved searches yet",
+  "savedSearches.emptyShared": "No shared searches",
+  "savedSearches.save": "Save Search",
+  "savedSearches.saveNew": "Save as New",
+  "savedSearches.updateExisting": "Update \"{{name}}\"",
+  "savedSearches.saveAsNew": "Save as New Search",
+  "savedSearches.nameLabel": "Search name",
+  "savedSearches.namePlaceholder": "e.g. My open bugs",
+  "savedSearches.sharedToggle": "Share with all project members",
+  "savedSearches.deleteConfirmTitle": "Delete Saved Search",
+  "savedSearches.deleteConfirmBody": "Are you sure you want to delete <strong>{{name}}</strong>?",
+  "savedSearches.renameTitle": "Rename Saved Search",
+  "workitems.filters.save": "Save current filters",
+  "workitems.filters.clearAll": "Clear all filters"
 }

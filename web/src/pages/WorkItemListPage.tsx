@@ -23,11 +23,16 @@ import { BoardView } from '@/components/workitems/BoardView'
 import { SLAIndicator } from '@/components/SLAIndicator'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { formatRelativeTime } from '@/utils/duration'
-import { User, History, Check } from 'lucide-react'
+import { User, History, Check, X, LayoutList, LayoutGrid } from 'lucide-react'
+import { Input } from '@/components/ui/Input'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAddToInbox } from '@/hooks/useInbox'
+import { useSavedSearches, useCreateSavedSearch, useUpdateSavedSearch, useDeleteSavedSearch } from '@/hooks/useSavedSearches'
+import { SavedSearchSelector } from '@/components/workitems/SavedSearchSelector'
+import { SaveSearchModal } from '@/components/workitems/SaveSearchModal'
 import { InboxButton } from '@/components/workitems/InboxButton'
 import type { AxiosError } from 'axios'
+import type { SavedSearch } from '@/api/savedSearches'
 import { listWorkItems, type WorkItem, type WorkItemFilter } from '@/api/workitems'
 
 type ViewMode = 'list' | 'board'
@@ -77,6 +82,33 @@ function buildUrlParams(filter: WorkItemFilter, search: string, view: ViewMode, 
     sp.set('order', order)
   }
   return sp
+}
+
+function WorkItemSearchBar({ search, onSearchChange }: { search: string; onSearchChange: (v: string) => void }) {
+  const { t } = useTranslation()
+  const searchRef = useRef<HTMLInputElement>(null)
+  useKeyboardShortcut({ key: '/' }, () => searchRef.current?.focus())
+  return (
+    <div className="relative">
+      <Input
+        ref={searchRef}
+        placeholder={t('workitems.filters.search')}
+        value={search}
+        onChange={(e) => onSearchChange(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Escape') searchRef.current?.blur() }}
+        className="!h-[39px] pr-8"
+      />
+      {search && (
+        <button
+          onClick={() => { onSearchChange(''); searchRef.current?.focus() }}
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          aria-label={t('common.clear')}
+        >
+          <X className="h-4 w-4" />
+        </button>
+      )}
+    </div>
+  )
 }
 
 export function WorkItemListPage() {
@@ -222,6 +254,105 @@ export function WorkItemListPage() {
     [filter, search, viewMode, sort, order],
   )
   const restoredRef = useRef(false)
+
+  // --- Saved searches ---
+  const { data: savedSearchList } = useSavedSearches(projectKey ?? '')
+  const createSearchMutation = useCreateSavedSearch(projectKey ?? '')
+  const updateSearchMutation = useUpdateSavedSearch(projectKey ?? '')
+  const deleteSearchMutation = useDeleteSavedSearch(projectKey ?? '')
+  const [activeSearchId, setActiveSearchId] = useState<string | null>(null)
+  const [activeSearchSnapshot, setActiveSearchSnapshot] = useState<{ filter: SavedFilter; search: string; viewMode: ViewMode } | null>(null)
+  const [showSaveModal, setShowSaveModal] = useState(false)
+
+  const canManageShared = currentUserRole === 'owner' || currentUserRole === 'admin' || user?.global_role === 'admin'
+
+  const activeSearch = useMemo(
+    () => savedSearchList?.find((s) => s.id === activeSearchId) ?? null,
+    [savedSearchList, activeSearchId],
+  )
+
+  const hasUnsavedChanges = useMemo(() => {
+    if (!activeSearchId || !activeSearchSnapshot) return false
+    return JSON.stringify(pickSavedFilter(filter)) !== JSON.stringify(activeSearchSnapshot.filter)
+      || search !== (activeSearchSnapshot.search ?? '')
+      || viewMode !== activeSearchSnapshot.viewMode
+  }, [activeSearchId, activeSearchSnapshot, filter, search, viewMode])
+
+  function handleSelectSearch(ss: SavedSearch) {
+    const f: WorkItemFilter = {}
+    if (ss.filters.type?.length) f.type = ss.filters.type
+    if (ss.filters.status?.length) f.status = ss.filters.status
+    if (ss.filters.priority?.length) f.priority = ss.filters.priority
+    if (ss.filters.assignee?.length) f.assignee = ss.filters.assignee
+    if (ss.filters.milestone?.length) f.milestone = ss.filters.milestone
+
+    setFilter(f)
+    setSearch(ss.filters.q ?? '')
+    setViewMode(ss.view_mode as ViewMode)
+    syncUrl(f, ss.filters.q ?? '', ss.view_mode as ViewMode)
+    setActiveSearchId(ss.id)
+    setActiveSearchSnapshot({ filter: pickSavedFilter(f), search: ss.filters.q ?? '', viewMode: ss.view_mode as ViewMode })
+    loadedFromUrlRef.current = false
+  }
+
+  function handleSaveNew(name: string, shared: boolean) {
+    createSearchMutation.mutate({
+      name,
+      filters: { ...pickSavedFilter(filter), q: search || undefined },
+      view_mode: viewMode,
+      shared,
+    }, {
+      onSuccess: (saved) => {
+        setActiveSearchId(saved.id)
+        setActiveSearchSnapshot({ filter: pickSavedFilter(filter), search, viewMode })
+        setShowSaveModal(false)
+      },
+    })
+  }
+
+  function handleUpdateExisting() {
+    if (!activeSearchId) return
+    updateSearchMutation.mutate({
+      searchId: activeSearchId,
+      input: {
+        filters: { ...pickSavedFilter(filter), q: search || undefined },
+        view_mode: viewMode,
+      },
+    }, {
+      onSuccess: () => {
+        setActiveSearchSnapshot({ filter: pickSavedFilter(filter), search, viewMode })
+        setShowSaveModal(false)
+      },
+    })
+  }
+
+  function handleRenameSearch(ss: SavedSearch, newName: string) {
+    updateSearchMutation.mutate({ searchId: ss.id, input: { name: newName } })
+  }
+
+  function handleDeleteSearch(ss: SavedSearch) {
+    deleteSearchMutation.mutate(ss.id, {
+      onSuccess: () => {
+        if (activeSearchId === ss.id) {
+          setActiveSearchId(null)
+          setActiveSearchSnapshot(null)
+        }
+      },
+    })
+  }
+
+  function handleClearFilters() {
+    const f: WorkItemFilter = defaultOpenStatuses ? { status: defaultOpenStatuses } : {}
+    setFilter(f)
+    setSearch('')
+    setViewMode('list')
+    setSort('created_at')
+    setOrder('desc')
+    setActiveSearchId(null)
+    setActiveSearchSnapshot(null)
+    syncUrl(f, '', 'list', 'created_at', 'desc')
+    loadedFromUrlRef.current = false
+  }
 
   useKeyboardShortcut({ key: 'c' }, () => setShowCreate(true), canEdit)
 
@@ -452,26 +583,31 @@ export function WorkItemListPage() {
           <span className="hidden sm:inline">{t('workitems.title')}</span>
         </h2>
         <div className="flex items-center gap-2">
+          <div className="hidden sm:block flex-1 min-w-0 max-w-md">
+            <WorkItemSearchBar search={search} onSearchChange={handleSearchChange} />
+          </div>
           <div className="inline-flex rounded-md shadow-sm">
             <button
-              className={`px-3 py-1.5 text-sm font-medium rounded-l-md border ${
+              className={`flex items-center gap-1.5 px-3 h-[39px] text-sm font-medium rounded-l-md border ${
                 viewMode === 'list' ? 'bg-indigo-50 text-indigo-700 border-indigo-300 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-700' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700'
               }`}
               onClick={() => handleViewChange('list')}
             >
+              <LayoutList className="h-4 w-4" />
               {t('workitems.view.list')}
             </button>
             <button
-              className={`px-3 py-1.5 text-sm font-medium rounded-r-md border-t border-r border-b ${
+              className={`flex items-center gap-1.5 px-3 h-[39px] text-sm font-medium rounded-r-md border-t border-r border-b ${
                 viewMode === 'board' ? 'bg-indigo-50 text-indigo-700 border-indigo-300 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-700' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700'
               }`}
               onClick={() => handleViewChange('board')}
             >
+              <LayoutGrid className="h-4 w-4" />
               {t('workitems.view.board')}
             </button>
           </div>
           {!readOnly && (
-            <Button onClick={() => setShowCreate(true)}>
+            <Button onClick={() => setShowCreate(true)} className="h-[39px] border border-transparent">
               <span className="sm:hidden">{t('workitems.newShort')}</span>
               <span className="hidden sm:inline">{t('workitems.new')}</span>
             </Button>
@@ -493,6 +629,43 @@ export function WorkItemListPage() {
         onOrderChange={handleOrderChange}
         showDates={showDates}
         onShowDatesChange={(v) => setPreferenceMutation.mutate({ key: 'showDates', value: v })}
+        onSave={() => setShowSaveModal(true)}
+        onClearFilters={handleClearFilters}
+        hasUnsavedChanges={hasUnsavedChanges}
+        hasActiveSearch={!!activeSearchId}
+        savedSearchSelector={
+          <SavedSearchSelector
+            searches={savedSearchList ?? []}
+            activeSearchId={activeSearchId}
+            hasUnsavedChanges={hasUnsavedChanges}
+            onSelect={handleSelectSearch}
+            onRename={handleRenameSearch}
+            onDelete={handleDeleteSearch}
+            canManageShared={canManageShared}
+          />
+        }
+        savedSearchMobileButton={
+          <SavedSearchSelector
+            searches={savedSearchList ?? []}
+            activeSearchId={activeSearchId}
+            hasUnsavedChanges={hasUnsavedChanges}
+            onSelect={handleSelectSearch}
+            onRename={handleRenameSearch}
+            onDelete={handleDeleteSearch}
+            canManageShared={canManageShared}
+            variant="mobile"
+          />
+        }
+      />
+
+      <SaveSearchModal
+        open={showSaveModal}
+        onClose={() => setShowSaveModal(false)}
+        onSaveNew={handleSaveNew}
+        onUpdateExisting={handleUpdateExisting}
+        activeSearch={activeSearch}
+        hasUnsavedChanges={hasUnsavedChanges}
+        canManageShared={canManageShared}
       />
 
       {/* Bulk action toolbar */}

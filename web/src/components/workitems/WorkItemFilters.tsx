@@ -1,7 +1,7 @@
-import { useRef, useState } from 'react'
-import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { SlidersHorizontal, ArrowUpDown, Settings, X } from 'lucide-react'
+import { SlidersHorizontal, ArrowUpDown, Settings, X, Save, Eraser } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { Input } from '@/components/ui/Input'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { Modal } from '@/components/ui/Modal'
@@ -26,14 +26,19 @@ interface WorkItemFiltersProps {
   onOrderChange?: (order: 'asc' | 'desc') => void
   showDates?: boolean
   onShowDatesChange?: (value: boolean) => void
+  onSave?: () => void
+  onClearFilters?: () => void
+  hasUnsavedChanges?: boolean
+  hasActiveSearch?: boolean
+  savedSearchSelector?: ReactNode
+  savedSearchMobileButton?: ReactNode
 }
 
 const closedCategories = new Set(['done', 'cancelled'])
 
-export function WorkItemFilters({ filter, onFilterChange, statuses, milestones = [], members = [], search, onSearchChange, sort, order, onSort, onOrderChange, showDates, onShowDatesChange }: WorkItemFiltersProps) {
+export function WorkItemFilters({ filter, onFilterChange, statuses, milestones = [], members = [], search, onSearchChange, sort, order, onSort, onOrderChange, showDates, onShowDatesChange, onSave, onClearFilters, hasUnsavedChanges, hasActiveSearch, savedSearchSelector, savedSearchMobileButton }: WorkItemFiltersProps) {
   const { t } = useTranslation()
   const { user } = useAuth()
-  const searchRef = useRef<HTMLInputElement>(null)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [sortOpen, setSortOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -70,8 +75,6 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
       group: closedCategories.has(s.category) ? t('workitems.filters.statusGroupClosed') : t('workitems.filters.statusGroupOpen'),
     }))
   }
-
-  useKeyboardShortcut({ key: '/' }, () => searchRef.current?.focus())
 
   function setArray(key: 'type' | 'status' | 'priority' | 'assignee' | 'milestone', values: string[]) {
     onFilterChange({ ...filter, [key]: values.length > 0 ? values : undefined, cursor: undefined })
@@ -116,46 +119,55 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
   return (
     <>
       {/* Desktop: inline layout */}
-      <div className="hidden sm:flex items-end gap-3">
-        <div className="flex-1 min-w-0 relative">
-          <Input
-            ref={searchRef}
-            placeholder={t('workitems.filters.search')}
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Escape') searchRef.current?.blur() }}
-            className="pr-8"
-          />
-          {search && (
-            <button
-              onClick={() => { onSearchChange(''); searchRef.current?.focus() }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-              aria-label={t('common.clear')}
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-        <div className="w-36">
+      <div className="hidden sm:flex items-end gap-2">
+        {savedSearchSelector && (
+          <div className="shrink-0">{savedSearchSelector}</div>
+        )}
+        <div className="flex-1 min-w-0">
           <MultiSelect options={typeOptions} selected={filter.type ?? []} onChange={(v) => setArray('type', v)} placeholder={t('workitems.filters.allTypes')} />
         </div>
-        <div className="w-36">
+        <div className="flex-1 min-w-0">
           <MultiSelect options={priorityOptions} selected={filter.priority ?? []} onChange={(v) => setArray('priority', v)} placeholder={t('workitems.filters.allPriorities')} />
         </div>
-        <div className="w-40">
+        <div className="flex-1 min-w-0">
           <MultiSelect options={statusOptions} selected={filter.status ?? []} onChange={(v) => setArray('status', v)} placeholder={t('workitems.filters.allStatuses')} groupActions={statusGroupActions} />
         </div>
-        <div className="w-40">
+        <div className="flex-1 min-w-0">
           <MultiSelect options={assigneeOptions} selected={filter.assignee ?? []} onChange={(v) => setArray('assignee', v)} placeholder={t('workitems.filters.allAssignees')} searchable />
         </div>
         {milestones.length > 0 && (
-          <div className="w-40">
+          <div className="flex-1 min-w-0">
             <MultiSelect options={milestoneOptions} selected={filter.milestone ?? []} onChange={(v) => setArray('milestone', v)} placeholder={t('workitems.filters.allMilestones')} />
           </div>
         )}
+        {onSave && (
+          <Tooltip content={t('workitems.filters.save')}>
+            <button
+              onClick={onSave}
+              className="relative shrink-0 h-[39px] w-[39px] inline-flex items-center justify-center rounded-md border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+              aria-label={t('workitems.filters.save')}
+            >
+              <Save className="h-4 w-4" />
+              {hasActiveSearch && hasUnsavedChanges && (
+                <span className="absolute -top-1 -right-1 flex h-2 w-2 rounded-full bg-amber-500" />
+              )}
+            </button>
+          </Tooltip>
+        )}
+        {onClearFilters && (
+          <Tooltip content={t('workitems.filters.clearAll')}>
+            <button
+              onClick={onClearFilters}
+              className="shrink-0 h-[39px] w-[39px] inline-flex items-center justify-center rounded-md border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+              aria-label={t('workitems.filters.clearAll')}
+            >
+              <Eraser className="h-4 w-4" />
+            </button>
+          </Tooltip>
+        )}
       </div>
 
-      {/* Mobile: search + sort icon + filter icon */}
+      {/* Mobile: search bar + icons on same row */}
       <div className="flex sm:hidden items-center gap-2">
         <div className="flex-1 min-w-0 relative">
           <Input
@@ -174,6 +186,9 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
             </button>
           )}
         </div>
+        {savedSearchMobileButton && (
+          <div className="shrink-0">{savedSearchMobileButton}</div>
+        )}
         {onSort && (
           <button
             onClick={() => setSortOpen(true)}
@@ -287,7 +302,34 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
       )}
 
       {/* Mobile filter modal */}
-      <Modal open={filtersOpen} onClose={() => setFiltersOpen(false)} title={t('workitems.filters.title')}>
+      <Modal open={filtersOpen} onClose={() => setFiltersOpen(false)} title={
+        <span className="flex items-center flex-1">
+          <span>{t('workitems.filters.title')}</span>
+          <span className="flex items-center justify-center gap-2 flex-1">
+            {onSave && (
+              <button
+                onClick={onSave}
+                className="relative p-2.5 rounded-md border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                aria-label={t('workitems.filters.save')}
+              >
+                <Save className="h-5 w-5" />
+                {hasActiveSearch && hasUnsavedChanges && (
+                  <span className="absolute -top-1 -right-1 flex h-2 w-2 rounded-full bg-amber-500" />
+                )}
+              </button>
+            )}
+            {onClearFilters && (
+              <button
+                onClick={onClearFilters}
+                className="p-2.5 rounded-md border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                aria-label={t('workitems.filters.clearAll')}
+              >
+                <Eraser className="h-5 w-5" />
+              </button>
+            )}
+          </span>
+        </span>
+      }>
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('workitems.filters.allTypes')}</label>
