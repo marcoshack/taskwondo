@@ -11,6 +11,7 @@ import {
   FolderKanban,
   LayoutDashboard,
   ClipboardList,
+  SquareStack,
   Target,
   Route,
   Settings,
@@ -70,7 +71,7 @@ export function AppSidebar({ projectKey }: AppSidebarProps) {
   const projectNavItems: NavItem[] = activeProjectKey ? [
     { to: `${projectBase}/`, label: t('sidebar.overview'), icon: LayoutDashboard, end: true },
     { to: `${projectBase}/items`, label: t('sidebar.items'), icon: ClipboardList, end: false },
-    { to: `${projectBase}/queues`, label: t('sidebar.queues'), icon: Inbox, end: false },
+    { to: `${projectBase}/queues`, label: t('sidebar.queues'), icon: SquareStack, end: false },
     { to: `${projectBase}/milestones`, label: t('sidebar.milestones'), icon: Target, end: false },
     { to: `${projectBase}/workflows`, label: t('sidebar.workflows'), icon: Route, end: false },
     { to: `${projectBase}/settings`, label: t('sidebar.settings'), icon: Settings, end: false },

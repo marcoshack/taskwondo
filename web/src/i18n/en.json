@@ -161,6 +161,7 @@
   "projects.switcher.search": "Search projects...",
 
   "projects.placeholder.comingSoon": "{{title}} view coming soon.",
+  "projects.queuesComingSoon": "Queues coming soon",
 
   "sidebar.overview": "Overview",
   "sidebar.items": "Items",
@@ -808,6 +809,7 @@
   "inbox.emptyHint": "Use the inbox icon or press 'i' on a work item to add it here",
   "inbox.searchPlaceholder": "Search inbox... (/)",
   "inbox.sendToInbox": "Send to inbox",
+  "inbox.alreadyInInbox": "Already in inbox",
   "inbox.removeFromInbox": "Remove from inbox",
   "inbox.settings": "Inbox settings",
   "inbox.clearCompleted": "Clear completed",

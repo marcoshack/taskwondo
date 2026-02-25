@@ -26,7 +26,7 @@ import { formatRelativeTime } from '@/utils/duration'
 import { User, History, Check, X, LayoutList, LayoutGrid } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { useAuth } from '@/contexts/AuthContext'
-import { useAddToInbox } from '@/hooks/useInbox'
+import { useAddToInbox, useInboxItems } from '@/hooks/useInbox'
 import { useSavedSearches, useCreateSavedSearch, useUpdateSavedSearch, useDeleteSavedSearch } from '@/hooks/useSavedSearches'
 import { SavedSearchSelector } from '@/components/workitems/SavedSearchSelector'
 import { SaveSearchModal } from '@/components/workitems/SaveSearchModal'
@@ -544,6 +544,16 @@ export function WorkItemListPage() {
   }, canEdit && viewMode === 'list' && activeRow >= 0)
   useKeyboardShortcut({ key: '#' }, () => setShowDeleteConfirm(true), canEdit && (selected.size > 0 || activeRow >= 0))
 
+  // Inbox: track which work items are already in inbox
+  const { data: inboxData } = useInboxItems()
+  const inboxByWorkItemId = useMemo(() => {
+    const map = new Map<string, string>()
+    if (inboxData?.items) {
+      for (const item of inboxData.items) map.set(item.work_item_id, item.id)
+    }
+    return map
+  }, [inboxData])
+
   // 'i' shortcut: send active row to inbox
   const addToInboxMutation = useAddToInbox()
   const [inboxSavedId, setInboxSavedId] = useState<string | null>(null)
@@ -608,7 +618,7 @@ export function WorkItemListPage() {
               <Check className="h-4 w-4 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
             ) : (
               <span className="sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                <InboxButton workItemId={row.id} />
+                <InboxButton workItemId={row.id} inboxItemId={inboxByWorkItemId.get(row.id)} />
               </span>
             )}
           </span>
@@ -844,7 +854,7 @@ export function WorkItemListPage() {
                     }}
                   >
                     <span className="absolute top-2 right-2" onClick={(e) => e.stopPropagation()}>
-                      <InboxButton workItemId={item.id} />
+                      <InboxButton workItemId={item.id} inboxItemId={inboxByWorkItemId.get(item.id)} />
                     </span>
                     <div className="flex items-center gap-2 flex-wrap pr-6">
                       <span className="font-mono text-sm font-semibold text-gray-700 dark:text-gray-300">{item.display_id}</span>

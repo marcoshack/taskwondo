@@ -1,5 +1,6 @@
 import { useParams, Routes, Route } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { SquareStack } from 'lucide-react'
 import { useProject } from '@/hooks/useProjects'
 import { AppSidebar } from '@/components/AppSidebar'
 import { useSidebar } from '@/contexts/SidebarContext'
@@ -11,9 +12,14 @@ import { ProjectOverviewPage } from './ProjectOverviewPage'
 import { ProjectWorkflowsPage } from './ProjectWorkflowsPage'
 import { MilestonesPage } from './MilestonesPage'
 
-function PlaceholderPage({ title }: { title: string }) {
+function QueuesPage() {
   const { t } = useTranslation()
-  return <p className="text-gray-500 dark:text-gray-400">{t('projects.placeholder.comingSoon', { title })}</p>
+  return (
+    <div className="flex flex-col items-center justify-center h-64 text-gray-500 dark:text-gray-400">
+      <SquareStack className="h-12 w-12 mb-4 opacity-30" />
+      <p className="text-lg font-medium">{t('projects.queuesComingSoon')}</p>
+    </div>
+  )
 }
 
 export function ProjectDetailPage() {
@@ -47,7 +53,7 @@ export function ProjectDetailPage() {
             <Route index element={<ProjectOverviewPage />} />
             <Route path="items" element={<WorkItemListPage />} />
             <Route path="items/:itemNumber" element={<WorkItemDetailPage />} />
-            <Route path="queues" element={<PlaceholderPage title={t('sidebar.queues')} />} />
+            <Route path="queues" element={<QueuesPage />} />
             <Route path="milestones" element={<MilestonesPage />} />
             <Route path="workflows" element={<ProjectWorkflowsPage />} />
             <Route path="settings" element={<ProjectSettingsPage />} />

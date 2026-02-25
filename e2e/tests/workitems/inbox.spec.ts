@@ -490,6 +490,45 @@ test.describe('Inbox', () => {
     await expect(inboxCards.getByText('Mobile inbox item 2')).toBeVisible();
   });
 
+  test('remove item from inbox via mobile card view toggle', async ({ request, testUser, testProject, page }) => {
+    // Set mobile viewport
+    await page.setViewportSize({ width: 375, height: 667 });
+
+    // Create a work item and add it to inbox
+    const item = await api.createWorkItem(request, testUser.token, testProject.key, {
+      title: 'Mobile remove inbox item',
+      type: 'task',
+    });
+    await api.addToInbox(request, testUser.token, item.id);
+
+    // Navigate to work item list (mobile card view)
+    await page.goto(`/projects/${testProject.key}/items`);
+    await dismissWelcomeModal(page);
+
+    // Scope to mobile card container
+    const mobileCards = page.locator('.sm\\:hidden');
+    await expect(mobileCards.getByText('Mobile remove inbox item')).toBeVisible({ timeout: 10000 });
+
+    const card = mobileCards.locator('[role="button"]').filter({ hasText: 'Mobile remove inbox item' });
+
+    // The inbox button should be active (indigo) since item is in inbox — aria-label should say "Remove from inbox"
+    const inboxBtn = card.getByRole('button', { name: 'Remove from inbox' });
+    await expect(inboxBtn).toBeVisible({ timeout: 10000 });
+
+    // Click to remove from inbox
+    await inboxBtn.click();
+
+    // Wait for the green checkmark feedback
+    await expect(card.locator('.text-green-500')).toBeVisible({ timeout: 5000 });
+
+    // After checkmark disappears, button should revert to "Send to inbox"
+    await expect(card.getByRole('button', { name: 'Send to inbox' })).toBeVisible({ timeout: 5000 });
+
+    // Verify via API that item is no longer in inbox
+    const list = await api.listInboxItems(request, testUser.token);
+    expect(list.items).toHaveLength(0);
+  });
+
   test('clicking inbox item navigates to work item detail with back to inbox link', async ({ request, testUser, testProject, page }) => {
     // Create a work item and add to inbox
     const item = await api.createWorkItem(request, testUser.token, testProject.key, {
