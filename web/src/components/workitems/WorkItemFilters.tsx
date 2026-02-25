@@ -121,7 +121,7 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
       {/* Desktop: inline layout */}
       <div className="hidden sm:flex items-end gap-2">
         {savedSearchSelector && (
-          <div className="shrink-0">{savedSearchSelector}</div>
+          <div className="shrink-0 w-48">{savedSearchSelector}</div>
         )}
         <div className="flex-1 min-w-0">
           <MultiSelect options={typeOptions} selected={filter.type ?? []} onChange={(v) => setArray('type', v)} placeholder={t('workitems.filters.allTypes')} />
