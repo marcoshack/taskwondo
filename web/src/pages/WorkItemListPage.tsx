@@ -607,7 +607,7 @@ export function WorkItemListPage() {
             {inboxSavedId === row.id ? (
               <Check className="h-4 w-4 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
             ) : (
-              <span className="opacity-0 group-hover:opacity-100 transition-opacity">
+              <span className="sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                 <InboxButton workItemId={row.id} />
               </span>
             )}
@@ -824,16 +824,29 @@ export function WorkItemListPage() {
                   ? members?.find(m => m.user_id === item.assignee_id)?.display_name ?? t('userPicker.unassigned')
                   : t('userPicker.unassigned')
                 return (
-                  <button
+                  <div
                     key={item.id}
+                    className="relative w-full text-left rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 shadow-sm hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors cursor-pointer"
                     onClick={() => {
                       sessionStorage.setItem(activeRowStorageKey, String(item.item_number))
                       sessionStorage.setItem(filterStorageKey, currentParamsString())
                       navigate(`/projects/${projectKey}/items/${item.item_number}`)
                     }}
-                    className="w-full text-left rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 shadow-sm hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors"
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        sessionStorage.setItem(activeRowStorageKey, String(item.item_number))
+                        sessionStorage.setItem(filterStorageKey, currentParamsString())
+                        navigate(`/projects/${projectKey}/items/${item.item_number}`)
+                      }
+                    }}
                   >
-                    <div className="flex items-center gap-2 flex-wrap">
+                    <span className="absolute top-2 right-2" onClick={(e) => e.stopPropagation()}>
+                      <InboxButton workItemId={item.id} />
+                    </span>
+                    <div className="flex items-center gap-2 flex-wrap pr-6">
                       <span className="font-mono text-sm font-semibold text-gray-700 dark:text-gray-300">{item.display_id}</span>
                       <TypeBadge type={item.type} />
                       <StatusBadge status={item.status} statuses={allStatuses ?? statuses} />
@@ -859,7 +872,7 @@ export function WorkItemListPage() {
                     {item.description && (
                       <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400 truncate">{item.description}</p>
                     )}
-                  </button>
+                  </div>
                 )
               })
             )}

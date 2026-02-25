@@ -121,7 +121,7 @@ function InboxRow({ item, isCompleted, isFirst, isLast, onRemove, onMoveUp, onMo
         ) : (
           <button
             onClick={() => onRemove(item.id)}
-            className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity"
+            className="sm:opacity-0 sm:group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity"
             aria-label={t('inbox.removeFromInbox')}
           >
             <X className="h-4 w-4" />

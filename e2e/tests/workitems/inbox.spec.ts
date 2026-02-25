@@ -436,6 +436,60 @@ test.describe('Inbox', () => {
     await expect(reloadedToggle).toHaveAttribute('aria-checked', 'false', { timeout: 10000 });
   });
 
+  test('add item to inbox via mobile card view', async ({ request, testUser, testProject, page }) => {
+    // Set mobile viewport
+    await page.setViewportSize({ width: 375, height: 667 });
+
+    // Create work items
+    const item1 = await api.createWorkItem(request, testUser.token, testProject.key, {
+      title: 'Mobile inbox item 1',
+      type: 'task',
+    });
+    const item2 = await api.createWorkItem(request, testUser.token, testProject.key, {
+      title: 'Mobile inbox item 2',
+      type: 'bug',
+    });
+
+    // Navigate to work item list (mobile card view)
+    await page.goto(`/projects/${testProject.key}/items`);
+    await dismissWelcomeModal(page);
+
+    // Scope to the mobile card container (sm:hidden div) to avoid matching hidden desktop table rows
+    const mobileCards = page.locator('.sm\\:hidden');
+
+    // Wait for cards to render
+    await expect(mobileCards.getByText('Mobile inbox item 1')).toBeVisible({ timeout: 10000 });
+    await expect(mobileCards.getByText('Mobile inbox item 2')).toBeVisible();
+
+    // Click the inbox button on item 1's card
+    const card1 = mobileCards.locator('[role="button"]').filter({ hasText: 'Mobile inbox item 1' });
+    const inboxBtn1 = card1.getByRole('button', { name: 'Send to inbox' });
+    await expect(inboxBtn1).toBeVisible();
+    await inboxBtn1.click();
+
+    // Wait for the green checkmark feedback
+    await expect(card1.locator('.text-green-500')).toBeVisible({ timeout: 5000 });
+
+    // Click the inbox button on item 2's card
+    const card2 = mobileCards.locator('[role="button"]').filter({ hasText: 'Mobile inbox item 2' });
+    const inboxBtn2 = card2.getByRole('button', { name: 'Send to inbox' });
+    await inboxBtn2.click();
+    await expect(card2.locator('.text-green-500')).toBeVisible({ timeout: 5000 });
+
+    // Verify both items are in the inbox via API
+    const list = await api.listInboxItems(request, testUser.token);
+    const titles = list.items.map((i: { title: string }) => i.title);
+    expect(titles).toContain('Mobile inbox item 1');
+    expect(titles).toContain('Mobile inbox item 2');
+
+    // Navigate to inbox page and verify items are displayed (scope to mobile card container)
+    await page.goto('/user/inbox');
+    await dismissWelcomeModal(page);
+    const inboxCards = page.locator('.sm\\:hidden');
+    await expect(inboxCards.getByText('Mobile inbox item 1')).toBeVisible({ timeout: 10000 });
+    await expect(inboxCards.getByText('Mobile inbox item 2')).toBeVisible();
+  });
+
   test('clicking inbox item navigates to work item detail with back to inbox link', async ({ request, testUser, testProject, page }) => {
     // Create a work item and add to inbox
     const item = await api.createWorkItem(request, testUser.token, testProject.key, {
