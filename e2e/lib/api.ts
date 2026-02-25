@@ -331,6 +331,21 @@ export async function deleteSavedSearch(
   if (!res.ok()) throw new Error(`Delete saved search failed (${res.status()}): ${await res.text()}`);
 }
 
+// --- Preferences ---
+
+export async function setPreference(
+  request: APIRequestContext,
+  token: string,
+  key: string,
+  value: unknown,
+): Promise<void> {
+  const res = await request.put(`${BASE_URL}/api/v1/user/preferences/${key}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { value },
+  });
+  if (!res.ok()) throw new Error(`Set preference failed (${res.status()}): ${await res.text()}`);
+}
+
 // --- SMTP Config ---
 
 export interface SMTPConfig {

@@ -38,6 +38,7 @@ import { listWorkItems, type WorkItem, type WorkItemFilter } from '@/api/workite
 type ViewMode = 'list' | 'board'
 
 const SETTINGS_KEY = 'workitem_filters'
+const VIEW_STATE_KEY = 'workitem_view_state'
 const closedCategories = new Set(['done', 'cancelled'])
 
 /** Filter keys synced to URL and persisted. */
@@ -45,6 +46,17 @@ const FILTER_PARAMS = ['type', 'status', 'priority', 'assignee', 'milestone'] as
 type FilterParam = typeof FILTER_PARAMS[number]
 
 type SavedFilter = Pick<WorkItemFilter, FilterParam>
+
+/** Full view state persisted to user settings — survives navigation. */
+interface ViewState {
+  filter: SavedFilter
+  search: string
+  viewMode: ViewMode
+  sort: string
+  order: 'asc' | 'desc'
+  activeSearchId: string | null
+  activeSearchSnapshot: { filter: SavedFilter; search: string; viewMode: ViewMode } | null
+}
 
 function pickSavedFilter(f: WorkItemFilter): SavedFilter {
   return { type: f.type, status: f.status, priority: f.priority, assignee: f.assignee, milestone: f.milestone }
@@ -128,8 +140,10 @@ export function WorkItemListPage() {
   const canEdit = user?.global_role === 'admin' || (currentUserRole != null && currentUserRole !== 'viewer')
   const readOnly = !canEdit
 
-  // Load saved filter from user settings
-  const { data: savedFilter, isLoading: settingsLoading } = useUserSetting<SavedFilter>(projectKey ?? '', SETTINGS_KEY)
+  // Load saved view state from user settings (full state: filter + search + view + sort + active search)
+  const { data: savedViewState, isLoading: settingsLoading } = useUserSetting<ViewState>(projectKey ?? '', VIEW_STATE_KEY)
+  // Legacy: load old filter-only setting as fallback for migration
+  const { data: savedFilterLegacy } = useUserSetting<SavedFilter>(projectKey ?? '', SETTINGS_KEY)
   const saveMutation = useSetUserSetting(projectKey ?? '')
 
   // Show dates preference (global, persisted)
@@ -158,7 +172,9 @@ export function WorkItemListPage() {
     }
   }
 
-  // Track whether the initial load was from a shared URL (don't save on init)
+  // Track whether the initial load was from a shared URL (don't save on init).
+  // If we have URL params AND a saved view state with the same filters, treat it as a reload
+  // (not a shared URL) — this lets us restore activeSearchId while still preventing save-on-init.
   const loadedFromUrlRef = useRef(initialUrlRef.current.hasParams)
 
   const [filter, setFilter] = useState<WorkItemFilter>(
@@ -169,19 +185,49 @@ export function WorkItemListPage() {
   const [viewMode, setViewMode] = useState<ViewMode>(initialUrlRef.current.view)
   const [sort, setSort] = useState(initialUrlRef.current.sort)
   const [order, setOrder] = useState<'asc' | 'desc'>(initialUrlRef.current.order)
+  const [activeSearchId, setActiveSearchId] = useState<string | null>(null)
+  const [activeSearchSnapshot, setActiveSearchSnapshot] = useState<{ filter: SavedFilter; search: string; viewMode: ViewMode } | null>(null)
 
-  // If no URL params, initialize from saved settings or defaults once data loads
+  // If no URL params, initialize from saved view state or defaults once data loads
   useEffect(() => {
     if (filterInitialized || settingsLoading) return
     if (!allStatuses?.length) return
 
-    if (savedFilter) {
-      setFilter(savedFilter)
+    const vs = savedViewState
+    const legacyFilter = savedFilterLegacy
+
+    if (vs) {
+      // Restore full view state
+      setFilter(vs.filter)
+      if (vs.search) setSearch(vs.search)
+      if (vs.viewMode) setViewMode(vs.viewMode)
+      if (vs.sort) setSort(vs.sort)
+      if (vs.order) setOrder(vs.order)
+      if (vs.activeSearchId) setActiveSearchId(vs.activeSearchId)
+      if (vs.activeSearchSnapshot) setActiveSearchSnapshot(vs.activeSearchSnapshot)
+    } else if (legacyFilter) {
+      // Migrate from legacy filter-only setting
+      setFilter(legacyFilter)
     } else if (defaultOpenStatuses) {
       setFilter({ status: defaultOpenStatuses })
     }
     setFilterInitialized(true)
-  }, [savedFilter, settingsLoading, defaultOpenStatuses, allStatuses, filterInitialized])
+  }, [savedViewState, savedFilterLegacy, settingsLoading, defaultOpenStatuses, allStatuses, filterInitialized])
+
+  // When page loads with URL params (reload), restore activeSearchId from saved view state.
+  // The main init effect above skips when filterInitialized=true (URL case), but we still
+  // need the active search context so the selector shows the correct name.
+  const searchIdRestoredRef = useRef(false)
+  useEffect(() => {
+    if (searchIdRestoredRef.current || !savedViewState || settingsLoading) return
+    if (initialUrlRef.current?.hasParams && savedViewState.activeSearchId) {
+      setActiveSearchId(savedViewState.activeSearchId)
+      if (savedViewState.activeSearchSnapshot) setActiveSearchSnapshot(savedViewState.activeSearchSnapshot)
+      // This is a reload, not a shared URL — allow saving view state changes
+      loadedFromUrlRef.current = false
+    }
+    searchIdRestoredRef.current = true
+  }, [savedViewState, settingsLoading])
 
   // Sync URL when filter initializes from settings/defaults (non-URL case)
   const urlSyncedRef = useRef(initialUrlRef.current.hasParams)
@@ -191,18 +237,34 @@ export function WorkItemListPage() {
     urlSyncedRef.current = true
   }, [filterInitialized, filter, search, viewMode, sort, order, setSearchParams])
 
-  // Save filter preferences (debounced) — only on manual user changes
+  // Save full view state (debounced) — only on manual user changes
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const saveMutationRef = useRef(saveMutation)
   saveMutationRef.current = saveMutation
+  // Use refs so saveViewState always captures the latest values without re-creating
+  const stateRefs = useRef({ search, viewMode, sort, order, activeSearchId, activeSearchSnapshot })
+  stateRefs.current = { search, viewMode, sort, order, activeSearchId, activeSearchSnapshot }
 
-  const saveFilter = useCallback((f: WorkItemFilter) => {
+  const saveViewState = useCallback((f: WorkItemFilter) => {
     if (!projectKey || !filterInitialized || loadedFromUrlRef.current) return
     clearTimeout(saveTimerRef.current)
     saveTimerRef.current = setTimeout(() => {
-      saveMutationRef.current.mutate({ key: SETTINGS_KEY, value: pickSavedFilter(f) })
+      const s = stateRefs.current
+      const vs: ViewState = {
+        filter: pickSavedFilter(f),
+        search: s.search,
+        viewMode: s.viewMode,
+        sort: s.sort,
+        order: s.order as 'asc' | 'desc',
+        activeSearchId: s.activeSearchId,
+        activeSearchSnapshot: s.activeSearchSnapshot,
+      }
+      saveMutationRef.current.mutate({ key: VIEW_STATE_KEY, value: vs })
     }, 500)
   }, [projectKey, filterInitialized])
+
+  // Alias for backward compat within this file
+  const saveFilter = saveViewState
 
   function syncUrl(f: WorkItemFilter, q: string, v: ViewMode, s: string = sort, o: 'asc' | 'desc' = order) {
     setSearchParams(buildUrlParams(f, q, v, s, o), { replace: true })
@@ -217,11 +279,13 @@ export function WorkItemListPage() {
   function handleSearchChange(q: string) {
     setSearch(q)
     syncUrl(filter, q, viewMode)
+    saveFilter(filter)
   }
 
   function handleViewChange(v: ViewMode) {
     setViewMode(v)
     syncUrl(filter, search, v)
+    saveFilter(filter)
   }
 
   function handleSort(sortKey: string) {
@@ -234,11 +298,13 @@ export function WorkItemListPage() {
     setSort(sortKey)
     setOrder(newOrder)
     syncUrl(filter, search, viewMode, sortKey, newOrder)
+    saveFilter(filter)
   }
 
   function handleOrderChange(newOrder: 'asc' | 'desc') {
     setOrder(newOrder)
     syncUrl(filter, search, viewMode, sort, newOrder)
+    saveFilter(filter)
   }
 
   const [showCreate, setShowCreate] = useState(false)
@@ -260,8 +326,6 @@ export function WorkItemListPage() {
   const createSearchMutation = useCreateSavedSearch(projectKey ?? '')
   const updateSearchMutation = useUpdateSavedSearch(projectKey ?? '')
   const deleteSearchMutation = useDeleteSavedSearch(projectKey ?? '')
-  const [activeSearchId, setActiveSearchId] = useState<string | null>(null)
-  const [activeSearchSnapshot, setActiveSearchSnapshot] = useState<{ filter: SavedFilter; search: string; viewMode: ViewMode } | null>(null)
   const [showSaveModal, setShowSaveModal] = useState(false)
 
   const canManageShared = currentUserRole === 'owner' || currentUserRole === 'admin' || user?.global_role === 'admin'
@@ -293,6 +357,7 @@ export function WorkItemListPage() {
     setActiveSearchId(ss.id)
     setActiveSearchSnapshot({ filter: pickSavedFilter(f), search: ss.filters.q ?? '', viewMode: ss.view_mode as ViewMode })
     loadedFromUrlRef.current = false
+    saveFilter(f)
   }
 
   function handleSaveNew(name: string, shared: boolean) {
@@ -306,6 +371,7 @@ export function WorkItemListPage() {
         setActiveSearchId(saved.id)
         setActiveSearchSnapshot({ filter: pickSavedFilter(filter), search, viewMode })
         setShowSaveModal(false)
+        saveFilter(filter)
       },
     })
   }
@@ -322,6 +388,7 @@ export function WorkItemListPage() {
       onSuccess: () => {
         setActiveSearchSnapshot({ filter: pickSavedFilter(filter), search, viewMode })
         setShowSaveModal(false)
+        saveFilter(filter)
       },
     })
   }
@@ -336,6 +403,7 @@ export function WorkItemListPage() {
         if (activeSearchId === ss.id) {
           setActiveSearchId(null)
           setActiveSearchSnapshot(null)
+          saveFilter(filter)
         }
       },
     })
@@ -352,6 +420,8 @@ export function WorkItemListPage() {
     setActiveSearchSnapshot(null)
     syncUrl(f, '', 'list', 'created_at', 'desc')
     loadedFromUrlRef.current = false
+    // Persist cleared state so it survives navigation
+    saveFilter(f)
   }
 
   useKeyboardShortcut({ key: 'c' }, () => setShowCreate(true), canEdit)

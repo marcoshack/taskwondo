@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { isAxiosError } from 'axios'
 import { getUserSettings, getUserSetting, setUserSetting, deleteUserSetting } from '@/api/userSettings'
 
 export function useUserSettings(projectKey: string) {
@@ -17,6 +18,11 @@ export function useUserSetting<T = unknown>(projectKey: string, key: string) {
       return setting.value as T
     },
     enabled: !!projectKey && !!key,
+    // Don't retry on 404 (setting doesn't exist yet — not a transient error)
+    retry: (count, error) => {
+      if (isAxiosError(error) && error.response?.status === 404) return false
+      return count < 3
+    },
   })
 }
 
