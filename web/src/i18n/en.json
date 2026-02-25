@@ -178,6 +178,7 @@
   "workitems.notFound": "Work item not found.",
   "workitems.empty": "No work items found",
   "workitems.backToItems": "Back to items",
+  "workitems.backToInbox": "Back to inbox",
   "workitems.dropToAttach": "Drop files to attach",
   "workitems.selected": "{{count}} selected",
   "workitems.attached": "Attached \"{{filename}}\"",
@@ -766,5 +767,24 @@
   "cliAuth.success": "Authorization successful! You can close this tab.",
   "cliAuth.denied": "Authorization denied. You can close this tab.",
   "cliAuth.error": "Authorization failed. Please try again.",
-  "cliAuth.missingParams": "Missing required parameters. Please start the login flow from your CLI tool."
+  "cliAuth.missingParams": "Missing required parameters. Please start the login flow from your CLI tool.",
+
+  "inbox.title": "Inbox",
+  "inbox.empty": "Your inbox is empty",
+  "inbox.emptyHint": "Use the inbox icon or press 'i' on a work item to add it here",
+  "inbox.searchPlaceholder": "Search inbox...",
+  "inbox.sendToInbox": "Send to inbox",
+  "inbox.removeFromInbox": "Remove from inbox",
+  "inbox.settings": "Inbox settings",
+  "inbox.clearCompleted": "Clear completed",
+  "inbox.noCompletedItems": "No completed items to clear",
+  "inbox.moveUp": "Move up",
+  "inbox.moveDown": "Move down",
+  "inbox.autoRemove": "Auto-hide completed items",
+  "inbox.autoRemoveDescription": "Automatically hide work items from your inbox when they are completed",
+  "user.sidebar.inbox": "Inbox",
+  "user.sidebar.feed": "Feed",
+  "user.sidebar.watchlist": "Watchlist",
+  "user.feedComingSoon": "Feeds coming soon",
+  "user.watchlistComingSoon": "Watchlist coming soon"
 }

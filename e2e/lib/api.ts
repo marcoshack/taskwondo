@@ -208,3 +208,83 @@ export async function deleteTimeEntry(
   });
   if (!res.ok()) throw new Error(`Delete time entry failed (${res.status()}): ${await res.text()}`);
 }
+
+// --- Inbox ---
+
+export async function addToInbox(
+  request: APIRequestContext,
+  token: string,
+  workItemId: string,
+): Promise<void> {
+  const res = await request.post(`${BASE_URL}/api/v1/user/inbox`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { work_item_id: workItemId },
+  });
+  if (!res.ok()) throw new Error(`Add to inbox failed (${res.status()}): ${await res.text()}`);
+}
+
+export async function listInboxItems(
+  request: APIRequestContext,
+  token: string,
+  params?: { search?: string; include_completed?: boolean },
+): Promise<{ items: { id: string; work_item_id: string; position: number; display_id: string; title: string; status: string; status_category: string }[]; total: number }> {
+  const query = new URLSearchParams();
+  if (params?.search) query.set('search', params.search);
+  if (params?.include_completed) query.set('include_completed', 'true');
+  const qs = query.toString();
+  const url = `${BASE_URL}/api/v1/user/inbox${qs ? `?${qs}` : ''}`;
+  const res = await request.get(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`List inbox items failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function removeFromInbox(
+  request: APIRequestContext,
+  token: string,
+  inboxItemId: string,
+): Promise<void> {
+  const res = await request.delete(`${BASE_URL}/api/v1/user/inbox/${inboxItemId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`Remove from inbox failed (${res.status()}): ${await res.text()}`);
+}
+
+export async function reorderInboxItem(
+  request: APIRequestContext,
+  token: string,
+  inboxItemId: string,
+  position: number,
+): Promise<void> {
+  const res = await request.patch(`${BASE_URL}/api/v1/user/inbox/${inboxItemId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { position },
+  });
+  if (!res.ok()) throw new Error(`Reorder inbox item failed (${res.status()}): ${await res.text()}`);
+}
+
+export async function getInboxCount(
+  request: APIRequestContext,
+  token: string,
+): Promise<number> {
+  const res = await request.get(`${BASE_URL}/api/v1/user/inbox/count`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`Get inbox count failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data.count;
+}
+
+export async function clearCompletedInbox(
+  request: APIRequestContext,
+  token: string,
+): Promise<number> {
+  const res = await request.delete(`${BASE_URL}/api/v1/user/inbox/completed`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`Clear completed inbox failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data.removed;
+}

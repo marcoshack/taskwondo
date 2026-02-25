@@ -23,8 +23,10 @@ import { BoardView } from '@/components/workitems/BoardView'
 import { SLAIndicator } from '@/components/SLAIndicator'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { formatRelativeTime } from '@/utils/duration'
-import { User, History } from 'lucide-react'
+import { User, History, Check } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import { useAddToInbox } from '@/hooks/useInbox'
+import { InboxButton } from '@/components/workitems/InboxButton'
 import type { AxiosError } from 'axios'
 import { listWorkItems, type WorkItem, type WorkItemFilter } from '@/api/workitems'
 
@@ -340,6 +342,22 @@ export function WorkItemListPage() {
     }
   }, canEdit && viewMode === 'list' && activeRow >= 0)
   useKeyboardShortcut({ key: '#' }, () => setShowDeleteConfirm(true), canEdit && (selected.size > 0 || activeRow >= 0))
+
+  // 'i' shortcut: send active row to inbox
+  const addToInboxMutation = useAddToInbox()
+  const [inboxSavedId, setInboxSavedId] = useState<string | null>(null)
+  useKeyboardShortcut({ key: 'i' }, () => {
+    if (activeRow >= 0 && activeRow < allItems.length) {
+      const item = allItems[activeRow]
+      addToInboxMutation.mutate(item.id, {
+        onSuccess: () => {
+          setInboxSavedId(item.id)
+          setTimeout(() => setInboxSavedId(null), 2000)
+        },
+      })
+    }
+  }, viewMode === 'list' && activeRow >= 0)
+
   useKeyboardShortcut({ key: 'Escape' }, () => setActiveRow(-1), activeRow >= 0)
 
   // Items targeted for deletion: selected checkboxes take priority, otherwise highlighted row
@@ -381,7 +399,20 @@ export function WorkItemListPage() {
       key: 'title',
       header: t('workitems.table.title'),
       sortKey: 'title',
-      render: (row) => <Tooltip content={row.title} className="relative block min-w-0"><span className="font-medium text-gray-900 dark:text-gray-100 truncate block">{row.title}</span></Tooltip>,
+      render: (row) => (
+        <div className="flex items-center gap-1 min-w-0">
+          <Tooltip content={row.title} className="relative block min-w-0 flex-1"><span className="font-medium text-gray-900 dark:text-gray-100 truncate block">{row.title}</span></Tooltip>
+          <span className="shrink-0" onClick={(e) => e.stopPropagation()}>
+            {inboxSavedId === row.id ? (
+              <Check className="h-4 w-4 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
+            ) : (
+              <span className="opacity-0 group-hover:opacity-100 transition-opacity">
+                <InboxButton workItemId={row.id} />
+              </span>
+            )}
+          </span>
+        </div>
+      ),
     },
     {
       key: 'status',

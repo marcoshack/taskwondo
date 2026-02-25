@@ -120,6 +120,7 @@ func main() {
 	systemSettingRepo := repository.NewSystemSettingRepository(db)
 	attachmentRepo := repository.NewAttachmentRepository(db)
 	timeEntryRepo := repository.NewTimeEntryRepository(db)
+	inboxRepo := repository.NewInboxRepository(db)
 	oauthAccountRepo := repository.NewOAuthAccountRepository(db)
 	typeWorkflowRepo := repository.NewProjectTypeWorkflowRepository(db)
 	inviteRepo := repository.NewProjectInviteRepository(db)
@@ -159,6 +160,7 @@ func main() {
 	milestoneService := service.NewMilestoneService(milestoneRepo, projectRepo, projectMemberRepo)
 	slaService := service.NewSLAService(slaRepo, projectRepo, projectMemberRepo, workflowRepo)
 	workItemService := service.NewWorkItemService(workItemRepo, workItemEventRepo, commentRepo, relationRepo, attachmentRepo, timeEntryRepo, projectRepo, projectMemberRepo, workflowRepo, typeWorkflowRepo, queueRepo, milestoneRepo, slaRepo, slaService, store, cfg.MaxUploadSize)
+	inboxService := service.NewInboxService(inboxRepo, projectMemberRepo)
 	userSettingService := service.NewUserSettingService(userSettingRepo, projectRepo, projectMemberRepo)
 	systemSettingService := service.NewSystemSettingService(systemSettingRepo)
 	adminService := service.NewAdminService(userRepo, projectRepo, projectMemberRepo)
@@ -197,6 +199,7 @@ func main() {
 	systemSettings := handler.NewSystemSettingHandler(systemSettingService)
 	admin := handler.NewAdminHandler(adminService)
 	sla := handler.NewSLAHandler(slaService)
+	inbox := handler.NewInboxHandler(inboxService, slaService)
 
 	// Set up router
 	r := chi.NewRouter()
@@ -255,6 +258,18 @@ func main() {
 					r.Get("/", userSettings.GetGlobal)
 					r.Put("/", userSettings.SetGlobal)
 					r.Delete("/", userSettings.DeleteGlobal)
+				})
+			})
+
+			// User inbox
+			r.Route("/user/inbox", func(r chi.Router) {
+				r.Get("/", inbox.List)
+				r.Post("/", inbox.Add)
+				r.Get("/count", inbox.Count)
+				r.Delete("/completed", inbox.ClearCompleted)
+				r.Route("/{inboxItemId}", func(r chi.Router) {
+					r.Delete("/", inbox.Remove)
+					r.Patch("/", inbox.Reorder)
 				})
 			})
 

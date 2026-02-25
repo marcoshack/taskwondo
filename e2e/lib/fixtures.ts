@@ -63,7 +63,7 @@ export const test = base.extend<{ testUser: TestUser; testProject: TestProject }
 
   // Creates a project owned by the test user
   testProject: async ({ request, testUser }, use) => {
-    const suffix = randomUUID().slice(0, 2).toUpperCase();
+    const suffix = randomUUID().slice(0, 4).toUpperCase();
     const key = `E${suffix}`;
     const name = `E2E Project ${suffix}`;
 

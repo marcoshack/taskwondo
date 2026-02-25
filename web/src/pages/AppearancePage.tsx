@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { useTheme, type Theme, type FontSize } from '@/contexts/ThemeContext'
 import { useLanguage } from '@/contexts/LanguageContext'
-
 export function AppearancePage() {
   const { t } = useTranslation()
   const { theme, setTheme, fontSize, setFontSize } = useTheme()
@@ -126,6 +125,7 @@ export function AppearancePage() {
             ))}
           </div>
         </div>
+
       </div>
     </div>
   )

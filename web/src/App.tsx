@@ -11,6 +11,7 @@ import { PreferencesPage } from '@/pages/PreferencesPage'
 import { SystemSettingsPage } from '@/pages/SystemSettingsPage'
 import { InviteAcceptPage } from '@/pages/InviteAcceptPage'
 import { CliAuthorizePage } from '@/pages/CliAuthorizePage'
+import UserPage from '@/pages/InboxPage'
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
         <Route element={<AppShell />}>
           <Route path="/projects" element={<ProjectListPage />} />
           <Route path="/projects/:projectKey/*" element={<ProjectDetailPage />} />
+          <Route path="/user/*" element={<UserPage />} />
           <Route path="/preferences/*" element={<PreferencesPage />} />
           <Route path="/admin/*" element={<AdminRoute><SystemSettingsPage /></AdminRoute>} />
         </Route>

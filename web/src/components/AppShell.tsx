@@ -1,7 +1,7 @@
 import { Outlet, useNavigate, useMatch } from 'react-router-dom'
 
 import { useTranslation } from 'react-i18next'
-import { Settings, UserCog, Menu, HelpCircle } from 'lucide-react'
+import { Settings, UserCog, Menu, HelpCircle, Inbox, LogOut } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSidebar } from '@/contexts/SidebarContext'
 import { useNavigationGuard } from '@/contexts/NavigationGuardContext'
@@ -17,6 +17,7 @@ import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal'
 import { WelcomeModal } from '@/components/WelcomeModal'
 import { usePreference, useSetPreference } from '@/hooks/usePreferences'
 import { useBrand } from '@/contexts/BrandContext'
+import { useInboxCount } from '@/hooks/useInbox'
 import { PoweredByFooter } from '@/components/PoweredByFooter'
 
 export function AppShell() {
@@ -46,7 +47,9 @@ export function AppShell() {
     }
   }, [welcomeLoaded, welcomeNotFound, welcomeAutoShown, welcomeDismissed])
 
+  const { data: inboxCount } = useInboxCount()
   const projectMatch = useMatch('/projects/:projectKey/*')
+  const userMatch = useMatch('/user/*')
   const adminMatch = useMatch('/admin/*')
   const preferencesMatch = useMatch('/preferences/*')
   const activeProjectKey = projectMatch?.params.projectKey
@@ -131,13 +134,18 @@ export function AppShell() {
             )}
             <div className="relative flex items-center gap-2" ref={menuRef}>
               <button
-                onClick={() => setWelcomeOpen(true)}
-                className="p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
-                aria-label={t('nav.help')}
+                onClick={() => guardedNavigate('/user/inbox')}
+                className="relative p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+                aria-label={t('inbox.title')}
               >
-                <HelpCircle className="h-5 w-5" />
+                <Inbox className="h-5 w-5" />
+                {inboxCount != null && inboxCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-indigo-600 px-1 text-[10px] font-bold text-white">
+                    {inboxCount > 99 ? '99+' : inboxCount}
+                  </span>
+                )}
               </button>
-              {activeProjectKey && (
+              {(activeProjectKey || userMatch) && (
                 <button
                   onClick={toggleMobileOpen}
                   className="sm:hidden p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
@@ -146,6 +154,7 @@ export function AppShell() {
                   <Menu className="h-5 w-5" />
                 </button>
               )}
+              <div className="hidden sm:block w-px h-5 bg-gray-200 dark:bg-gray-700 mx-1" />
               <button
                 onClick={() => setMenuOpen(!menuOpen)}
                 className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
@@ -160,29 +169,33 @@ export function AppShell() {
                   </div>
                   <button
                     onClick={() => { setMenuOpen(false); guardedNavigate('/preferences') }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                   >
+                    <UserCog className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                     {t('nav.preferences')}
                   </button>
                   {user?.global_role === 'admin' && (
                     <button
                       onClick={() => { setMenuOpen(false); guardedNavigate('/admin') }}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                     >
+                      <Settings className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                       {t('nav.systemSettings')}
                     </button>
                   )}
                   <button
                     onClick={() => { setMenuOpen(false); setWelcomeOpen(true) }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                   >
+                    <HelpCircle className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                     {t('nav.help')}
                   </button>
                   <div className="border-t border-gray-100 dark:border-gray-700" />
                   <button
                     onClick={handleLogout}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                   >
+                    <LogOut className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                     {t('nav.signOut')}
                   </button>
                 </div>

@@ -102,7 +102,7 @@ export function DataTable<T>({
                 key={i}
                 ref={isActive ? activeRowRef : undefined}
                 onClick={() => onRowClick?.(row)}
-                className={`${onRowClick ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800' : ''} ${isActive ? 'ring-2 ring-inset ring-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/20' : ''}`}
+                className={`group ${onRowClick ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800' : ''} ${isActive ? 'ring-2 ring-inset ring-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/20' : ''}`}
               >
                 {columns.map((col) => (
                   <td key={col.key} className={`px-3 sm:px-6 py-4 whitespace-nowrap text-sm overflow-hidden ${col.className ?? ''}`}>

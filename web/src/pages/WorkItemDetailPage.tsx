@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import { useConfirmFeedback } from '@/hooks/useConfirmFeedback'
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
 import { ConfirmCheck } from '@/components/ui/ConfirmCheck'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { Trans, useTranslation } from 'react-i18next'
 import { useWorkItem, useUpdateWorkItem, useDeleteWorkItem, useUploadAttachment, useAttachments } from '@/hooks/useWorkItems'
 import { useProject, useMembers, useTypeWorkflows } from '@/hooks/useProjects'
@@ -75,12 +75,15 @@ export function WorkItemDetailPage() {
   const { confirmed: titleConfirmed, showConfirm: showTitleConfirm } = useConfirmFeedback()
   const { confirmed: descConfirmed, showConfirm: showDescConfirm } = useConfirmFeedback()
 
-  // Build back URL preserving list filters from sessionStorage
+  // Build back URL — inbox or project items list
+  const location = useLocation()
+  const fromInbox = (location.state as { from?: string } | null)?.from === 'inbox'
   const backToListUrl = useMemo(() => {
+    if (fromInbox) return '/user/inbox'
     const base = `/projects/${projectKey}/items`
     const stored = sessionStorage.getItem(`taskwondo_listParams_${projectKey}`)
     return stored ? `${base}?${stored}` : base
-  }, [projectKey])
+  }, [projectKey, fromInbox])
   useKeyboardShortcut({ key: '#' }, () => setShowDelete(true), canEdit)
 
   // Navigation guard for unsaved comment draft
@@ -232,7 +235,7 @@ export function WorkItemDetailPage() {
           className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
           onClick={() => guardedNavigate(backToListUrl)}
         >
-          &larr; {t('workitems.backToItems')}
+          &larr; {t(fromInbox ? 'workitems.backToInbox' : 'workitems.backToItems')}
         </button>
         <button
           onClick={() => setShowProperties(true)}

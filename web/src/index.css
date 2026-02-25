@@ -39,3 +39,12 @@ html:where(.dark) {
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes inbox-highlight {
+  0% { background-color: transparent; }
+  20% { background-color: var(--inbox-highlight-color); }
+  100% { background-color: transparent; }
+}
+
+html { --inbox-highlight-color: rgb(199 210 254 / 0.5); }
+html:where(.dark) { --inbox-highlight-color: rgb(67 56 202 / 0.2); }
+
