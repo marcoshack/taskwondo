@@ -81,7 +81,7 @@ export function AppShell() {
     return registerSequentialCombo({
       id: 'go-to-inbox',
       keys: ['g', 'i'],
-      callback: () => guardedNavigate('/inbox'),
+      callback: () => guardedNavigate('/user/inbox'),
     })
   }, [registerSequentialCombo])
   useEffect(() => {
