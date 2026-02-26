@@ -209,6 +209,23 @@ export async function deleteTimeEntry(
   if (!res.ok()) throw new Error(`Delete time entry failed (${res.status()}): ${await res.text()}`);
 }
 
+// --- Milestones ---
+
+export async function createMilestone(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  data: { name: string; due_date?: string },
+): Promise<{ id: string; name: string }> {
+  const res = await request.post(`${BASE_URL}/api/v1/projects/${projectKey}/milestones`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data,
+  });
+  if (!res.ok()) throw new Error(`Create milestone failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
 // --- Relations ---
 
 export async function createRelation(

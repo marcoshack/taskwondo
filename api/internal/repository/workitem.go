@@ -138,7 +138,9 @@ func (r *WorkItemRepository) List(ctx context.Context, projectID uuid.UUID, filt
 	}
 
 	// Milestone filter
-	if filter.MilestoneNone {
+	if filter.MilestoneNone && len(filter.MilestoneIDs) > 0 {
+		qb.add("(milestone_id IS NULL OR milestone_id = ANY(?))", pq.Array(filter.MilestoneIDs))
+	} else if filter.MilestoneNone {
 		qb.addRaw("milestone_id IS NULL")
 	} else if len(filter.MilestoneIDs) > 0 {
 		qb.add("milestone_id = ANY(?)", pq.Array(filter.MilestoneIDs))
