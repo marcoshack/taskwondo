@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -14,14 +15,20 @@ import (
 	"github.com/marcoshack/taskwondo/internal/service"
 )
 
+// InviteAcceptor accepts a project invite on behalf of a user.
+type InviteAcceptor interface {
+	AcceptInvite(ctx context.Context, info *model.AuthInfo, code string) (*service.AcceptInviteResult, error)
+}
+
 // AuthHandler handles authentication endpoints.
 type AuthHandler struct {
-	auth *service.AuthService
+	auth    *service.AuthService
+	invites InviteAcceptor
 }
 
 // NewAuthHandler creates a new AuthHandler.
-func NewAuthHandler(auth *service.AuthService) *AuthHandler {
-	return &AuthHandler{auth: auth}
+func NewAuthHandler(auth *service.AuthService, invites InviteAcceptor) *AuthHandler {
+	return &AuthHandler{auth: auth, invites: invites}
 }
 
 type loginRequest struct {
@@ -408,6 +415,7 @@ func (h *AuthHandler) DeleteAPIKey(w http.ResponseWriter, r *http.Request) {
 type registerRequest struct {
 	Email       string `json:"email"`
 	DisplayName string `json:"display_name"`
+	InviteCode  string `json:"invite_code,omitempty"`
 }
 
 // Register handles POST /api/v1/auth/register.
@@ -423,7 +431,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.auth.RequestRegistration(r.Context(), req.Email, req.DisplayName); err != nil {
+	if err := h.auth.RequestRegistration(r.Context(), req.Email, req.DisplayName, req.InviteCode); err != nil {
 		if errors.Is(err, model.ErrForbidden) {
 			writeError(w, http.StatusForbidden, "FORBIDDEN", "email registration is disabled")
 			return
@@ -464,7 +472,7 @@ func (h *AuthHandler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, user, err := h.auth.VerifyEmailAndCreateUser(r.Context(), req.Token, req.Password)
+	result, err := h.auth.VerifyEmailAndCreateUser(r.Context(), req.Token, req.Password)
 	if err != nil {
 		if errors.Is(err, model.ErrNotFound) {
 			writeError(w, http.StatusNotFound, "NOT_FOUND", "invalid or expired verification token")
@@ -487,8 +495,21 @@ func (h *AuthHandler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeData(w, http.StatusOK, map[string]interface{}{
-		"token": token,
-		"user":  toUserResponse(user),
-	})
+	resp := map[string]interface{}{
+		"token": result.Token,
+		"user":  toUserResponse(result.User),
+	}
+
+	// Auto-accept project invite if one was stored with the verification token
+	if result.InviteCode != "" && h.invites != nil {
+		authInfo := &model.AuthInfo{UserID: result.User.ID, GlobalRole: result.User.GlobalRole}
+		inviteResult, err := h.invites.AcceptInvite(r.Context(), authInfo, result.InviteCode)
+		if err != nil {
+			log.Ctx(r.Context()).Warn().Err(err).Str("invite_code", result.InviteCode).Msg("failed to auto-accept invite after registration")
+		} else {
+			resp["project_key"] = inviteResult.Project.Key
+		}
+	}
+
+	writeData(w, http.StatusOK, resp)
 }

@@ -385,7 +385,9 @@ func (s *AuthService) getBoolSetting(ctx context.Context, key string, defaultVal
 }
 
 // RequestRegistration creates a verification token and sends a verification email.
-func (s *AuthService) RequestRegistration(ctx context.Context, email, displayName string) error {
+// If inviteCode is non-empty, it is stored with the token so the invite can be
+// auto-accepted when the user verifies their email (even from a different device).
+func (s *AuthService) RequestRegistration(ctx context.Context, email, displayName, inviteCode string) error {
 	if s.emailVerifications == nil || s.emailSender == nil || s.settings == nil {
 		return fmt.Errorf("%w: email registration is not configured", model.ErrForbidden)
 	}
@@ -435,6 +437,7 @@ func (s *AuthService) RequestRegistration(ctx context.Context, email, displayNam
 		Email:       email,
 		DisplayName: displayName,
 		TokenHash:   tokenHash,
+		InviteCode:  inviteCode,
 		ExpiresAt:   time.Now().Add(emailVerificationTokenExpiry),
 	}
 	if err := s.emailVerifications.Create(ctx, token); err != nil {
@@ -454,27 +457,34 @@ func (s *AuthService) RequestRegistration(ctx context.Context, email, displayNam
 	return nil
 }
 
+// VerifyEmailResult contains the result of a successful email verification.
+type VerifyEmailResult struct {
+	Token      string
+	User       *model.User
+	InviteCode string // non-empty if a project invite should be auto-accepted
+}
+
 // VerifyEmailAndCreateUser validates a token, creates the user, and returns a JWT.
-func (s *AuthService) VerifyEmailAndCreateUser(ctx context.Context, rawToken, password string) (string, *model.User, error) {
+func (s *AuthService) VerifyEmailAndCreateUser(ctx context.Context, rawToken, password string) (*VerifyEmailResult, error) {
 	if s.emailVerifications == nil {
-		return "", nil, fmt.Errorf("%w: email registration is not configured", model.ErrForbidden)
+		return nil, fmt.Errorf("%w: email registration is not configured", model.ErrForbidden)
 	}
 
 	tokenHash := hashToken(rawToken)
 	verification, err := s.emailVerifications.GetByTokenHash(ctx, tokenHash)
 	if err != nil {
 		if errors.Is(err, model.ErrNotFound) {
-			return "", nil, fmt.Errorf("%w: invalid or expired verification token", model.ErrNotFound)
+			return nil, fmt.Errorf("%w: invalid or expired verification token", model.ErrNotFound)
 		}
-		return "", nil, fmt.Errorf("looking up verification token: %w", err)
+		return nil, fmt.Errorf("looking up verification token: %w", err)
 	}
 
 	// Validate password
 	if len(password) < 8 {
-		return "", nil, fmt.Errorf("%w: password must be at least 8 characters", model.ErrValidation)
+		return nil, fmt.Errorf("%w: password must be at least 8 characters", model.ErrValidation)
 	}
 	if len(password) > 72 {
-		return "", nil, fmt.Errorf("%w: password must be 72 characters or fewer", model.ErrValidation)
+		return nil, fmt.Errorf("%w: password must be 72 characters or fewer", model.ErrValidation)
 	}
 
 	// Check email not already taken (race condition guard)
@@ -482,16 +492,16 @@ func (s *AuthService) VerifyEmailAndCreateUser(ctx context.Context, rawToken, pa
 	if err == nil {
 		// Clean up the token
 		_ = s.emailVerifications.DeleteByTokenHash(ctx, tokenHash)
-		return "", nil, fmt.Errorf("%w: a user with this email already exists", model.ErrAlreadyExists)
+		return nil, fmt.Errorf("%w: a user with this email already exists", model.ErrAlreadyExists)
 	}
 	if !errors.Is(err, model.ErrNotFound) {
-		return "", nil, fmt.Errorf("checking existing user: %w", err)
+		return nil, fmt.Errorf("checking existing user: %w", err)
 	}
 
 	// Hash password and create user
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return "", nil, fmt.Errorf("hashing password: %w", err)
+		return nil, fmt.Errorf("hashing password: %w", err)
 	}
 
 	user := &model.User{
@@ -503,7 +513,7 @@ func (s *AuthService) VerifyEmailAndCreateUser(ctx context.Context, rawToken, pa
 		IsActive:     true,
 	}
 	if err := s.users.Create(ctx, user); err != nil {
-		return "", nil, fmt.Errorf("creating user: %w", err)
+		return nil, fmt.Errorf("creating user: %w", err)
 	}
 
 	// Delete the used token
@@ -514,7 +524,7 @@ func (s *AuthService) VerifyEmailAndCreateUser(ctx context.Context, rawToken, pa
 	// Generate JWT
 	jwtToken, err := s.generateJWT(user)
 	if err != nil {
-		return "", nil, fmt.Errorf("generating token: %w", err)
+		return nil, fmt.Errorf("generating token: %w", err)
 	}
 
 	if err := s.users.UpdateLastLogin(ctx, user.ID); err != nil {
@@ -522,7 +532,11 @@ func (s *AuthService) VerifyEmailAndCreateUser(ctx context.Context, rawToken, pa
 	}
 
 	log.Ctx(ctx).Info().Str("email", user.Email).Msg("user created via email verification")
-	return jwtToken, user, nil
+	return &VerifyEmailResult{
+		Token:      jwtToken,
+		User:       user,
+		InviteCode: verification.InviteCode,
+	}, nil
 }
 
 func hashToken(raw string) string {

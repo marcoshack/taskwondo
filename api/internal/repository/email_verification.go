@@ -20,10 +20,14 @@ func NewEmailVerificationRepository(db *sql.DB) *EmailVerificationRepository {
 
 // Create inserts a new email verification token.
 func (r *EmailVerificationRepository) Create(ctx context.Context, token *model.EmailVerificationToken) error {
+	var inviteCode *string
+	if token.InviteCode != "" {
+		inviteCode = &token.InviteCode
+	}
 	_, err := r.db.ExecContext(ctx,
-		`INSERT INTO email_verification_tokens (id, email, display_name, token_hash, expires_at)
-		 VALUES ($1, $2, $3, $4, $5)`,
-		token.ID, token.Email, token.DisplayName, token.TokenHash, token.ExpiresAt)
+		`INSERT INTO email_verification_tokens (id, email, display_name, token_hash, expires_at, invite_code)
+		 VALUES ($1, $2, $3, $4, $5, $6)`,
+		token.ID, token.Email, token.DisplayName, token.TokenHash, token.ExpiresAt, inviteCode)
 	if err != nil {
 		return fmt.Errorf("inserting email verification token: %w", err)
 	}
@@ -33,12 +37,16 @@ func (r *EmailVerificationRepository) Create(ctx context.Context, token *model.E
 // GetByTokenHash returns a non-expired token by its hash.
 func (r *EmailVerificationRepository) GetByTokenHash(ctx context.Context, tokenHash string) (*model.EmailVerificationToken, error) {
 	var token model.EmailVerificationToken
+	var inviteCode *string
 	err := r.db.QueryRowContext(ctx,
-		`SELECT id, email, display_name, token_hash, expires_at, created_at
+		`SELECT id, email, display_name, token_hash, expires_at, created_at, invite_code
 		 FROM email_verification_tokens
 		 WHERE token_hash = $1 AND expires_at > now()`, tokenHash).Scan(
 		&token.ID, &token.Email, &token.DisplayName, &token.TokenHash,
-		&token.ExpiresAt, &token.CreatedAt)
+		&token.ExpiresAt, &token.CreatedAt, &inviteCode)
+	if inviteCode != nil {
+		token.InviteCode = *inviteCode
+	}
 	if err == sql.ErrNoRows {
 		return nil, model.ErrNotFound
 	}

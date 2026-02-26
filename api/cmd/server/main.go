@@ -219,7 +219,7 @@ func main() {
 
 	// Initialize handlers
 	health := handler.NewHealthHandler(db)
-	auth := handler.NewAuthHandler(authService)
+	auth := handler.NewAuthHandler(authService, projectService)
 	projects := handler.NewProjectHandler(projectService, cfg.BaseURL)
 	workflows := handler.NewWorkflowHandler(workflowService, projectService)
 	queues := handler.NewQueueHandler(queueService)

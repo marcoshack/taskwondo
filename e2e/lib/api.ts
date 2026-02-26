@@ -545,3 +545,20 @@ export async function deleteMailpitMessages(
 ): Promise<void> {
   await request.delete(`${MAILPIT_URL}/api/v1/messages`);
 }
+
+// --- Invites ---
+
+export async function createInvite(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  role: string,
+): Promise<{ code: string; url: string }> {
+  const res = await request.post(`${BASE_URL}/api/v1/projects/${projectKey}/invites`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { role },
+  });
+  if (!res.ok()) throw new Error(`Create invite failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}

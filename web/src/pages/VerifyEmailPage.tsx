@@ -20,9 +20,10 @@ export function VerifyEmailPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [redirectTo, setRedirectTo] = useState<string | null>(null)
 
   if (user) {
-    return <Navigate to="/projects" replace />
+    return <Navigate to={redirectTo || '/projects'} replace />
   }
 
   if (!token) {
@@ -46,6 +47,10 @@ export function VerifyEmailPage() {
     setLoading(true)
     try {
       const result = await authApi.verifyEmail(token, password)
+      if (result.project_key) {
+        setRedirectTo(`/projects/${result.project_key}`)
+      }
+      localStorage.removeItem('taskwondo_pending_invite')
       loginWithToken(result.token, result.user)
     } catch (err) {
       if (isAxiosError(err) && err.response?.data?.error?.message) {

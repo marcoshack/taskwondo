@@ -122,16 +122,17 @@ export async function deleteAPIKey(id: string) {
 
 // Registration
 
-export async function register(email: string, displayName: string) {
+export async function register(email: string, displayName: string, inviteCode?: string) {
   const res = await api.post<{ data: { message: string } }>('/auth/register', {
     email,
     display_name: displayName,
+    ...(inviteCode ? { invite_code: inviteCode } : {}),
   })
   return res.data.data
 }
 
 export async function verifyEmail(token: string, password: string) {
-  const res = await api.post<{ data: { token: string; user: User } }>('/auth/verify-email', {
+  const res = await api.post<{ data: { token: string; user: User; project_key?: string } }>('/auth/verify-email', {
     token,
     password,
   })

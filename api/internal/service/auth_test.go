@@ -1285,7 +1285,7 @@ func TestRequestRegistration_Success(t *testing.T) {
 	svc, _, _, settings, sender := newTestAuthServiceWithEmail()
 	settings.setBool(model.SettingAuthEmailRegistrationEnabled, true)
 
-	err := svc.RequestRegistration(context.Background(), "new@example.com", "New User")
+	err := svc.RequestRegistration(context.Background(), "new@example.com", "New User", "")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -1305,7 +1305,7 @@ func TestRequestRegistration_Disabled(t *testing.T) {
 	svc, _, _, _, _ := newTestAuthServiceWithEmail()
 	// Registration is disabled by default
 
-	err := svc.RequestRegistration(context.Background(), "new@example.com", "New User")
+	err := svc.RequestRegistration(context.Background(), "new@example.com", "New User", "")
 	if err == nil {
 		t.Fatal("expected error when registration is disabled")
 	}
@@ -1331,7 +1331,7 @@ func TestRequestRegistration_DuplicateEmail(t *testing.T) {
 	userRepo.users[existing.Email] = existing
 	userRepo.byID[existing.ID] = existing
 
-	err := svc.RequestRegistration(context.Background(), "existing@example.com", "New User")
+	err := svc.RequestRegistration(context.Background(), "existing@example.com", "New User", "")
 	if err == nil {
 		t.Fatal("expected error for duplicate email")
 	}
@@ -1344,7 +1344,7 @@ func TestRequestRegistration_InvalidEmail(t *testing.T) {
 	svc, _, _, settings, _ := newTestAuthServiceWithEmail()
 	settings.setBool(model.SettingAuthEmailRegistrationEnabled, true)
 
-	err := svc.RequestRegistration(context.Background(), "invalid", "New User")
+	err := svc.RequestRegistration(context.Background(), "invalid", "New User", "")
 	if err == nil {
 		t.Fatal("expected validation error for invalid email")
 	}
@@ -1356,7 +1356,7 @@ func TestVerifyEmailAndCreateUser_Success(t *testing.T) {
 
 	// First request registration to create a token
 	sender := svc.emailSender.(*mockEmailSender)
-	err := svc.RequestRegistration(context.Background(), "verify@example.com", "Verify User")
+	err := svc.RequestRegistration(context.Background(), "verify@example.com", "Verify User", "")
 	if err != nil {
 		t.Fatalf("request registration failed: %v", err)
 	}
@@ -1373,18 +1373,18 @@ func TestVerifyEmailAndCreateUser_Success(t *testing.T) {
 	rawToken := body[tokenStart : tokenStart+tokenEnd]
 
 	// Verify
-	jwt, user, err := svc.VerifyEmailAndCreateUser(context.Background(), rawToken, "SecurePass123!")
+	result, err := svc.VerifyEmailAndCreateUser(context.Background(), rawToken, "SecurePass123!")
 	if err != nil {
 		t.Fatalf("verify failed: %v", err)
 	}
-	if jwt == "" {
+	if result.Token == "" {
 		t.Fatal("expected JWT token")
 	}
-	if user.Email != "verify@example.com" {
-		t.Fatalf("expected email verify@example.com, got %s", user.Email)
+	if result.User.Email != "verify@example.com" {
+		t.Fatalf("expected email verify@example.com, got %s", result.User.Email)
 	}
-	if user.DisplayName != "Verify User" {
-		t.Fatalf("expected display name 'Verify User', got %s", user.DisplayName)
+	if result.User.DisplayName != "Verify User" {
+		t.Fatalf("expected display name 'Verify User', got %s", result.User.DisplayName)
 	}
 
 	// User should exist in repo
@@ -1393,10 +1393,57 @@ func TestVerifyEmailAndCreateUser_Success(t *testing.T) {
 	}
 }
 
+func TestRequestRegistration_WithInviteCode(t *testing.T) {
+	svc, _, emailVerifRepo, settings, _ := newTestAuthServiceWithEmail()
+	settings.setBool(model.SettingAuthEmailRegistrationEnabled, true)
+
+	err := svc.RequestRegistration(context.Background(), "invite@example.com", "Invite User", "abc123")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	// Verify the invite code was stored in the token
+	for _, tok := range emailVerifRepo.tokens {
+		if tok.Email == "invite@example.com" {
+			if tok.InviteCode != "abc123" {
+				t.Fatalf("expected invite code 'abc123', got '%s'", tok.InviteCode)
+			}
+			return
+		}
+	}
+	t.Fatal("token not found in repo")
+}
+
+func TestVerifyEmailAndCreateUser_WithInviteCode(t *testing.T) {
+	svc, _, _, settings, _ := newTestAuthServiceWithEmail()
+	settings.setBool(model.SettingAuthEmailRegistrationEnabled, true)
+
+	sender := svc.emailSender.(*mockEmailSender)
+	err := svc.RequestRegistration(context.Background(), "inviteverify@example.com", "Invite Verify", "invcode42")
+	if err != nil {
+		t.Fatalf("request registration failed: %v", err)
+	}
+
+	// Extract token from email
+	body := sender.sent[0].body
+	idx := strings.Index(body, "verify-email?token=")
+	tokenStart := idx + len("verify-email?token=")
+	tokenEnd := strings.IndexAny(body[tokenStart:], "\"' ")
+	rawToken := body[tokenStart : tokenStart+tokenEnd]
+
+	result, err := svc.VerifyEmailAndCreateUser(context.Background(), rawToken, "SecurePass123!")
+	if err != nil {
+		t.Fatalf("verify failed: %v", err)
+	}
+	if result.InviteCode != "invcode42" {
+		t.Fatalf("expected invite code 'invcode42', got '%s'", result.InviteCode)
+	}
+}
+
 func TestVerifyEmailAndCreateUser_InvalidToken(t *testing.T) {
 	svc, _, _, _, _ := newTestAuthServiceWithEmail()
 
-	_, _, err := svc.VerifyEmailAndCreateUser(context.Background(), "nonexistent-token", "password123")
+	_, err := svc.VerifyEmailAndCreateUser(context.Background(), "nonexistent-token", "password123")
 	if err == nil {
 		t.Fatal("expected error for invalid token")
 	}
@@ -1416,7 +1463,7 @@ func TestVerifyEmailAndCreateUser_WeakPassword(t *testing.T) {
 		ExpiresAt:   time.Now().Add(time.Hour),
 	}
 
-	_, _, err := svc.VerifyEmailAndCreateUser(context.Background(), "test-token", "short")
+	_, err := svc.VerifyEmailAndCreateUser(context.Background(), "test-token", "short")
 	if err == nil {
 		t.Fatal("expected error for weak password")
 	}

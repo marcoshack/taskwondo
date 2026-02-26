@@ -12,6 +12,7 @@ type EmailVerificationToken struct {
 	Email       string
 	DisplayName string
 	TokenHash   string
+	InviteCode  string // optional project invite code to auto-accept after verification
 	ExpiresAt   time.Time
 	CreatedAt   time.Time
 }

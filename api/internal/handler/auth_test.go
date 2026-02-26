@@ -207,7 +207,7 @@ func testSetup(t *testing.T) (*AuthHandler, *service.AuthService, string) {
 		t.Fatal(err)
 	}
 
-	h := NewAuthHandler(authSvc)
+	h := NewAuthHandler(authSvc, nil)
 	return h, authSvc, token
 }
 
@@ -712,7 +712,7 @@ func testSetupWithEmail(t *testing.T) (*AuthHandler, *service.AuthService, *hand
 	sender := &handlerMockEmailSender{}
 	authSvc.SetEmailVerification(verifRepo, settings, sender, "http://localhost:5173")
 
-	h := NewAuthHandler(authSvc)
+	h := NewAuthHandler(authSvc, nil)
 	return h, authSvc, settings
 }
 

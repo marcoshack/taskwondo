@@ -38,7 +38,8 @@ export function RegisterPage() {
     setError('')
     setLoading(true)
     try {
-      await authApi.register(email, displayName)
+      const pendingInvite = localStorage.getItem('taskwondo_pending_invite') || undefined
+      await authApi.register(email, displayName, pendingInvite)
       setSuccess(true)
     } catch (err) {
       if (isAxiosError(err) && err.response?.data?.error?.message) {
