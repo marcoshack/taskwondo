@@ -47,6 +47,9 @@ export const test = base.extend<{ testUser: TestUser; testProject: TestProject }
     // 4. Login again with the final password to get a clean token
     const finalLogin = await api.login(request, email, TEST_PASSWORD);
 
+    // 5. Dismiss the Welcome modal so it doesn't interfere with tests
+    await api.setPreference(request, finalLogin.token, 'welcome_dismissed', true);
+
     const testUser: TestUser = {
       id: finalLogin.user.id,
       email,

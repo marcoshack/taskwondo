@@ -255,7 +255,7 @@ export function AdminUsersPage() {
 
   return (
     <div className="max-w-3xl space-y-6">
-      <div className="flex items-start justify-between gap-4">
+      <div className="space-y-3 sm:space-y-0 sm:flex sm:items-start sm:justify-between sm:gap-4">
         <div>
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('admin.users.title')}</h2>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('admin.users.description')}</p>
@@ -325,47 +325,115 @@ export function AdminUsersPage() {
             return (
               <div key={u.id}>
                 <div
-                  className="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  className="p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
                   onClick={() => setExpandedUserId(isExpanded ? null : u.id)}
                 >
+                  {/* Row 1: identity */}
                   <div className="flex items-center gap-3 min-w-0">
                     <button className="text-gray-400 shrink-0">
                       {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                     </button>
                     <Avatar name={u.display_name} size="sm" />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                        {u.display_name}
-                        {isSelf && <span className="ml-1 text-xs text-gray-400">({t('common.you')})</span>}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{u.email}</p>
+                    <div className="min-w-0 flex-1">
+                      {/* Desktop: name + email on separate lines */}
+                      <div className="hidden sm:block">
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                          {u.display_name}
+                          {isSelf && <span className="ml-1 text-xs text-gray-400">({t('common.you')})</span>}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{u.email}</p>
+                      </div>
+                      {/* Mobile: name + email inline, horizontally scrollable */}
+                      <div className="sm:hidden overflow-x-auto scrollbar-none">
+                        <p className="text-sm whitespace-nowrap">
+                          <span className="font-medium text-gray-900 dark:text-gray-100">{u.display_name}</span>
+                          {isSelf && <span className="ml-1 text-xs text-gray-400">({t('common.you')})</span>}
+                          <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">{u.email}</span>
+                        </p>
+                      </div>
+                    </div>
+                    {/* Desktop-only: controls inline on row 1 */}
+                    <div className="hidden sm:flex items-center gap-3 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                      {(saved[`role:${u.id}`] || saved[`status:${u.id}`] || saved[`limit:${u.id}`]) && (
+                        <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
+                      )}
+                      {u.global_role !== 'admin' && (
+                        <Tooltip content={t('admin.users.maxProjectsHelp')}>
+                          <span className="inline-flex items-center gap-1">
+                            <input
+                              type="number"
+                              min={0}
+                              className="w-[5.2rem] rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-1.5 py-1 text-xs text-center shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              placeholder={t('admin.users.maxProjectsDefault')}
+                              value={getUserLimitDisplay(u)}
+                              onChange={(e) => handleUserLimitChange(u.id, e.target.value)}
+                              onKeyDown={(e) => { if (e.key === 'Enter') handleUserLimitSave(u.id, u.max_projects) }}
+                            />
+                            <button
+                              className={`px-1 py-1 rounded-md border ${isUserLimitDirty(u) ? 'border-indigo-400 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-500 dark:text-indigo-400 dark:hover:bg-indigo-900/30' : 'border-gray-300 text-gray-300 cursor-default dark:border-gray-600 dark:text-gray-600'}`}
+                              onClick={() => isUserLimitDirty(u) && handleUserLimitSave(u.id, u.max_projects)}
+                              disabled={!isUserLimitDirty(u)}
+                            >
+                              <Save className="h-3.5 w-3.5" />
+                            </button>
+                          </span>
+                        </Tooltip>
+                      )}
+                      {!isSelf ? (
+                        <select
+                          className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          value={u.global_role}
+                          onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                          disabled={updateUserMutation.isPending}
+                        >
+                          <option value="admin">{t('admin.users.roles.admin')}</option>
+                          <option value="user">{t('admin.users.roles.user')}</option>
+                        </select>
+                      ) : (
+                        <Badge color={u.global_role === 'admin' ? 'blue' : 'gray'}>
+                          {t(`admin.users.roles.${u.global_role}`)}
+                        </Badge>
+                      )}
+                      {u.is_active ? (
+                        !isSelf ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDisableTarget(u)}
+                          >
+                            {t('admin.users.active')}
+                          </Button>
+                        ) : (
+                          <Badge color="green">{t('admin.users.active')}</Badge>
+                        )
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEnable(u.id)}
+                        >
+                          <span className="text-red-600 dark:text-red-400">{t('admin.users.disabled')}</span>
+                        </Button>
+                      )}
+                      {!isSelf && (
+                        <Tooltip content={t('admin.users.resetPasswordButton')}>
+                          <button
+                            className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                            onClick={() => setResetTarget(u)}
+                          >
+                            <KeyRound className="h-4 w-4" />
+                          </button>
+                        </Tooltip>
+                      )}
+                      <span className="text-xs text-gray-400 w-16 text-right">
+                        {formatLastLogin(u.last_login_at)}
+                      </span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                  {/* Row 2: mobile-only controls */}
+                  <div className="flex sm:hidden items-center gap-2 mt-2 pl-11" onClick={(e) => e.stopPropagation()}>
                     {(saved[`role:${u.id}`] || saved[`status:${u.id}`] || saved[`limit:${u.id}`]) && (
                       <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
-                    )}
-                    {u.global_role !== 'admin' && (
-                      <Tooltip content={t('admin.users.maxProjectsHelp')}>
-                        <span className="inline-flex items-center gap-1">
-                          <input
-                            type="number"
-                            min={0}
-                            className="w-[5.2rem] rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-1.5 py-1 text-xs text-center shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            placeholder={t('admin.users.maxProjectsDefault')}
-                            value={getUserLimitDisplay(u)}
-                            onChange={(e) => handleUserLimitChange(u.id, e.target.value)}
-                            onKeyDown={(e) => { if (e.key === 'Enter') handleUserLimitSave(u.id, u.max_projects) }}
-                          />
-                          <button
-                            className={`px-1 py-1 rounded-md border ${isUserLimitDirty(u) ? 'border-indigo-400 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-500 dark:text-indigo-400 dark:hover:bg-indigo-900/30' : 'border-gray-300 text-gray-300 cursor-default dark:border-gray-600 dark:text-gray-600'}`}
-                            onClick={() => isUserLimitDirty(u) && handleUserLimitSave(u.id, u.max_projects)}
-                            disabled={!isUserLimitDirty(u)}
-                          >
-                            <Save className="h-3.5 w-3.5" />
-                          </button>
-                        </span>
-                      </Tooltip>
                     )}
                     {!isSelf ? (
                       <select
@@ -404,23 +472,28 @@ export function AdminUsersPage() {
                       </Button>
                     )}
                     {!isSelf && (
-                      <Tooltip content={t('admin.users.resetPasswordButton')}>
-                        <button
-                          className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                          onClick={() => setResetTarget(u)}
-                        >
-                          <KeyRound className="h-4 w-4" />
-                        </button>
-                      </Tooltip>
+                      <button
+                        className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                        onClick={() => setResetTarget(u)}
+                      >
+                        <KeyRound className="h-4 w-4" />
+                      </button>
                     )}
-                    <span className="text-xs text-gray-400 hidden sm:block w-16 text-right">
-                      {formatLastLogin(u.last_login_at)}
-                    </span>
                   </div>
                 </div>
 
                 {isExpanded && (
-                  <UserProjectsPanel userId={u.id} userName={u.display_name} />
+                  <UserProjectsPanel
+                    userId={u.id}
+                    userName={u.display_name}
+                    mobileProjectLimit={u.global_role !== 'admin' ? {
+                      value: getUserLimitDisplay(u),
+                      dirty: isUserLimitDirty(u),
+                      saved: !!saved[`limit:${u.id}`],
+                      onChange: (v: string) => handleUserLimitChange(u.id, v),
+                      onSave: () => handleUserLimitSave(u.id, u.max_projects),
+                    } : undefined}
+                  />
                 )}
               </div>
             )
@@ -543,12 +616,22 @@ export function AdminUsersPage() {
   )
 }
 
+interface MobileProjectLimit {
+  value: string
+  dirty: boolean
+  saved: boolean
+  onChange: (v: string) => void
+  onSave: () => void
+}
+
 function UserProjectsPanel({
   userId,
   userName,
+  mobileProjectLimit,
 }: {
   userId: string
   userName: string
+  mobileProjectLimit?: MobileProjectLimit
 }) {
   const { t } = useTranslation()
   const { data: userProjects, isLoading } = useUserProjects(userId)
@@ -610,7 +693,35 @@ function UserProjectsPanel({
   }
 
   return (
-    <div className="px-3 pb-3 pl-12">
+    <div className="px-3 pb-3 pl-12 space-y-3">
+      {mobileProjectLimit && (
+        <div className="sm:hidden border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            {t('admin.general.projectLimit.label')}
+          </label>
+          <div className="flex items-center gap-2 mt-2">
+            <input
+              type="number"
+              min={0}
+              className="w-20 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1 text-xs text-center shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              placeholder={t('admin.users.maxProjectsDefault')}
+              value={mobileProjectLimit.value}
+              onChange={(e) => mobileProjectLimit.onChange(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') mobileProjectLimit.onSave() }}
+            />
+            <button
+              className={`px-1 py-1 rounded-md border ${mobileProjectLimit.dirty ? 'border-indigo-400 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-500 dark:text-indigo-400 dark:hover:bg-indigo-900/30' : 'border-gray-300 text-gray-300 cursor-default dark:border-gray-600 dark:text-gray-600'}`}
+              onClick={() => mobileProjectLimit.dirty && mobileProjectLimit.onSave()}
+              disabled={!mobileProjectLimit.dirty}
+            >
+              <Save className="h-3.5 w-3.5" />
+            </button>
+            {mobileProjectLimit.saved && (
+              <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
+            )}
+          </div>
+        </div>
+      )}
       <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-3">
         <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
           {t('admin.users.projects')}
