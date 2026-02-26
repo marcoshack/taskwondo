@@ -453,3 +453,95 @@ export async function resetSMTPConfig(
     from_name: '',
   });
 }
+
+/** Configure SMTP to use Mailpit (for E2E email tests). */
+export async function configureMailpitSMTP(
+  request: APIRequestContext,
+  adminToken: string,
+): Promise<void> {
+  await setSMTPConfig(request, adminToken, {
+    enabled: true,
+    smtp_host: 'mailpit',
+    smtp_port: 1025,
+    imap_host: '',
+    imap_port: 993,
+    username: 'test@e2e.local',
+    password: 'unused',
+    encryption: 'none',
+    from_address: 'noreply@e2e.local',
+    from_name: 'Taskwondo E2E',
+  });
+}
+
+// --- System Settings ---
+
+export async function setSystemSetting(
+  request: APIRequestContext,
+  adminToken: string,
+  key: string,
+  value: unknown,
+): Promise<void> {
+  const res = await request.put(`${BASE_URL}/api/v1/admin/settings/${key}`, {
+    headers: { Authorization: `Bearer ${adminToken}` },
+    data: { value },
+  });
+  if (!res.ok()) throw new Error(`Set system setting failed (${res.status()}): ${await res.text()}`);
+}
+
+/** Enable email auth (login + registration). Requires SMTP to be configured first. */
+export async function enableEmailAuth(
+  request: APIRequestContext,
+  adminToken: string,
+): Promise<void> {
+  await setSystemSetting(request, adminToken, 'auth_email_login_enabled', true);
+  await setSystemSetting(request, adminToken, 'auth_email_registration_enabled', true);
+}
+
+/** Disable email registration. */
+export async function disableEmailRegistration(
+  request: APIRequestContext,
+  adminToken: string,
+): Promise<void> {
+  await setSystemSetting(request, adminToken, 'auth_email_registration_enabled', false);
+}
+
+// --- Mailpit ---
+
+const MAILPIT_URL = process.env.MAILPIT_URL || 'http://localhost:8025';
+
+interface MailpitMessage {
+  ID: string;
+  From: { Address: string; Name: string };
+  To: { Address: string; Name: string }[];
+  Subject: string;
+  Snippet: string;
+}
+
+interface MailpitMessageDetail extends MailpitMessage {
+  HTML: string;
+  Text: string;
+}
+
+export async function getMailpitMessages(
+  request: APIRequestContext,
+): Promise<MailpitMessage[]> {
+  const res = await request.get(`${MAILPIT_URL}/api/v1/messages`);
+  if (!res.ok()) throw new Error(`Mailpit list failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.messages ?? [];
+}
+
+export async function getMailpitMessage(
+  request: APIRequestContext,
+  id: string,
+): Promise<MailpitMessageDetail> {
+  const res = await request.get(`${MAILPIT_URL}/api/v1/message/${id}`);
+  if (!res.ok()) throw new Error(`Mailpit get failed (${res.status()}): ${await res.text()}`);
+  return await res.json();
+}
+
+export async function deleteMailpitMessages(
+  request: APIRequestContext,
+): Promise<void> {
+  await request.delete(`${MAILPIT_URL}/api/v1/messages`);
+}

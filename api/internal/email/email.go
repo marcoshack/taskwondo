@@ -100,7 +100,10 @@ func sendMail(ctx context.Context, cfg *model.SMTPConfig, to, subject, htmlBody 
 		Str("message_id", messageID).
 		Logger()
 
-	auth := smtp.PlainAuth("", cfg.Username, cfg.Password, cfg.SMTPHost)
+	var auth smtp.Auth
+	if cfg.Username != "" {
+		auth = smtp.PlainAuth("", cfg.Username, cfg.Password, cfg.SMTPHost)
+	}
 
 	var err error
 	switch cfg.Encryption {
@@ -109,7 +112,9 @@ func sendMail(ctx context.Context, cfg *model.SMTPConfig, to, subject, htmlBody 
 	case model.SMTPEncryptionSTARTTLS:
 		err = sendWithSTARTTLS(&l, addr, cfg.SMTPHost, auth, cfg.FromAddress, to, msg)
 	case model.SMTPEncryptionNone:
-		err = smtp.SendMail(addr, auth, cfg.FromAddress, []string{to}, msg)
+		// For plaintext SMTP, skip auth — Go's PlainAuth refuses to send
+		// credentials over unencrypted non-localhost connections.
+		err = smtp.SendMail(addr, nil, cfg.FromAddress, []string{to}, msg)
 		if err == nil {
 			l.Info().Msg("email accepted by server")
 		}

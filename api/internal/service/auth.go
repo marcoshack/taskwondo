@@ -7,8 +7,10 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
 	"strconv"
 	"strings"
 	"time"
@@ -49,6 +51,24 @@ type OAuthAccountRepository interface {
 	Delete(ctx context.Context, id, userID uuid.UUID) error
 }
 
+// EmailVerificationRepo defines persistence operations for email verification tokens.
+type EmailVerificationRepo interface {
+	Create(ctx context.Context, token *model.EmailVerificationToken) error
+	GetByTokenHash(ctx context.Context, tokenHash string) (*model.EmailVerificationToken, error)
+	DeleteByTokenHash(ctx context.Context, tokenHash string) error
+	DeleteByEmail(ctx context.Context, email string) error
+}
+
+// AuthSettingsReader loads system settings by key for auth decisions.
+type AuthSettingsReader interface {
+	Get(ctx context.Context, key string) (*model.SystemSetting, error)
+}
+
+// EmailSender sends emails.
+type EmailSender interface {
+	Send(ctx context.Context, to, subject, htmlBody string) error
+}
+
 // Claims are the JWT token claims.
 type Claims struct {
 	jwt.RegisteredClaims
@@ -59,14 +79,20 @@ type Claims struct {
 
 const oauthStateExpiry = 10 * time.Minute
 
+const emailVerificationTokenExpiry = 24 * time.Hour
+
 // AuthService handles authentication and authorization.
 type AuthService struct {
-	users         UserRepository
-	apiKeys       APIKeyRepository
-	oauthAccounts OAuthAccountRepository
-	jwtSecret     []byte
-	jwtExpiry     time.Duration
-	providers     map[string]OAuthProvider
+	users              UserRepository
+	apiKeys            APIKeyRepository
+	oauthAccounts      OAuthAccountRepository
+	emailVerifications EmailVerificationRepo
+	settings           AuthSettingsReader
+	emailSender        EmailSender
+	baseURL            string
+	jwtSecret          []byte
+	jwtExpiry          time.Duration
+	providers          map[string]OAuthProvider
 }
 
 // NewAuthService creates a new AuthService.
@@ -90,6 +116,14 @@ func NewAuthService(
 		jwtExpiry:     jwtExpiry,
 		providers:     pm,
 	}
+}
+
+// SetEmailVerification configures the email verification dependencies.
+func (s *AuthService) SetEmailVerification(repo EmailVerificationRepo, settings AuthSettingsReader, sender EmailSender, baseURL string) {
+	s.emailVerifications = repo
+	s.settings = settings
+	s.emailSender = sender
+	s.baseURL = baseURL
 }
 
 // Login verifies credentials and returns a JWT token and user.
@@ -303,13 +337,214 @@ func (s *AuthService) SeedAdminUser(ctx context.Context, email, password string)
 	return nil
 }
 
-// EnabledProviders returns the names of all configured OAuth providers.
-func (s *AuthService) EnabledProviders() map[string]bool {
-	result := make(map[string]bool, len(s.providers))
+// EnabledProviders returns the names of all enabled auth providers.
+// OAuth providers must be both configured (env vars) and enabled in settings.
+// When a setting doesn't exist: OAuth defaults to enabled (backward compat),
+// email login defaults to enabled, email registration defaults to disabled.
+func (s *AuthService) EnabledProviders(ctx context.Context) map[string]bool {
+	result := make(map[string]bool, len(s.providers)+2)
+
 	for name := range s.providers {
-		result[name] = true
+		settingKey := ""
+		switch name {
+		case "discord":
+			settingKey = model.SettingAuthDiscordEnabled
+		case "google":
+			settingKey = model.SettingAuthGoogleEnabled
+		}
+		if settingKey != "" {
+			result[name] = s.getBoolSetting(ctx, settingKey, true)
+		} else {
+			result[name] = true
+		}
 	}
+
+	// Email login: default true (backward compat for existing password users)
+	result["email_login"] = s.getBoolSetting(ctx, model.SettingAuthEmailLoginEnabled, true)
+
+	// Email registration: default false (opt-in)
+	result["email_registration"] = s.getBoolSetting(ctx, model.SettingAuthEmailRegistrationEnabled, false)
+
 	return result
+}
+
+// getBoolSetting reads a boolean system setting, returning defaultVal if not found.
+func (s *AuthService) getBoolSetting(ctx context.Context, key string, defaultVal bool) bool {
+	if s.settings == nil {
+		return defaultVal
+	}
+	setting, err := s.settings.Get(ctx, key)
+	if err != nil {
+		return defaultVal
+	}
+	var val bool
+	if err := json.Unmarshal(setting.Value, &val); err != nil {
+		return defaultVal
+	}
+	return val
+}
+
+// RequestRegistration creates a verification token and sends a verification email.
+func (s *AuthService) RequestRegistration(ctx context.Context, email, displayName string) error {
+	if s.emailVerifications == nil || s.emailSender == nil || s.settings == nil {
+		return fmt.Errorf("%w: email registration is not configured", model.ErrForbidden)
+	}
+
+	// Check registration is enabled
+	if !s.getBoolSetting(ctx, model.SettingAuthEmailRegistrationEnabled, false) {
+		return fmt.Errorf("%w: email registration is disabled", model.ErrForbidden)
+	}
+
+	// Validate inputs
+	email = strings.TrimSpace(email)
+	displayName = strings.TrimSpace(displayName)
+	if email == "" || !strings.Contains(email, "@") {
+		return fmt.Errorf("%w: valid email is required", model.ErrValidation)
+	}
+	if displayName == "" {
+		return fmt.Errorf("%w: display name is required", model.ErrValidation)
+	}
+	if len(displayName) > 100 {
+		return fmt.Errorf("%w: display name must be 100 characters or fewer", model.ErrValidation)
+	}
+
+	// Check user doesn't already exist
+	_, err := s.users.GetByEmail(ctx, email)
+	if err == nil {
+		return fmt.Errorf("%w: a user with this email already exists", model.ErrAlreadyExists)
+	}
+	if !errors.Is(err, model.ErrNotFound) {
+		return fmt.Errorf("checking existing user: %w", err)
+	}
+
+	// Clean up any existing tokens for this email
+	if err := s.emailVerifications.DeleteByEmail(ctx, email); err != nil {
+		return fmt.Errorf("cleaning up old tokens: %w", err)
+	}
+
+	// Generate random token
+	rawBytes := make([]byte, 32)
+	if _, err := rand.Read(rawBytes); err != nil {
+		return fmt.Errorf("generating random token: %w", err)
+	}
+	rawToken := hex.EncodeToString(rawBytes)
+	tokenHash := hashToken(rawToken)
+
+	token := &model.EmailVerificationToken{
+		ID:          uuid.New(),
+		Email:       email,
+		DisplayName: displayName,
+		TokenHash:   tokenHash,
+		ExpiresAt:   time.Now().Add(emailVerificationTokenExpiry),
+	}
+	if err := s.emailVerifications.Create(ctx, token); err != nil {
+		return fmt.Errorf("storing verification token: %w", err)
+	}
+
+	// Build verification URL and send email
+	verifyURL := strings.TrimRight(s.baseURL, "/") + "/verify-email?token=" + rawToken
+	htmlBody := verificationEmailHTML(displayName, verifyURL)
+
+	if err := s.emailSender.Send(ctx, email, "Verify your email", htmlBody); err != nil {
+		log.Ctx(ctx).Error().Err(err).Str("email", email).Msg("failed to send verification email")
+		return fmt.Errorf("sending verification email: %w", err)
+	}
+
+	log.Ctx(ctx).Info().Str("email", email).Msg("verification email sent")
+	return nil
+}
+
+// VerifyEmailAndCreateUser validates a token, creates the user, and returns a JWT.
+func (s *AuthService) VerifyEmailAndCreateUser(ctx context.Context, rawToken, password string) (string, *model.User, error) {
+	if s.emailVerifications == nil {
+		return "", nil, fmt.Errorf("%w: email registration is not configured", model.ErrForbidden)
+	}
+
+	tokenHash := hashToken(rawToken)
+	verification, err := s.emailVerifications.GetByTokenHash(ctx, tokenHash)
+	if err != nil {
+		if errors.Is(err, model.ErrNotFound) {
+			return "", nil, fmt.Errorf("%w: invalid or expired verification token", model.ErrNotFound)
+		}
+		return "", nil, fmt.Errorf("looking up verification token: %w", err)
+	}
+
+	// Validate password
+	if len(password) < 8 {
+		return "", nil, fmt.Errorf("%w: password must be at least 8 characters", model.ErrValidation)
+	}
+	if len(password) > 72 {
+		return "", nil, fmt.Errorf("%w: password must be 72 characters or fewer", model.ErrValidation)
+	}
+
+	// Check email not already taken (race condition guard)
+	_, err = s.users.GetByEmail(ctx, verification.Email)
+	if err == nil {
+		// Clean up the token
+		_ = s.emailVerifications.DeleteByTokenHash(ctx, tokenHash)
+		return "", nil, fmt.Errorf("%w: a user with this email already exists", model.ErrAlreadyExists)
+	}
+	if !errors.Is(err, model.ErrNotFound) {
+		return "", nil, fmt.Errorf("checking existing user: %w", err)
+	}
+
+	// Hash password and create user
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return "", nil, fmt.Errorf("hashing password: %w", err)
+	}
+
+	user := &model.User{
+		ID:           uuid.New(),
+		Email:        verification.Email,
+		DisplayName:  verification.DisplayName,
+		PasswordHash: string(hash),
+		GlobalRole:   model.RoleUser,
+		IsActive:     true,
+	}
+	if err := s.users.Create(ctx, user); err != nil {
+		return "", nil, fmt.Errorf("creating user: %w", err)
+	}
+
+	// Delete the used token
+	if err := s.emailVerifications.DeleteByTokenHash(ctx, tokenHash); err != nil {
+		log.Ctx(ctx).Warn().Err(err).Msg("failed to delete used verification token")
+	}
+
+	// Generate JWT
+	jwtToken, err := s.generateJWT(user)
+	if err != nil {
+		return "", nil, fmt.Errorf("generating token: %w", err)
+	}
+
+	if err := s.users.UpdateLastLogin(ctx, user.ID); err != nil {
+		log.Ctx(ctx).Warn().Err(err).Msg("failed to update last login")
+	}
+
+	log.Ctx(ctx).Info().Str("email", user.Email).Msg("user created via email verification")
+	return jwtToken, user, nil
+}
+
+func hashToken(raw string) string {
+	h := sha256.Sum256([]byte(raw))
+	return hex.EncodeToString(h[:])
+}
+
+func verificationEmailHTML(displayName, verifyURL string) string {
+	return fmt.Sprintf(`<!DOCTYPE html>
+<html>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #f9fafb;">
+<div style="max-width: 480px; margin: 0 auto; background: #fff; border-radius: 8px; padding: 32px; border: 1px solid #e5e7eb;">
+<h2 style="margin: 0 0 16px;">Verify your email</h2>
+<p>Hi %s,</p>
+<p>Click the button below to verify your email address and set your password:</p>
+<p style="text-align: center; margin: 24px 0;">
+<a href="%s" style="display: inline-block; padding: 12px 24px; background: #4f46e5; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 600;">Verify email</a>
+</p>
+<p style="color: #6b7280; font-size: 14px;">This link expires in 24 hours. If you didn't request this, you can safely ignore this email.</p>
+</div>
+</body>
+</html>`, html.EscapeString(displayName), verifyURL)
 }
 
 // OAuthURL generates the authorization URL for the given provider.

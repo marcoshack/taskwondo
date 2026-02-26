@@ -76,7 +76,14 @@ func (s *SystemSettingService) Delete(ctx context.Context, info *model.AuthInfo,
 
 // GetPublic returns a curated set of system settings accessible without authentication.
 func (s *SystemSettingService) GetPublic(ctx context.Context) (map[string]json.RawMessage, error) {
-	publicKeys := []string{"brand_name", model.SettingMaxProjectsPerUser}
+	publicKeys := []string{
+		"brand_name",
+		model.SettingMaxProjectsPerUser,
+		model.SettingAuthEmailLoginEnabled,
+		model.SettingAuthEmailRegistrationEnabled,
+		model.SettingAuthDiscordEnabled,
+		model.SettingAuthGoogleEnabled,
+	}
 	result := make(map[string]json.RawMessage)
 
 	for _, key := range publicKeys {

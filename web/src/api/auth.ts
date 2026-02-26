@@ -120,6 +120,24 @@ export async function deleteAPIKey(id: string) {
   await api.delete(`/user/api-keys/${id}`)
 }
 
+// Registration
+
+export async function register(email: string, displayName: string) {
+  const res = await api.post<{ data: { message: string } }>('/auth/register', {
+    email,
+    display_name: displayName,
+  })
+  return res.data.data
+}
+
+export async function verifyEmail(token: string, password: string) {
+  const res = await api.post<{ data: { token: string; user: User } }>('/auth/verify-email', {
+    token,
+    password,
+  })
+  return res.data.data
+}
+
 // Password management
 
 export async function changePassword(oldPassword: string, newPassword: string) {

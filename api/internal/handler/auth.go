@@ -127,9 +127,9 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// AuthProviders returns which OAuth providers are enabled.
+// AuthProviders returns which auth providers are enabled.
 func (h *AuthHandler) AuthProviders(w http.ResponseWriter, r *http.Request) {
-	writeData(w, http.StatusOK, h.auth.EnabledProviders())
+	writeData(w, http.StatusOK, h.auth.EnabledProviders(r.Context()))
 }
 
 // OAuth handlers (generic for all providers)
@@ -401,4 +401,94 @@ func (h *AuthHandler) DeleteAPIKey(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// Registration handlers
+
+type registerRequest struct {
+	Email       string `json:"email"`
+	DisplayName string `json:"display_name"`
+}
+
+// Register handles POST /api/v1/auth/register.
+func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
+	var req registerRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		return
+	}
+
+	if req.Email == "" || req.DisplayName == "" {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "email and display_name are required")
+		return
+	}
+
+	if err := h.auth.RequestRegistration(r.Context(), req.Email, req.DisplayName); err != nil {
+		if errors.Is(err, model.ErrForbidden) {
+			writeError(w, http.StatusForbidden, "FORBIDDEN", "email registration is disabled")
+			return
+		}
+		if errors.Is(err, model.ErrAlreadyExists) {
+			writeError(w, http.StatusConflict, "CONFLICT", "a user with this email already exists")
+			return
+		}
+		if errors.Is(err, model.ErrValidation) {
+			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+			return
+		}
+		log.Ctx(r.Context()).Error().Err(err).Msg("registration failed")
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		return
+	}
+
+	writeData(w, http.StatusOK, map[string]string{
+		"message": "verification email sent",
+	})
+}
+
+type verifyEmailRequest struct {
+	Token    string `json:"token"`
+	Password string `json:"password"`
+}
+
+// VerifyEmail handles POST /api/v1/auth/verify-email.
+func (h *AuthHandler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
+	var req verifyEmailRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		return
+	}
+
+	if req.Token == "" || req.Password == "" {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "token and password are required")
+		return
+	}
+
+	token, user, err := h.auth.VerifyEmailAndCreateUser(r.Context(), req.Token, req.Password)
+	if err != nil {
+		if errors.Is(err, model.ErrNotFound) {
+			writeError(w, http.StatusNotFound, "NOT_FOUND", "invalid or expired verification token")
+			return
+		}
+		if errors.Is(err, model.ErrAlreadyExists) {
+			writeError(w, http.StatusConflict, "CONFLICT", "a user with this email already exists")
+			return
+		}
+		if errors.Is(err, model.ErrValidation) {
+			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+			return
+		}
+		if errors.Is(err, model.ErrForbidden) {
+			writeError(w, http.StatusForbidden, "FORBIDDEN", "email registration is not configured")
+			return
+		}
+		log.Ctx(r.Context()).Error().Err(err).Msg("email verification failed")
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		return
+	}
+
+	writeData(w, http.StatusOK, map[string]interface{}{
+		"token": token,
+		"user":  toUserResponse(user),
+	})
 }

@@ -527,14 +527,22 @@ func TestOAuthURL_NotConfigured(t *testing.T) {
 }
 
 func TestEnabledProviders(t *testing.T) {
+	ctx := context.Background()
 	svc, _, _ := newTestAuthService()
-	providers := svc.EnabledProviders()
-	if len(providers) != 0 {
-		t.Fatalf("expected no providers, got %v", providers)
+	providers := svc.EnabledProviders(ctx)
+	// No OAuth providers, but email_login defaults to true, email_registration defaults to false
+	if providers["discord"] {
+		t.Fatal("expected discord to not be enabled")
+	}
+	if !providers["email_login"] {
+		t.Fatal("expected email_login to default to true")
+	}
+	if providers["email_registration"] {
+		t.Fatal("expected email_registration to default to false")
 	}
 
 	svc2, _, _ := newTestAuthServiceWithOAuth()
-	providers2 := svc2.EnabledProviders()
+	providers2 := svc2.EnabledProviders(ctx)
 	if !providers2["discord"] {
 		t.Fatal("expected discord to be enabled")
 	}
@@ -1105,6 +1113,7 @@ func TestOAuthCallback_GoogleFullSuccess(t *testing.T) {
 }
 
 func TestEnabledProviders_Multiple(t *testing.T) {
+	ctx := context.Background()
 	userRepo := newMockUserRepo()
 	apiKeyRepo := newMockAPIKeyRepo()
 	oauthRepo := newMockOAuthAccountRepo()
@@ -1113,15 +1122,16 @@ func TestEnabledProviders_Multiple(t *testing.T) {
 	svc := NewAuthService(userRepo, apiKeyRepo, oauthRepo, "test-secret-at-least-32-chars!!", 24*time.Hour,
 		[]OAuthProvider{discord, google})
 
-	providers := svc.EnabledProviders()
+	providers := svc.EnabledProviders(ctx)
 	if !providers["discord"] {
 		t.Fatal("expected discord to be enabled")
 	}
 	if !providers["google"] {
 		t.Fatal("expected google to be enabled")
 	}
-	if len(providers) != 2 {
-		t.Fatalf("expected 2 providers, got %d", len(providers))
+	// 2 OAuth + email_login + email_registration = 4
+	if len(providers) != 4 {
+		t.Fatalf("expected 4 providers, got %d: %v", len(providers), providers)
 	}
 }
 
@@ -1184,5 +1194,261 @@ func TestValidateAPIKey_EmptyPermissions(t *testing.T) {
 	}
 	if len(info.Permissions) != 0 {
 		t.Fatalf("expected empty permissions, got %v", info.Permissions)
+	}
+}
+
+// --- Email verification mocks ---
+
+type mockEmailVerificationRepo struct {
+	tokens map[string]*model.EmailVerificationToken // keyed by token_hash
+}
+
+func newMockEmailVerificationRepo() *mockEmailVerificationRepo {
+	return &mockEmailVerificationRepo{tokens: make(map[string]*model.EmailVerificationToken)}
+}
+
+func (m *mockEmailVerificationRepo) Create(_ context.Context, token *model.EmailVerificationToken) error {
+	m.tokens[token.TokenHash] = token
+	return nil
+}
+
+func (m *mockEmailVerificationRepo) GetByTokenHash(_ context.Context, tokenHash string) (*model.EmailVerificationToken, error) {
+	t, ok := m.tokens[tokenHash]
+	if !ok {
+		return nil, model.ErrNotFound
+	}
+	if t.ExpiresAt.Before(time.Now()) {
+		return nil, model.ErrNotFound
+	}
+	return t, nil
+}
+
+func (m *mockEmailVerificationRepo) DeleteByTokenHash(_ context.Context, tokenHash string) error {
+	delete(m.tokens, tokenHash)
+	return nil
+}
+
+func (m *mockEmailVerificationRepo) DeleteByEmail(_ context.Context, email string) error {
+	for k, t := range m.tokens {
+		if t.Email == email {
+			delete(m.tokens, k)
+		}
+	}
+	return nil
+}
+
+type mockSettingsReader struct {
+	settings map[string]*model.SystemSetting
+}
+
+func newMockSettingsReader() *mockSettingsReader {
+	return &mockSettingsReader{settings: make(map[string]*model.SystemSetting)}
+}
+
+func (m *mockSettingsReader) Get(_ context.Context, key string) (*model.SystemSetting, error) {
+	s, ok := m.settings[key]
+	if !ok {
+		return nil, model.ErrNotFound
+	}
+	return s, nil
+}
+
+func (m *mockSettingsReader) setBool(key string, val bool) {
+	raw, _ := json.Marshal(val)
+	m.settings[key] = &model.SystemSetting{Key: key, Value: raw}
+}
+
+type mockEmailSender struct {
+	sent []struct{ to, subject, body string }
+}
+
+func (m *mockEmailSender) Send(_ context.Context, to, subject, body string) error {
+	m.sent = append(m.sent, struct{ to, subject, body string }{to, subject, body})
+	return nil
+}
+
+func newTestAuthServiceWithEmail() (*AuthService, *mockUserRepo, *mockEmailVerificationRepo, *mockSettingsReader, *mockEmailSender) {
+	userRepo := newMockUserRepo()
+	apiKeyRepo := newMockAPIKeyRepo()
+	oauthRepo := newMockOAuthAccountRepo()
+	svc := NewAuthService(userRepo, apiKeyRepo, oauthRepo, "test-secret-at-least-32-chars!!", 24*time.Hour, nil)
+
+	emailVerifRepo := newMockEmailVerificationRepo()
+	settings := newMockSettingsReader()
+	sender := &mockEmailSender{}
+	svc.SetEmailVerification(emailVerifRepo, settings, sender, "http://localhost:5173")
+
+	return svc, userRepo, emailVerifRepo, settings, sender
+}
+
+func TestRequestRegistration_Success(t *testing.T) {
+	svc, _, _, settings, sender := newTestAuthServiceWithEmail()
+	settings.setBool(model.SettingAuthEmailRegistrationEnabled, true)
+
+	err := svc.RequestRegistration(context.Background(), "new@example.com", "New User")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	if len(sender.sent) != 1 {
+		t.Fatalf("expected 1 email sent, got %d", len(sender.sent))
+	}
+	if sender.sent[0].to != "new@example.com" {
+		t.Fatalf("expected email to new@example.com, got %s", sender.sent[0].to)
+	}
+	if !strings.Contains(sender.sent[0].body, "verify-email?token=") {
+		t.Fatal("expected verification URL in email body")
+	}
+}
+
+func TestRequestRegistration_Disabled(t *testing.T) {
+	svc, _, _, _, _ := newTestAuthServiceWithEmail()
+	// Registration is disabled by default
+
+	err := svc.RequestRegistration(context.Background(), "new@example.com", "New User")
+	if err == nil {
+		t.Fatal("expected error when registration is disabled")
+	}
+	if !strings.Contains(err.Error(), "disabled") {
+		t.Fatalf("expected 'disabled' in error, got: %v", err)
+	}
+}
+
+func TestRequestRegistration_DuplicateEmail(t *testing.T) {
+	svc, userRepo, _, settings, _ := newTestAuthServiceWithEmail()
+	settings.setBool(model.SettingAuthEmailRegistrationEnabled, true)
+
+	// Create existing user
+	hash, _ := bcrypt.GenerateFromPassword([]byte("password"), bcrypt.MinCost)
+	existing := &model.User{
+		ID:           uuid.New(),
+		Email:        "existing@example.com",
+		DisplayName:  "Existing",
+		PasswordHash: string(hash),
+		GlobalRole:   model.RoleUser,
+		IsActive:     true,
+	}
+	userRepo.users[existing.Email] = existing
+	userRepo.byID[existing.ID] = existing
+
+	err := svc.RequestRegistration(context.Background(), "existing@example.com", "New User")
+	if err == nil {
+		t.Fatal("expected error for duplicate email")
+	}
+	if !strings.Contains(err.Error(), "already exists") {
+		t.Fatalf("expected 'already exists' error, got: %v", err)
+	}
+}
+
+func TestRequestRegistration_InvalidEmail(t *testing.T) {
+	svc, _, _, settings, _ := newTestAuthServiceWithEmail()
+	settings.setBool(model.SettingAuthEmailRegistrationEnabled, true)
+
+	err := svc.RequestRegistration(context.Background(), "invalid", "New User")
+	if err == nil {
+		t.Fatal("expected validation error for invalid email")
+	}
+}
+
+func TestVerifyEmailAndCreateUser_Success(t *testing.T) {
+	svc, userRepo, _, settings, _ := newTestAuthServiceWithEmail()
+	settings.setBool(model.SettingAuthEmailRegistrationEnabled, true)
+
+	// First request registration to create a token
+	sender := svc.emailSender.(*mockEmailSender)
+	err := svc.RequestRegistration(context.Background(), "verify@example.com", "Verify User")
+	if err != nil {
+		t.Fatalf("request registration failed: %v", err)
+	}
+
+	// Extract token from email body
+	body := sender.sent[0].body
+	idx := strings.Index(body, "verify-email?token=")
+	if idx == -1 {
+		t.Fatal("token not found in email")
+	}
+	tokenStart := idx + len("verify-email?token=")
+	// Find end of token (next quote or end of string)
+	tokenEnd := strings.IndexAny(body[tokenStart:], "\"' ")
+	rawToken := body[tokenStart : tokenStart+tokenEnd]
+
+	// Verify
+	jwt, user, err := svc.VerifyEmailAndCreateUser(context.Background(), rawToken, "SecurePass123!")
+	if err != nil {
+		t.Fatalf("verify failed: %v", err)
+	}
+	if jwt == "" {
+		t.Fatal("expected JWT token")
+	}
+	if user.Email != "verify@example.com" {
+		t.Fatalf("expected email verify@example.com, got %s", user.Email)
+	}
+	if user.DisplayName != "Verify User" {
+		t.Fatalf("expected display name 'Verify User', got %s", user.DisplayName)
+	}
+
+	// User should exist in repo
+	if _, err := userRepo.GetByEmail(context.Background(), "verify@example.com"); err != nil {
+		t.Fatalf("expected user in repo, got: %v", err)
+	}
+}
+
+func TestVerifyEmailAndCreateUser_InvalidToken(t *testing.T) {
+	svc, _, _, _, _ := newTestAuthServiceWithEmail()
+
+	_, _, err := svc.VerifyEmailAndCreateUser(context.Background(), "nonexistent-token", "password123")
+	if err == nil {
+		t.Fatal("expected error for invalid token")
+	}
+}
+
+func TestVerifyEmailAndCreateUser_WeakPassword(t *testing.T) {
+	svc, _, emailVerifRepo, settings, _ := newTestAuthServiceWithEmail()
+	settings.setBool(model.SettingAuthEmailRegistrationEnabled, true)
+
+	// Manually create a token
+	tokenHash := hashToken("test-token")
+	emailVerifRepo.tokens[tokenHash] = &model.EmailVerificationToken{
+		ID:          uuid.New(),
+		Email:       "weak@example.com",
+		DisplayName: "Weak Pass",
+		TokenHash:   tokenHash,
+		ExpiresAt:   time.Now().Add(time.Hour),
+	}
+
+	_, _, err := svc.VerifyEmailAndCreateUser(context.Background(), "test-token", "short")
+	if err == nil {
+		t.Fatal("expected error for weak password")
+	}
+	if !strings.Contains(err.Error(), "8 characters") {
+		t.Fatalf("expected password length error, got: %v", err)
+	}
+}
+
+func TestEnabledProviders_WithSettings(t *testing.T) {
+	ctx := context.Background()
+	svc, _, _, settings, _ := newTestAuthServiceWithEmail()
+
+	// Default: email_login true, email_registration false
+	providers := svc.EnabledProviders(ctx)
+	if !providers["email_login"] {
+		t.Fatal("email_login should default to true")
+	}
+	if providers["email_registration"] {
+		t.Fatal("email_registration should default to false")
+	}
+
+	// Enable registration
+	settings.setBool(model.SettingAuthEmailRegistrationEnabled, true)
+	providers = svc.EnabledProviders(ctx)
+	if !providers["email_registration"] {
+		t.Fatal("email_registration should be enabled")
+	}
+
+	// Disable email login
+	settings.setBool(model.SettingAuthEmailLoginEnabled, false)
+	providers = svc.EnabledProviders(ctx)
+	if providers["email_login"] {
+		t.Fatal("email_login should be disabled")
 	}
 }

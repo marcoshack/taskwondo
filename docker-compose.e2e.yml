@@ -39,6 +39,15 @@ services:
       "
     restart: "no"
 
+  mailpit:
+    image: axllent/mailpit:latest
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8025/api/v1/messages"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+    restart: "no"
+
   api:
     image: ghcr.io/marcoshack/taskwondo/api:e2e
     build:
@@ -62,6 +71,7 @@ services:
       ADMIN_PASSWORD: "E2eAdminPass123!"
       AUTH_RATE_LIMIT: "1000"
       AUTH_RATE_BURST: "100"
+      BASE_URL: "http://web:80"
       LOG_LEVEL: "info"
       LOG_FORMAT: "text"
     healthcheck:
@@ -93,10 +103,13 @@ services:
         condition: service_started
       api:
         condition: service_healthy
+      mailpit:
+        condition: service_healthy
     environment:
       BASE_URL: "http://web:80"
       ADMIN_EMAIL: "admin@e2e.test"
       ADMIN_PASSWORD: "E2eAdminPass123!"
+      MAILPIT_URL: "http://mailpit:8025"
     volumes:
       - ./e2e/test-results:/e2e/test-results
       - ./e2e/playwright-report:/e2e/playwright-report

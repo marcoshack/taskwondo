@@ -128,6 +128,7 @@ func main() {
 	typeWorkflowRepo := repository.NewProjectTypeWorkflowRepository(db)
 	inviteRepo := repository.NewProjectInviteRepository(db)
 	slaRepo := repository.NewSLARepository(db)
+	emailVerificationRepo := repository.NewEmailVerificationRepository(db)
 
 	// Initialize storage
 	store, err := storage.NewMinIOStorage(
@@ -213,6 +214,9 @@ func main() {
 	// Initialize email sender
 	emailSender := email.NewSender(encryptor, systemSettingRepo)
 
+	// Configure email verification on auth service
+	authService.SetEmailVerification(emailVerificationRepo, systemSettingRepo, emailSender, cfg.BaseURL)
+
 	// Initialize handlers
 	health := handler.NewHealthHandler(db)
 	auth := handler.NewAuthHandler(authService)
@@ -248,6 +252,8 @@ func main() {
 		// Public auth routes (rate-limited)
 		authLimiter := middleware.RateLimit(rate.Limit(cfg.AuthRateLimit)/60, cfg.AuthRateBurst)
 		r.With(authLimiter).Post("/auth/login", auth.Login)
+		r.With(authLimiter).Post("/auth/register", auth.Register)
+		r.With(authLimiter).Post("/auth/verify-email", auth.VerifyEmail)
 		r.Get("/auth/providers", auth.AuthProviders)
 		r.Get("/auth/{provider}", auth.OAuthAuth)
 		r.With(authLimiter).Post("/auth/{provider}/callback", auth.OAuthCallback)

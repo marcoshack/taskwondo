@@ -630,3 +630,167 @@ func TestCreateAPIKey_WithExpiration(t *testing.T) {
 		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
 	}
 }
+
+// --- Email registration handler tests ---
+
+type handlerMockEmailVerifRepo struct {
+	tokens map[string]*model.EmailVerificationToken
+}
+
+func newHandlerMockEmailVerifRepo() *handlerMockEmailVerifRepo {
+	return &handlerMockEmailVerifRepo{tokens: make(map[string]*model.EmailVerificationToken)}
+}
+
+func (m *handlerMockEmailVerifRepo) Create(_ context.Context, token *model.EmailVerificationToken) error {
+	m.tokens[token.TokenHash] = token
+	return nil
+}
+
+func (m *handlerMockEmailVerifRepo) GetByTokenHash(_ context.Context, tokenHash string) (*model.EmailVerificationToken, error) {
+	t, ok := m.tokens[tokenHash]
+	if !ok || t.ExpiresAt.Before(time.Now()) {
+		return nil, model.ErrNotFound
+	}
+	return t, nil
+}
+
+func (m *handlerMockEmailVerifRepo) DeleteByTokenHash(_ context.Context, tokenHash string) error {
+	delete(m.tokens, tokenHash)
+	return nil
+}
+
+func (m *handlerMockEmailVerifRepo) DeleteByEmail(_ context.Context, email string) error {
+	for k, t := range m.tokens {
+		if t.Email == email {
+			delete(m.tokens, k)
+		}
+	}
+	return nil
+}
+
+type handlerMockSettingsReader struct {
+	settings map[string]*model.SystemSetting
+}
+
+func newHandlerMockSettingsReader() *handlerMockSettingsReader {
+	return &handlerMockSettingsReader{settings: make(map[string]*model.SystemSetting)}
+}
+
+func (m *handlerMockSettingsReader) Get(_ context.Context, key string) (*model.SystemSetting, error) {
+	s, ok := m.settings[key]
+	if !ok {
+		return nil, model.ErrNotFound
+	}
+	return s, nil
+}
+
+func (m *handlerMockSettingsReader) setBool(key string, val bool) {
+	raw, _ := json.Marshal(val)
+	m.settings[key] = &model.SystemSetting{Key: key, Value: raw}
+}
+
+type handlerMockEmailSender struct {
+	sent []string
+}
+
+func (m *handlerMockEmailSender) Send(_ context.Context, to, subject, body string) error {
+	m.sent = append(m.sent, to)
+	return nil
+}
+
+func testSetupWithEmail(t *testing.T) (*AuthHandler, *service.AuthService, *handlerMockSettingsReader) {
+	t.Helper()
+
+	userRepo := newMockUserRepo()
+	apiKeyRepo := newMockAPIKeyRepo()
+	oauthRepo := newMockOAuthAccountRepo()
+	authSvc := service.NewAuthService(userRepo, apiKeyRepo, oauthRepo,
+		"test-secret-that-is-at-least-32!", 1*time.Hour, nil)
+
+	verifRepo := newHandlerMockEmailVerifRepo()
+	settings := newHandlerMockSettingsReader()
+	sender := &handlerMockEmailSender{}
+	authSvc.SetEmailVerification(verifRepo, settings, sender, "http://localhost:5173")
+
+	h := NewAuthHandler(authSvc)
+	return h, authSvc, settings
+}
+
+func TestRegisterHandler_Success(t *testing.T) {
+	h, _, settings := testSetupWithEmail(t)
+	settings.setBool(model.SettingAuthEmailRegistrationEnabled, true)
+
+	body := `{"email":"new@example.com","display_name":"New User"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	h.Register(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestRegisterHandler_Disabled(t *testing.T) {
+	h, _, _ := testSetupWithEmail(t)
+	// Registration disabled by default
+
+	body := `{"email":"new@example.com","display_name":"New User"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	h.Register(w, req)
+
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestRegisterHandler_MissingFields(t *testing.T) {
+	h, _, settings := testSetupWithEmail(t)
+	settings.setBool(model.SettingAuthEmailRegistrationEnabled, true)
+
+	body := `{"email":"new@example.com"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	h.Register(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestVerifyEmailHandler_MissingFields(t *testing.T) {
+	h, _, _ := testSetupWithEmail(t)
+
+	body := `{"token":"abc"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/verify-email", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	h.VerifyEmail(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestVerifyEmailHandler_InvalidToken(t *testing.T) {
+	h, _, _ := testSetupWithEmail(t)
+
+	body := `{"token":"nonexistent","password":"password123"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/verify-email", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	h.VerifyEmail(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d: %s", w.Code, w.Body.String())
+	}
+}
+

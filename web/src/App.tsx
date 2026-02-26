@@ -11,6 +11,8 @@ import { PreferencesPage } from '@/pages/PreferencesPage'
 import { SystemSettingsPage } from '@/pages/SystemSettingsPage'
 import { InviteAcceptPage } from '@/pages/InviteAcceptPage'
 import { CliAuthorizePage } from '@/pages/CliAuthorizePage'
+import { RegisterPage } from '@/pages/RegisterPage'
+import { VerifyEmailPage } from '@/pages/VerifyEmailPage'
 import UserPage from '@/pages/InboxPage'
 
 export default function App() {
@@ -21,6 +23,8 @@ export default function App() {
       <Route path="/change-password" element={<ChangePasswordPage />} />
       <Route path="/invite/:code" element={<InviteAcceptPage />} />
       <Route path="/auth/cli/authorize" element={<CliAuthorizePage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
       <Route element={<ProtectedRoute />}>
         <Route element={<AppShell />}>
           <Route path="/projects" element={<ProjectListPage />} />

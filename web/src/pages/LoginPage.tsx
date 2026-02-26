@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import type { FormEvent } from 'react'
-import { Navigate, useSearchParams } from 'react-router-dom'
+import { Navigate, useSearchParams, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/Button'
@@ -94,6 +94,9 @@ export function LoginPage() {
     ? Object.keys(OAUTH_PROVIDERS).filter((p) => providers[p])
     : []
 
+  const emailLoginEnabled = providers ? providers.email_login !== false : true
+  const emailRegistrationEnabled = providers?.email_registration === true
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 px-4">
       <div className="flex-1 flex items-center justify-center">
@@ -101,43 +104,64 @@ export function LoginPage() {
         <h1 className="text-2xl font-bold text-center text-gray-900 dark:text-gray-100 mb-8">
           {t('login.title', { brandName })}
         </h1>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            label={t('login.email')}
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            autoComplete="email"
-          />
-          <Input
-            label={t('login.password')}
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            autoComplete="current-password"
-          />
-          {error && (
-            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-          )}
-          <Button type="submit" disabled={loading} className="w-full">
-            {loading ? t('login.submitting') : t('login.submit')}
-          </Button>
-        </form>
+
+        {emailLoginEnabled && (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <Input
+              label={t('login.email')}
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoComplete="email"
+            />
+            <Input
+              label={t('login.password')}
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              autoComplete="current-password"
+            />
+            {error && (
+              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+            )}
+            <Button type="submit" disabled={loading} className="w-full">
+              {loading ? t('login.submitting') : t('login.submit')}
+            </Button>
+
+            {emailRegistrationEnabled && (
+              <p className="text-center text-sm text-gray-600 dark:text-gray-400">
+                {t('login.noAccount')}{' '}
+                <Link
+                  to="/register"
+                  className="text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
+                >
+                  {t('login.createAccount')}
+                </Link>
+              </p>
+            )}
+          </form>
+        )}
+
+        {!emailLoginEnabled && error && (
+          <p className="text-sm text-red-600 dark:text-red-400 mb-4">{error}</p>
+        )}
 
         {enabledProviders.length > 0 && (
           <>
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300 dark:border-gray-600" />
+            {emailLoginEnabled && (
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-300 dark:border-gray-600" />
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400">
+                    {t('login.or')}
+                  </span>
+                </div>
               </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400">
-                  {t('login.or')}
-                </span>
-              </div>
-            </div>
+            )}
 
             <div className="space-y-3">
               {enabledProviders.map((provider) => (

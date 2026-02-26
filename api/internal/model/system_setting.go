@@ -11,6 +11,12 @@ const (
 	SettingMaxProjectsPerUser   = "max_projects_per_user"
 	SettingDefaultTypeWorkflows = "default_type_workflows"
 	SettingSMTPConfig           = "smtp_config"
+
+	// Authentication settings
+	SettingAuthEmailLoginEnabled        = "auth_email_login_enabled"
+	SettingAuthEmailRegistrationEnabled = "auth_email_registration_enabled"
+	SettingAuthDiscordEnabled           = "auth_discord_enabled"
+	SettingAuthGoogleEnabled            = "auth_google_enabled"
 )
 
 // SMTPEncryption constants for the Encryption field of SMTPConfig.

@@ -1,5 +1,7 @@
 import { test as base, expect } from '../../lib/fixtures';
 import { getAdminToken } from '../../lib/fixtures';
+import * as api from '../../lib/api';
+import { randomUUID } from 'crypto';
 
 // Override storageState to inject admin token instead of the regular test user
 const test = base.extend({
@@ -21,6 +23,13 @@ const test = base.extend({
 });
 
 test.describe('Admin users page mobile', () => {
+  // Ensure a non-admin user exists for tests that expect a role combobox
+  test.beforeAll(async ({ request }) => {
+    const adminToken = getAdminToken();
+    const uniqueId = randomUUID().slice(0, 8);
+    await api.createUser(request, adminToken, `mobile-${uniqueId}@e2e.local`, `Mobile User ${uniqueId}`);
+  });
+
   test('users page header and controls are accessible on mobile', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/admin/users');

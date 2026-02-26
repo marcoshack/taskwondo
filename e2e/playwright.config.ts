@@ -27,9 +27,25 @@ export default defineConfig({
       testMatch: /auth\.setup\.ts/,
     },
     {
-      name: 'chromium',
+      // Admin tests mutate global state (SMTP, auth settings) — run them
+      // first so other tests that depend on that state don't race.
+      name: 'admin',
+      testMatch: /tests\/admin\//,
       use: { ...devices['Desktop Chrome'] },
       dependencies: ['setup'],
+    },
+    {
+      // After admin tests: configure SMTP (Mailpit) and enable auth providers
+      // so chromium tests can use email registration without touching settings.
+      name: 'chromium-setup',
+      testMatch: /chromium\.setup\.ts/,
+      dependencies: ['admin'],
+    },
+    {
+      name: 'chromium',
+      testIgnore: [/tests\/admin\//, /\.setup\.ts$/],
+      use: { ...devices['Desktop Chrome'] },
+      dependencies: ['setup', 'chromium-setup'],
     },
     {
       name: 'cleanup',
