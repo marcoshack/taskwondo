@@ -98,7 +98,7 @@ export function ProjectOverviewPage() {
   return (
     <div className="max-w-3xl space-y-6">
       {/* Mobile top bar with navigation icons */}
-      <nav className="flex sm:hidden overflow-hidden">
+      <nav className="flex sm:hidden overflow-x-auto">
         {navItems.map((item) => (
           <NavLink
             key={item.to}
@@ -111,15 +111,15 @@ export function ProjectOverviewPage() {
               }
             }}
             className={({ isActive }) =>
-              `flex flex-1 flex-col items-center gap-1 py-3 text-xs font-medium transition-colors ${
+              `flex flex-1 flex-col items-center gap-1 py-3 text-xs font-medium transition-colors shrink-0 min-w-[3.5rem] ${
                 isActive
                   ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
                   : 'text-gray-500 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-800'
               }`
             }
           >
-            <item.icon className="h-5 w-5" />
-            <span className="truncate max-w-full px-1">{item.label}</span>
+            <item.icon className="h-5 w-5 shrink-0" />
+            <span className="w-full text-center leading-tight px-0.5 break-words">{item.label}</span>
           </NavLink>
         ))}
       </nav>

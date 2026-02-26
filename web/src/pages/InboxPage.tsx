@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useRef } from 'react'
 import { Routes, Route, useNavigate } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
+import { Trans, useTranslation } from 'react-i18next'
 import { ChevronUp, ChevronDown, X, Search, BrushCleaning, Inbox, Check, Rss, Bookmark, Settings, User, History } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
@@ -42,6 +42,7 @@ interface InboxRowProps {
   isCompleted: boolean
   isFirst: boolean
   isLast: boolean
+  isActive: boolean
   onRemove: (id: string) => void
   onMoveUp: (item: InboxItem) => void
   onMoveDown: (item: InboxItem) => void
@@ -57,7 +58,7 @@ function getDescriptionPreview(description: string): string {
   return line.trim().replace(/^#+\s+/, '').replace(/[*_~`[\]]/g, '')
 }
 
-function InboxRow({ item, isCompleted, isFirst, isLast, onRemove, onMoveUp, onMoveDown, onClick, removedId, reorderedId, autoRemove }: InboxRowProps) {
+function InboxRow({ item, isCompleted, isFirst, isLast, isActive, onRemove, onMoveUp, onMoveDown, onClick, removedId, reorderedId, autoRemove }: InboxRowProps) {
   const { t } = useTranslation()
   const isRemoving = removedId === item.id
 
@@ -66,7 +67,7 @@ function InboxRow({ item, isCompleted, isFirst, isLast, onRemove, onMoveUp, onMo
       className={`group border-b border-gray-200 dark:border-gray-700
         ${reorderedId === item.id ? 'animate-[inbox-highlight_1s_ease-in-out]' : ''}
         ${isRemoving && autoRemove ? 'transition-all duration-300 opacity-0 -translate-y-2' : ''}
-        hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer`}
+        ${isActive ? 'bg-indigo-50 dark:bg-indigo-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-800'} cursor-pointer`}
       onClick={() => onClick(item)}
     >
       {/* Reorder arrows */}
@@ -148,6 +149,7 @@ interface InboxCardProps {
   isCompleted: boolean
   isFirst: boolean
   isLast: boolean
+  isActive: boolean
   onRemove: (id: string) => void
   onMoveUp: (item: InboxItem) => void
   onMoveDown: (item: InboxItem) => void
@@ -157,7 +159,7 @@ interface InboxCardProps {
   autoRemove: boolean
 }
 
-function InboxCard({ item, isCompleted, isFirst, isLast, onRemove, onMoveUp, onMoveDown, onClick, removedId, reorderedId, autoRemove }: InboxCardProps) {
+function InboxCard({ item, isCompleted, isFirst, isLast, isActive, onRemove, onMoveUp, onMoveDown, onClick, removedId, reorderedId, autoRemove }: InboxCardProps) {
   const { t } = useTranslation()
   const isRemoving = removedId === item.id
   const dimmed = isCompleted && !isRemoving
@@ -165,7 +167,8 @@ function InboxCard({ item, isCompleted, isFirst, isLast, onRemove, onMoveUp, onM
 
   return (
     <div
-      className={`flex items-center gap-2 p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors
+      className={`flex items-center gap-2 p-3 rounded-lg border bg-white dark:bg-gray-800 shadow-sm transition-colors
+        ${isActive ? 'border-indigo-400 dark:border-indigo-500 ring-1 ring-indigo-300 dark:ring-indigo-600' : 'border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600'}
         ${reorderedId === item.id ? 'animate-[inbox-highlight_1s_ease-in-out]' : ''}
         ${isRemoving && autoRemove ? 'transition-all duration-300 opacity-0 -translate-y-2' : ''}`}
     >
@@ -194,7 +197,7 @@ function InboxCard({ item, isCompleted, isFirst, isLast, onRemove, onMoveUp, onM
         onClick={() => onClick(item)}
       >
         {/* Line 1: Display ID + badges */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 overflow-x-auto">
           <span className={`font-mono text-sm font-semibold ${dimmed ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'}`}>{item.display_id}</span>
           <span className={`inline-flex ${dimmed ? 'opacity-40' : ''}`}><TypeBadge type={item.type} /></span>
           <InboxStatusBadge status={item.status} category={item.status_category} />
@@ -202,7 +205,7 @@ function InboxCard({ item, isCompleted, isFirst, isLast, onRemove, onMoveUp, onM
           {!dimmed && item.sla && <span className="ml-auto"><SLAIndicator sla={item.sla} compact /></span>}
         </div>
         {/* Line 2: Assignee, Updated, SLA (when no compact SLA above) */}
-        <div className={`flex items-center gap-3 mt-1.5 text-xs ${dimmed ? 'text-gray-300 dark:text-gray-600' : 'text-gray-400 dark:text-gray-500'}`}>
+        <div className={`flex items-center gap-3 mt-1.5 text-xs overflow-x-auto ${dimmed ? 'text-gray-300 dark:text-gray-600' : 'text-gray-400 dark:text-gray-500'}`}>
           <span className="inline-flex items-center gap-1">
             <User className="h-3 w-3" />
             <span className="truncate max-w-[8rem]">{assigneeName}</span>
@@ -245,10 +248,10 @@ function InboxListPage() {
   const searchRef = useRef<HTMLInputElement>(null)
   const debouncedSearch = useDebounce(searchInput, 300)
 
-  useKeyboardShortcut({ key: '/' }, () => searchRef.current?.focus())
-
   const { data: autoRemovePref } = usePreference<boolean>('inbox_auto_remove')
   const autoRemove = autoRemovePref ?? true
+  const { data: skipRemoveConfirmPref } = usePreference<boolean>('inbox_skip_remove_confirm')
+  const skipRemoveConfirm = skipRemoveConfirmPref ?? false
   const setPreferenceMutation = useSetPreference()
 
   const { data, isLoading } = useInboxItems({
@@ -291,14 +294,54 @@ function InboxListPage() {
 
   const [removedId, setRemovedId] = useState<string | null>(null)
   const [reorderedId, setReorderedId] = useState<string | null>(null)
+  const [activeRow, setActiveRow] = useState(-1)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [removeConfirmItem, setRemoveConfirmItem] = useState<InboxItem | null>(null)
+  const [dontShowAgainChecked, setDontShowAgainChecked] = useState(false)
+
+  // Debounced reorder for rapid j/k with selected item
+  const reorderTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const pendingReorderRef = useRef<{ inboxItemId: string; position: number } | null>(null)
+
+  const flushReorder = useCallback(() => {
+    clearTimeout(reorderTimerRef.current)
+    if (pendingReorderRef.current) {
+      const { inboxItemId, position } = pendingReorderRef.current
+      pendingReorderRef.current = null
+      reorderMutation.mutate({ inboxItemId, position }, {
+        onSuccess: () => {
+          setReorderedId(inboxItemId)
+          setTimeout(() => setReorderedId(null), 1000)
+        },
+      })
+    }
+  }, [reorderMutation])
+
+  const scheduleReorder = useCallback((inboxItemId: string, position: number) => {
+    pendingReorderRef.current = { inboxItemId, position }
+    clearTimeout(reorderTimerRef.current)
+    reorderTimerRef.current = setTimeout(flushReorder, 500)
+  }, [flushReorder])
 
   const handleRemove = useCallback((inboxItemId: string) => {
     setRemovedId(inboxItemId)
+    // If the removed item was selected, deselect
+    if (selectedId === inboxItemId) setSelectedId(null)
     setTimeout(() => {
       removeMutation.mutate(inboxItemId)
       setRemovedId(null)
     }, autoRemove ? 300 : 0)
-  }, [removeMutation, autoRemove])
+  }, [removeMutation, autoRemove, selectedId])
+
+  // Remove with confirmation (Shift+#)
+  const handleRemoveWithConfirm = useCallback((item: InboxItem) => {
+    if (skipRemoveConfirm) {
+      handleRemove(item.id)
+    } else {
+      setRemoveConfirmItem(item)
+      setDontShowAgainChecked(false)
+    }
+  }, [skipRemoveConfirm, handleRemove])
 
   const handleClick = useCallback((item: InboxItem) => {
     navigate(`/projects/${item.project_key}/items/${item.display_id.split('-')[1]}`, { state: { from: 'inbox' } })
@@ -328,6 +371,66 @@ function InboxListPage() {
       },
     })
   }, [allItems, reorderMutation])
+
+  // Keyboard navigation
+  useKeyboardShortcut({ key: '/' }, () => searchRef.current?.focus())
+  useKeyboardShortcut([{ key: 'ArrowDown' }, { key: 'j' }], () => {
+    if (selectedId && activeRow >= 0 && activeRow < allItems.length) {
+      // Selected item: move it down
+      const item = allItems[activeRow]
+      if (item.id === selectedId && activeRow < allItems.length - 1) {
+        const next = allItems[activeRow + 1]
+        scheduleReorder(item.id, next.position + 1)
+        setActiveRow(activeRow + 1)
+      }
+    } else {
+      setActiveRow((prev) => Math.min(prev + 1, allItems.length - 1))
+    }
+  }, allItems.length > 0)
+  useKeyboardShortcut([{ key: 'ArrowUp' }, { key: 'k' }], () => {
+    if (selectedId && activeRow >= 0 && activeRow < allItems.length) {
+      // Selected item: move it up
+      const item = allItems[activeRow]
+      if (item.id === selectedId && activeRow > 0) {
+        const prev = allItems[activeRow - 1]
+        scheduleReorder(item.id, prev.position - 1)
+        setActiveRow(activeRow - 1)
+      }
+    } else {
+      setActiveRow((prev) => Math.max(prev - 1, 0))
+    }
+  }, allItems.length > 0)
+  useKeyboardShortcut({ key: 'x' }, () => {
+    if (activeRow >= 0 && activeRow < allItems.length) {
+      const item = allItems[activeRow]
+      // Toggle selection — only one item at a time
+      if (selectedId === item.id) {
+        flushReorder()
+        setSelectedId(null)
+      } else {
+        flushReorder()
+        setSelectedId(item.id)
+      }
+    }
+  }, activeRow >= 0)
+  useKeyboardShortcut([{ key: 'Enter' }, { key: 'o' }], () => {
+    if (activeRow >= 0 && activeRow < allItems.length) {
+      handleClick(allItems[activeRow])
+    }
+  }, activeRow >= 0 && !selectedId)
+  useKeyboardShortcut({ key: '#' }, () => {
+    if (activeRow >= 0 && activeRow < allItems.length) {
+      handleRemoveWithConfirm(allItems[activeRow])
+    }
+  }, activeRow >= 0)
+  useKeyboardShortcut({ key: 'Escape' }, () => {
+    if (selectedId) {
+      flushReorder()
+      setSelectedId(null)
+    } else {
+      setActiveRow(-1)
+    }
+  }, activeRow >= 0 || !!selectedId)
 
   if (isLoading) {
     return (
@@ -402,9 +505,18 @@ function InboxListPage() {
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder={t('inbox.searchPlaceholder')}
-            className="pl-10"
+            className="pl-10 pr-8"
             onKeyDown={(e) => { if (e.key === 'Escape') searchRef.current?.blur() }}
           />
+          {searchInput && (
+            <button
+              onClick={() => { setSearchInput(''); searchRef.current?.focus() }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              aria-label={t('common.clear')}
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
         {/* Clear completed */}
         <Tooltip content={completedItems.length > 0 ? `${t('inbox.clearCompleted')} (${completedItems.length})` : t('inbox.noCompletedItems')}>
@@ -468,6 +580,7 @@ function InboxListPage() {
                     isCompleted={item.status_category === 'done' || item.status_category === 'cancelled'}
                     isFirst={index === 0}
                     isLast={index === allItems.length - 1}
+                    isActive={index === activeRow}
                     onRemove={handleRemove}
                     onMoveUp={handleMoveUp}
                     onMoveDown={handleMoveDown}
@@ -490,6 +603,7 @@ function InboxListPage() {
                 isCompleted={item.status_category === 'done' || item.status_category === 'cancelled'}
                 isFirst={index === 0}
                 isLast={index === allItems.length - 1}
+                isActive={index === activeRow}
                 onRemove={handleRemove}
                 onMoveUp={handleMoveUp}
                 onMoveDown={handleMoveDown}
@@ -523,6 +637,36 @@ function InboxListPage() {
           </Button>
         </div>
       )}
+
+      {/* Remove confirmation modal */}
+      <Modal open={!!removeConfirmItem} onClose={() => setRemoveConfirmItem(null)} title={t('inbox.removeConfirmTitle')}>
+        <form onSubmit={(e) => {
+          e.preventDefault()
+          if (removeConfirmItem) {
+            if (dontShowAgainChecked) {
+              setPreferenceMutation.mutate({ key: 'inbox_skip_remove_confirm', value: true })
+            }
+            handleRemove(removeConfirmItem.id)
+            setRemoveConfirmItem(null)
+          }
+        }}>
+          <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+            <Trans i18nKey="inbox.removeConfirmBody" values={{ displayId: removeConfirmItem?.display_id ?? '' }} components={{ bold: <strong /> }} />
+          </p>
+          <label className="flex items-center gap-2 mb-4 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={dontShowAgainChecked}
+              onChange={(e) => setDontShowAgainChecked(e.target.checked)}
+            />
+            <span className="text-sm text-gray-500 dark:text-gray-400">{t('inbox.dontShowAgain')}</span>
+          </label>
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="secondary" onClick={() => setRemoveConfirmItem(null)}>{t('common.cancel')}</Button>
+            <Button type="submit" variant="danger" autoFocus>{t('common.remove')}</Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   )
 }

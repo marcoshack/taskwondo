@@ -30,6 +30,8 @@ import { CopyButton } from '@/components/ui/CopyButton'
 import { SLAIndicator } from '@/components/SLAIndicator'
 import { useAuth } from '@/contexts/AuthContext'
 import { Settings2, User, Calendar, CalendarPlus, History, Lock, Unlock, Globe } from 'lucide-react'
+import { InboxButton } from '@/components/workitems/InboxButton'
+import { useInboxItems } from '@/hooks/useInbox'
 import { formatRelativeTime } from '@/utils/duration'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -54,6 +56,13 @@ export function WorkItemDetailPage() {
   const { user } = useAuth()
   const updateMutation = useUpdateWorkItem(projectKey ?? '')
   const deleteMutation = useDeleteWorkItem(projectKey ?? '')
+
+  // Inbox: find if this work item is in the user's inbox
+  const { data: inboxData } = useInboxItems()
+  const inboxItemId = useMemo(() => {
+    if (!item || !inboxData?.items) return undefined
+    return inboxData.items.find((i) => i.work_item_id === item.id)?.id
+  }, [item, inboxData])
 
   const currentUserRole = members?.find((m) => m.user_id === user?.id)?.role ?? (user?.global_role === 'admin' ? 'owner' : null)
   const canEdit = user?.global_role === 'admin' || (currentUserRole != null && currentUserRole !== 'viewer')
@@ -237,13 +246,16 @@ export function WorkItemDetailPage() {
         >
           &larr; {t(fromInbox ? 'workitems.backToInbox' : 'workitems.backToItems')}
         </button>
-        <button
-          onClick={() => setShowProperties(true)}
-          className="sm:hidden ml-auto p-1.5 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
-          aria-label={t('workitems.detail.properties')}
-        >
-          <Settings2 className="h-5 w-5" />
-        </button>
+        <span className="sm:hidden ml-auto flex items-center gap-1">
+          {item && <InboxButton workItemId={item.id} inboxItemId={inboxItemId} className="p-1.5" />}
+          <button
+            onClick={() => setShowProperties(true)}
+            className="p-1.5 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+            aria-label={t('workitems.detail.properties')}
+          >
+            <Settings2 className="h-5 w-5" />
+          </button>
+        </span>
       </div>
 
       <div className="flex gap-6">

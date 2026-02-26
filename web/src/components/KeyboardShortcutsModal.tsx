@@ -69,6 +69,16 @@ export function KeyboardShortcutsModal({ open, onClose }: { open: boolean; onClo
       ],
     },
     {
+      title: t('shortcuts.inbox'),
+      shortcuts: [
+        { keys: ['j / \u2193'], label: t('shortcuts.inbox.moveDown') },
+        { keys: ['k / \u2191'], label: t('shortcuts.inbox.moveUp') },
+        { keys: ['o / \u21B5'], label: t('shortcuts.inbox.open') },
+        { keys: ['x'], label: t('shortcuts.inbox.select') },
+        { keys: ['Shift', '#'], label: t('shortcuts.inbox.remove') },
+      ],
+    },
+    {
       title: t('shortcuts.editing'),
       shortcuts: [
         { keys: ['\u21B5'], label: t('shortcuts.editing.saveField') },
@@ -87,7 +97,7 @@ export function KeyboardShortcutsModal({ open, onClose }: { open: boolean; onClo
 
   return (
     <Modal open={open} onClose={onClose} title={t('shortcuts.title')} className="!max-w-3xl">
-      <div className="grid grid-cols-3 gap-x-8 gap-y-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-8 gap-y-4">
         {categories.map((cat) => (
           <div key={cat.title}>
             <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1">
