@@ -209,6 +209,24 @@ export async function deleteTimeEntry(
   if (!res.ok()) throw new Error(`Delete time entry failed (${res.status()}): ${await res.text()}`);
 }
 
+// --- Relations ---
+
+export async function createRelation(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  itemNumber: number,
+  data: { target_display_id: string; relation_type: string },
+): Promise<{ id: string }> {
+  const res = await request.post(`${BASE_URL}/api/v1/projects/${projectKey}/items/${itemNumber}/relations`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data,
+  });
+  if (!res.ok()) throw new Error(`Create relation failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
 // --- Inbox ---
 
 export async function addToInbox(
