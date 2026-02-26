@@ -123,6 +123,12 @@ function WorkItemSearchBar({ search, onSearchChange }: { search: string; onSearc
   )
 }
 
+function getDescriptionPreview(description: string): string {
+  const line = description.split('\n').find(l => l.trim() !== '')
+  if (!line) return ''
+  return line.trim().replace(/^#+\s+/, '').replace(/[*_~`[\]]/g, '')
+}
+
 export function WorkItemListPage() {
   const { t } = useTranslation()
   const { projectKey } = useParams<{ projectKey: string }>()
@@ -612,7 +618,14 @@ export function WorkItemListPage() {
       sortKey: 'title',
       render: (row) => (
         <div className="flex items-center gap-1 min-w-0">
-          <Tooltip content={row.title} className="relative block min-w-0 flex-1"><span className="font-medium text-gray-900 dark:text-gray-100 truncate block">{row.title}</span></Tooltip>
+          <Tooltip content={row.title} className="relative block min-w-0 flex-1">
+            <span className={`truncate block ${row.description ? 'text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'}`}>
+              <span className="font-medium text-gray-900 dark:text-gray-100">{row.title}</span>
+              {row.description && (
+                <span className="font-normal text-xs"> – {getDescriptionPreview(row.description)}</span>
+              )}
+            </span>
+          </Tooltip>
           <span className="shrink-0" onClick={(e) => e.stopPropagation()}>
             {inboxSavedId === row.id ? (
               <Check className="h-4 w-4 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />

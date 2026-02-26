@@ -51,6 +51,12 @@ interface InboxRowProps {
   autoRemove: boolean
 }
 
+function getDescriptionPreview(description: string): string {
+  const line = description.split('\n').find(l => l.trim() !== '')
+  if (!line) return ''
+  return line.trim().replace(/^#+\s+/, '').replace(/[*_~`[\]]/g, '')
+}
+
 function InboxRow({ item, isCompleted, isFirst, isLast, onRemove, onMoveUp, onMoveDown, onClick, removedId, reorderedId, autoRemove }: InboxRowProps) {
   const { t } = useTranslation()
   const isRemoving = removedId === item.id
@@ -93,10 +99,13 @@ function InboxRow({ item, isCompleted, isFirst, isLast, onRemove, onMoveUp, onMo
         <TypeBadge type={item.type} />
       </td>
       {/* Title */}
-      <td className="px-3 py-3 text-sm truncate">
-        <span className={isCompleted && !isRemoving ? 'line-through text-gray-400 dark:text-gray-500' : ''}>
+      <td className={`px-3 py-3 text-sm truncate ${item.description && !isCompleted ? 'text-gray-400 dark:text-gray-500' : ''}`}>
+        <span className={isCompleted && !isRemoving ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'}>
           {item.title}
         </span>
+        {item.description && !isCompleted && (
+          <span className="text-xs"> – {getDescriptionPreview(item.description)}</span>
+        )}
       </td>
       {/* Status — always shows color for visibility */}
       <td className="px-3 py-3 whitespace-nowrap">

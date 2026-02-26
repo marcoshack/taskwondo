@@ -43,7 +43,8 @@ export function KeyboardShortcutsModal({ open, onClose }: { open: boolean; onClo
       title: t('shortcuts.navigation'),
       shortcuts: [
         { keys: ['g', 'p'], label: t('shortcuts.navigation.switchProject') },
-        { keys: ['g', 'i'], label: t('shortcuts.navigation.goToItems') },
+        { keys: ['g', 'o'], label: t('shortcuts.navigation.goToItems') },
+        { keys: ['g', 'i'], label: t('shortcuts.navigation.goToInbox') },
         { keys: ['Ctrl', ','], label: t('shortcuts.navigation.preferences') },
         { keys: ['['], label: t('shortcuts.navigation.toggleSidebar') },
       ],
@@ -85,8 +86,8 @@ export function KeyboardShortcutsModal({ open, onClose }: { open: boolean; onClo
   ]
 
   return (
-    <Modal open={open} onClose={onClose} title={t('shortcuts.title')}>
-      <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+    <Modal open={open} onClose={onClose} title={t('shortcuts.title')} className="!max-w-3xl">
+      <div className="grid grid-cols-3 gap-x-8 gap-y-4">
         {categories.map((cat) => (
           <div key={cat.title}>
             <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1">

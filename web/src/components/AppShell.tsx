@@ -69,7 +69,7 @@ export function AppShell() {
     return () => document.removeEventListener('mousedown', handler)
   }, [menuOpen])
 
-  // Sequential combos: g-p (project switcher), g-i (go to items)
+  // Sequential combos: g-p (project switcher), g-i (inbox), g-o (project items)
   const { registerSequentialCombo } = useKeyboardShortcutContext()
   useEffect(() => {
     return registerSequentialCombo({
@@ -79,10 +79,17 @@ export function AppShell() {
     })
   }, [registerSequentialCombo])
   useEffect(() => {
+    return registerSequentialCombo({
+      id: 'go-to-inbox',
+      keys: ['g', 'i'],
+      callback: () => guardedNavigate('/inbox'),
+    })
+  }, [registerSequentialCombo])
+  useEffect(() => {
     if (!activeProjectKey) return
     return registerSequentialCombo({
       id: 'go-to-items',
-      keys: ['g', 'i'],
+      keys: ['g', 'o'],
       callback: () => guardedNavigate(`/projects/${activeProjectKey}/items`),
     })
   }, [activeProjectKey, navigate, registerSequentialCombo])

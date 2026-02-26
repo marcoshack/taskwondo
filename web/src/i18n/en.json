@@ -462,6 +462,7 @@
   "shortcuts.then": "then",
   "shortcuts.navigation": "Navigation",
   "shortcuts.navigation.switchProject": "Switch project",
+  "shortcuts.navigation.goToInbox": "Go to inbox",
   "shortcuts.navigation.goToItems": "Go to items",
   "shortcuts.navigation.preferences": "User preferences",
   "shortcuts.navigation.toggleSidebar": "Toggle sidebar",
