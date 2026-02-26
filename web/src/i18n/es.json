@@ -687,6 +687,12 @@
   "welcome.milestones.description": "Los hitos te permiten agrupar elementos de trabajo hacia un objetivo o fecha límite compartida. Rastrea el progreso con conteos de finalización y fechas de vencimiento para mantener a tu equipo al día con lanzamientos, sprints o campañas.",
   "welcome.workflows.title": "Flujos de Trabajo",
   "welcome.workflows.description": "Los flujos de trabajo definen el ciclo de vida de tus elementos de trabajo — qué estados están disponibles y cómo los elementos transicionan entre ellos. Usa los flujos integrados o crea flujos personalizados para adaptarte al proceso de tu equipo. También puedes configurar objetivos de SLA por tipo de elemento de trabajo para rastrear tiempos de respuesta y resolución.",
+  "welcome.inbox.title": "Bandeja de Entrada",
+  "welcome.inbox.description": "Tu bandeja de entrada es una vista unificada de los elementos de trabajo asignados a ti en todos los proyectos. Úsala como tu centro de operaciones para gestionar tu carga de trabajo, priorizar tareas y acceder directamente a lo que necesita tu atención — sin importar a qué proyecto pertenezca.",
+  "welcome.feed.title": "Feed",
+  "welcome.feed.description": "El feed muestra la actividad reciente en tus proyectos — cambios de estado, nuevos comentarios y actualizaciones de tu equipo. Mantente informado sobre lo que está pasando sin tener que revisar cada proyecto individualmente.",
+  "welcome.watchlist.title": "Lista de Seguimiento",
+  "welcome.watchlist.description": "Agrega elementos de trabajo a tu lista de seguimiento para monitorear su progreso sin estar directamente asignado. Recibe notificaciones de cambios en los elementos que te interesan, incluso en proyectos diferentes.",
 
   "projects.settings.invites": "Enlaces de Invitación",
   "projects.settings.invitesDescription": "Crea enlaces compartibles para invitar personas a este proyecto.",

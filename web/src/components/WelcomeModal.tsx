@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { FolderKanban, ClipboardList, Inbox, Target, Route, ChevronLeft, ChevronRight } from 'lucide-react'
+import { FolderKanban, ClipboardList, SquareStack, Target, Route, Inbox, Rss, Bookmark, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 
@@ -11,8 +11,8 @@ interface WelcomeModalProps {
   alreadyDismissed?: boolean
 }
 
-const SLIDE_ICONS = [FolderKanban, ClipboardList, Inbox, Target, Route]
-const SLIDE_KEYS = ['projects', 'workItems', 'queues', 'milestones', 'workflows'] as const
+const SLIDE_ICONS = [FolderKanban, ClipboardList, SquareStack, Target, Route, Inbox, Rss, Bookmark]
+const SLIDE_KEYS = ['projects', 'workItems', 'queues', 'milestones', 'workflows', 'inbox', 'feed', 'watchlist'] as const
 
 export function WelcomeModal({ open, onClose, onDismiss, alreadyDismissed }: WelcomeModalProps) {
   const { t } = useTranslation()
@@ -48,20 +48,27 @@ export function WelcomeModal({ open, onClose, onDismiss, alreadyDismissed }: Wel
   const slideKey = SLIDE_KEYS[current]
 
   return (
-    <Modal open={open} onClose={handleClose} title={t('welcome.title')}>
-      <div className="flex flex-col items-center text-center px-2">
-        <div className="w-16 h-16 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center mb-4">
+    <Modal open={open} onClose={handleClose} title={t('welcome.title')} className="!max-w-xl !overflow-hidden">
+      <div className="flex flex-col items-center text-center px-2 h-[420px]">
+        {/* Icon — fixed */}
+        <div className="w-16 h-16 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center mb-4 shrink-0">
           <Icon className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
         </div>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+
+        {/* Title — fixed */}
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2 shrink-0">
           {t(`welcome.${slideKey}.title`)}
         </h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed mb-6 min-h-[4.5rem]">
-          {t(`welcome.${slideKey}.description`)}
-        </p>
 
-        {/* Dot indicators */}
-        <div className="flex gap-2 mb-5">
+        {/* Description — scrollable */}
+        <div className="flex-1 min-h-0 w-full mb-4 overflow-y-auto overscroll-contain">
+          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed px-2">
+            {t(`welcome.${slideKey}.description`)}
+          </p>
+        </div>
+
+        {/* Dot indicators — fixed */}
+        <div className="flex gap-2 mb-5 shrink-0">
           {SLIDE_KEYS.map((_, i) => (
             <button
               key={i}
@@ -76,8 +83,8 @@ export function WelcomeModal({ open, onClose, onDismiss, alreadyDismissed }: Wel
           ))}
         </div>
 
-        {/* Navigation */}
-        <div className="flex items-center justify-between w-full">
+        {/* Navigation — fixed */}
+        <div className="flex items-center justify-between w-full shrink-0">
           <Button
             variant="secondary"
             size="sm"
@@ -103,7 +110,7 @@ export function WelcomeModal({ open, onClose, onDismiss, alreadyDismissed }: Wel
 
         {/* Don't show again — hidden when already dismissed */}
         {!alreadyDismissed && (
-          <label className="flex items-center gap-2 mt-4 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none">
+          <label className="flex items-center gap-2 mt-4 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none shrink-0">
             <input
               type="checkbox"
               checked={dontShow}

@@ -667,6 +667,12 @@
   "welcome.milestones.description": "Les jalons vous permettent de regrouper des éléments de travail vers un objectif ou une échéance commune. Suivez la progression avec des compteurs d'achèvement et des dates d'échéance pour maintenir votre équipe dans les temps pour les livraisons, sprints ou campagnes.",
   "welcome.workflows.title": "Flux de travail",
   "welcome.workflows.description": "Les flux de travail définissent le cycle de vie de vos éléments de travail — quels statuts sont disponibles et comment les éléments transitent entre eux. Utilisez les flux intégrés ou créez des flux personnalisés adaptés au processus de votre équipe. Vous pouvez également configurer des objectifs SLA par type d'élément de travail pour suivre les temps de réponse et de résolution.",
+  "welcome.inbox.title": "Boîte de réception",
+  "welcome.inbox.description": "Votre boîte de réception est une vue unifiée des éléments de travail qui vous sont assignés dans tous les projets. Utilisez-la comme votre hub central pour gérer votre charge de travail, prioriser les tâches et accéder directement à ce qui nécessite votre attention — quel que soit le projet.",
+  "welcome.feed.title": "Fil d'actualité",
+  "welcome.feed.description": "Le fil d'actualité affiche l'activité récente de vos projets — changements de statut, nouveaux commentaires et mises à jour de votre équipe. Restez informé de ce qui se passe sans avoir à vérifier chaque projet individuellement.",
+  "welcome.watchlist.title": "Liste de suivi",
+  "welcome.watchlist.description": "Ajoutez des éléments de travail à votre liste de suivi pour suivre leur progression sans y être directement assigné. Recevez des notifications sur les changements des éléments qui vous intéressent, même dans des projets différents.",
 
   "projects.settings.invites": "Liens d'invitation",
   "projects.settings.invitesDescription": "Créez des liens partageables pour inviter des personnes à ce projet.",

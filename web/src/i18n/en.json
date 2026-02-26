@@ -753,6 +753,12 @@
   "welcome.milestones.description": "Milestones let you group work items toward a shared goal or deadline. Track progress with completion counts and due dates to keep your team on schedule for releases, sprints, or campaigns.",
   "welcome.workflows.title": "Workflows",
   "welcome.workflows.description": "Workflows define the lifecycle of your work items — which statuses are available and how items transition between them. Use the built-in workflows or create custom ones to match your team's process. You can also configure SLA targets per work item type to track response and resolution times.",
+  "welcome.inbox.title": "Inbox",
+  "welcome.inbox.description": "Your inbox is a unified view of work items assigned to you across all projects. Use it as your central hub to manage your workload, prioritize tasks, and jump straight into what needs your attention — no matter which project it belongs to.",
+  "welcome.feed.title": "Feed",
+  "welcome.feed.description": "The feed shows recent activity across your projects — status changes, new comments, and updates from your team. Stay informed about what's happening without checking each project individually.",
+  "welcome.watchlist.title": "Watchlist",
+  "welcome.watchlist.description": "Add work items to your watchlist to track their progress without being directly assigned. Get notified of changes to items you care about, even across different projects.",
 
   "projects.settings.invites": "Invite Links",
   "projects.settings.invitesDescription": "Create shareable links to invite people to this project.",

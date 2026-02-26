@@ -715,6 +715,12 @@
   "welcome.milestones.description": "Meilensteine ermöglichen es Ihnen, Arbeitselemente auf ein gemeinsames Ziel oder eine Frist hin zu gruppieren. Verfolgen Sie den Fortschritt mit Abschlusszählern und Fälligkeitsdaten, um Ihr Team bei Releases, Sprints oder Kampagnen auf Kurs zu halten.",
   "welcome.workflows.title": "Workflows",
   "welcome.workflows.description": "Workflows definieren den Lebenszyklus Ihrer Arbeitselemente — welche Status verfügbar sind und wie Elemente zwischen ihnen wechseln. Verwenden Sie die integrierten Workflows oder erstellen Sie eigene, die zum Prozess Ihres Teams passen. Sie können auch SLA-Ziele pro Arbeitselementtyp konfigurieren, um Antwort- und Lösungszeiten zu verfolgen.",
+  "welcome.inbox.title": "Posteingang",
+  "welcome.inbox.description": "Ihr Posteingang ist eine einheitliche Ansicht der Ihnen zugewiesenen Arbeitselemente über alle Projekte hinweg. Nutzen Sie ihn als zentrale Anlaufstelle, um Ihre Arbeitslast zu verwalten, Aufgaben zu priorisieren und direkt das anzugehen, was Ihre Aufmerksamkeit erfordert — unabhängig vom Projekt.",
+  "welcome.feed.title": "Feed",
+  "welcome.feed.description": "Der Feed zeigt aktuelle Aktivitäten in Ihren Projekten — Statusänderungen, neue Kommentare und Updates von Ihrem Team. Bleiben Sie informiert, ohne jedes Projekt einzeln überprüfen zu müssen.",
+  "welcome.watchlist.title": "Beobachtungsliste",
+  "welcome.watchlist.description": "Fügen Sie Arbeitselemente zu Ihrer Beobachtungsliste hinzu, um deren Fortschritt zu verfolgen, ohne direkt zugewiesen zu sein. Erhalten Sie Benachrichtigungen über Änderungen an Elementen, die Sie interessieren, auch projektübergreifend.",
 
   "projects.settings.invites": "Einladungslinks",
   "projects.settings.invitesDescription": "Erstellen Sie teilbare Links, um Personen zu diesem Projekt einzuladen.",

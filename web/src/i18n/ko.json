@@ -687,6 +687,12 @@
   "welcome.milestones.description": "마일스톤을 사용하면 공동 목표나 마감일을 향해 작업 항목을 그룹화할 수 있습니다. 완료 횟수와 마감일로 진행 상황을 추적하여 릴리스, 스프린트 또는 캠페인 일정을 관리하세요.",
   "welcome.workflows.title": "워크플로",
   "welcome.workflows.description": "워크플로는 작업 항목의 수명 주기를 정의합니다 — 사용 가능한 상태와 항목 간의 전환 방법을 설정합니다. 기본 제공 워크플로를 사용하거나 팀 프로세스에 맞는 사용자 정의 워크플로를 만드세요. 작업 항목 유형별로 SLA 목표를 설정하여 응답 및 해결 시간을 추적할 수도 있습니다.",
+  "welcome.inbox.title": "받은편지함",
+  "welcome.inbox.description": "받은편지함은 모든 프로젝트에 걸쳐 자신에게 할당된 작업 항목의 통합 뷰입니다. 업무량을 관리하고, 작업의 우선순위를 정하고, 주의가 필요한 항목에 바로 접근하는 중앙 허브로 활용하세요 — 어떤 프로젝트에 속해 있든 상관없이.",
+  "welcome.feed.title": "피드",
+  "welcome.feed.description": "피드는 프로젝트 전반의 최근 활동을 보여줍니다 — 상태 변경, 새 댓글, 팀의 업데이트. 각 프로젝트를 개별적으로 확인하지 않고도 최신 정보를 파악할 수 있습니다.",
+  "welcome.watchlist.title": "관심 목록",
+  "welcome.watchlist.description": "관심 목록에 작업 항목을 추가하여 직접 담당하지 않아도 진행 상황을 추적하세요. 다른 프로젝트의 항목이라도 관심 있는 변경 사항에 대한 알림을 받을 수 있습니다.",
 
   "projects.settings.invites": "초대 링크",
   "projects.settings.invitesDescription": "이 프로젝트에 사람들을 초대할 수 있는 공유 링크를 만드세요.",

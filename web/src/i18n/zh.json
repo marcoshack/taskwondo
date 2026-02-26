@@ -715,6 +715,12 @@
   "welcome.milestones.description": "里程碑让您将工作项集中到共同的目标或截止日期。通过完成计数和截止日期跟踪进度，确保团队按时完成发布、冲刺或活动。",
   "welcome.workflows.title": "工作流",
   "welcome.workflows.description": "工作流定义了工作项的生命周期 — 可用的状态以及项目之间的转换方式。使用内置工作流或创建自定义工作流以匹配团队的流程。您还可以按工作项类型配置SLA目标，以跟踪响应和解决时间。",
+  "welcome.inbox.title": "收件箱",
+  "welcome.inbox.description": "收件箱是您在所有项目中被分配的工作项的统一视图。将它作为您的中心枢纽来管理工作量、排列任务优先级，并直接处理需要您关注的事项 — 无论它属于哪个项目。",
+  "welcome.feed.title": "动态",
+  "welcome.feed.description": "动态显示您项目中的最近活动 — 状态变更、新评论和团队更新。无需逐个检查每个项目即可了解最新情况。",
+  "welcome.watchlist.title": "关注列表",
+  "welcome.watchlist.description": "将工作项添加到关注列表，即使未直接负责也能追踪其进展。即使是不同项目中的事项，也能收到您关心的变更通知。",
 
   "projects.settings.invites": "邀请链接",
   "projects.settings.invitesDescription": "创建可分享的链接来邀请人员加入此项目。",

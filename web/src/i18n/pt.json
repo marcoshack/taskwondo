@@ -716,6 +716,12 @@
   "welcome.milestones.description": "Marcos permitem agrupar itens de trabalho em torno de um objetivo ou prazo compartilhado. Acompanhe o progresso com contagens de conclusão e datas de vencimento para manter sua equipe no ritmo de lançamentos, sprints ou campanhas.",
   "welcome.workflows.title": "Fluxos de Trabalho",
   "welcome.workflows.description": "Fluxos de trabalho definem o ciclo de vida dos seus itens de trabalho — quais status estão disponíveis e como os itens transitam entre eles. Use os fluxos integrados ou crie fluxos personalizados para se adequar ao processo da sua equipe. Você também pode configurar metas de SLA por tipo de item de trabalho para acompanhar tempos de resposta e resolução.",
+  "welcome.inbox.title": "Caixa de Entrada",
+  "welcome.inbox.description": "Sua caixa de entrada é uma visão unificada dos itens de trabalho atribuídos a você em todos os projetos. Use-a como seu hub central para gerenciar sua carga de trabalho, priorizar tarefas e ir direto ao que precisa da sua atenção — independentemente do projeto.",
+  "welcome.feed.title": "Feed",
+  "welcome.feed.description": "O feed mostra a atividade recente nos seus projetos — mudanças de status, novos comentários e atualizações da sua equipe. Mantenha-se informado sobre o que está acontecendo sem precisar verificar cada projeto individualmente.",
+  "welcome.watchlist.title": "Lista de Acompanhamento",
+  "welcome.watchlist.description": "Adicione itens de trabalho à sua lista de acompanhamento para monitorar o progresso sem ser diretamente responsável. Receba notificações de alterações em itens que você se interessa, mesmo em projetos diferentes.",
 
   "projects.settings.invites": "Links de Convite",
   "projects.settings.invitesDescription": "Crie links compartilháveis para convidar pessoas para este projeto.",
