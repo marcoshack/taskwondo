@@ -103,6 +103,7 @@ func updateWorkItemTool() mcp.Tool {
 		mcp.WithString("assignee", mcp.Description("Assignee user ID, or 'none' to unassign")),
 		mcp.WithArray("labels", mcp.WithStringItems(), mcp.Description("New labels (replaces existing)")),
 		mcp.WithString("due_date", mcp.Description("Due date YYYY-MM-DD, or 'none' to clear")),
+		mcp.WithString("milestone_id", mcp.Description("Milestone UUID, or 'none' to clear")),
 	)
 }
 
@@ -286,7 +287,7 @@ func handleGetWorkItem(_ context.Context, request mcp.CallToolRequest) (*mcp.Cal
 		return mcp.NewToolResultError(fmt.Sprintf("Failed to get work item: %v", err)), nil
 	}
 
-	return mcp.NewToolResultText(formatWorkItem(item)), nil
+	return mcp.NewToolResultText(formatWorkItemWithClient(item, client)), nil
 }
 
 func handleListWorkItems(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -368,7 +369,7 @@ func handleCreateWorkItem(_ context.Context, request mcp.CallToolRequest) (*mcp.
 	}
 
 	return mcp.NewToolResultText(fmt.Sprintf("Created work item %s: %s\n\n%s",
-		item.DisplayID, item.Title, formatWorkItem(item))), nil
+		item.DisplayID, item.Title, formatWorkItemWithClient(item, client))), nil
 }
 
 func handleUpdateWorkItem(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -424,6 +425,13 @@ func handleUpdateWorkItem(_ context.Context, request mcp.CallToolRequest) (*mcp.
 			updates["due_date"] = v
 		}
 	}
+	if v := request.GetString("milestone_id", ""); v != "" {
+		if v == "none" {
+			updates["milestone_id"] = nil
+		} else {
+			updates["milestone_id"] = v
+		}
+	}
 
 	if len(updates) == 0 {
 		return mcp.NewToolResultError("No fields to update. Provide at least one field to change."), nil
@@ -434,7 +442,7 @@ func handleUpdateWorkItem(_ context.Context, request mcp.CallToolRequest) (*mcp.
 		return mcp.NewToolResultError(fmt.Sprintf("Failed to update work item: %v", err)), nil
 	}
 
-	return mcp.NewToolResultText(fmt.Sprintf("Updated %s\n\n%s", item.DisplayID, formatWorkItem(item))), nil
+	return mcp.NewToolResultText(fmt.Sprintf("Updated %s\n\n%s", item.DisplayID, formatWorkItemWithClient(item, client))), nil
 }
 
 func handleAddComment(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -2076,7 +2084,36 @@ func formatQueue(q *Queue) string {
 	return sb.String()
 }
 
-func formatWorkItem(item *WorkItem) string {
+// milestoneNameCache caches milestone ID → name mappings per project to avoid repeated API calls.
+var milestoneNameCache = map[string]map[string]string{} // projectKey → milestoneID → name
+
+// resolveMilestoneName returns the milestone name for a given ID, using the cache when possible.
+func resolveMilestoneName(client *Client, projectKey, milestoneID string) string {
+	if cache, ok := milestoneNameCache[projectKey]; ok {
+		if name, ok := cache[milestoneID]; ok {
+			return name
+		}
+	}
+
+	// Fetch all milestones for the project and cache them
+	milestones, err := client.ListMilestones(projectKey)
+	if err != nil {
+		return milestoneID // fallback to ID
+	}
+
+	cache := make(map[string]string, len(milestones))
+	for _, m := range milestones {
+		cache[m.ID] = m.Name
+	}
+	milestoneNameCache[projectKey] = cache
+
+	if name, ok := cache[milestoneID]; ok {
+		return name
+	}
+	return milestoneID
+}
+
+func formatWorkItemWithClient(item *WorkItem, client *Client) string {
 	var sb strings.Builder
 	fmt.Fprintf(&sb, "## %s: %s\n\n", item.DisplayID, item.Title)
 	fmt.Fprintf(&sb, "- **Type**: %s\n", item.Type)
@@ -2086,6 +2123,13 @@ func formatWorkItem(item *WorkItem) string {
 		fmt.Fprintf(&sb, "- **Assignee**: %s\n", *item.AssigneeID)
 	} else {
 		sb.WriteString("- **Assignee**: unassigned\n")
+	}
+	if item.MilestoneID != nil {
+		name := *item.MilestoneID
+		if client != nil {
+			name = resolveMilestoneName(client, item.ProjectKey, *item.MilestoneID)
+		}
+		fmt.Fprintf(&sb, "- **Milestone**: %s\n", name)
 	}
 	if len(item.Labels) > 0 {
 		fmt.Fprintf(&sb, "- **Labels**: %s\n", strings.Join(item.Labels, ", "))
