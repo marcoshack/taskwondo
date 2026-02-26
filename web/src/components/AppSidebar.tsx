@@ -22,6 +22,8 @@ import type { LucideIcon } from 'lucide-react'
 
 interface AppSidebarProps {
   projectKey?: string
+  /** Render only the mobile overlay (used in AppShell for global availability) */
+  mobileOnly?: boolean
 }
 
 interface NavItem {
@@ -34,7 +36,7 @@ interface NavItem {
 
 const LAST_PROJECT_KEY = 'taskwondo_last_project_key'
 
-export function AppSidebar({ projectKey }: AppSidebarProps) {
+export function AppSidebar({ projectKey, mobileOnly }: AppSidebarProps) {
   const { t } = useTranslation()
   const { collapsed, toggleCollapsed, mobileOpen, closeMobile } = useSidebar('app')
   const { guardRef, guardedNavigate } = useNavigationGuard()
@@ -249,6 +251,21 @@ export function AppSidebar({ projectKey }: AppSidebarProps) {
     )
   }
 
+  if (mobileOnly) {
+    // Render only the mobile dropdown overlay (used in AppShell for global availability)
+    if (!mobileOpen) return null
+    return (
+      <div className="fixed inset-0 z-40 sm:hidden" onClick={closeMobile}>
+        <nav
+          className="absolute right-4 top-14 w-52 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-2"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {renderContent(true)}
+        </nav>
+      </div>
+    )
+  }
+
   return (
     <>
       {/* Desktop sidebar */}
@@ -287,18 +304,6 @@ export function AppSidebar({ projectKey }: AppSidebarProps) {
           </button>
         </div>
       </nav>
-
-      {/* Mobile dropdown menu */}
-      {mobileOpen && (
-        <div className="fixed inset-0 z-40 sm:hidden" onClick={closeMobile}>
-          <nav
-            className="absolute right-4 top-14 w-52 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-2"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {renderContent(true)}
-          </nav>
-        </div>
-      )}
     </>
   )
 }

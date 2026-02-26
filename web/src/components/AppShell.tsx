@@ -19,6 +19,7 @@ import { usePreference, useSetPreference } from '@/hooks/usePreferences'
 import { useBrand } from '@/contexts/BrandContext'
 import { useInboxCount } from '@/hooks/useInbox'
 import { PoweredByFooter } from '@/components/PoweredByFooter'
+import { AppSidebar } from '@/components/AppSidebar'
 
 export function AppShell() {
   const { t } = useTranslation()
@@ -49,8 +50,6 @@ export function AppShell() {
 
   const { data: inboxCount } = useInboxCount()
   const projectMatch = useMatch('/projects/:projectKey/*')
-  const projectListMatch = useMatch('/projects')
-  const userMatch = useMatch('/user/*')
   const adminMatch = useMatch('/admin/*')
   const preferencesMatch = useMatch('/preferences/*')
   const routeProjectKey = projectMatch?.params.projectKey
@@ -155,15 +154,13 @@ export function AppShell() {
                   </span>
                 )}
               </button>
-              {(activeProjectKey || projectListMatch || userMatch) && (
-                <button
-                  onClick={toggleMobileOpen}
-                  className="sm:hidden p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
-                  aria-label={t('sidebar.menu')}
-                >
-                  <Menu className="h-5 w-5" />
-                </button>
-              )}
+              <button
+                onClick={toggleMobileOpen}
+                className="sm:hidden p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+                aria-label={t('sidebar.menu')}
+              >
+                <Menu className="h-5 w-5" />
+              </button>
               <div className="hidden sm:block w-px h-5 bg-gray-200 dark:bg-gray-700 mx-1" />
               <button
                 onClick={() => setMenuOpen(!menuOpen)}
@@ -214,6 +211,7 @@ export function AppShell() {
           </div>
         </div>
       </nav>
+      <AppSidebar mobileOnly />
       <main className="flex-1">
         <Outlet />
       </main>
