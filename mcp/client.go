@@ -623,20 +623,16 @@ func (c *Client) ListTimeEntries(projectKey string, itemNumber int) (*TimeEntryL
 	if err != nil {
 		return nil, err
 	}
-	// The list endpoint returns {data: [...], meta: {total_logged_seconds: N}}
-	var raw struct {
-		Data []TimeEntry `json:"data"`
-		Meta struct {
-			TotalLoggedSeconds int `json:"total_logged_seconds"`
-		} `json:"meta"`
+	// The API returns {data: {entries: [...], total_logged_seconds: N}}
+	var resp apiResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
 	}
-	if err := json.Unmarshal(data, &raw); err != nil {
+	var list TimeEntryList
+	if err := json.Unmarshal(resp.Data, &list); err != nil {
 		return nil, fmt.Errorf("decode time entries: %w", err)
 	}
-	return &TimeEntryList{
-		Entries:            raw.Data,
-		TotalLoggedSeconds: raw.Meta.TotalLoggedSeconds,
-	}, nil
+	return &list, nil
 }
 
 func (c *Client) UpdateTimeEntry(projectKey string, itemNumber int, entryID string, updates map[string]interface{}) (*TimeEntry, error) {
