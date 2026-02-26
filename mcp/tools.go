@@ -1803,6 +1803,193 @@ func handleDeleteQueue(_ context.Context, request mcp.CallToolRequest) (*mcp.Cal
 	return mcp.NewToolResultText(fmt.Sprintf("Deleted queue %s from project %s", queueID, project)), nil
 }
 
+// --- Inbox tool definitions ---
+
+func listInboxTool() mcp.Tool {
+	return mcp.NewTool("list_inbox",
+		mcp.WithDescription("List work items in the user's inbox. Returns items ordered by position with work item details including status, priority, and project info."),
+		mcp.WithString("search", mcp.Description("Full-text search query")),
+		mcp.WithString("include_completed", mcp.Description("Include completed items (default: false)")),
+		mcp.WithNumber("limit", mcp.Description("Max results to return (default 50)")),
+	)
+}
+
+func addToInboxTool() mcp.Tool {
+	return mcp.NewTool("add_to_inbox",
+		mcp.WithDescription("Add a work item to the user's inbox by its display ID (e.g. TF-141). Max 100 items per inbox."),
+		mcp.WithString("display_id", mcp.Required(), mcp.Description("Work item display ID, e.g. TF-141")),
+	)
+}
+
+func removeFromInboxTool() mcp.Tool {
+	return mcp.NewTool("remove_from_inbox",
+		mcp.WithDescription("Remove an item from the user's inbox"),
+		mcp.WithString("inbox_item_id", mcp.Required(), mcp.Description("Inbox item UUID (from list_inbox)")),
+	)
+}
+
+func reorderInboxTool() mcp.Tool {
+	return mcp.NewTool("reorder_inbox",
+		mcp.WithDescription("Change the position of an inbox item"),
+		mcp.WithString("inbox_item_id", mcp.Required(), mcp.Description("Inbox item UUID (from list_inbox)")),
+		mcp.WithNumber("position", mcp.Required(), mcp.Description("New position (0-based index)")),
+	)
+}
+
+func inboxCountTool() mcp.Tool {
+	return mcp.NewTool("inbox_count",
+		mcp.WithDescription("Get the count of non-completed items in the user's inbox"),
+	)
+}
+
+func clearCompletedInboxTool() mcp.Tool {
+	return mcp.NewTool("clear_completed_inbox",
+		mcp.WithDescription("Remove all completed work items from the user's inbox. Returns the number of items removed."),
+	)
+}
+
+// --- Inbox handlers ---
+
+func handleListInbox(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := getClient()
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	params := ListInboxParams{
+		Search:           request.GetString("search", ""),
+		IncludeCompleted: request.GetString("include_completed", "") == "true",
+		Limit:            request.GetInt("limit", 0),
+	}
+
+	list, err := client.ListInbox(params)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to list inbox: %v", err)), nil
+	}
+
+	if len(list.Items) == 0 {
+		return mcp.NewToolResultText("Inbox is empty."), nil
+	}
+
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "# Inbox (%d items)\n\n", list.Total)
+	for _, item := range list.Items {
+		fmt.Fprintf(&sb, "- **%s** %s [%s/%s] (%s) — %s/%s",
+			item.DisplayID, item.Title, item.Status, item.Priority, item.Type,
+			item.ProjectKey, item.ProjectName)
+		if item.AssigneeDisplayName != "" {
+			fmt.Fprintf(&sb, " → %s", item.AssigneeDisplayName)
+		}
+		if item.DueDate != nil {
+			fmt.Fprintf(&sb, " due:%s", *item.DueDate)
+		}
+		fmt.Fprintf(&sb, " (inbox_item_id: %s)\n", item.ID)
+	}
+	if list.HasMore {
+		sb.WriteString("\n_More items available._\n")
+	}
+
+	return mcp.NewToolResultText(sb.String()), nil
+}
+
+func handleAddToInbox(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := getClient()
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	displayID, err := request.RequireString("display_id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	// Look up the work item to get its UUID
+	projectKey, itemNumber, err := parseDisplayID(displayID)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	item, err := client.GetWorkItem(projectKey, itemNumber)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to find work item %s: %v", displayID, err)), nil
+	}
+
+	if err := client.AddToInbox(item.ID); err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to add to inbox: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText(fmt.Sprintf("Added %s (%s) to inbox.", displayID, item.Title)), nil
+}
+
+func handleRemoveFromInbox(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := getClient()
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	inboxItemID, err := request.RequireString("inbox_item_id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	if err := client.RemoveFromInbox(inboxItemID); err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to remove from inbox: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText("Removed item from inbox."), nil
+}
+
+func handleReorderInbox(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := getClient()
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	inboxItemID, err := request.RequireString("inbox_item_id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	position := request.GetInt("position", 0)
+
+	if err := client.ReorderInboxItem(inboxItemID, position); err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to reorder inbox item: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText(fmt.Sprintf("Moved inbox item to position %d.", position)), nil
+}
+
+func handleInboxCount(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := getClient()
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	count, err := client.InboxCount()
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to get inbox count: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText(fmt.Sprintf("Inbox has %d non-completed items.", count)), nil
+}
+
+func handleClearCompletedInbox(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := getClient()
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	removed, err := client.ClearCompletedInbox()
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to clear completed inbox items: %v", err)), nil
+	}
+
+	if removed == 0 {
+		return mcp.NewToolResultText("No completed items to clear."), nil
+	}
+	return mcp.NewToolResultText(fmt.Sprintf("Removed %d completed items from inbox.", removed)), nil
+}
+
 // --- Formatting helpers ---
 
 func formatDuration(seconds int) string {

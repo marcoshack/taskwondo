@@ -1043,6 +1043,126 @@ func (c *Client) SearchUsers(query string) ([]User, error) {
 	return users, nil
 }
 
+// --- Inbox methods ---
+
+type InboxItem struct {
+	ID                  string  `json:"id"`
+	WorkItemID          string  `json:"work_item_id"`
+	Position            int     `json:"position"`
+	DisplayID           string  `json:"display_id"`
+	Title               string  `json:"title"`
+	Type                string  `json:"type"`
+	Status              string  `json:"status"`
+	StatusCategory      string  `json:"status_category"`
+	Priority            string  `json:"priority"`
+	ProjectKey          string  `json:"project_key"`
+	ProjectName         string  `json:"project_name"`
+	AssigneeID          *string `json:"assignee_id,omitempty"`
+	AssigneeDisplayName string  `json:"assignee_display_name,omitempty"`
+	Description         string  `json:"description,omitempty"`
+	DueDate             *string `json:"due_date,omitempty"`
+	CreatedAt           string  `json:"created_at"`
+	UpdatedAt           string  `json:"updated_at"`
+}
+
+type InboxList struct {
+	Items   []InboxItem `json:"items"`
+	Cursor  string      `json:"cursor"`
+	HasMore bool        `json:"has_more"`
+	Total   int         `json:"total"`
+}
+
+type ListInboxParams struct {
+	Search           string
+	IncludeCompleted bool
+	Limit            int
+}
+
+func (c *Client) ListInbox(params ListInboxParams) (*InboxList, error) {
+	q := url.Values{}
+	if params.Search != "" {
+		q.Set("search", params.Search)
+	}
+	if params.IncludeCompleted {
+		q.Set("include_completed", "true")
+	}
+	if params.Limit > 0 {
+		q.Set("limit", fmt.Sprintf("%d", params.Limit))
+	}
+
+	path := "/api/v1/user/inbox"
+	if len(q) > 0 {
+		path += "?" + q.Encode()
+	}
+
+	data, err := c.doRequest("GET", path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var resp apiResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+	var list InboxList
+	if err := json.Unmarshal(resp.Data, &list); err != nil {
+		return nil, fmt.Errorf("decode inbox: %w", err)
+	}
+	return &list, nil
+}
+
+func (c *Client) AddToInbox(workItemID string) error {
+	_, err := c.doRequest("POST", "/api/v1/user/inbox", map[string]string{"work_item_id": workItemID})
+	return err
+}
+
+func (c *Client) RemoveFromInbox(inboxItemID string) error {
+	path := fmt.Sprintf("/api/v1/user/inbox/%s", url.PathEscape(inboxItemID))
+	_, err := c.doRequest("DELETE", path, nil)
+	return err
+}
+
+func (c *Client) ReorderInboxItem(inboxItemID string, position int) error {
+	path := fmt.Sprintf("/api/v1/user/inbox/%s", url.PathEscape(inboxItemID))
+	_, err := c.doRequest("PATCH", path, map[string]int{"position": position})
+	return err
+}
+
+func (c *Client) InboxCount() (int, error) {
+	data, err := c.doRequest("GET", "/api/v1/user/inbox/count", nil)
+	if err != nil {
+		return 0, err
+	}
+	var resp apiResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return 0, fmt.Errorf("decode response: %w", err)
+	}
+	var result struct {
+		Count int `json:"count"`
+	}
+	if err := json.Unmarshal(resp.Data, &result); err != nil {
+		return 0, fmt.Errorf("decode count: %w", err)
+	}
+	return result.Count, nil
+}
+
+func (c *Client) ClearCompletedInbox() (int, error) {
+	data, err := c.doRequest("DELETE", "/api/v1/user/inbox/completed", nil)
+	if err != nil {
+		return 0, err
+	}
+	var resp apiResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return 0, fmt.Errorf("decode response: %w", err)
+	}
+	var result struct {
+		Removed int `json:"removed"`
+	}
+	if err := json.Unmarshal(resp.Data, &result); err != nil {
+		return 0, fmt.Errorf("decode result: %w", err)
+	}
+	return result.Removed, nil
+}
+
 func (c *Client) ListProjectStatuses(projectKey string) ([]WorkflowStatus, error) {
 	path := fmt.Sprintf("/api/v1/projects/%s/workflows/statuses", url.PathEscape(projectKey))
 	data, err := c.doRequest("GET", path, nil)

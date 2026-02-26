@@ -84,6 +84,14 @@ func main() {
 	s.AddTool(updateQueueTool(), handleUpdateQueue)
 	s.AddTool(deleteQueueTool(), handleDeleteQueue)
 
+	// Inbox tools
+	s.AddTool(listInboxTool(), handleListInbox)
+	s.AddTool(addToInboxTool(), handleAddToInbox)
+	s.AddTool(removeFromInboxTool(), handleRemoveFromInbox)
+	s.AddTool(reorderInboxTool(), handleReorderInbox)
+	s.AddTool(inboxCountTool(), handleInboxCount)
+	s.AddTool(clearCompletedInboxTool(), handleClearCompletedInbox)
+
 	if err := server.ServeStdio(s); err != nil {
 		fmt.Fprintf(os.Stderr, "Server error: %v\n", err)
 		os.Exit(1)
