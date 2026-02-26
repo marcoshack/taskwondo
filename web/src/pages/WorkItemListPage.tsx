@@ -879,7 +879,7 @@ export function WorkItemListPage() {
                       )}
                     </div>
                     {showDates && (
-                      <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-400 dark:text-gray-500">
+                      <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-400 dark:text-gray-500 overflow-x-auto">
                         <span className="inline-flex items-center gap-1">
                           <User className="h-3 w-3" />
                           <span className="truncate max-w-[8rem]">{assigneeName}</span>
