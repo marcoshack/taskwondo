@@ -5,10 +5,11 @@ import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { UserPicker } from '@/components/ui/UserPicker'
+import { ProjectPicker } from '@/components/ui/ProjectPicker'
 import { MentionModal } from '@/components/ui/MentionModal'
 import { useMentionAutocomplete } from '@/hooks/useMentionAutocomplete'
 import type { WorkflowStatus } from '@/api/workflows'
-import type { ProjectMember } from '@/api/projects'
+import type { ProjectMember, Project } from '@/api/projects'
 import type { Milestone } from '@/api/milestones'
 
 const TYPES = ['task', 'ticket', 'bug', 'feedback', 'epic']
@@ -21,6 +22,9 @@ interface WorkItemFormProps {
   members: ProjectMember[]
   milestones?: Milestone[]
   allowedComplexityValues?: number[]
+  projects?: Project[]
+  projectLocked?: boolean
+  onProjectChange?: (projectKey: string) => void
   initialValues?: {
     type?: string
     title?: string
@@ -48,6 +52,9 @@ export function WorkItemForm({
   members,
   milestones = [],
   allowedComplexityValues = [],
+  projects,
+  projectLocked,
+  onProjectChange,
   initialValues = {},
   statuses,
   allowedTransitions,
@@ -58,9 +65,13 @@ export function WorkItemForm({
 }: WorkItemFormProps) {
   const { t } = useTranslation()
   const [type, setType] = useState(initialValues.type ?? '')
+  const projectSelected = !!projectKey
   const typeSelected = mode === 'edit' || type !== ''
+  const disabledUntilProject = mode === 'create' && !!projects && !projectSelected
   const disabledUntilType = mode === 'create' && !typeSelected
-  const disabledTooltip = disabledUntilType ? t('workitems.form.typeRequiredTooltip') : undefined
+  const disabledTooltip = disabledUntilProject
+    ? t('workitems.form.projectRequiredTooltip')
+    : disabledUntilType ? t('workitems.form.typeRequiredTooltip') : undefined
   const [title, setTitle] = useState(initialValues.title ?? '')
   const [description, setDescription] = useState(initialValues.description ?? '')
   const [priority, setPriority] = useState(initialValues.priority ?? 'medium')
@@ -135,13 +146,23 @@ export function WorkItemForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {mode === 'create' && projects && (
+        <ProjectPicker
+          projects={projects}
+          value={projectKey}
+          onChange={(key) => onProjectChange?.(key)}
+          disabled={projectLocked}
+        />
+      )}
       {mode === 'create' && (
-        <Select label={t('workitems.form.type')} value={type} onChange={(e) => setType(e.target.value)} required>
-          {!typeSelected && <option value="">{t('workitems.form.typePlaceholder')}</option>}
-          {TYPES.map((tp) => (
-            <option key={tp} value={tp}>{t(`workitems.types.${tp}`)}</option>
-          ))}
-        </Select>
+        <Tooltip content={disabledUntilProject ? t('workitems.form.projectRequiredTooltip') : undefined} className="relative block">
+          <Select label={t('workitems.form.type')} value={type} onChange={(e) => setType(e.target.value)} required disabled={disabledUntilProject}>
+            {!typeSelected && <option value="">{t('workitems.form.typePlaceholder')}</option>}
+            {TYPES.map((tp) => (
+              <option key={tp} value={tp}>{t(`workitems.types.${tp}`)}</option>
+            ))}
+          </Select>
+        </Tooltip>
       )}
       <Tooltip content={disabledTooltip} className="relative block">
         <Input label={t('workitems.form.title')} value={title} onChange={(e) => setTitle(e.target.value)} required autoFocus={typeSelected} disabled={disabledUntilType} />
@@ -238,7 +259,7 @@ export function WorkItemForm({
       )}
       <div className="flex justify-end gap-3 pt-2">
         <Button type="button" variant="secondary" onClick={onCancel}>{t('common.cancel')}</Button>
-        <Button type="submit" disabled={isSubmitting || !title.trim() || hasValidationErrors || disabledUntilType}>
+        <Button type="submit" disabled={isSubmitting || !title.trim() || hasValidationErrors || disabledUntilType || disabledUntilProject}>
           {isSubmitting ? t('common.saving') : mode === 'create' ? t('common.create') : t('common.save')}
         </Button>
       </div>

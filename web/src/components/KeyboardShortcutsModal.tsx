@@ -96,7 +96,7 @@ export function KeyboardShortcutsModal({ open, onClose }: { open: boolean; onClo
   ]
 
   return (
-    <Modal open={open} onClose={onClose} title={t('shortcuts.title')} className="!max-w-3xl">
+    <Modal open={open} onClose={onClose} title={t('shortcuts.title')} className="!max-w-[57.6rem]">
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-8 gap-y-4">
         {categories.map((cat) => (
           <div key={cat.title}>

@@ -3,6 +3,7 @@ import { Routes, Route, useNavigate } from 'react-router-dom'
 import { Trans, useTranslation } from 'react-i18next'
 import { ChevronUp, ChevronDown, X, Search, BrushCleaning, Inbox, Check, Rss, Bookmark, Settings, User, History, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { CreateWorkItemModal } from '@/components/workitems/CreateWorkItemModal'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { Spinner } from '@/components/ui/Spinner'
@@ -13,7 +14,7 @@ import { Tooltip } from '@/components/ui/Tooltip'
 import { SLAIndicator } from '@/components/SLAIndicator'
 import { AppSidebar } from '@/components/AppSidebar'
 import { useSidebar } from '@/contexts/SidebarContext'
-import { useInboxItems, useRemoveFromInbox, useReorderInboxItem, useClearCompletedInbox } from '@/hooks/useInbox'
+import { useInboxItems, useRemoveFromInbox, useReorderInboxItem, useClearCompletedInbox, useAddToInbox } from '@/hooks/useInbox'
 import { usePreference, useSetPreference } from '@/hooks/usePreferences'
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
 import { useDebounce } from '@/hooks/useDebounce'
@@ -267,6 +268,8 @@ function InboxListPage() {
 
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [editing, setEditing] = useState(false)
+  const [showCreate, setShowCreate] = useState(false)
+  const addToInboxMutation = useAddToInbox()
 
   const [loadedPages, setLoadedPages] = useState<InboxItem[][]>([])
   const [prevSearch, setPrevSearch] = useState(debouncedSearch)
@@ -380,6 +383,7 @@ function InboxListPage() {
   }, [allItems, reorderMutation])
 
   // Keyboard navigation
+  useKeyboardShortcut({ key: 'c' }, () => setShowCreate(true))
   useKeyboardShortcut({ key: '/' }, () => searchRef.current?.focus())
   useKeyboardShortcut([{ key: 'ArrowDown' }, { key: 'j' }], () => {
     if (selectedId && activeRow >= 0 && activeRow < allItems.length) {
@@ -459,25 +463,32 @@ function InboxListPage() {
             </span>
           )}
         </div>
-        {/* Desktop: auto-hide toggle */}
-        <Tooltip content={t('inbox.autoRemoveDescription')}>
-          <label className="hidden sm:flex items-center gap-2 cursor-pointer select-none">
-            <span className="text-sm text-gray-600 dark:text-gray-400">{t('inbox.autoRemove')}</span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={autoRemove}
-              onClick={() => setPreferenceMutation.mutate({ key: 'inbox_auto_remove', value: !autoRemove })}
-              className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors ${
-                autoRemove ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-600'
-              }`}
-            >
-              <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow ring-0 transition-transform ${
-                autoRemove ? 'translate-x-4' : 'translate-x-0'
-              }`} />
-            </button>
-          </label>
-        </Tooltip>
+        <div className="flex items-center gap-3">
+          {/* Desktop: auto-hide toggle */}
+          <Tooltip content={t('inbox.autoRemoveDescription')}>
+            <label className="hidden sm:flex items-center gap-2 cursor-pointer select-none">
+              <span className="text-sm text-gray-600 dark:text-gray-400">{t('inbox.autoRemove')}</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={autoRemove}
+                onClick={() => setPreferenceMutation.mutate({ key: 'inbox_auto_remove', value: !autoRemove })}
+                className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors ${
+                  autoRemove ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-600'
+                }`}
+              >
+                <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow ring-0 transition-transform ${
+                  autoRemove ? 'translate-x-4' : 'translate-x-0'
+                }`} />
+              </button>
+            </label>
+          </Tooltip>
+          {/* New Item button */}
+          <Button onClick={() => setShowCreate(true)}>
+            <span className="sm:hidden">{t('workitems.newShort')}</span>
+            <span className="hidden sm:inline">{t('workitems.new')}</span>
+          </Button>
+        </div>
       </div>
 
       {/* Mobile settings modal */}
@@ -687,6 +698,12 @@ function InboxListPage() {
           </div>
         </form>
       </Modal>
+
+      <CreateWorkItemModal
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+        onCreated={(workItemId) => addToInboxMutation.mutate(workItemId)}
+      />
     </div>
   )
 }

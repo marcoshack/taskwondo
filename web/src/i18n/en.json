@@ -228,6 +228,11 @@
   "workitems.bulk.milestone": "Set milestone...",
   "workitems.bulk.transitionError": "Invalid status transition for: {{items}}",
 
+  "workitems.form.project": "Project",
+  "workitems.form.projectPlaceholder": "Select project",
+  "workitems.form.projectSearchPlaceholder": "Search projects...",
+  "workitems.form.noProjectsFound": "No projects found",
+  "workitems.form.projectRequiredTooltip": "Select a project first",
   "workitems.form.type": "Type",
   "workitems.form.typePlaceholder": "Select type",
   "workitems.form.typeRequiredTooltip": "Select a type first",

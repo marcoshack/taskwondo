@@ -318,32 +318,6 @@ test.describe('Inbox', () => {
     await expect(sidebar).toHaveClass(/w-48/, { timeout: 3000 });
   });
 
-  test('add item via i keyboard shortcut from work item list', async ({ request, testUser, testProject, page }) => {
-    // Create a work item
-    const item = await api.createWorkItem(request, testUser.token, testProject.key, {
-      title: 'Keyboard shortcut inbox item',
-      type: 'task',
-    });
-
-    // Navigate to work item list
-    await page.goto(`/projects/${testProject.key}/items`);
-    await dismissWelcomeModal(page);
-
-    // Wait for the item to appear in the table
-    await expect(page.getByRole('table').getByText('Keyboard shortcut inbox item')).toBeVisible({ timeout: 10000 });
-
-    // Press arrow down to highlight the first row, then 'i' to send to inbox
-    await page.keyboard.press('ArrowDown');
-    await page.keyboard.press('i');
-
-    // Wait for the green checkmark feedback
-    await expect(page.locator('.text-green-500')).toBeVisible({ timeout: 5000 });
-
-    // Verify via API that item is now in inbox
-    const list = await api.listInboxItems(request, testUser.token);
-    expect(list.items.some((i: { title: string }) => i.title === 'Keyboard shortcut inbox item')).toBe(true);
-  });
-
   test('reorder items via up/down arrow buttons', async ({ request, testUser, testProject, page }) => {
     // Create 3 items and add to inbox
     const items = [];
@@ -623,6 +597,149 @@ test.describe('Inbox', () => {
     // Verify via API
     const list = await api.listInboxItems(request, testUser.token);
     expect(list.items).toHaveLength(0);
+  });
+
+  test('create new item from inbox via desktop New Item button', async ({ request, testUser, testProject, page }) => {
+    await page.goto('/user/inbox');
+    await dismissWelcomeModal(page);
+
+    // Click the "New Item" button in the header
+    await page.getByRole('button', { name: 'New Item' }).click();
+
+    // Modal should open with "New Work Item" title
+    await expect(page.getByRole('heading', { name: 'New Work Item' })).toBeVisible({ timeout: 5000 });
+
+    // Select the project from the picker
+    await page.getByText('Select project').click();
+    await page.getByPlaceholder('Search projects...').fill(testProject.key);
+    await page.getByText(testProject.name).last().click();
+
+    // Select type (wait for it to be enabled after project selection)
+    await page.getByLabel('Type').selectOption('task');
+
+    // Fill title
+    await page.getByLabel('Title').fill('Inbox created item desktop');
+
+    // Click Create
+    await page.getByRole('button', { name: 'Create' }).click();
+
+    // Modal should close
+    await expect(page.getByRole('heading', { name: 'New Work Item' })).not.toBeVisible({ timeout: 5000 });
+
+    // Verify item was added to inbox via API
+    const list = await api.listInboxItems(request, testUser.token);
+    expect(list.items.some((i: { title: string }) => i.title === 'Inbox created item desktop')).toBe(true);
+
+    // The inbox page should show the new item
+    await expect(page.getByRole('table').getByText('Inbox created item desktop')).toBeVisible({ timeout: 10000 });
+  });
+
+  test('create new item from inbox via c keyboard shortcut', async ({ request, testUser, testProject, page }) => {
+    await page.goto('/user/inbox');
+    await dismissWelcomeModal(page);
+
+    // Click on the page body to ensure no input has focus
+    await page.locator('h1').click();
+
+    // Press 'c' to open the create modal
+    await page.keyboard.press('c');
+
+    // Modal should open
+    await expect(page.getByRole('heading', { name: 'New Work Item' })).toBeVisible({ timeout: 5000 });
+
+    // Select the project from the picker
+    await page.getByText('Select project').click();
+    await page.getByPlaceholder('Search projects...').fill(testProject.key);
+    await page.getByText(testProject.name).last().click();
+
+    // Select type and fill title
+    await page.getByLabel('Type').selectOption('bug');
+    await page.getByLabel('Title').fill('Inbox keyboard created bug');
+    await page.getByRole('button', { name: 'Create' }).click();
+
+    // Modal should close
+    await expect(page.getByRole('heading', { name: 'New Work Item' })).not.toBeVisible({ timeout: 5000 });
+
+    // Verify item was added to inbox
+    const list = await api.listInboxItems(request, testUser.token);
+    expect(list.items.some((i: { title: string }) => i.title === 'Inbox keyboard created bug')).toBe(true);
+  });
+
+  test('inbox new item modal has searchable project picker', async ({ request, testUser, testProject, page }) => {
+    await page.goto('/user/inbox');
+    await dismissWelcomeModal(page);
+
+    // Open the create modal
+    await page.getByRole('button', { name: 'New Item' }).click();
+    await expect(page.getByRole('heading', { name: 'New Work Item' })).toBeVisible({ timeout: 5000 });
+
+    // Click the project picker button (shows "Select project" placeholder)
+    await page.getByText('Select project').click();
+
+    // Search input should appear
+    const searchInput = page.getByPlaceholder('Search projects...');
+    await expect(searchInput).toBeVisible({ timeout: 3000 });
+
+    // Type to search by project key
+    await searchInput.fill(testProject.key);
+
+    // The project should be visible in results
+    await expect(page.getByText(testProject.name).last()).toBeVisible();
+
+    // Type nonsense — should show no results
+    await searchInput.fill('ZZZZNONEXISTENT');
+    await expect(page.getByText('No projects found')).toBeVisible({ timeout: 3000 });
+
+    // Clear and select the project by clicking
+    await searchInput.fill('');
+    await page.getByText(testProject.name).last().click();
+
+    // Project should be selected — picker button now shows project name
+    await expect(page.locator('button').filter({ hasText: testProject.name })).toBeVisible();
+
+    // Type field should now be enabled
+    await expect(page.getByLabel('Type')).toBeEnabled();
+
+    // Cancel to close modal
+    await page.getByRole('button', { name: 'Cancel' }).click();
+  });
+
+  test('create new item from inbox on mobile', async ({ request, testUser, testProject, page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+
+    await page.goto('/user/inbox');
+    await dismissWelcomeModal(page);
+
+    // Click the "New" button (mobile shows short text)
+    await page.getByRole('button', { name: 'New', exact: true }).click();
+
+    // Modal should open
+    await expect(page.getByRole('heading', { name: 'New Work Item' })).toBeVisible({ timeout: 5000 });
+
+    // Select the project from the picker
+    await page.getByText('Select project').click();
+    await page.getByPlaceholder('Search projects...').fill(testProject.key);
+    await page.getByText(testProject.name).last().click();
+
+    // Select type
+    await page.getByLabel('Type').selectOption('task');
+
+    // Fill title
+    await page.getByLabel('Title').fill('Inbox mobile created item');
+
+    // Click Create
+    await page.getByRole('button', { name: 'Create' }).click();
+
+    // Modal should close
+    await expect(page.getByRole('heading', { name: 'New Work Item' })).not.toBeVisible({ timeout: 5000 });
+
+    // Verify item was added to inbox via API
+    const list = await api.listInboxItems(request, testUser.token);
+    expect(list.items.some((i: { title: string }) => i.title === 'Inbox mobile created item')).toBe(true);
+
+    // The inbox page should show the new item in mobile cards
+    const inboxCards = page.locator('.sm\\:hidden');
+    await expect(inboxCards.getByText('Inbox mobile created item')).toBeVisible({ timeout: 10000 });
   });
 
   test('mobile edit mode reorder items', async ({ request, testUser, testProject, page }) => {

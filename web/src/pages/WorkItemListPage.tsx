@@ -2,8 +2,8 @@ import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
-import { useWorkItems, useCreateWorkItem, useBulkUpdateWorkItems, useDeleteWorkItem, type BulkUpdateResult } from '@/hooks/useWorkItems'
-import { useProject, useMembers } from '@/hooks/useProjects'
+import { useWorkItems, useBulkUpdateWorkItems, useDeleteWorkItem, type BulkUpdateResult } from '@/hooks/useWorkItems'
+import { useMembers } from '@/hooks/useProjects'
 import { useProjectWorkflow, useAvailableStatuses } from '@/hooks/useWorkflows'
 import { useMilestones } from '@/hooks/useMilestones'
 import { useUserSetting, useSetUserSetting } from '@/hooks/useUserSettings'
@@ -18,20 +18,20 @@ import { PriorityBadge } from '@/components/workitems/PriorityBadge'
 import { TypeBadge } from '@/components/workitems/TypeBadge'
 import { StatusBadge } from '@/components/workitems/StatusBadge'
 import { WorkItemFilters } from '@/components/workitems/WorkItemFilters'
-import { WorkItemForm } from '@/components/workitems/WorkItemForm'
+import { CreateWorkItemModal } from '@/components/workitems/CreateWorkItemModal'
 import { BoardView } from '@/components/workitems/BoardView'
 import { SLAIndicator } from '@/components/SLAIndicator'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { formatRelativeTime } from '@/utils/duration'
-import { User, History, Check, X, LayoutList, LayoutGrid } from 'lucide-react'
+import { User, History, X, LayoutList, LayoutGrid } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { useAuth } from '@/contexts/AuthContext'
-import { useAddToInbox, useInboxItems } from '@/hooks/useInbox'
+import { useInboxItems } from '@/hooks/useInbox'
 import { useSavedSearches, useCreateSavedSearch, useUpdateSavedSearch, useDeleteSavedSearch } from '@/hooks/useSavedSearches'
 import { SavedSearchSelector } from '@/components/workitems/SavedSearchSelector'
 import { SaveSearchModal } from '@/components/workitems/SaveSearchModal'
 import { InboxButton } from '@/components/workitems/InboxButton'
-import type { AxiosError } from 'axios'
+
 import type { SavedSearch } from '@/api/savedSearches'
 import { listWorkItems, type WorkItem, type WorkItemFilter } from '@/api/workitems'
 
@@ -138,7 +138,7 @@ export function WorkItemListPage() {
   const { user } = useAuth()
   const { statuses, transitionsMap } = useProjectWorkflow(projectKey ?? '')
   const { data: allStatuses } = useAvailableStatuses(projectKey ?? '')
-  const { data: project } = useProject(projectKey ?? '')
+
   const { data: members } = useMembers(projectKey ?? '')
   const { data: milestones } = useMilestones(projectKey ?? '')
 
@@ -443,7 +443,7 @@ export function WorkItemListPage() {
   }), [filter, debouncedSearch, viewMode, sort, order])
 
   const { data: result, isLoading } = useWorkItems(projectKey ?? '', activeFilter)
-  const createMutation = useCreateWorkItem(projectKey ?? '')
+
   const deleteMutation = useDeleteWorkItem(projectKey ?? '')
   const bulkMutation = useBulkUpdateWorkItems(projectKey ?? '')
   const items = result?.data ?? []
@@ -560,21 +560,6 @@ export function WorkItemListPage() {
     return map
   }, [inboxData])
 
-  // 'i' shortcut: send active row to inbox
-  const addToInboxMutation = useAddToInbox()
-  const [inboxSavedId, setInboxSavedId] = useState<string | null>(null)
-  useKeyboardShortcut({ key: 'i' }, () => {
-    if (activeRow >= 0 && activeRow < allItems.length) {
-      const item = allItems[activeRow]
-      addToInboxMutation.mutate(item.id, {
-        onSuccess: () => {
-          setInboxSavedId(item.id)
-          setTimeout(() => setInboxSavedId(null), 2000)
-        },
-      })
-    }
-  }, viewMode === 'list' && activeRow >= 0)
-
   useKeyboardShortcut({ key: 'Escape' }, () => setActiveRow(-1), activeRow >= 0)
 
   // Items targeted for deletion: selected checkboxes take priority, otherwise highlighted row
@@ -627,13 +612,9 @@ export function WorkItemListPage() {
             </span>
           </Tooltip>
           <span className="shrink-0" onClick={(e) => e.stopPropagation()}>
-            {inboxSavedId === row.id ? (
-              <Check className="h-4 w-4 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
-            ) : (
-              <span className="sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                <InboxButton workItemId={row.id} inboxItemId={inboxByWorkItemId.get(row.id)} />
-              </span>
-            )}
+            <span className="sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+              <InboxButton workItemId={row.id} inboxItemId={inboxByWorkItemId.get(row.id)} />
+            </span>
           </span>
         </div>
       ),
@@ -931,23 +912,11 @@ export function WorkItemListPage() {
         />
       )}
 
-      <Modal open={showCreate} onClose={() => { setShowCreate(false); createMutation.reset() }} title={t('workitems.newTitle')} dismissable={false}>
-        <WorkItemForm
-          projectKey={projectKey ?? ''}
-          mode="create"
-          members={members ?? []}
-          milestones={milestones}
-          allowedComplexityValues={project?.allowed_complexity_values}
-          onSubmit={(values) => {
-            createMutation.mutate(values as { type: string; title: string }, {
-              onSuccess: () => { setShowCreate(false); createMutation.reset() },
-            })
-          }}
-          onCancel={() => { setShowCreate(false); createMutation.reset() }}
-          isSubmitting={createMutation.isPending}
-          submitError={createMutation.error ? t('workitems.form.submitError', { message: (createMutation.error as AxiosError<{ error?: { message?: string } }>).response?.data?.error?.message ?? t('common.unknown') }) : null}
-        />
-      </Modal>
+      <CreateWorkItemModal
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+        lockedProjectKey={projectKey ?? ''}
+      />
 
       <Modal open={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)} title={t('workitems.deleteSelectedTitle')}>
         <form onSubmit={(e) => {
