@@ -110,12 +110,67 @@ function resolveValue(fieldName: string, value: string, members: ProjectMember[]
   return value
 }
 
+function isMultiline(value?: string): boolean {
+  return !!value && value.includes('\n')
+}
+
 function FieldChangeDiff({ event, members, t, onExpand }: { event: WorkItemEvent; members?: ProjectMember[]; t: TFunction; onExpand: (target: DiffPreviewTarget) => void }) {
   if (!event.field_name) return null
   if (!event.old_value && !event.new_value) return null
 
   const resolvedOld = event.old_value ? resolveValue(event.field_name, event.old_value, members, t) : undefined
   const resolvedNew = event.new_value ? resolveValue(event.field_name, event.new_value, members, t) : undefined
+
+  // For multiline values (e.g. description), show a proper line-level diff
+  if (resolvedOld && resolvedNew && (isMultiline(resolvedOld) || isMultiline(resolvedNew))) {
+    const allLines = computeDiff(resolvedOld, resolvedNew)
+    const changedLines = allLines.filter((l) => l.type !== 'same')
+    if (changedLines.length === 0) return null
+
+    const displayLines = changedLines.slice(0, COLLAPSED_LINES)
+    const hasMore = changedLines.length > COLLAPSED_LINES
+    const groups = pairDiffLines(displayLines)
+
+    function handleExpandModal() {
+      onExpand({
+        kind: 'field',
+        fieldLabel: fieldLabel(event.field_name!, t),
+        oldValue: resolvedOld,
+        newValue: resolvedNew,
+        diffLines: allLines,
+      })
+    }
+
+    return (
+      <div
+        className={`mt-1 mb-1 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs font-mono overflow-hidden ${hasMore ? 'cursor-pointer hover:border-gray-300 dark:hover:border-gray-600' : ''}`}
+        onClick={hasMore ? handleExpandModal : undefined}
+        role={hasMore ? 'button' : undefined}
+        tabIndex={hasMore ? 0 : undefined}
+        onKeyDown={hasMore ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleExpandModal() } } : undefined}
+      >
+        {groups.map((group, gi) => {
+          if (group.length === 2) {
+            const { oldSpans, newSpans } = computeWordDiff(group[0].text, group[1].text)
+            return (
+              <div key={gi}>
+                <DiffLineView line={group[0]} wordSpans={oldSpans} />
+                <DiffLineView line={group[1]} wordSpans={newSpans} />
+              </div>
+            )
+          }
+          return <DiffLineView key={gi} line={group[0]} />
+        })}
+        {hasMore && (
+          <div className="px-3 py-1 text-xs text-gray-500 dark:text-gray-400 text-left">
+            {t('common.showMoreLines', { count: changedLines.length - COLLAPSED_LINES })}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // Single-line values: simple old/new display
   const expandable = (resolvedOld && isTruncated(resolvedOld)) || (resolvedNew && isTruncated(resolvedNew))
 
   function handleClick() {
@@ -190,6 +245,132 @@ function computeDiff(oldText: string, newText: string): DiffLine[] {
   return result.reverse()
 }
 
+// --- Word-level highlighting within a line pair ---
+
+type WordSpan = { text: string; highlighted: boolean }
+
+function computeWordDiff(oldLine: string, newLine: string): { oldSpans: WordSpan[]; newSpans: WordSpan[] } {
+  const oldWords = oldLine.split(/(\s+)/)
+  const newWords = newLine.split(/(\s+)/)
+  const m = oldWords.length
+  const n = newWords.length
+
+  // LCS on words
+  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0))
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = oldWords[i - 1] === newWords[j - 1]
+        ? dp[i - 1][j - 1] + 1
+        : Math.max(dp[i - 1][j], dp[i][j - 1])
+    }
+  }
+
+  // Backtrack to tag each word as same or changed
+  const oldTags: boolean[] = Array(m).fill(true) // true = highlighted (changed)
+  const newTags: boolean[] = Array(n).fill(true)
+  let i = m, j = n
+  while (i > 0 && j > 0) {
+    if (oldWords[i - 1] === newWords[j - 1]) {
+      oldTags[i - 1] = false
+      newTags[j - 1] = false
+      i--; j--
+    } else if (dp[i][j - 1] >= dp[i - 1][j]) {
+      j--
+    } else {
+      i--
+    }
+  }
+
+  // Merge consecutive spans with same highlight state
+  function merge(words: string[], tags: boolean[]): WordSpan[] {
+    const spans: WordSpan[] = []
+    for (let k = 0; k < words.length; k++) {
+      if (spans.length > 0 && spans[spans.length - 1].highlighted === tags[k]) {
+        spans[spans.length - 1].text += words[k]
+      } else {
+        spans.push({ text: words[k], highlighted: tags[k] })
+      }
+    }
+    return spans
+  }
+
+  return { oldSpans: merge(oldWords, oldTags), newSpans: merge(newWords, newTags) }
+}
+
+/**
+ * Pair up adjacent remove/add lines for word-level highlighting.
+ * Returns groups: standalone removes, standalone adds, or paired remove+add.
+ */
+function pairDiffLines(lines: DiffLine[]): DiffLine[][] {
+  const groups: DiffLine[][] = []
+  let i = 0
+  while (i < lines.length) {
+    if (lines[i].type === 'remove') {
+      // Collect consecutive removes
+      const removes: DiffLine[] = []
+      while (i < lines.length && lines[i].type === 'remove') {
+        removes.push(lines[i])
+        i++
+      }
+      // Collect consecutive adds that follow
+      const adds: DiffLine[] = []
+      while (i < lines.length && lines[i].type === 'add') {
+        adds.push(lines[i])
+        i++
+      }
+      // Pair them up 1:1, any leftover are standalone
+      const paired = Math.min(removes.length, adds.length)
+      for (let k = 0; k < paired; k++) {
+        groups.push([removes[k], adds[k]])
+      }
+      for (let k = paired; k < removes.length; k++) {
+        groups.push([removes[k]])
+      }
+      for (let k = paired; k < adds.length; k++) {
+        groups.push([adds[k]])
+      }
+    } else {
+      groups.push([lines[i]])
+      i++
+    }
+  }
+  return groups
+}
+
+/** Render a single diff line with optional word-level highlights */
+function DiffLineView({ line, wordSpans, className }: { line: DiffLine; wordSpans?: WordSpan[]; className?: string }) {
+  const isRemove = line.type === 'remove'
+  const isAdd = line.type === 'add'
+
+  const bg = isRemove
+    ? 'bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300'
+    : isAdd
+      ? 'bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+      : 'text-gray-600 dark:text-gray-400'
+
+  const symbolColor = isRemove ? 'text-red-400' : isAdd ? 'text-green-400' : 'text-gray-400'
+  const symbol = isRemove ? '\u2212' : isAdd ? '+' : ' '
+
+  return (
+    <div className={`px-3 py-0.5 ${bg} ${className ?? ''}`}>
+      <span className={`select-none mr-2 ${symbolColor}`}>{symbol}</span>
+      {wordSpans ? (
+        wordSpans.map((span, si) =>
+          span.highlighted ? (
+            <span key={si} className={isRemove ? 'bg-red-200 dark:bg-red-800/60 rounded-sm' : 'bg-green-200 dark:bg-green-800/60 rounded-sm'}>
+              {span.text}
+            </span>
+          ) : (
+            <span key={si}>{span.text}</span>
+          )
+        )
+      ) : (
+        line.text || '\u00A0'
+      )}
+    </div>
+  )
+}
+
 /** Get first N lines of a string */
 function firstLines(text: string, n: number): string {
   const lines = text.split('\n')
@@ -220,6 +401,7 @@ function CommentPreview({ event, t, onExpand }: { event: WorkItemEvent; t: TFunc
 
     const displayLines = expanded ? changedLines : changedLines.slice(0, COLLAPSED_LINES)
     const hasMore = changedLines.length > COLLAPSED_LINES
+    const groups = pairDiffLines(displayLines)
 
     function handleExpandModal() {
       onExpand({ kind: 'comment', lines: allLines })
@@ -233,21 +415,18 @@ function CommentPreview({ event, t, onExpand }: { event: WorkItemEvent; t: TFunc
         tabIndex={hasMore ? 0 : undefined}
         onKeyDown={hasMore ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleExpandModal() } } : undefined}
       >
-        {displayLines.map((line, idx) => (
-          <div
-            key={idx}
-            className={
-              line.type === 'remove'
-                ? 'px-3 py-0.5 bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300'
-                : 'px-3 py-0.5 bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300'
-            }
-          >
-            <span className={`select-none mr-2 ${line.type === 'remove' ? 'text-red-400' : 'text-green-400'}`}>
-              {line.type === 'remove' ? '\u2212' : '+'}
-            </span>
-            {line.text || '\u00A0'}
-          </div>
-        ))}
+        {groups.map((group, gi) => {
+          if (group.length === 2) {
+            const { oldSpans, newSpans } = computeWordDiff(group[0].text, group[1].text)
+            return (
+              <div key={gi}>
+                <DiffLineView line={group[0]} wordSpans={oldSpans} />
+                <DiffLineView line={group[1]} wordSpans={newSpans} />
+              </div>
+            )
+          }
+          return <DiffLineView key={gi} line={group[0]} />
+        })}
         {hasMore && (
           <div className="px-3 py-1 text-xs text-gray-500 dark:text-gray-400 text-left">
             {t('common.showMoreLines', { count: changedLines.length - COLLAPSED_LINES })}
