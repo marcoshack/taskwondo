@@ -662,6 +662,387 @@ func (c *Client) DeleteTimeEntry(projectKey string, itemNumber int, entryID stri
 	return err
 }
 
+// --- New types ---
+
+type ProjectMember struct {
+	UserID      string `json:"user_id"`
+	Email       string `json:"email"`
+	DisplayName string `json:"display_name"`
+	Role        string `json:"role"`
+	CreatedAt   string `json:"created_at"`
+}
+
+type Milestone struct {
+	ID          string  `json:"id"`
+	ProjectID   string  `json:"project_id"`
+	Name        string  `json:"name"`
+	Description *string `json:"description,omitempty"`
+	DueDate     *string `json:"due_date,omitempty"`
+	Status      string  `json:"status"`
+	OpenCount   int     `json:"open_count"`
+	ClosedCount int     `json:"closed_count"`
+	TotalCount  int     `json:"total_count"`
+	CreatedAt   string  `json:"created_at"`
+	UpdatedAt   string  `json:"updated_at"`
+}
+
+type Queue struct {
+	ID              string  `json:"id"`
+	ProjectID       string  `json:"project_id"`
+	Name            string  `json:"name"`
+	Description     *string `json:"description,omitempty"`
+	QueueType       string  `json:"queue_type"`
+	IsPublic        bool    `json:"is_public"`
+	DefaultPriority string  `json:"default_priority"`
+	CreatedAt       string  `json:"created_at"`
+	UpdatedAt       string  `json:"updated_at"`
+}
+
+// --- Project member methods ---
+
+func (c *Client) ListMembers(projectKey string) ([]ProjectMember, error) {
+	path := fmt.Sprintf("/api/v1/projects/%s/members", url.PathEscape(projectKey))
+	data, err := c.doRequest("GET", path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var resp apiResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+	var members []ProjectMember
+	if err := json.Unmarshal(resp.Data, &members); err != nil {
+		return nil, fmt.Errorf("decode members: %w", err)
+	}
+	return members, nil
+}
+
+type AddMemberParams struct {
+	UserID string `json:"user_id"`
+	Role   string `json:"role"`
+}
+
+func (c *Client) AddMember(projectKey string, params AddMemberParams) (*ProjectMember, error) {
+	path := fmt.Sprintf("/api/v1/projects/%s/members", url.PathEscape(projectKey))
+	data, err := c.doRequest("POST", path, params)
+	if err != nil {
+		return nil, err
+	}
+	var resp apiResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+	var member ProjectMember
+	if err := json.Unmarshal(resp.Data, &member); err != nil {
+		return nil, fmt.Errorf("decode member: %w", err)
+	}
+	return &member, nil
+}
+
+func (c *Client) UpdateMemberRole(projectKey, userID, role string) (*ProjectMember, error) {
+	path := fmt.Sprintf("/api/v1/projects/%s/members/%s", url.PathEscape(projectKey), url.PathEscape(userID))
+	data, err := c.doRequest("PATCH", path, map[string]string{"role": role})
+	if err != nil {
+		return nil, err
+	}
+	var resp apiResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+	var member ProjectMember
+	if err := json.Unmarshal(resp.Data, &member); err != nil {
+		return nil, fmt.Errorf("decode member: %w", err)
+	}
+	return &member, nil
+}
+
+func (c *Client) RemoveMember(projectKey, userID string) error {
+	path := fmt.Sprintf("/api/v1/projects/%s/members/%s", url.PathEscape(projectKey), url.PathEscape(userID))
+	_, err := c.doRequest("DELETE", path, nil)
+	return err
+}
+
+// --- Project CRUD ---
+
+type CreateProjectParams struct {
+	Name        string  `json:"name"`
+	Key         string  `json:"key"`
+	Description *string `json:"description,omitempty"`
+}
+
+func (c *Client) CreateProject(params CreateProjectParams) (*Project, error) {
+	data, err := c.doRequest("POST", "/api/v1/projects", params)
+	if err != nil {
+		return nil, err
+	}
+	var resp apiResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+	var project Project
+	if err := json.Unmarshal(resp.Data, &project); err != nil {
+		return nil, fmt.Errorf("decode project: %w", err)
+	}
+	return &project, nil
+}
+
+func (c *Client) UpdateProject(key string, updates map[string]interface{}) (*Project, error) {
+	path := fmt.Sprintf("/api/v1/projects/%s", url.PathEscape(key))
+	data, err := c.doRequest("PATCH", path, updates)
+	if err != nil {
+		return nil, err
+	}
+	var resp apiResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+	var project Project
+	if err := json.Unmarshal(resp.Data, &project); err != nil {
+		return nil, fmt.Errorf("decode project: %w", err)
+	}
+	return &project, nil
+}
+
+func (c *Client) DeleteProject(key string) error {
+	path := fmt.Sprintf("/api/v1/projects/%s", url.PathEscape(key))
+	_, err := c.doRequest("DELETE", path, nil)
+	return err
+}
+
+// --- Work item delete ---
+
+func (c *Client) DeleteWorkItem(projectKey string, itemNumber int) error {
+	path := fmt.Sprintf("/api/v1/projects/%s/items/%d", url.PathEscape(projectKey), itemNumber)
+	_, err := c.doRequest("DELETE", path, nil)
+	return err
+}
+
+// --- Comment update/delete ---
+
+func (c *Client) UpdateComment(projectKey string, itemNumber int, commentID, body string) (*Comment, error) {
+	path := fmt.Sprintf("/api/v1/projects/%s/items/%d/comments/%s", url.PathEscape(projectKey), itemNumber, url.PathEscape(commentID))
+	data, err := c.doRequest("PATCH", path, map[string]string{"body": body})
+	if err != nil {
+		return nil, err
+	}
+	var resp apiResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+	var comment Comment
+	if err := json.Unmarshal(resp.Data, &comment); err != nil {
+		return nil, fmt.Errorf("decode comment: %w", err)
+	}
+	return &comment, nil
+}
+
+func (c *Client) DeleteComment(projectKey string, itemNumber int, commentID string) error {
+	path := fmt.Sprintf("/api/v1/projects/%s/items/%d/comments/%s", url.PathEscape(projectKey), itemNumber, url.PathEscape(commentID))
+	_, err := c.doRequest("DELETE", path, nil)
+	return err
+}
+
+// --- Relation delete ---
+
+func (c *Client) DeleteRelation(projectKey string, itemNumber int, relationID string) error {
+	path := fmt.Sprintf("/api/v1/projects/%s/items/%d/relations/%s", url.PathEscape(projectKey), itemNumber, url.PathEscape(relationID))
+	_, err := c.doRequest("DELETE", path, nil)
+	return err
+}
+
+// --- Attachment delete ---
+
+func (c *Client) DeleteAttachment(projectKey string, itemNumber int, attachmentID string) error {
+	path := fmt.Sprintf("/api/v1/projects/%s/items/%d/attachments/%s", url.PathEscape(projectKey), itemNumber, url.PathEscape(attachmentID))
+	_, err := c.doRequest("DELETE", path, nil)
+	return err
+}
+
+// --- Milestone methods ---
+
+type CreateMilestoneParams struct {
+	Name        string  `json:"name"`
+	Description *string `json:"description,omitempty"`
+	DueDate     *string `json:"due_date,omitempty"`
+}
+
+func (c *Client) ListMilestones(projectKey string) ([]Milestone, error) {
+	path := fmt.Sprintf("/api/v1/projects/%s/milestones", url.PathEscape(projectKey))
+	data, err := c.doRequest("GET", path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var resp apiResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+	var milestones []Milestone
+	if err := json.Unmarshal(resp.Data, &milestones); err != nil {
+		return nil, fmt.Errorf("decode milestones: %w", err)
+	}
+	return milestones, nil
+}
+
+func (c *Client) CreateMilestone(projectKey string, params CreateMilestoneParams) (*Milestone, error) {
+	path := fmt.Sprintf("/api/v1/projects/%s/milestones", url.PathEscape(projectKey))
+	data, err := c.doRequest("POST", path, params)
+	if err != nil {
+		return nil, err
+	}
+	var resp apiResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+	var milestone Milestone
+	if err := json.Unmarshal(resp.Data, &milestone); err != nil {
+		return nil, fmt.Errorf("decode milestone: %w", err)
+	}
+	return &milestone, nil
+}
+
+func (c *Client) GetMilestone(projectKey, milestoneID string) (*Milestone, error) {
+	path := fmt.Sprintf("/api/v1/projects/%s/milestones/%s", url.PathEscape(projectKey), url.PathEscape(milestoneID))
+	data, err := c.doRequest("GET", path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var resp apiResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+	var milestone Milestone
+	if err := json.Unmarshal(resp.Data, &milestone); err != nil {
+		return nil, fmt.Errorf("decode milestone: %w", err)
+	}
+	return &milestone, nil
+}
+
+func (c *Client) UpdateMilestone(projectKey, milestoneID string, updates map[string]interface{}) (*Milestone, error) {
+	path := fmt.Sprintf("/api/v1/projects/%s/milestones/%s", url.PathEscape(projectKey), url.PathEscape(milestoneID))
+	data, err := c.doRequest("PATCH", path, updates)
+	if err != nil {
+		return nil, err
+	}
+	var resp apiResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+	var milestone Milestone
+	if err := json.Unmarshal(resp.Data, &milestone); err != nil {
+		return nil, fmt.Errorf("decode milestone: %w", err)
+	}
+	return &milestone, nil
+}
+
+func (c *Client) DeleteMilestone(projectKey, milestoneID string) error {
+	path := fmt.Sprintf("/api/v1/projects/%s/milestones/%s", url.PathEscape(projectKey), url.PathEscape(milestoneID))
+	_, err := c.doRequest("DELETE", path, nil)
+	return err
+}
+
+// --- Queue methods ---
+
+type CreateQueueParams struct {
+	Name            string  `json:"name"`
+	QueueType       string  `json:"queue_type"`
+	Description     *string `json:"description,omitempty"`
+	IsPublic        bool    `json:"is_public"`
+	DefaultPriority string  `json:"default_priority,omitempty"`
+}
+
+func (c *Client) ListQueues(projectKey string) ([]Queue, error) {
+	path := fmt.Sprintf("/api/v1/projects/%s/queues", url.PathEscape(projectKey))
+	data, err := c.doRequest("GET", path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var resp apiResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+	var queues []Queue
+	if err := json.Unmarshal(resp.Data, &queues); err != nil {
+		return nil, fmt.Errorf("decode queues: %w", err)
+	}
+	return queues, nil
+}
+
+func (c *Client) CreateQueue(projectKey string, params CreateQueueParams) (*Queue, error) {
+	path := fmt.Sprintf("/api/v1/projects/%s/queues", url.PathEscape(projectKey))
+	data, err := c.doRequest("POST", path, params)
+	if err != nil {
+		return nil, err
+	}
+	var resp apiResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+	var queue Queue
+	if err := json.Unmarshal(resp.Data, &queue); err != nil {
+		return nil, fmt.Errorf("decode queue: %w", err)
+	}
+	return &queue, nil
+}
+
+func (c *Client) GetQueue(projectKey, queueID string) (*Queue, error) {
+	path := fmt.Sprintf("/api/v1/projects/%s/queues/%s", url.PathEscape(projectKey), url.PathEscape(queueID))
+	data, err := c.doRequest("GET", path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var resp apiResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+	var queue Queue
+	if err := json.Unmarshal(resp.Data, &queue); err != nil {
+		return nil, fmt.Errorf("decode queue: %w", err)
+	}
+	return &queue, nil
+}
+
+func (c *Client) UpdateQueue(projectKey, queueID string, updates map[string]interface{}) (*Queue, error) {
+	path := fmt.Sprintf("/api/v1/projects/%s/queues/%s", url.PathEscape(projectKey), url.PathEscape(queueID))
+	data, err := c.doRequest("PATCH", path, updates)
+	if err != nil {
+		return nil, err
+	}
+	var resp apiResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+	var queue Queue
+	if err := json.Unmarshal(resp.Data, &queue); err != nil {
+		return nil, fmt.Errorf("decode queue: %w", err)
+	}
+	return &queue, nil
+}
+
+func (c *Client) DeleteQueue(projectKey, queueID string) error {
+	path := fmt.Sprintf("/api/v1/projects/%s/queues/%s", url.PathEscape(projectKey), url.PathEscape(queueID))
+	_, err := c.doRequest("DELETE", path, nil)
+	return err
+}
+
+// --- User search ---
+
+func (c *Client) SearchUsers(query string) ([]User, error) {
+	path := "/api/v1/users/search?q=" + url.QueryEscape(query)
+	data, err := c.doRequest("GET", path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var resp apiResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+	var users []User
+	if err := json.Unmarshal(resp.Data, &users); err != nil {
+		return nil, fmt.Errorf("decode users: %w", err)
+	}
+	return users, nil
+}
+
 func (c *Client) ListProjectStatuses(projectKey string) ([]WorkflowStatus, error) {
 	path := fmt.Sprintf("/api/v1/projects/%s/workflows/statuses", url.PathEscape(projectKey))
 	data, err := c.doRequest("GET", path, nil)

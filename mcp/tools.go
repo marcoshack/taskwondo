@@ -936,6 +936,873 @@ func handleDeleteTimeEntry(_ context.Context, request mcp.CallToolRequest) (*mcp
 	return mcp.NewToolResultText(fmt.Sprintf("Deleted time entry %s from %s", entryID, displayID)), nil
 }
 
+// --- New tool definitions ---
+
+func deleteWorkItemTool() mcp.Tool {
+	return mcp.NewTool("delete_work_item",
+		mcp.WithDescription("Delete a work item permanently"),
+		mcp.WithString("display_id", mcp.Required(), mcp.Description("Work item display ID, e.g. TF-141")),
+	)
+}
+
+func updateCommentTool() mcp.Tool {
+	return mcp.NewTool("update_comment",
+		mcp.WithDescription("Update the body of an existing comment on a work item"),
+		mcp.WithString("display_id", mcp.Required(), mcp.Description("Work item display ID, e.g. TF-141")),
+		mcp.WithString("comment_id", mcp.Required(), mcp.Description("Comment UUID to update")),
+		mcp.WithString("body", mcp.Required(), mcp.Description("New comment body (markdown supported)")),
+	)
+}
+
+func deleteCommentTool() mcp.Tool {
+	return mcp.NewTool("delete_comment",
+		mcp.WithDescription("Delete a comment from a work item"),
+		mcp.WithString("display_id", mcp.Required(), mcp.Description("Work item display ID, e.g. TF-141")),
+		mcp.WithString("comment_id", mcp.Required(), mcp.Description("Comment UUID to delete")),
+	)
+}
+
+func deleteRelationTool() mcp.Tool {
+	return mcp.NewTool("delete_relation",
+		mcp.WithDescription("Delete a relation between work items"),
+		mcp.WithString("display_id", mcp.Required(), mcp.Description("Work item display ID, e.g. TF-141")),
+		mcp.WithString("relation_id", mcp.Required(), mcp.Description("Relation UUID to delete (from list_relations)")),
+	)
+}
+
+func deleteAttachmentTool() mcp.Tool {
+	return mcp.NewTool("delete_attachment",
+		mcp.WithDescription("Delete a file attachment from a work item"),
+		mcp.WithString("display_id", mcp.Required(), mcp.Description("Work item display ID, e.g. TF-141")),
+		mcp.WithString("attachment_id", mcp.Required(), mcp.Description("Attachment UUID to delete (from list_attachments)")),
+	)
+}
+
+func createProjectTool() mcp.Tool {
+	return mcp.NewTool("create_project",
+		mcp.WithDescription("Create a new project"),
+		mcp.WithString("name", mcp.Required(), mcp.Description("Project display name")),
+		mcp.WithString("key", mcp.Required(), mcp.Description("Project key (2-10 uppercase letters/digits, must start with a letter, e.g. MYPROJ)")),
+		mcp.WithString("description", mcp.Description("Optional project description")),
+	)
+}
+
+func updateProjectTool() mcp.Tool {
+	return mcp.NewTool("update_project",
+		mcp.WithDescription("Update a project's fields. Only provided fields are changed."),
+		mcp.WithString("project", mcp.Required(), mcp.Description("Project key, e.g. TF")),
+		mcp.WithString("name", mcp.Description("New project name")),
+		mcp.WithString("description", mcp.Description("New description, or 'none' to clear")),
+	)
+}
+
+func deleteProjectTool() mcp.Tool {
+	return mcp.NewTool("delete_project",
+		mcp.WithDescription("Delete a project and all its work items. This is irreversible."),
+		mcp.WithString("project", mcp.Required(), mcp.Description("Project key, e.g. TF")),
+	)
+}
+
+func listMembersTool() mcp.Tool {
+	return mcp.NewTool("list_members",
+		mcp.WithDescription("List members of a project"),
+		mcp.WithString("project", mcp.Required(), mcp.Description("Project key, e.g. TF")),
+	)
+}
+
+func addMemberTool() mcp.Tool {
+	return mcp.NewTool("add_member",
+		mcp.WithDescription("Add a user to a project"),
+		mcp.WithString("project", mcp.Required(), mcp.Description("Project key, e.g. TF")),
+		mcp.WithString("user_id", mcp.Required(), mcp.Description("User UUID to add (use search_users to find)")),
+		mcp.WithString("role", mcp.Required(), mcp.Description("Member role: member, admin, owner")),
+	)
+}
+
+func updateMemberRoleTool() mcp.Tool {
+	return mcp.NewTool("update_member_role",
+		mcp.WithDescription("Update a project member's role"),
+		mcp.WithString("project", mcp.Required(), mcp.Description("Project key, e.g. TF")),
+		mcp.WithString("user_id", mcp.Required(), mcp.Description("User UUID")),
+		mcp.WithString("role", mcp.Required(), mcp.Description("New role: member, admin, owner")),
+	)
+}
+
+func removeMemberTool() mcp.Tool {
+	return mcp.NewTool("remove_member",
+		mcp.WithDescription("Remove a user from a project"),
+		mcp.WithString("project", mcp.Required(), mcp.Description("Project key, e.g. TF")),
+		mcp.WithString("user_id", mcp.Required(), mcp.Description("User UUID to remove")),
+	)
+}
+
+func searchUsersTool() mcp.Tool {
+	return mcp.NewTool("search_users",
+		mcp.WithDescription("Search for users by name or email. Useful for finding user IDs when adding project members or assigning work items."),
+		mcp.WithString("query", mcp.Required(), mcp.Description("Search query (name or email)")),
+	)
+}
+
+func listMilestonesTool() mcp.Tool {
+	return mcp.NewTool("list_milestones",
+		mcp.WithDescription("List milestones for a project, including progress counts (open/closed work items)"),
+		mcp.WithString("project", mcp.Required(), mcp.Description("Project key, e.g. TF")),
+	)
+}
+
+func createMilestoneTool() mcp.Tool {
+	return mcp.NewTool("create_milestone",
+		mcp.WithDescription("Create a new milestone in a project"),
+		mcp.WithString("project", mcp.Required(), mcp.Description("Project key, e.g. TF")),
+		mcp.WithString("name", mcp.Required(), mcp.Description("Milestone name")),
+		mcp.WithString("description", mcp.Description("Optional milestone description")),
+		mcp.WithString("due_date", mcp.Description("Due date in YYYY-MM-DD format")),
+	)
+}
+
+func getMilestoneTool() mcp.Tool {
+	return mcp.NewTool("get_milestone",
+		mcp.WithDescription("Get details of a specific milestone including progress counts"),
+		mcp.WithString("project", mcp.Required(), mcp.Description("Project key, e.g. TF")),
+		mcp.WithString("milestone_id", mcp.Required(), mcp.Description("Milestone UUID")),
+	)
+}
+
+func updateMilestoneTool() mcp.Tool {
+	return mcp.NewTool("update_milestone",
+		mcp.WithDescription("Update a milestone's fields. Only provided fields are changed."),
+		mcp.WithString("project", mcp.Required(), mcp.Description("Project key, e.g. TF")),
+		mcp.WithString("milestone_id", mcp.Required(), mcp.Description("Milestone UUID")),
+		mcp.WithString("name", mcp.Description("New milestone name")),
+		mcp.WithString("description", mcp.Description("New description, or 'none' to clear")),
+		mcp.WithString("due_date", mcp.Description("New due date YYYY-MM-DD, or 'none' to clear")),
+		mcp.WithString("status", mcp.Description("New status: open or closed")),
+	)
+}
+
+func deleteMilestoneTool() mcp.Tool {
+	return mcp.NewTool("delete_milestone",
+		mcp.WithDescription("Delete a milestone from a project"),
+		mcp.WithString("project", mcp.Required(), mcp.Description("Project key, e.g. TF")),
+		mcp.WithString("milestone_id", mcp.Required(), mcp.Description("Milestone UUID")),
+	)
+}
+
+func listQueuesTool() mcp.Tool {
+	return mcp.NewTool("list_queues",
+		mcp.WithDescription("List queues for a project"),
+		mcp.WithString("project", mcp.Required(), mcp.Description("Project key, e.g. TF")),
+	)
+}
+
+func createQueueTool() mcp.Tool {
+	return mcp.NewTool("create_queue",
+		mcp.WithDescription("Create a new queue in a project"),
+		mcp.WithString("project", mcp.Required(), mcp.Description("Project key, e.g. TF")),
+		mcp.WithString("name", mcp.Required(), mcp.Description("Queue name")),
+		mcp.WithString("queue_type", mcp.Required(), mcp.Description("Queue type: support, alerts, feedback, general")),
+		mcp.WithString("description", mcp.Description("Optional queue description")),
+		mcp.WithBoolean("is_public", mcp.Description("Whether the queue is public (default: false)")),
+		mcp.WithString("default_priority", mcp.Description("Default priority for items: critical, high, medium, low")),
+	)
+}
+
+func getQueueTool() mcp.Tool {
+	return mcp.NewTool("get_queue",
+		mcp.WithDescription("Get details of a specific queue"),
+		mcp.WithString("project", mcp.Required(), mcp.Description("Project key, e.g. TF")),
+		mcp.WithString("queue_id", mcp.Required(), mcp.Description("Queue UUID")),
+	)
+}
+
+func updateQueueTool() mcp.Tool {
+	return mcp.NewTool("update_queue",
+		mcp.WithDescription("Update a queue's fields. Only provided fields are changed."),
+		mcp.WithString("project", mcp.Required(), mcp.Description("Project key, e.g. TF")),
+		mcp.WithString("queue_id", mcp.Required(), mcp.Description("Queue UUID")),
+		mcp.WithString("name", mcp.Description("New queue name")),
+		mcp.WithString("description", mcp.Description("New description, or 'none' to clear")),
+		mcp.WithString("queue_type", mcp.Description("New queue type: support, alerts, feedback, general")),
+		mcp.WithString("default_priority", mcp.Description("New default priority: critical, high, medium, low")),
+	)
+}
+
+func deleteQueueTool() mcp.Tool {
+	return mcp.NewTool("delete_queue",
+		mcp.WithDescription("Delete a queue from a project"),
+		mcp.WithString("project", mcp.Required(), mcp.Description("Project key, e.g. TF")),
+		mcp.WithString("queue_id", mcp.Required(), mcp.Description("Queue UUID")),
+	)
+}
+
+// --- New tool handlers ---
+
+func handleDeleteWorkItem(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := getClient()
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	displayID, err := request.RequireString("display_id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	projectKey, itemNumber, err := parseDisplayID(displayID)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	if err := client.DeleteWorkItem(projectKey, itemNumber); err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to delete work item: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText(fmt.Sprintf("Deleted work item %s", displayID)), nil
+}
+
+func handleUpdateComment(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := getClient()
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	displayID, err := request.RequireString("display_id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	commentID, err := request.RequireString("comment_id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	body, err := request.RequireString("body")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	projectKey, itemNumber, err := parseDisplayID(displayID)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	comment, err := client.UpdateComment(projectKey, itemNumber, commentID, body)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to update comment: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText(fmt.Sprintf("Updated comment %s on %s", comment.ID, displayID)), nil
+}
+
+func handleDeleteComment(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := getClient()
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	displayID, err := request.RequireString("display_id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	commentID, err := request.RequireString("comment_id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	projectKey, itemNumber, err := parseDisplayID(displayID)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	if err := client.DeleteComment(projectKey, itemNumber, commentID); err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to delete comment: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText(fmt.Sprintf("Deleted comment %s from %s", commentID, displayID)), nil
+}
+
+func handleDeleteRelation(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := getClient()
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	displayID, err := request.RequireString("display_id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	relationID, err := request.RequireString("relation_id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	projectKey, itemNumber, err := parseDisplayID(displayID)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	if err := client.DeleteRelation(projectKey, itemNumber, relationID); err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to delete relation: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText(fmt.Sprintf("Deleted relation %s from %s", relationID, displayID)), nil
+}
+
+func handleDeleteAttachment(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := getClient()
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	displayID, err := request.RequireString("display_id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	attachmentID, err := request.RequireString("attachment_id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	projectKey, itemNumber, err := parseDisplayID(displayID)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	if err := client.DeleteAttachment(projectKey, itemNumber, attachmentID); err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to delete attachment: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText(fmt.Sprintf("Deleted attachment %s from %s", attachmentID, displayID)), nil
+}
+
+func handleCreateProject(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := getClient()
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	name, err := request.RequireString("name")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	key, err := request.RequireString("key")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	params := CreateProjectParams{Name: name, Key: key}
+	if desc := request.GetString("description", ""); desc != "" {
+		params.Description = &desc
+	}
+
+	p, err := client.CreateProject(params)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to create project: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText(fmt.Sprintf("Created project %s (%s)", p.Key, p.Name)), nil
+}
+
+func handleUpdateProject(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := getClient()
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	project, err := request.RequireString("project")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	updates := make(map[string]interface{})
+	if v := request.GetString("name", ""); v != "" {
+		updates["name"] = v
+	}
+	if v := request.GetString("description", ""); v != "" {
+		if v == "none" {
+			updates["description"] = nil
+		} else {
+			updates["description"] = v
+		}
+	}
+
+	if len(updates) == 0 {
+		return mcp.NewToolResultError("No fields to update. Provide at least one field to change."), nil
+	}
+
+	p, err := client.UpdateProject(project, updates)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to update project: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText(fmt.Sprintf("Updated project %s (%s)", p.Key, p.Name)), nil
+}
+
+func handleDeleteProject(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := getClient()
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	project, err := request.RequireString("project")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	if err := client.DeleteProject(project); err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to delete project: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText(fmt.Sprintf("Deleted project %s", project)), nil
+}
+
+func handleListMembers(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := getClient()
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	project, err := request.RequireString("project")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	members, err := client.ListMembers(project)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to list members: %v", err)), nil
+	}
+
+	if len(members) == 0 {
+		return mcp.NewToolResultText(fmt.Sprintf("No members in project %s", project)), nil
+	}
+
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "Members of %s (%d):\n\n", project, len(members))
+	for _, m := range members {
+		fmt.Fprintf(&sb, "- **%s** (%s) — role: %s | id: %s\n", m.DisplayName, m.Email, m.Role, m.UserID)
+	}
+	return mcp.NewToolResultText(sb.String()), nil
+}
+
+func handleAddMember(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := getClient()
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	project, err := request.RequireString("project")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	userID, err := request.RequireString("user_id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	role, err := request.RequireString("role")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	member, err := client.AddMember(project, AddMemberParams{UserID: userID, Role: role})
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to add member: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText(fmt.Sprintf("Added %s (%s) to %s as %s", member.DisplayName, member.Email, project, member.Role)), nil
+}
+
+func handleUpdateMemberRole(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := getClient()
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	project, err := request.RequireString("project")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	userID, err := request.RequireString("user_id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	role, err := request.RequireString("role")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	member, err := client.UpdateMemberRole(project, userID, role)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to update member role: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText(fmt.Sprintf("Updated %s role to %s in %s", member.DisplayName, member.Role, project)), nil
+}
+
+func handleRemoveMember(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := getClient()
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	project, err := request.RequireString("project")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	userID, err := request.RequireString("user_id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	if err := client.RemoveMember(project, userID); err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to remove member: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText(fmt.Sprintf("Removed user %s from project %s", userID, project)), nil
+}
+
+func handleSearchUsers(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := getClient()
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	query, err := request.RequireString("query")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	users, err := client.SearchUsers(query)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to search users: %v", err)), nil
+	}
+
+	if len(users) == 0 {
+		return mcp.NewToolResultText("No users found matching the query."), nil
+	}
+
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "Users matching %q (%d):\n\n", query, len(users))
+	for _, u := range users {
+		fmt.Fprintf(&sb, "- **%s** (%s) | id: %s\n", u.DisplayName, u.Email, u.ID)
+	}
+	return mcp.NewToolResultText(sb.String()), nil
+}
+
+func handleListMilestones(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := getClient()
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	project, err := request.RequireString("project")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	milestones, err := client.ListMilestones(project)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to list milestones: %v", err)), nil
+	}
+
+	if len(milestones) == 0 {
+		return mcp.NewToolResultText(fmt.Sprintf("No milestones in project %s", project)), nil
+	}
+
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "Milestones in %s (%d):\n\n", project, len(milestones))
+	for _, m := range milestones {
+		due := ""
+		if m.DueDate != nil {
+			due = fmt.Sprintf(" | due: %s", *m.DueDate)
+		}
+		fmt.Fprintf(&sb, "- **%s** [%s]%s — %d/%d closed | id: %s\n",
+			m.Name, m.Status, due, m.ClosedCount, m.TotalCount, m.ID)
+	}
+	return mcp.NewToolResultText(sb.String()), nil
+}
+
+func handleCreateMilestone(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := getClient()
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	project, err := request.RequireString("project")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	name, err := request.RequireString("name")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	params := CreateMilestoneParams{Name: name}
+	if desc := request.GetString("description", ""); desc != "" {
+		params.Description = &desc
+	}
+	if dd := request.GetString("due_date", ""); dd != "" {
+		params.DueDate = &dd
+	}
+
+	m, err := client.CreateMilestone(project, params)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to create milestone: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText(fmt.Sprintf("Created milestone %q in %s (id: %s)", m.Name, project, m.ID)), nil
+}
+
+func handleGetMilestone(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := getClient()
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	project, err := request.RequireString("project")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	milestoneID, err := request.RequireString("milestone_id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	m, err := client.GetMilestone(project, milestoneID)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to get milestone: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText(formatMilestone(m)), nil
+}
+
+func handleUpdateMilestone(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := getClient()
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	project, err := request.RequireString("project")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	milestoneID, err := request.RequireString("milestone_id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	updates := make(map[string]interface{})
+	if v := request.GetString("name", ""); v != "" {
+		updates["name"] = v
+	}
+	if v := request.GetString("description", ""); v != "" {
+		if v == "none" {
+			updates["description"] = nil
+		} else {
+			updates["description"] = v
+		}
+	}
+	if v := request.GetString("due_date", ""); v != "" {
+		if v == "none" {
+			updates["due_date"] = nil
+		} else {
+			updates["due_date"] = v
+		}
+	}
+	if v := request.GetString("status", ""); v != "" {
+		updates["status"] = v
+	}
+
+	if len(updates) == 0 {
+		return mcp.NewToolResultError("No fields to update. Provide at least one of: name, description, due_date, status."), nil
+	}
+
+	m, err := client.UpdateMilestone(project, milestoneID, updates)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to update milestone: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText(fmt.Sprintf("Updated milestone %q (id: %s)", m.Name, m.ID)), nil
+}
+
+func handleDeleteMilestone(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := getClient()
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	project, err := request.RequireString("project")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	milestoneID, err := request.RequireString("milestone_id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	if err := client.DeleteMilestone(project, milestoneID); err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to delete milestone: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText(fmt.Sprintf("Deleted milestone %s from project %s", milestoneID, project)), nil
+}
+
+func handleListQueues(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := getClient()
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	project, err := request.RequireString("project")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	queues, err := client.ListQueues(project)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to list queues: %v", err)), nil
+	}
+
+	if len(queues) == 0 {
+		return mcp.NewToolResultText(fmt.Sprintf("No queues in project %s", project)), nil
+	}
+
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "Queues in %s (%d):\n\n", project, len(queues))
+	for _, q := range queues {
+		public := ""
+		if q.IsPublic {
+			public = " [public]"
+		}
+		fmt.Fprintf(&sb, "- **%s** [%s]%s | id: %s\n", q.Name, q.QueueType, public, q.ID)
+	}
+	return mcp.NewToolResultText(sb.String()), nil
+}
+
+func handleCreateQueue(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := getClient()
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	project, err := request.RequireString("project")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	name, err := request.RequireString("name")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	queueType, err := request.RequireString("queue_type")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	params := CreateQueueParams{
+		Name:            name,
+		QueueType:       queueType,
+		IsPublic:        request.GetBool("is_public", false),
+		DefaultPriority: request.GetString("default_priority", ""),
+	}
+	if desc := request.GetString("description", ""); desc != "" {
+		params.Description = &desc
+	}
+
+	q, err := client.CreateQueue(project, params)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to create queue: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText(fmt.Sprintf("Created queue %q in %s (id: %s)", q.Name, project, q.ID)), nil
+}
+
+func handleGetQueue(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := getClient()
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	project, err := request.RequireString("project")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	queueID, err := request.RequireString("queue_id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	q, err := client.GetQueue(project, queueID)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to get queue: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText(formatQueue(q)), nil
+}
+
+func handleUpdateQueue(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := getClient()
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	project, err := request.RequireString("project")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	queueID, err := request.RequireString("queue_id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	updates := make(map[string]interface{})
+	if v := request.GetString("name", ""); v != "" {
+		updates["name"] = v
+	}
+	if v := request.GetString("description", ""); v != "" {
+		if v == "none" {
+			updates["description"] = nil
+		} else {
+			updates["description"] = v
+		}
+	}
+	if v := request.GetString("queue_type", ""); v != "" {
+		updates["queue_type"] = v
+	}
+	if v := request.GetString("default_priority", ""); v != "" {
+		updates["default_priority"] = v
+	}
+
+	if len(updates) == 0 {
+		return mcp.NewToolResultError("No fields to update. Provide at least one of: name, description, queue_type, default_priority."), nil
+	}
+
+	q, err := client.UpdateQueue(project, queueID, updates)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to update queue: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText(fmt.Sprintf("Updated queue %q (id: %s)", q.Name, q.ID)), nil
+}
+
+func handleDeleteQueue(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := getClient()
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	project, err := request.RequireString("project")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	queueID, err := request.RequireString("queue_id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	if err := client.DeleteQueue(project, queueID); err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to delete queue: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText(fmt.Sprintf("Deleted queue %s from project %s", queueID, project)), nil
+}
+
 // --- Formatting helpers ---
 
 func formatDuration(seconds int) string {
@@ -947,6 +1814,38 @@ func formatDuration(seconds int) string {
 		return fmt.Sprintf("%dh", h)
 	}
 	return fmt.Sprintf("%dm", m)
+}
+
+func formatMilestone(m *Milestone) string {
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "## %s\n\n", m.Name)
+	fmt.Fprintf(&sb, "- **Status**: %s\n", m.Status)
+	fmt.Fprintf(&sb, "- **Progress**: %d/%d closed (%d open)\n", m.ClosedCount, m.TotalCount, m.OpenCount)
+	if m.DueDate != nil {
+		fmt.Fprintf(&sb, "- **Due date**: %s\n", *m.DueDate)
+	}
+	if m.Description != nil && *m.Description != "" {
+		fmt.Fprintf(&sb, "- **Description**: %s\n", *m.Description)
+	}
+	fmt.Fprintf(&sb, "- **ID**: %s\n", m.ID)
+	fmt.Fprintf(&sb, "- **Created**: %s\n", m.CreatedAt)
+	return sb.String()
+}
+
+func formatQueue(q *Queue) string {
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "## %s\n\n", q.Name)
+	fmt.Fprintf(&sb, "- **Type**: %s\n", q.QueueType)
+	fmt.Fprintf(&sb, "- **Public**: %v\n", q.IsPublic)
+	if q.DefaultPriority != "" {
+		fmt.Fprintf(&sb, "- **Default priority**: %s\n", q.DefaultPriority)
+	}
+	if q.Description != nil && *q.Description != "" {
+		fmt.Fprintf(&sb, "- **Description**: %s\n", *q.Description)
+	}
+	fmt.Fprintf(&sb, "- **ID**: %s\n", q.ID)
+	fmt.Fprintf(&sb, "- **Created**: %s\n", q.CreatedAt)
+	return sb.String()
 }
 
 func formatWorkItem(item *WorkItem) string {

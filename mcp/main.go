@@ -51,6 +51,39 @@ func main() {
 	// Workflow tools
 	s.AddTool(listStatusesTool(), handleListStatuses)
 
+	// Extended work item tools
+	s.AddTool(deleteWorkItemTool(), handleDeleteWorkItem)
+	s.AddTool(updateCommentTool(), handleUpdateComment)
+	s.AddTool(deleteCommentTool(), handleDeleteComment)
+	s.AddTool(deleteRelationTool(), handleDeleteRelation)
+	s.AddTool(deleteAttachmentTool(), handleDeleteAttachment)
+
+	// Project management tools
+	s.AddTool(createProjectTool(), handleCreateProject)
+	s.AddTool(updateProjectTool(), handleUpdateProject)
+	s.AddTool(deleteProjectTool(), handleDeleteProject)
+	s.AddTool(listMembersTool(), handleListMembers)
+	s.AddTool(addMemberTool(), handleAddMember)
+	s.AddTool(updateMemberRoleTool(), handleUpdateMemberRole)
+	s.AddTool(removeMemberTool(), handleRemoveMember)
+
+	// User tools
+	s.AddTool(searchUsersTool(), handleSearchUsers)
+
+	// Milestone tools
+	s.AddTool(listMilestonesTool(), handleListMilestones)
+	s.AddTool(createMilestoneTool(), handleCreateMilestone)
+	s.AddTool(getMilestoneTool(), handleGetMilestone)
+	s.AddTool(updateMilestoneTool(), handleUpdateMilestone)
+	s.AddTool(deleteMilestoneTool(), handleDeleteMilestone)
+
+	// Queue tools
+	s.AddTool(listQueuesTool(), handleListQueues)
+	s.AddTool(createQueueTool(), handleCreateQueue)
+	s.AddTool(getQueueTool(), handleGetQueue)
+	s.AddTool(updateQueueTool(), handleUpdateQueue)
+	s.AddTool(deleteQueueTool(), handleDeleteQueue)
+
 	if err := server.ServeStdio(s); err != nil {
 		fmt.Fprintf(os.Stderr, "Server error: %v\n", err)
 		os.Exit(1)
