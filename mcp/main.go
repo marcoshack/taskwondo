@@ -37,6 +37,7 @@ func main() {
 	// Attachment tools
 	s.AddTool(listAttachmentsTool(), handleListAttachments)
 	s.AddTool(uploadAttachmentTool(), handleUploadAttachment)
+	s.AddTool(downloadAttachmentTool(), handleDownloadAttachment)
 
 	// Project tools
 	s.AddTool(listProjectsTool(), handleListProjects)

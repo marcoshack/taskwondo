@@ -850,6 +850,43 @@ func (c *Client) DeleteRelation(projectKey string, itemNumber int, relationID st
 	return err
 }
 
+// --- Attachment download ---
+
+// DownloadAttachment downloads an attachment and saves it to destPath.
+func (c *Client) DownloadAttachment(projectKey string, itemNumber int, attachmentID, destPath string) (int64, error) {
+	path := fmt.Sprintf("/api/v1/projects/%s/items/%d/attachments/%s", url.PathEscape(projectKey), itemNumber, url.PathEscape(attachmentID))
+	reqURL := c.baseURL + path
+
+	req, err := http.NewRequest("GET", reqURL, nil)
+	if err != nil {
+		return 0, fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+c.apiKey)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return 0, fmt.Errorf("request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return 0, fmt.Errorf("API error %d: %s", resp.StatusCode, string(body))
+	}
+
+	f, err := os.Create(destPath)
+	if err != nil {
+		return 0, fmt.Errorf("create file: %w", err)
+	}
+	defer f.Close()
+
+	n, err := io.Copy(f, resp.Body)
+	if err != nil {
+		return 0, fmt.Errorf("write file: %w", err)
+	}
+	return n, nil
+}
+
 // --- Attachment delete ---
 
 func (c *Client) DeleteAttachment(projectKey string, itemNumber int, attachmentID string) error {

@@ -970,6 +970,15 @@ func deleteRelationTool() mcp.Tool {
 	)
 }
 
+func downloadAttachmentTool() mcp.Tool {
+	return mcp.NewTool("download_attachment",
+		mcp.WithDescription("Download a file attachment from a work item to a local path"),
+		mcp.WithString("display_id", mcp.Required(), mcp.Description("Work item display ID, e.g. TF-141")),
+		mcp.WithString("attachment_id", mcp.Required(), mcp.Description("Attachment UUID to download (from list_attachments)")),
+		mcp.WithString("file_path", mcp.Required(), mcp.Description("Absolute path to save the downloaded file to")),
+	)
+}
+
 func deleteAttachmentTool() mcp.Tool {
 	return mcp.NewTool("delete_attachment",
 		mcp.WithDescription("Delete a file attachment from a work item"),
@@ -1244,6 +1253,38 @@ func handleDeleteRelation(_ context.Context, request mcp.CallToolRequest) (*mcp.
 	}
 
 	return mcp.NewToolResultText(fmt.Sprintf("Deleted relation %s from %s", relationID, displayID)), nil
+}
+
+func handleDownloadAttachment(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := getClient()
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	displayID, err := request.RequireString("display_id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	attachmentID, err := request.RequireString("attachment_id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	filePath, err := request.RequireString("file_path")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	projectKey, itemNumber, err := parseDisplayID(displayID)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	n, err := client.DownloadAttachment(projectKey, itemNumber, attachmentID, filePath)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to download attachment: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText(fmt.Sprintf("Downloaded attachment %s from %s to %s (%d bytes)", attachmentID, displayID, filePath, n)), nil
 }
 
 func handleDeleteAttachment(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
