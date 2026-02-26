@@ -869,26 +869,26 @@ export function WorkItemListPage() {
                     <span className="absolute top-2 right-2" onClick={(e) => e.stopPropagation()}>
                       <InboxButton workItemId={item.id} inboxItemId={inboxByWorkItemId.get(item.id)} />
                     </span>
-                    <div className="flex items-center gap-2 overflow-x-auto pr-6">
-                      <span className="font-mono text-sm font-semibold text-gray-700 dark:text-gray-300">{item.display_id}</span>
-                      <TypeBadge type={item.type} />
-                      <StatusBadge status={item.status} statuses={allStatuses ?? statuses} />
-                      <PriorityBadge priority={item.priority} />
+                    <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pr-6">
+                      <span className="shrink-0 font-mono text-sm font-semibold text-gray-700 dark:text-gray-300">{item.display_id}</span>
+                      <span className="shrink-0 inline-flex"><TypeBadge type={item.type} /></span>
+                      <span className="shrink-0 inline-flex"><StatusBadge status={item.status} statuses={allStatuses ?? statuses} /></span>
+                      <span className="shrink-0 inline-flex"><PriorityBadge priority={item.priority} /></span>
                       {!showDates && item.sla && (
-                        <span className="ml-auto"><SLAIndicator sla={item.sla} compact /></span>
+                        <span className="shrink-0 inline-flex ml-auto"><SLAIndicator sla={item.sla} compact /></span>
                       )}
                     </div>
                     {showDates && (
-                      <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-400 dark:text-gray-500 overflow-x-auto">
-                        <span className="inline-flex items-center gap-1">
+                      <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-400 dark:text-gray-500 overflow-x-auto scrollbar-none">
+                        <span className="shrink-0 inline-flex items-center gap-1">
                           <User className="h-3 w-3" />
                           <span className="truncate max-w-[8rem]">{assigneeName}</span>
                         </span>
-                        <span className="inline-flex items-center gap-1">
+                        <span className="shrink-0 inline-flex items-center gap-1">
                           <History className="h-3 w-3" />
                           {formatRelativeTime(item.updated_at)}
                         </span>
-                        {item.sla && <SLAIndicator sla={item.sla} />}
+                        {item.sla && <span className="shrink-0 inline-flex"><SLAIndicator sla={item.sla} /></span>}
                       </div>
                     )}
                     <p className="mt-1.5 text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{item.title}</p>

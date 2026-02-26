@@ -554,4 +554,116 @@ test.describe('Inbox', () => {
     await backLink.click();
     await expect(page).toHaveURL(/\/user\/inbox/, { timeout: 10000 });
   });
+
+  test('mobile edit mode toggle shows and hides card controls', async ({ request, testUser, testProject, page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+
+    const item = await api.createWorkItem(request, testUser.token, testProject.key, {
+      title: 'Edit mode test',
+      type: 'task',
+    });
+    await api.addToInbox(request, testUser.token, item.id);
+
+    await page.goto('/user/inbox');
+    await dismissWelcomeModal(page);
+
+    const inboxCards = page.locator('.sm\\:hidden');
+    await expect(inboxCards.getByText('Edit mode test')).toBeVisible({ timeout: 10000 });
+
+    // Controls should not be visible before enabling edit mode
+    await expect(inboxCards.getByRole('button', { name: 'Remove from inbox' })).not.toBeVisible();
+    await expect(inboxCards.getByRole('button', { name: 'Move up' })).not.toBeVisible();
+    await page.screenshot({ path: 'test-results/inbox-mobile-edit-toggle-1-before.png' });
+
+    // Click the edit toggle button (pencil icon)
+    const editBtn = page.getByRole('button', { name: 'Edit', exact: true });
+    await editBtn.click();
+
+    // Controls should now be visible
+    await expect(inboxCards.getByRole('button', { name: 'Remove from inbox' })).toBeVisible({ timeout: 3000 });
+    await page.screenshot({ path: 'test-results/inbox-mobile-edit-toggle-2-controls-visible.png' });
+
+    // Toggle edit mode off
+    await editBtn.click();
+
+    // Controls should be hidden again
+    await expect(inboxCards.getByRole('button', { name: 'Remove from inbox' })).not.toBeVisible({ timeout: 3000 });
+    await page.screenshot({ path: 'test-results/inbox-mobile-edit-toggle-3-controls-hidden.png' });
+  });
+
+  test('mobile edit mode remove item from inbox', async ({ request, testUser, testProject, page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+
+    const item = await api.createWorkItem(request, testUser.token, testProject.key, {
+      title: 'Mobile edit remove',
+      type: 'task',
+    });
+    await api.addToInbox(request, testUser.token, item.id);
+
+    await page.goto('/user/inbox');
+    await dismissWelcomeModal(page);
+
+    const inboxCards = page.locator('.sm\\:hidden');
+    await expect(inboxCards.getByText('Mobile edit remove')).toBeVisible({ timeout: 10000 });
+    await page.screenshot({ path: 'test-results/inbox-mobile-edit-remove-1-before.png' });
+
+    // Enable edit mode
+    await page.getByRole('button', { name: 'Edit', exact: true }).click();
+
+    // Click the remove button on the card
+    const removeBtn = inboxCards.getByRole('button', { name: 'Remove from inbox' });
+    await expect(removeBtn).toBeVisible({ timeout: 3000 });
+    await page.screenshot({ path: 'test-results/inbox-mobile-edit-remove-2-edit-mode.png' });
+    await removeBtn.click();
+
+    // Item should disappear
+    await expect(inboxCards.getByText('Mobile edit remove')).not.toBeVisible({ timeout: 5000 });
+    await page.screenshot({ path: 'test-results/inbox-mobile-edit-remove-3-after.png' });
+
+    // Verify via API
+    const list = await api.listInboxItems(request, testUser.token);
+    expect(list.items).toHaveLength(0);
+  });
+
+  test('mobile edit mode reorder items', async ({ request, testUser, testProject, page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+
+    // Create 3 items and add to inbox
+    for (let i = 1; i <= 3; i++) {
+      const item = await api.createWorkItem(request, testUser.token, testProject.key, {
+        title: `Mobile order ${i}`,
+        type: 'task',
+      });
+      await api.addToInbox(request, testUser.token, item.id);
+    }
+
+    await page.goto('/user/inbox');
+    await dismissWelcomeModal(page);
+
+    const inboxCards = page.locator('.sm\\:hidden');
+    await expect(inboxCards.getByText('Mobile order 1')).toBeVisible({ timeout: 10000 });
+    await expect(inboxCards.getByText('Mobile order 3')).toBeVisible();
+    await page.screenshot({ path: 'test-results/inbox-mobile-edit-reorder-1-before.png' });
+
+    // Enable edit mode
+    await page.getByRole('button', { name: 'Edit', exact: true }).click();
+    await page.screenshot({ path: 'test-results/inbox-mobile-edit-reorder-2-edit-mode.png' });
+
+    // Find the last card (Mobile order 3) and click its "Move up" button
+    const cards = inboxCards.locator('.rounded-lg');
+    const lastCard = cards.filter({ hasText: 'Mobile order 3' });
+    const moveUpBtn = lastCard.getByRole('button', { name: 'Move up' });
+    await expect(moveUpBtn).toBeVisible({ timeout: 3000 });
+    await moveUpBtn.click();
+
+    // Wait for reorder to complete
+    await page.waitForTimeout(1000);
+    await page.screenshot({ path: 'test-results/inbox-mobile-edit-reorder-3-after.png' });
+
+    // Verify new order via API: item 1, item 3, item 2
+    const list = await api.listInboxItems(request, testUser.token);
+    expect(list.items[0].title).toBe('Mobile order 1');
+    expect(list.items[1].title).toBe('Mobile order 3');
+    expect(list.items[2].title).toBe('Mobile order 2');
+  });
 });

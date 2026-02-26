@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useRef } from 'react'
 import { Routes, Route, useNavigate } from 'react-router-dom'
 import { Trans, useTranslation } from 'react-i18next'
-import { ChevronUp, ChevronDown, X, Search, BrushCleaning, Inbox, Check, Rss, Bookmark, Settings, User, History } from 'lucide-react'
+import { ChevronUp, ChevronDown, X, Search, BrushCleaning, Inbox, Check, Rss, Bookmark, Settings, User, History, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
@@ -150,6 +150,7 @@ interface InboxCardProps {
   isFirst: boolean
   isLast: boolean
   isActive: boolean
+  editing: boolean
   onRemove: (id: string) => void
   onMoveUp: (item: InboxItem) => void
   onMoveDown: (item: InboxItem) => void
@@ -159,7 +160,7 @@ interface InboxCardProps {
   autoRemove: boolean
 }
 
-function InboxCard({ item, isCompleted, isFirst, isLast, isActive, onRemove, onMoveUp, onMoveDown, onClick, removedId, reorderedId, autoRemove }: InboxCardProps) {
+function InboxCard({ item, isCompleted, isFirst, isLast, isActive, editing, onRemove, onMoveUp, onMoveDown, onClick, removedId, reorderedId, autoRemove }: InboxCardProps) {
   const { t } = useTranslation()
   const isRemoving = removedId === item.id
   const dimmed = isCompleted && !isRemoving
@@ -167,53 +168,34 @@ function InboxCard({ item, isCompleted, isFirst, isLast, isActive, onRemove, onM
 
   return (
     <div
-      className={`flex items-center gap-2 p-3 rounded-lg border bg-white dark:bg-gray-800 shadow-sm transition-colors
+      className={`flex items-stretch gap-0 rounded-lg border bg-white dark:bg-gray-800 shadow-sm transition-colors
         ${isActive ? 'border-indigo-400 dark:border-indigo-500 ring-1 ring-indigo-300 dark:ring-indigo-600' : 'border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600'}
         ${reorderedId === item.id ? 'animate-[inbox-highlight_1s_ease-in-out]' : ''}
         ${isRemoving && autoRemove ? 'transition-all duration-300 opacity-0 -translate-y-2' : ''}`}
     >
-      {/* Reorder arrows — vertically centered */}
-      <div className={`flex flex-col items-center flex-shrink-0 ${dimmed ? 'opacity-40' : ''}`}>
-        <button
-          onClick={() => onMoveUp(item)}
-          disabled={isFirst}
-          className={`p-0.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-gray-700 ${isFirst ? 'invisible' : ''}`}
-          aria-label={t('inbox.moveUp')}
-        >
-          <ChevronUp className="h-4 w-4" />
-        </button>
-        <button
-          onClick={() => onMoveDown(item)}
-          disabled={isLast}
-          className={`p-0.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-gray-700 ${isLast ? 'invisible' : ''}`}
-          aria-label={t('inbox.moveDown')}
-        >
-          <ChevronDown className="h-4 w-4" />
-        </button>
-      </div>
       {/* Card content */}
       <button
-        className="flex-1 text-left min-w-0"
+        className="flex-1 text-left min-w-0 p-3"
         onClick={() => onClick(item)}
       >
         {/* Line 1: Display ID + badges */}
-        <div className="flex items-center gap-2 overflow-x-auto">
-          <span className={`font-mono text-sm font-semibold ${dimmed ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'}`}>{item.display_id}</span>
-          <span className={`inline-flex ${dimmed ? 'opacity-40' : ''}`}><TypeBadge type={item.type} /></span>
-          <InboxStatusBadge status={item.status} category={item.status_category} />
-          <span className={`inline-flex ${dimmed ? 'opacity-40' : ''}`}><PriorityBadge priority={item.priority} /></span>
-          {!dimmed && item.sla && <span className="ml-auto"><SLAIndicator sla={item.sla} compact /></span>}
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none">
+          <span className={`shrink-0 font-mono text-sm font-semibold ${dimmed ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'}`}>{item.display_id}</span>
+          <span className={`shrink-0 inline-flex ${dimmed ? 'opacity-40' : ''}`}><TypeBadge type={item.type} /></span>
+          <span className="shrink-0 inline-flex"><InboxStatusBadge status={item.status} category={item.status_category} /></span>
+          <span className={`shrink-0 inline-flex ${dimmed ? 'opacity-40' : ''}`}><PriorityBadge priority={item.priority} /></span>
         </div>
-        {/* Line 2: Assignee, Updated, SLA (when no compact SLA above) */}
-        <div className={`flex items-center gap-3 mt-1.5 text-xs overflow-x-auto ${dimmed ? 'text-gray-300 dark:text-gray-600' : 'text-gray-400 dark:text-gray-500'}`}>
-          <span className="inline-flex items-center gap-1">
+        {/* Line 2: Assignee, Updated, SLA */}
+        <div className={`flex items-center gap-3 mt-1.5 text-xs overflow-x-auto scrollbar-none ${dimmed ? 'text-gray-300 dark:text-gray-600' : 'text-gray-400 dark:text-gray-500'}`}>
+          <span className="shrink-0 inline-flex items-center gap-1">
             <User className="h-3 w-3" />
             <span className="truncate max-w-[8rem]">{assigneeName}</span>
           </span>
-          <span className="inline-flex items-center gap-1">
+          <span className="shrink-0 inline-flex items-center gap-1">
             <History className="h-3 w-3" />
             {formatRelativeTime(item.updated_at)}
           </span>
+          {!dimmed && item.sla && <span className="shrink-0 inline-flex"><SLAIndicator sla={item.sla} /></span>}
         </div>
         {/* Line 3: Title */}
         <p className={`mt-1.5 text-sm font-medium truncate ${dimmed ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'}`}>
@@ -226,14 +208,38 @@ function InboxCard({ item, isCompleted, isFirst, isLast, isActive, onRemove, onM
           </p>
         )}
       </button>
-      {/* Remove button */}
-      <button
-        onClick={() => onRemove(item.id)}
-        className="text-gray-400 hover:text-red-500 flex-shrink-0"
-        aria-label={t('inbox.removeFromInbox')}
-      >
-        <X className="h-4 w-4" />
-      </button>
+      {/* Edit controls — right column, fits within card's natural height */}
+      {editing && (
+        <div className="flex flex-col items-center justify-between flex-shrink-0 rounded-r-lg bg-indigo-50 dark:bg-indigo-900/20 border-l border-indigo-200 dark:border-indigo-700/50 px-2 py-1">
+          {/* Remove at top */}
+          <button
+            onClick={() => onRemove(item.id)}
+            className="p-1 rounded text-red-400 hover:text-red-600 hover:bg-red-100 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/30"
+            aria-label={t('inbox.removeFromInbox')}
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+          {/* Reorder arrows — shifted up 10%, spaced 20% apart */}
+          <div className="relative -top-[10%] flex flex-col items-center gap-[20%]">
+            <button
+              onClick={() => onMoveUp(item)}
+              disabled={isFirst}
+              className={`p-0.5 rounded text-indigo-400 hover:text-indigo-600 hover:bg-indigo-100 dark:text-indigo-400 dark:hover:text-indigo-300 dark:hover:bg-indigo-800/40 ${isFirst ? 'invisible' : ''}`}
+              aria-label={t('inbox.moveUp')}
+            >
+              <ChevronUp className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => onMoveDown(item)}
+              disabled={isLast}
+              className={`p-0.5 rounded text-indigo-400 hover:text-indigo-600 hover:bg-indigo-100 dark:text-indigo-400 dark:hover:text-indigo-300 dark:hover:bg-indigo-800/40 ${isLast ? 'invisible' : ''}`}
+              aria-label={t('inbox.moveDown')}
+            >
+              <ChevronDown className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -260,6 +266,7 @@ function InboxListPage() {
   })
 
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [editing, setEditing] = useState(false)
 
   const [loadedPages, setLoadedPages] = useState<InboxItem[][]>([])
   const [prevSearch, setPrevSearch] = useState(debouncedSearch)
@@ -538,6 +545,18 @@ function InboxListPage() {
             )}
           </button>
         </Tooltip>
+        {/* Mobile: edit toggle */}
+        <button
+          onClick={() => setEditing((v) => !v)}
+          className={`sm:hidden p-2 rounded-lg border transition-colors ${
+            editing
+              ? 'border-indigo-400 bg-indigo-50 text-indigo-600 dark:border-indigo-500 dark:bg-indigo-900/30 dark:text-indigo-400'
+              : 'border-gray-300 dark:border-gray-600 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-300'
+          }`}
+          aria-label={t('common.edit')}
+        >
+          <Pencil className="h-5 w-5" />
+        </button>
         {/* Mobile: settings button */}
         <button
           onClick={() => setSettingsOpen(true)}
@@ -604,6 +623,7 @@ function InboxListPage() {
                 isFirst={index === 0}
                 isLast={index === allItems.length - 1}
                 isActive={index === activeRow}
+                editing={editing}
                 onRemove={handleRemove}
                 onMoveUp={handleMoveUp}
                 onMoveDown={handleMoveDown}
