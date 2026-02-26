@@ -58,41 +58,10 @@ export function RelationList({ projectKey, itemNumber, readOnly = false }: Relat
   if (isLoading) return <Spinner size="sm" />
 
   return (
-    <div className="space-y-1">
-      {(relations ?? []).map((r) => {
-        const linked = getLinkedInfo(r)
-        return (
-          <div key={r.id} className="flex items-center justify-between text-sm py-1.5">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="text-gray-500 dark:text-gray-400 shrink-0">{linked.label}</span>
-              <Link
-                to={displayIdToPath(linked.displayId)}
-                className="inline-flex items-center rounded-md bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 text-xs font-bold hover:bg-indigo-200 dark:hover:bg-indigo-900/60 transition-colors shrink-0"
-              >
-                {linked.displayId}
-              </Link>
-              <Link
-                to={displayIdToPath(linked.displayId)}
-                className="text-gray-700 dark:text-gray-300 truncate hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-              >
-                {linked.title}
-              </Link>
-            </div>
-            {!readOnly && (
-              <button
-                className="text-xs text-red-400 hover:text-red-600 dark:hover:text-red-300 shrink-0 ml-2"
-                onClick={() => deleteMutation.mutate(r.id)}
-              >
-                {t('common.remove')}
-              </button>
-            )}
-          </div>
-        )
-      })}
-
+    <div className="space-y-4">
       {!readOnly && (
-        <div className="flex items-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
-          <div className="flex-1">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 pb-3 border-b border-gray-100 dark:border-gray-700">
+          <div className="sm:flex-1">
             <WorkItemPicker
               projectKey={projectKey}
               excludeItemNumber={itemNumber}
@@ -101,26 +70,61 @@ export function RelationList({ projectKey, itemNumber, readOnly = false }: Relat
               onSelect={setTargetId}
             />
           </div>
-          <div className="w-40">
-            <Select value={relationType} onChange={(e) => setRelationType(e.target.value)}>
-              {RELATION_TYPES.map((tp) => (
-                <option key={tp} value={tp}>{t(`relations.types.${tp}`)}</option>
-              ))}
-            </Select>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 sm:w-40 sm:flex-none">
+              <Select value={relationType} onChange={(e) => setRelationType(e.target.value)}>
+                {RELATION_TYPES.map((tp) => (
+                  <option key={tp} value={tp}>{t(`relations.types.${tp}`)}</option>
+                ))}
+              </Select>
+            </div>
+            <Button
+              className="py-2 text-sm shrink-0"
+              onClick={() => {
+                createMutation.mutate({ targetDisplayId: targetId, relationType }, {
+                  onSuccess: () => setTargetId(''),
+                })
+              }}
+              disabled={!targetId.trim() || createMutation.isPending}
+            >
+              {t('common.add')}
+            </Button>
           </div>
-          <Button
-            className="py-2 text-sm"
-            onClick={() => {
-              createMutation.mutate({ targetDisplayId: targetId, relationType }, {
-                onSuccess: () => setTargetId(''),
-              })
-            }}
-            disabled={!targetId.trim() || createMutation.isPending}
-          >
-            {t('common.add')}
-          </Button>
         </div>
       )}
+
+      <div className="space-y-1">
+        {(relations ?? []).map((r) => {
+          const linked = getLinkedInfo(r)
+          return (
+            <div key={r.id} className="flex items-center justify-between text-sm py-1.5">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-gray-500 dark:text-gray-400 shrink-0">{linked.label}</span>
+                <Link
+                  to={displayIdToPath(linked.displayId)}
+                  className="inline-flex items-center rounded-md bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 text-xs font-bold hover:bg-indigo-200 dark:hover:bg-indigo-900/60 transition-colors shrink-0"
+                >
+                  {linked.displayId}
+                </Link>
+                <Link
+                  to={displayIdToPath(linked.displayId)}
+                  className="text-gray-700 dark:text-gray-300 truncate hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                >
+                  {linked.title}
+                </Link>
+              </div>
+              {!readOnly && (
+                <button
+                  className="text-xs text-red-400 hover:text-red-600 dark:hover:text-red-300 shrink-0 ml-2"
+                  onClick={() => deleteMutation.mutate(r.id)}
+                >
+                  {t('common.remove')}
+                </button>
+              )}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
