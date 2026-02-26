@@ -869,7 +869,7 @@ export function WorkItemListPage() {
                     <span className="absolute top-2 right-2" onClick={(e) => e.stopPropagation()}>
                       <InboxButton workItemId={item.id} inboxItemId={inboxByWorkItemId.get(item.id)} />
                     </span>
-                    <div className="flex items-center gap-2 flex-wrap pr-6">
+                    <div className="flex items-center gap-2 overflow-x-auto pr-6">
                       <span className="font-mono text-sm font-semibold text-gray-700 dark:text-gray-300">{item.display_id}</span>
                       <TypeBadge type={item.type} />
                       <StatusBadge status={item.status} statuses={allStatuses ?? statuses} />
