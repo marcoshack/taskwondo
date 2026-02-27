@@ -1,4 +1,4 @@
-.PHONY: build push help dev dev-db dev-api dev-web dev-worker up down logs logs-api migrate migrate-new test test-e2e test-e2e-dev test-e2e-report check-env export import release build-mcp build-worker
+.PHONY: build push help dev dev-db dev-api dev-web dev-worker up down logs logs-api migrate migrate-new test test-api test-web test-e2e test-e2e-dev test-e2e-report check-env export import release build-mcp build-worker
 
 # Required environment variables (checked by sourcing .env)
 REQUIRED_VARS := POSTGRES_USER POSTGRES_PASSWORD MINIO_ROOT_USER MINIO_ROOT_PASSWORD JWT_SECRET DATABASE_URL STORAGE_ACCESS_KEY STORAGE_SECRET_KEY
@@ -184,7 +184,9 @@ build-mcp: ## Build the MCP server binary
 
 LIGHT_BLUE := \033[94m
 
-test: ## Run all tests
+test: test-api test-web ## Run all tests (API + frontend)
+
+test-api: ## Run Go API tests
 	@echo ""
 	@printf "$(CYAN)## Running Go tests...$(RESET)\n"
 	cd api && go test ./... -v -race -cover 2>&1 | tee /tmp/taskwondo-test-output.txt
@@ -193,7 +195,13 @@ test: ## Run all tests
 	@grep -E '^ok\s' /tmp/taskwondo-test-output.txt | sed 's|github.com/marcoshack/taskwondo/||' | awk '{pkg=$$2; for(i=1;i<=NF;i++) if($$i ~ /^coverage:/) {pct=$$(i+1); gsub(/%/,"",pct); printf "$(LIGHT_BLUE)   %-40s %s%%$(RESET)\n", pkg, pct}}' | sort
 	@total=$$(grep -oP 'coverage: \K[0-9.]+' /tmp/taskwondo-test-output.txt | awk '{s+=$$1; n++} END {if(n>0) printf "%.1f", s/n; else print "0"}'); \
 	printf "$(LIGHT_BLUE)   %-40s %s%%$(RESET)\n" "TOTAL (avg)" "$$total"
-	@printf "$(GREEN)## All tests passed$(RESET)\n"
+	@printf "$(GREEN)## Go tests passed$(RESET)\n"
+
+test-web: ## Run frontend unit tests (Vitest)
+	@echo ""
+	@printf "$(CYAN)## Running frontend tests...$(RESET)\n"
+	cd web && npm test
+	@printf "$(GREEN)## Frontend tests passed$(RESET)\n"
 
 test-e2e: ## Run E2E tests in isolated Docker stack (no host deps)
 	@echo ""
