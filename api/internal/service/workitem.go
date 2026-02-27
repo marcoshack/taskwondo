@@ -69,6 +69,11 @@ type TimeEntryRepository interface {
 	SumByWorkItem(ctx context.Context, workItemID uuid.UUID) (int, error)
 }
 
+// EventPublisher publishes async events (e.g. notifications) to a message broker.
+type EventPublisher interface {
+	Publish(subject string, data any) error
+}
+
 // CreateWorkItemInput holds the input for creating a work item.
 type CreateWorkItemInput struct {
 	Type         string
@@ -176,6 +181,7 @@ type WorkItemService struct {
 	slaService    *SLAService
 	fileStorage   storage.Storage
 	maxUploadSize int64
+	publisher     EventPublisher
 }
 
 // NewWorkItemService creates a new WorkItemService.
@@ -215,6 +221,11 @@ func NewWorkItemService(
 		fileStorage:   fileStorage,
 		maxUploadSize: maxUploadSize,
 	}
+}
+
+// SetPublisher configures the event publisher for async notifications.
+func (s *WorkItemService) SetPublisher(p EventPublisher) {
+	s.publisher = p
 }
 
 // Create creates a new work item in the given project.
@@ -349,6 +360,9 @@ func (s *WorkItemService) Create(ctx context.Context, info *model.AuthInfo, proj
 	if err := s.sla.InitElapsedOnCreate(ctx, item.ID, item.Status, time.Now()); err != nil {
 		log.Ctx(ctx).Warn().Err(err).Msg("failed to initialize SLA elapsed tracking")
 	}
+
+	// Publish assignment notification if item was created with an assignee
+	s.publishAssignment(ctx, projectKey, item, info.UserID)
 
 	log.Ctx(ctx).Info().
 		Str("project_key", projectKey).
@@ -599,6 +613,7 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 			}
 			s.recordEvent(ctx, item.ID, &info.UserID, "assigned", strPtr("assignee_id"), strPtr(oldAssignee), strPtr(newAssignee))
 			item.AssigneeID = input.AssigneeID
+			s.publishAssignment(ctx, project.Key, item, info.UserID)
 		}
 	}
 
@@ -1569,6 +1584,29 @@ func (s *WorkItemService) recordFieldChange(ctx context.Context, workItemID uuid
 		eventType = "priority_changed"
 	}
 	s.recordEvent(ctx, workItemID, actorID, eventType, &fieldName, &oldValue, &newValue)
+}
+
+// publishAssignment publishes an assignment notification event (best-effort).
+func (s *WorkItemService) publishAssignment(_ context.Context, projectKey string, item *model.WorkItem, assignerID uuid.UUID) {
+	if s.publisher == nil || item.AssigneeID == nil {
+		return
+	}
+	// Don't notify when users assign to themselves
+	if *item.AssigneeID == assignerID {
+		return
+	}
+	evt := model.AssignmentEvent{
+		WorkItemID: item.ID,
+		ProjectKey: projectKey,
+		ItemNumber: item.ItemNumber,
+		Title:      item.Title,
+		AssigneeID: *item.AssigneeID,
+		AssignerID: assignerID,
+		ProjectID:  item.ProjectID,
+	}
+	if err := s.publisher.Publish("notification.assignment", evt); err != nil {
+		log.Ctx(context.Background()).Warn().Err(err).Msg("failed to publish assignment notification")
+	}
 }
 
 // resolveWorkflowID returns the workflow ID for a given project and item type.

@@ -106,11 +106,39 @@ export async function deactivateUser(
   if (!res.ok()) throw new Error(`Deactivate user failed (${res.status()}): ${await res.text()}`);
 }
 
+export async function addMember(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  userId: string,
+  role: string,
+): Promise<void> {
+  const res = await request.post(`${BASE_URL}/api/v1/projects/${projectKey}/members`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { user_id: userId, role },
+  });
+  if (!res.ok()) throw new Error(`Add member failed (${res.status()}): ${await res.text()}`);
+}
+
+export async function setProjectUserSetting(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  key: string,
+  value: unknown,
+): Promise<void> {
+  const res = await request.put(`${BASE_URL}/api/v1/projects/${projectKey}/user-settings/${key}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { value },
+  });
+  if (!res.ok()) throw new Error(`Set project user setting failed (${res.status()}): ${await res.text()}`);
+}
+
 export async function createWorkItem(
   request: APIRequestContext,
   token: string,
   projectKey: string,
-  data: { title: string; type: string; description?: string },
+  data: { title: string; type: string; description?: string; assignee_id?: string },
 ): Promise<{ id: string; item_number: number; display_id: string }> {
   const res = await request.post(`${BASE_URL}/api/v1/projects/${projectKey}/items`, {
     headers: { Authorization: `Bearer ${token}` },

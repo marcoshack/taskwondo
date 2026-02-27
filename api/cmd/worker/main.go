@@ -12,7 +12,9 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/marcoshack/taskwondo/internal/config"
+	"github.com/marcoshack/taskwondo/internal/crypto"
 	"github.com/marcoshack/taskwondo/internal/database"
+	"github.com/marcoshack/taskwondo/internal/email"
 	"github.com/marcoshack/taskwondo/internal/repository"
 	"github.com/marcoshack/taskwondo/internal/workers"
 )
@@ -46,6 +48,29 @@ func main() {
 
 	// Initialize repositories
 	statsRepo := repository.NewStatsRepository(db)
+	userRepo := repository.NewUserRepository(db)
+	projectRepo := repository.NewProjectRepository(db)
+	userSettingRepo := repository.NewUserSettingRepository(db)
+	systemSettingRepo := repository.NewSystemSettingRepository(db)
+
+	// Initialize encryption (same derivation as API server)
+	var encKey []byte
+	if v := os.Getenv("ENCRYPTION_KEY"); v != "" {
+		encKey = []byte(v)
+	} else {
+		var err error
+		encKey, err = crypto.DeriveKey(cfg.JWTSecret)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to derive encryption key")
+		}
+	}
+	encryptor, err := crypto.NewEncryptor(encKey)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to create encryptor")
+	}
+
+	// Initialize email sender
+	emailSender := email.NewSender(encryptor, systemSettingRepo)
 
 	// Connect to NATS
 	nc, err := nats.Connect(cfg.NatsURL,
@@ -76,8 +101,11 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to create dispatcher")
 	}
 
-	// Register event-driven tasks here as they are added
-	// dispatcher.Register(someTask)
+	// Register event-driven tasks
+	notifyAssignment := workers.NewNotificationAssignmentTask(
+		userRepo, projectRepo, userSettingRepo, emailSender, cfg.BaseURL, log.Logger,
+	)
+	dispatcher.Register(notifyAssignment)
 
 	// Start dispatcher
 	if err := dispatcher.Start(ctx); err != nil {

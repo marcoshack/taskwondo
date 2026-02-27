@@ -4,6 +4,7 @@ import { useSidebar } from '@/contexts/SidebarContext'
 import {
   Palette,
   Key,
+  Bell,
   PanelLeftClose,
   PanelLeftOpen,
 } from 'lucide-react'
@@ -16,6 +17,7 @@ export function PreferencesSidebar() {
 
   const navItems: { to: string; label: string; icon: LucideIcon; end: boolean }[] = [
     { to: 'appearance', label: t('preferences.sidebar.appearance'), icon: Palette, end: false },
+    { to: 'notifications', label: t('preferences.sidebar.notifications'), icon: Bell, end: false },
     { to: 'api-keys', label: t('preferences.sidebar.apiKeys'), icon: Key, end: false },
   ]
 

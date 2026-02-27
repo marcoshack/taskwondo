@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/nats-io/nats.go"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/time/rate"
@@ -24,6 +25,7 @@ import (
 	"github.com/marcoshack/taskwondo/internal/repository"
 	"github.com/marcoshack/taskwondo/internal/service"
 	"github.com/marcoshack/taskwondo/internal/storage"
+	"github.com/marcoshack/taskwondo/internal/workers"
 )
 
 func main() {
@@ -216,6 +218,11 @@ func main() {
 
 	// Configure email verification on auth service
 	authService.SetEmailVerification(emailVerificationRepo, systemSettingRepo, emailSender, cfg.BaseURL)
+
+	// Connect to NATS for event publishing (optional — notifications degrade gracefully)
+	publisher, natsCleanup := initEventPublisher(cfg.NatsURL)
+	defer natsCleanup()
+	workItemService.SetPublisher(publisher)
 
 	// Initialize handlers
 	health := handler.NewHealthHandler(db)
@@ -502,6 +509,42 @@ func main() {
 	}
 
 	log.Info().Msg("server stopped")
+}
+
+func initEventPublisher(natsURL string) (service.EventPublisher, func()) {
+	noop := func() {}
+	if natsURL == "" {
+		log.Warn().Msg("NATS_URL not configured, notifications disabled")
+		return workers.NoopPublisher{}, noop
+	}
+
+	nc, err := nats.Connect(natsURL,
+		nats.RetryOnFailedConnect(true),
+		nats.MaxReconnects(-1),
+		nats.ReconnectWait(2*time.Second),
+		nats.DisconnectErrHandler(func(_ *nats.Conn, err error) {
+			if err != nil {
+				log.Error().Err(err).Msg("nats disconnected")
+			}
+		}),
+		nats.ReconnectHandler(func(_ *nats.Conn) {
+			log.Info().Msg("nats reconnected")
+		}),
+	)
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to connect to NATS, notifications disabled")
+		return workers.NoopPublisher{}, noop
+	}
+
+	pub, err := workers.NewEventPublisher(nc, log.Logger)
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to create event publisher, notifications disabled")
+		nc.Close()
+		return workers.NoopPublisher{}, noop
+	}
+
+	log.Info().Str("url", natsURL).Msg("connected to NATS for event publishing")
+	return pub, nc.Close
 }
 
 func setupLogger(level, format string) {

@@ -1,9 +1,10 @@
 import { NavLink, Routes, Route, Navigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Palette, Key } from 'lucide-react'
+import { Palette, Key, Bell } from 'lucide-react'
 import { useSidebar } from '@/contexts/SidebarContext'
 import { PreferencesSidebar } from '@/components/PreferencesSidebar'
 import { AppearancePage } from './AppearancePage'
+import { NotificationsPage } from './NotificationsPage'
 import { APIKeysPage } from './APIKeysPage'
 
 export function PreferencesPage() {
@@ -12,6 +13,7 @@ export function PreferencesPage() {
 
   const navItems = [
     { to: 'appearance', label: t('preferences.sidebar.appearance'), icon: Palette },
+    { to: 'notifications', label: t('preferences.sidebar.notifications'), icon: Bell },
     { to: 'api-keys', label: t('preferences.sidebar.apiKeys'), icon: Key },
   ]
 
@@ -43,6 +45,7 @@ export function PreferencesPage() {
           <Routes>
             <Route index element={<Navigate to="appearance" replace />} />
             <Route path="appearance" element={<AppearancePage />} />
+            <Route path="notifications" element={<NotificationsPage />} />
             <Route path="api-keys" element={<APIKeysPage />} />
           </Routes>
         </div>
