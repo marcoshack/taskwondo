@@ -150,7 +150,7 @@ type oauthCallbackRequest struct {
 func (h *AuthHandler) OAuthAuth(w http.ResponseWriter, r *http.Request) {
 	provider := chi.URLParam(r, "provider")
 
-	authURL, err := h.auth.OAuthURL(provider)
+	authURL, err := h.auth.OAuthURL(r.Context(), provider)
 	if err != nil {
 		writeError(w, http.StatusNotFound, "NOT_CONFIGURED", provider+" oauth is not configured")
 		return

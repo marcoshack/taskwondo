@@ -503,7 +503,7 @@ func TestOAuthState_InvalidFormat(t *testing.T) {
 func TestOAuthURL_Discord(t *testing.T) {
 	svc, _, _ := newTestAuthServiceWithOAuth()
 
-	authURL, err := svc.OAuthURL("discord")
+	authURL, err := svc.OAuthURL(context.Background(), "discord")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -520,7 +520,7 @@ func TestOAuthURL_Discord(t *testing.T) {
 
 func TestOAuthURL_NotConfigured(t *testing.T) {
 	svc, _, _ := newTestAuthService()
-	_, err := svc.OAuthURL("discord")
+	_, err := svc.OAuthURL(context.Background(), "discord")
 	if err == nil {
 		t.Fatal("expected error when discord is not configured")
 	}
@@ -1036,7 +1036,7 @@ func TestOAuthURL_Google(t *testing.T) {
 	svc := NewAuthService(userRepo, apiKeyRepo, oauthRepo, "test-secret-at-least-32-chars!!", 24*time.Hour,
 		[]OAuthProvider{google})
 
-	authURL, err := svc.OAuthURL("google")
+	authURL, err := svc.OAuthURL(context.Background(), "google")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}

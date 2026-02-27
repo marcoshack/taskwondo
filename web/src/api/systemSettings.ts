@@ -63,3 +63,21 @@ export async function testSMTPConfig(): Promise<{ message: string }> {
   const res = await api.post<DataResponse<{ message: string }>>('/admin/settings/smtp_config/test')
   return res.data.data
 }
+
+// OAuth Provider Configuration
+
+export interface OAuthProviderConfig {
+  client_id: string
+  client_secret: string
+  redirect_uri: string
+}
+
+export async function getOAuthConfig(provider: string): Promise<OAuthProviderConfig> {
+  const res = await api.get<DataResponse<OAuthProviderConfig>>(`/admin/settings/oauth_config/${provider}`)
+  return res.data.data
+}
+
+export async function setOAuthConfig(provider: string, config: OAuthProviderConfig): Promise<OAuthProviderConfig> {
+  const res = await api.put<DataResponse<OAuthProviderConfig>>(`/admin/settings/oauth_config/${provider}`, config)
+  return res.data.data
+}

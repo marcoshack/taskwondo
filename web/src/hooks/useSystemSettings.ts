@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getSystemSettings, getSystemSetting, setSystemSetting, deleteSystemSetting, getPublicSettings, getSMTPConfig, setSMTPConfig, testSMTPConfig } from '@/api/systemSettings'
-import type { SMTPConfig } from '@/api/systemSettings'
+import { getSystemSettings, getSystemSetting, setSystemSetting, deleteSystemSetting, getPublicSettings, getSMTPConfig, setSMTPConfig, testSMTPConfig, getOAuthConfig, setOAuthConfig } from '@/api/systemSettings'
+import type { SMTPConfig, OAuthProviderConfig } from '@/api/systemSettings'
 
 export function useSystemSettings() {
   return useQuery({
@@ -72,5 +72,24 @@ export function useSetSMTPConfig() {
 export function useTestSMTP() {
   return useMutation({
     mutationFn: () => testSMTPConfig(),
+  })
+}
+
+export function useOAuthConfig(provider: string) {
+  return useQuery({
+    queryKey: ['system-settings', 'oauth_config', provider],
+    queryFn: () => getOAuthConfig(provider),
+    enabled: !!provider,
+  })
+}
+
+export function useSetOAuthConfig(provider: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (config: OAuthProviderConfig) => setOAuthConfig(provider, config),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['system-settings', 'oauth_config', provider] })
+      qc.invalidateQueries({ queryKey: ['public-settings'] })
+    },
   })
 }

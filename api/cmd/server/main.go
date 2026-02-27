@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"net/http"
 	"os"
@@ -22,6 +23,7 @@ import (
 	"github.com/marcoshack/taskwondo/internal/email"
 	"github.com/marcoshack/taskwondo/internal/handler"
 	"github.com/marcoshack/taskwondo/internal/middleware"
+	"github.com/marcoshack/taskwondo/internal/model"
 	"github.com/marcoshack/taskwondo/internal/repository"
 	"github.com/marcoshack/taskwondo/internal/service"
 	"github.com/marcoshack/taskwondo/internal/storage"
@@ -220,6 +222,12 @@ func main() {
 
 	// Configure email verification on auth service
 	authService.SetEmailVerification(emailVerificationRepo, systemSettingRepo, emailSender, cfg.BaseURL)
+
+	// Configure encryptor on auth service (for decrypting OAuth secrets from DB)
+	authService.SetEncryptor(encryptor)
+
+	// Seed OAuth config from env vars if not already in DB
+	seedOAuthConfig(ctx, systemSettingRepo, encryptor, cfg)
 
 	// Connect to NATS for event publishing (optional — notifications degrade gracefully)
 	publisher, natsCleanup := initEventPublisher(cfg.NatsURL)
@@ -469,6 +477,10 @@ func main() {
 						r.Put("/", systemSettings.SetSMTP)
 						r.Post("/test", systemSettings.TestSMTP)
 					})
+					r.Route("/oauth_config/{provider}", func(r chi.Router) {
+						r.Get("/", systemSettings.GetOAuthConfig)
+						r.Put("/", systemSettings.SetOAuthConfig)
+					})
 					r.Route("/{key}", func(r chi.Router) {
 						r.Get("/", systemSettings.Get)
 						r.Put("/", systemSettings.Set)
@@ -551,6 +563,85 @@ func initEventPublisher(natsURL string) (service.EventPublisher, func()) {
 
 	log.Info().Str("url", natsURL).Msg("connected to NATS for event publishing")
 	return pub, nc.Close
+}
+
+// seedOAuthConfig seeds OAuth provider config from env vars into the database
+// if no DB config exists yet. This provides backward compatibility — env vars
+// are used only for initial seeding, then the DB config takes over.
+func seedOAuthConfig(ctx context.Context, settings service.SystemSettingRepositoryInterface, encryptor *crypto.Encryptor, cfg *config.Config) {
+	type providerEnv struct {
+		name        string
+		settingKey  string
+		enabledKey  string
+		clientID    string
+		secret      string
+		redirectURI string
+	}
+
+	providers := []providerEnv{
+		{
+			name:        "discord",
+			settingKey:  model.SettingOAuthDiscordConfig,
+			enabledKey:  model.SettingAuthDiscordEnabled,
+			clientID:    cfg.DiscordClientID,
+			secret:      cfg.DiscordClientSecret,
+			redirectURI: cfg.DiscordRedirectURI,
+		},
+		{
+			name:        "google",
+			settingKey:  model.SettingOAuthGoogleConfig,
+			enabledKey:  model.SettingAuthGoogleEnabled,
+			clientID:    cfg.GoogleClientID,
+			secret:      cfg.GoogleClientSecret,
+			redirectURI: cfg.GoogleRedirectURI,
+		},
+	}
+
+	for _, p := range providers {
+		if p.clientID == "" || p.secret == "" || p.redirectURI == "" {
+			continue // env vars not set, skip
+		}
+
+		// Check if DB config already exists
+		_, err := settings.Get(ctx, p.settingKey)
+		if err == nil {
+			log.Debug().Str("provider", p.name).Msg("oauth config already in database, skipping seed")
+			continue
+		}
+
+		// Encrypt the client secret
+		encryptedSecret, err := encryptor.Encrypt(p.secret)
+		if err != nil {
+			log.Error().Err(err).Str("provider", p.name).Msg("failed to encrypt oauth client secret for seeding")
+			continue
+		}
+
+		oauthCfg := model.OAuthProviderConfig{
+			ClientID:     p.clientID,
+			ClientSecret: encryptedSecret,
+			RedirectURI:  p.redirectURI,
+		}
+
+		value, err := json.Marshal(oauthCfg)
+		if err != nil {
+			log.Error().Err(err).Str("provider", p.name).Msg("failed to marshal oauth config for seeding")
+			continue
+		}
+
+		if err := settings.Upsert(ctx, &model.SystemSetting{Key: p.settingKey, Value: value}); err != nil {
+			log.Error().Err(err).Str("provider", p.name).Msg("failed to seed oauth config")
+			continue
+		}
+
+		// Also seed the enabled setting
+		enabledValue, _ := json.Marshal(true)
+		if err := settings.Upsert(ctx, &model.SystemSetting{Key: p.enabledKey, Value: enabledValue}); err != nil {
+			log.Error().Err(err).Str("provider", p.name).Msg("failed to seed oauth enabled setting")
+			continue
+		}
+
+		log.Info().Str("provider", p.name).Msg("seeded oauth config from environment variables")
+	}
 }
 
 func setupLogger(level, format string) {

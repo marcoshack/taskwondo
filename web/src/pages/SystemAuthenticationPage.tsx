@@ -1,22 +1,148 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { usePublicSettings, useSetSystemSetting, useSMTPConfig } from '@/hooks/useSystemSettings'
-import { getAuthProviders } from '@/api/auth'
-import type { AuthProviders } from '@/api/auth'
+import { usePublicSettings, useSetSystemSetting, useSMTPConfig, useOAuthConfig, useSetOAuthConfig } from '@/hooks/useSystemSettings'
+import type { OAuthProviderConfig } from '@/api/systemSettings'
 import { Toggle } from '@/components/ui/Toggle'
+import { Input } from '@/components/ui/Input'
 import { Spinner } from '@/components/ui/Spinner'
+import { ExpandableConfigCard } from '@/components/ui/ExpandableConfigCard'
 import { TriangleAlert } from 'lucide-react'
+
+const PASSWORD_MASK = '••••••••'
+
+const emptyConfig: OAuthProviderConfig = {
+  client_id: '',
+  client_secret: '',
+  redirect_uri: '',
+}
+
+function OAuthProviderCard({
+  provider,
+  titleKey,
+  descriptionKey,
+  enabledSettingKey,
+  enabled,
+  onToggleEnabled,
+}: {
+  provider: string
+  titleKey: string
+  descriptionKey: string
+  enabledSettingKey: string
+  enabled: boolean
+  onToggleEnabled: (key: string, value: boolean) => void
+}) {
+  const { t } = useTranslation()
+  const { data: savedConfig, isLoading } = useOAuthConfig(provider)
+  const setConfig = useSetOAuthConfig(provider)
+  const [localConfig, setLocalConfig] = useState<OAuthProviderConfig | null>(null)
+  const [expanded, setExpanded] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [saveError, setSaveError] = useState('')
+  const [secretTouched, setSecretTouched] = useState(false)
+
+  const cfg = localConfig ?? savedConfig ?? emptyConfig
+  const hasExistingConfig = !!(savedConfig && savedConfig.client_id)
+
+  const updateField = <K extends keyof OAuthProviderConfig>(field: K, value: OAuthProviderConfig[K]) => {
+    setLocalConfig((prev) => ({ ...(prev ?? savedConfig ?? emptyConfig), [field]: value }))
+    setSaved(false)
+    setSaveError('')
+  }
+
+  const isDirty = localConfig !== null || secretTouched
+
+  const isFormComplete = () => {
+    return (
+      cfg.client_id.trim() !== '' &&
+      cfg.redirect_uri.trim() !== '' &&
+      (cfg.client_secret !== '' || (hasExistingConfig && savedConfig?.client_secret === PASSWORD_MASK && !secretTouched))
+    )
+  }
+
+  const canSave = isDirty && isFormComplete()
+
+  const handleSave = () => {
+    setSaved(false)
+    setSaveError('')
+
+    const toSave = { ...cfg }
+    if (!secretTouched && hasExistingConfig && savedConfig?.client_secret === PASSWORD_MASK) {
+      toSave.client_secret = PASSWORD_MASK
+    }
+
+    setConfig.mutate(toSave, {
+      onSuccess: () => {
+        setSaved(true)
+        setLocalConfig(null)
+        setSecretTouched(false)
+      },
+      onError: () => setSaveError(t('admin.authentication.oauth.saveError')),
+    })
+  }
+
+  const handleCancel = () => {
+    setLocalConfig(null)
+    setSecretTouched(false)
+    setSaved(false)
+    setSaveError('')
+  }
+
+  if (isLoading) return null
+
+  return (
+    <ExpandableConfigCard
+      title={t(titleKey)}
+      description={t(descriptionKey)}
+      enabled={enabled}
+      onToggle={(val) => onToggleEnabled(enabledSettingKey, val)}
+      expanded={expanded}
+      onToggleExpand={() => setExpanded((prev) => !prev)}
+      onSave={handleSave}
+      onCancel={isDirty ? handleCancel : undefined}
+      canSave={canSave}
+      saving={setConfig.isPending}
+      saved={saved}
+      error={saveError}
+    >
+      {!hasExistingConfig && !localConfig && (
+        <p className="text-sm text-amber-600 dark:text-amber-400">
+          {t('admin.authentication.oauth.notConfigured')}
+        </p>
+      )}
+      <Input
+        label={t('admin.authentication.oauth.clientId')}
+        value={cfg.client_id}
+        onChange={(e) => updateField('client_id', e.target.value)}
+      />
+      <Input
+        label={t('admin.authentication.oauth.clientSecret')}
+        type="password"
+        value={secretTouched ? cfg.client_secret : (hasExistingConfig && savedConfig?.client_secret === PASSWORD_MASK ? PASSWORD_MASK : cfg.client_secret)}
+        onChange={(e) => {
+          setSecretTouched(true)
+          updateField('client_secret', e.target.value)
+        }}
+        onFocus={() => {
+          if (!secretTouched && hasExistingConfig && savedConfig?.client_secret === PASSWORD_MASK) {
+            setSecretTouched(true)
+            updateField('client_secret', '')
+          }
+        }}
+      />
+      <Input
+        label={t('admin.authentication.oauth.redirectUri')}
+        value={cfg.redirect_uri}
+        onChange={(e) => updateField('redirect_uri', e.target.value)}
+      />
+    </ExpandableConfigCard>
+  )
+}
 
 export function SystemAuthenticationPage() {
   const { t } = useTranslation()
   const { data: publicSettings, isLoading: settingsLoading } = usePublicSettings()
   const { data: smtpConfig, isLoading: smtpLoading } = useSMTPConfig()
   const setSetting = useSetSystemSetting()
-  const [providers, setProviders] = useState<AuthProviders | null>(null)
-
-  useEffect(() => {
-    getAuthProviders().then(setProviders).catch(() => {})
-  }, [])
 
   if (settingsLoading || smtpLoading) {
     return (
@@ -41,11 +167,6 @@ export function SystemAuthenticationPage() {
   const googleEnabled = settings.auth_google_enabled !== undefined
     ? settings.auth_google_enabled === true
     : true // default: enabled if configured
-
-  // OAuth providers are "configured" if they appear in the providers map
-  // (backend only includes them when env vars are set)
-  const discordConfigured = providers !== null && 'discord' in providers
-  const googleConfigured = providers !== null && 'google' in providers
 
   // SMTP is configured if the config exists and is enabled
   const smtpConfigured = smtpConfig?.enabled === true
@@ -109,44 +230,24 @@ export function SystemAuthenticationPage() {
       </div>
 
       {/* Discord */}
-      {discordConfigured && (
-        <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                {t('admin.authentication.discord.title')}
-              </h3>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                {t('admin.authentication.discord.description')}
-              </p>
-            </div>
-            <Toggle
-              enabled={discordEnabled}
-              onChange={(val) => handleToggle('auth_discord_enabled', val)}
-            />
-          </div>
-        </div>
-      )}
+      <OAuthProviderCard
+        provider="discord"
+        titleKey="admin.authentication.discord.title"
+        descriptionKey="admin.authentication.discord.description"
+        enabledSettingKey="auth_discord_enabled"
+        enabled={discordEnabled}
+        onToggleEnabled={handleToggle}
+      />
 
       {/* Google */}
-      {googleConfigured && (
-        <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                {t('admin.authentication.google.title')}
-              </h3>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                {t('admin.authentication.google.description')}
-              </p>
-            </div>
-            <Toggle
-              enabled={googleEnabled}
-              onChange={(val) => handleToggle('auth_google_enabled', val)}
-            />
-          </div>
-        </div>
-      )}
+      <OAuthProviderCard
+        provider="google"
+        titleKey="admin.authentication.google.title"
+        descriptionKey="admin.authentication.google.description"
+        enabledSettingKey="auth_google_enabled"
+        enabled={googleEnabled}
+        onToggleEnabled={handleToggle}
+      />
     </div>
   )
 }

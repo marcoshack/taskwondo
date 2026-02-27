@@ -18,6 +18,10 @@ const (
 	SettingAuthDiscordEnabled           = "auth_discord_enabled"
 	SettingAuthGoogleEnabled            = "auth_google_enabled"
 
+	// OAuth provider configuration
+	SettingOAuthDiscordConfig = "oauth_discord_config"
+	SettingOAuthGoogleConfig  = "oauth_google_config"
+
 	// Feature flags
 	SettingFeatureStatsTimeline = "feature_stats_timeline"
 )
@@ -70,6 +74,40 @@ func (c *SMTPConfig) Validate() error {
 		return fmt.Errorf("%w: encryption must be one of: starttls, tls, none", ErrValidation)
 	}
 	return nil
+}
+
+// OAuthProviderConfig holds OAuth provider credentials stored as a system setting.
+// The enabled/disabled state is stored separately in auth_*_enabled settings.
+type OAuthProviderConfig struct {
+	ClientID     string `json:"client_id"`
+	ClientSecret string `json:"client_secret"`
+	RedirectURI  string `json:"redirect_uri"`
+}
+
+// Validate checks that all required fields are present.
+func (c *OAuthProviderConfig) Validate() error {
+	if c.ClientID == "" {
+		return fmt.Errorf("%w: client_id is required", ErrValidation)
+	}
+	if c.ClientSecret == "" {
+		return fmt.Errorf("%w: client_secret is required", ErrValidation)
+	}
+	if c.RedirectURI == "" {
+		return fmt.Errorf("%w: redirect_uri is required", ErrValidation)
+	}
+	return nil
+}
+
+// OAuthConfigSettingKey returns the system setting key for a given provider name.
+func OAuthConfigSettingKey(provider string) string {
+	switch provider {
+	case OAuthProviderDiscord:
+		return SettingOAuthDiscordConfig
+	case OAuthProviderGoogle:
+		return SettingOAuthGoogleConfig
+	default:
+		return ""
+	}
 }
 
 // DefaultMaxProjectsPerUser is the fallback when the setting is not configured.

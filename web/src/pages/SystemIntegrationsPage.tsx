@@ -5,7 +5,7 @@ import type { SMTPConfig } from '@/api/systemSettings'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
-import { Toggle } from '@/components/ui/Toggle'
+import { ExpandableConfigCard } from '@/components/ui/ExpandableConfigCard'
 
 const PASSWORD_MASK = '••••••••'
 
@@ -30,6 +30,7 @@ export function SystemIntegrationsPage() {
 
   // Local overrides — null means "use server data"
   const [localConfig, setLocalConfig] = useState<SMTPConfig | null>(null)
+  const [expanded, setExpanded] = useState(false)
   const [saved, setSaved] = useState(false)
   const [saveError, setSaveError] = useState('')
   const [testSuccess, setTestSuccess] = useState(false)
@@ -79,6 +80,13 @@ export function SystemIntegrationsPage() {
     })
   }
 
+  const handleCancel = () => {
+    setLocalConfig(null)
+    setPasswordTouched(false)
+    setSaved(false)
+    setSaveError('')
+  }
+
   const handleTest = () => {
     setTestSuccess(false)
     setTestError('')
@@ -118,24 +126,42 @@ export function SystemIntegrationsPage() {
         </p>
       </div>
 
-      <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-        {/* Header with toggle */}
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-            {t('admin.integrations.smtp.title')}
-          </h3>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600 dark:text-gray-400">
-              {t('admin.integrations.smtp.enable')}
-            </span>
-            <Toggle
-              enabled={cfg.enabled}
-              onChange={(val) => updateField('enabled', val)}
-            />
-          </div>
-        </div>
-
-        {/* Outbound SMTP fields */}
+      <ExpandableConfigCard
+        title={t('admin.integrations.smtp.title')}
+        description={t('admin.integrations.smtp.description')}
+        enabled={cfg.enabled}
+        onToggle={(val) => updateField('enabled', val)}
+        expanded={expanded}
+        onToggleExpand={() => setExpanded((prev) => !prev)}
+        onSave={handleSave}
+        onCancel={isDirty ? handleCancel : undefined}
+        canSave={canSave}
+        saving={setConfigMutation.isPending}
+        saved={saved}
+        savedMessage={t('admin.integrations.smtp.saved')}
+        error={saveError}
+        extraActions={
+          <>
+            <Button
+              variant="secondary"
+              onClick={handleTest}
+              disabled={!canTest || testMutation.isPending}
+            >
+              {testMutation.isPending
+                ? t('admin.integrations.smtp.testEmailSending')
+                : t('admin.integrations.smtp.testEmail')}
+            </Button>
+            {testSuccess && (
+              <span className="text-sm text-green-600 dark:text-green-400">
+                {t('admin.integrations.smtp.testEmailSuccess')}
+              </span>
+            )}
+            {testError && (
+              <span className="text-sm text-red-600 dark:text-red-400">{testError}</span>
+            )}
+          </>
+        }
+      >
         <div className={`space-y-4 ${!cfg.enabled ? 'opacity-50 pointer-events-none' : ''}`}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
@@ -233,44 +259,7 @@ export function SystemIntegrationsPage() {
             </div>
           </div>
         </div>
-
-        {/* Actions */}
-        <div className="mt-6 flex flex-wrap items-center gap-3">
-          <Button
-            onClick={handleSave}
-            disabled={!canSave || setConfigMutation.isPending}
-          >
-            {setConfigMutation.isPending ? t('common.saving') : t('common.save')}
-          </Button>
-
-          <Button
-            variant="secondary"
-            onClick={handleTest}
-            disabled={!canTest || testMutation.isPending}
-          >
-            {testMutation.isPending
-              ? t('admin.integrations.smtp.testEmailSending')
-              : t('admin.integrations.smtp.testEmail')}
-          </Button>
-
-          {saved && (
-            <span className="text-sm text-green-600 dark:text-green-400">
-              {t('admin.integrations.smtp.saved')}
-            </span>
-          )}
-          {saveError && (
-            <span className="text-sm text-red-600 dark:text-red-400">{saveError}</span>
-          )}
-          {testSuccess && (
-            <span className="text-sm text-green-600 dark:text-green-400">
-              {t('admin.integrations.smtp.testEmailSuccess')}
-            </span>
-          )}
-          {testError && (
-            <span className="text-sm text-red-600 dark:text-red-400">{testError}</span>
-          )}
-        </div>
-      </div>
+      </ExpandableConfigCard>
     </div>
   )
 }

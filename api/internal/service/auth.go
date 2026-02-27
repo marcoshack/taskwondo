@@ -20,6 +20,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/marcoshack/taskwondo/internal/crypto"
 	"github.com/marcoshack/taskwondo/internal/model"
 )
 
@@ -89,10 +90,11 @@ type AuthService struct {
 	emailVerifications EmailVerificationRepo
 	settings           AuthSettingsReader
 	emailSender        EmailSender
+	encryptor          *crypto.Encryptor
 	baseURL            string
 	jwtSecret          []byte
 	jwtExpiry          time.Duration
-	providers          map[string]OAuthProvider
+	providers          map[string]OAuthProvider // static providers from env vars (fallback)
 }
 
 // NewAuthService creates a new AuthService.
@@ -124,6 +126,46 @@ func (s *AuthService) SetEmailVerification(repo EmailVerificationRepo, settings 
 	s.settings = settings
 	s.emailSender = sender
 	s.baseURL = baseURL
+}
+
+// SetEncryptor configures the encryptor used to decrypt OAuth client secrets from DB.
+func (s *AuthService) SetEncryptor(enc *crypto.Encryptor) {
+	s.encryptor = enc
+}
+
+// getProvider returns an OAuthProvider for the given name, preferring DB config over static.
+// Returns nil if the provider is not configured anywhere.
+func (s *AuthService) getProvider(ctx context.Context, name string) OAuthProvider {
+	// Try DB config first
+	if s.settings != nil && s.encryptor != nil {
+		settingKey := model.OAuthConfigSettingKey(name)
+		if settingKey != "" {
+			setting, err := s.settings.Get(ctx, settingKey)
+			if err == nil {
+				var cfg model.OAuthProviderConfig
+				if err := json.Unmarshal(setting.Value, &cfg); err == nil && cfg.ClientID != "" {
+					// Decrypt the client secret
+					secret, err := s.encryptor.Decrypt(cfg.ClientSecret)
+					if err != nil {
+						log.Ctx(ctx).Error().Err(err).Str("provider", name).Msg("failed to decrypt oauth client secret, falling back to static provider")
+					} else {
+						switch name {
+						case model.OAuthProviderDiscord:
+							return NewDiscordProvider(cfg.ClientID, secret, cfg.RedirectURI, nil)
+						case model.OAuthProviderGoogle:
+							return NewGoogleProvider(cfg.ClientID, secret, cfg.RedirectURI, nil)
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Fall back to static provider from env vars
+	if p, ok := s.providers[name]; ok {
+		return p
+	}
+	return nil
 }
 
 // Login verifies credentials and returns a JWT token and user.
@@ -338,24 +380,27 @@ func (s *AuthService) SeedAdminUser(ctx context.Context, email, password string)
 }
 
 // EnabledProviders returns the names of all enabled auth providers.
-// OAuth providers must be both configured (env vars) and enabled in settings.
+// OAuth providers must be both configured (DB or env vars) and enabled in settings.
 // When a setting doesn't exist: OAuth defaults to enabled (backward compat),
 // email login defaults to enabled, email registration defaults to disabled.
 func (s *AuthService) EnabledProviders(ctx context.Context) map[string]bool {
-	result := make(map[string]bool, len(s.providers)+2)
+	result := make(map[string]bool, 4)
 
-	for name := range s.providers {
-		settingKey := ""
-		switch name {
-		case "discord":
-			settingKey = model.SettingAuthDiscordEnabled
-		case "google":
-			settingKey = model.SettingAuthGoogleEnabled
-		}
-		if settingKey != "" {
-			result[name] = s.getBoolSetting(ctx, settingKey, true)
-		} else {
-			result[name] = true
+	// Check each known OAuth provider — configured via DB or static env vars
+	for _, name := range []string{model.OAuthProviderDiscord, model.OAuthProviderGoogle} {
+		if s.isOAuthConfigured(ctx, name) {
+			settingKey := ""
+			switch name {
+			case model.OAuthProviderDiscord:
+				settingKey = model.SettingAuthDiscordEnabled
+			case model.OAuthProviderGoogle:
+				settingKey = model.SettingAuthGoogleEnabled
+			}
+			if settingKey != "" {
+				result[name] = s.getBoolSetting(ctx, settingKey, true)
+			} else {
+				result[name] = true
+			}
 		}
 	}
 
@@ -366,6 +411,26 @@ func (s *AuthService) EnabledProviders(ctx context.Context) map[string]bool {
 	result["email_registration"] = s.getBoolSetting(ctx, model.SettingAuthEmailRegistrationEnabled, false)
 
 	return result
+}
+
+// isOAuthConfigured checks if an OAuth provider has config in DB or static providers.
+func (s *AuthService) isOAuthConfigured(ctx context.Context, name string) bool {
+	// Check DB config
+	if s.settings != nil {
+		settingKey := model.OAuthConfigSettingKey(name)
+		if settingKey != "" {
+			setting, err := s.settings.Get(ctx, settingKey)
+			if err == nil {
+				var cfg model.OAuthProviderConfig
+				if err := json.Unmarshal(setting.Value, &cfg); err == nil && cfg.ClientID != "" {
+					return true
+				}
+			}
+		}
+	}
+	// Check static providers
+	_, ok := s.providers[name]
+	return ok
 }
 
 // getBoolSetting reads a boolean system setting, returning defaultVal if not found.
@@ -562,9 +627,9 @@ func verificationEmailHTML(displayName, verifyURL string) string {
 }
 
 // OAuthURL generates the authorization URL for the given provider.
-func (s *AuthService) OAuthURL(providerName string) (string, error) {
-	provider, ok := s.providers[providerName]
-	if !ok {
+func (s *AuthService) OAuthURL(ctx context.Context, providerName string) (string, error) {
+	provider := s.getProvider(ctx, providerName)
+	if provider == nil {
 		return "", fmt.Errorf("oauth provider %q is not configured", providerName)
 	}
 
@@ -578,8 +643,8 @@ func (s *AuthService) OAuthURL(providerName string) (string, error) {
 
 // OAuthCallback validates state, exchanges the code via the provider, and finds or creates a user.
 func (s *AuthService) OAuthCallback(ctx context.Context, providerName, code, state string) (string, *model.User, error) {
-	provider, ok := s.providers[providerName]
-	if !ok {
+	provider := s.getProvider(ctx, providerName)
+	if provider == nil {
 		return "", nil, fmt.Errorf("oauth provider %q is not configured", providerName)
 	}
 

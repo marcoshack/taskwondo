@@ -256,6 +256,117 @@ func (h *SystemSettingHandler) TestSMTP(w http.ResponseWriter, r *http.Request) 
 	writeData(w, http.StatusOK, map[string]string{"message": "test email sent successfully"})
 }
 
+// validOAuthProviders is the set of allowed OAuth provider names.
+var validOAuthProviders = map[string]bool{
+	model.OAuthProviderDiscord: true,
+	model.OAuthProviderGoogle:  true,
+}
+
+// GetOAuthConfig handles GET /api/v1/admin/settings/oauth_config/{provider}
+func (h *SystemSettingHandler) GetOAuthConfig(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	provider := chi.URLParam(r, "provider")
+	if !validOAuthProviders[provider] {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid oauth provider")
+		return
+	}
+
+	settingKey := model.OAuthConfigSettingKey(provider)
+	setting, err := h.settings.Get(r.Context(), info, settingKey)
+	if err != nil {
+		if errors.Is(err, model.ErrNotFound) {
+			writeData(w, http.StatusOK, &model.OAuthProviderConfig{})
+			return
+		}
+		handleSystemSettingError(w, r, err, "failed to get oauth config")
+		return
+	}
+
+	var cfg model.OAuthProviderConfig
+	if err := json.Unmarshal(setting.Value, &cfg); err != nil {
+		log.Ctx(r.Context()).Error().Err(err).Msg("failed to parse oauth config")
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		return
+	}
+
+	// Mask the client secret
+	if cfg.ClientSecret != "" {
+		cfg.ClientSecret = model.PasswordMask
+	}
+
+	writeData(w, http.StatusOK, cfg)
+}
+
+// SetOAuthConfig handles PUT /api/v1/admin/settings/oauth_config/{provider}
+func (h *SystemSettingHandler) SetOAuthConfig(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	provider := chi.URLParam(r, "provider")
+	if !validOAuthProviders[provider] {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid oauth provider")
+		return
+	}
+
+	var cfg model.OAuthProviderConfig
+	if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		return
+	}
+
+	if err := cfg.Validate(); err != nil {
+		handleSystemSettingError(w, r, err, "oauth config validation failed")
+		return
+	}
+
+	settingKey := model.OAuthConfigSettingKey(provider)
+
+	// Handle client secret: if masked or empty, preserve the existing encrypted value
+	if cfg.ClientSecret == "" || cfg.ClientSecret == model.PasswordMask {
+		existing, err := h.settings.Get(r.Context(), info, settingKey)
+		if err == nil {
+			var existingCfg model.OAuthProviderConfig
+			if err := json.Unmarshal(existing.Value, &existingCfg); err == nil {
+				cfg.ClientSecret = existingCfg.ClientSecret
+			}
+		}
+	} else {
+		// Encrypt the new client secret
+		encrypted, err := h.encryptor.Encrypt(cfg.ClientSecret)
+		if err != nil {
+			log.Ctx(r.Context()).Error().Err(err).Msg("failed to encrypt oauth client secret")
+			writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+			return
+		}
+		cfg.ClientSecret = encrypted
+	}
+
+	value, err := json.Marshal(cfg)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		return
+	}
+
+	if _, err := h.settings.Set(r.Context(), info, settingKey, value); err != nil {
+		handleSystemSettingError(w, r, err, "failed to save oauth config")
+		return
+	}
+
+	// Return the config with masked client secret
+	if cfg.ClientSecret != "" {
+		cfg.ClientSecret = model.PasswordMask
+	}
+	writeData(w, http.StatusOK, cfg)
+}
+
 func handleSystemSettingError(w http.ResponseWriter, r *http.Request, err error, logMsg string) {
 	if errors.Is(err, model.ErrNotFound) {
 		writeError(w, http.StatusNotFound, "NOT_FOUND", "setting not found")
