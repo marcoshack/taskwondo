@@ -1,11 +1,13 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Trans } from 'react-i18next'
-import { ChevronDown, Pencil, Trash2, Search, FolderSearch } from 'lucide-react'
+import { ChevronDown, ChevronUp, Pencil, Trash2, Search, FolderSearch, ArrowUpDown } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import type { SavedSearch } from '@/api/savedSearches'
+
+type MobileMode = 'browse' | 'edit' | 'order'
 
 interface SavedSearchSelectorProps {
   searches: SavedSearch[]
@@ -14,6 +16,7 @@ interface SavedSearchSelectorProps {
   onSelect: (search: SavedSearch) => void
   onRename: (search: SavedSearch, newName: string) => void
   onDelete: (search: SavedSearch) => void
+  onReorder: (search: SavedSearch, direction: 'up' | 'down') => void
   canManageShared: boolean
   variant?: 'desktop' | 'mobile'
 }
@@ -25,6 +28,7 @@ export function SavedSearchSelector({
   onSelect,
   onRename,
   onDelete,
+  onReorder,
   canManageShared,
   variant = 'desktop',
 }: SavedSearchSelectorProps) {
@@ -34,23 +38,23 @@ export function SavedSearchSelector({
   const [renaming, setRenaming] = useState<SavedSearch | null>(null)
   const [renameValue, setRenameValue] = useState('')
   const [deleting, setDeleting] = useState<SavedSearch | null>(null)
+  const [mobileMode, setMobileMode] = useState<MobileMode>('browse')
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const buttonRef = useRef<HTMLButtonElement>(null)
-  const [dropdownTop, setDropdownTop] = useState(0)
 
   const activeSearch = searches.find((s) => s.id === activeSearchId) ?? null
 
-  // Close on outside click
+  // Close on outside click (desktop only), but not when a confirmation modal is open
   useEffect(() => {
-    if (!open) return
+    if (!open || variant === 'mobile') return
     function handleClick(e: MouseEvent) {
+      if (renaming || deleting) return
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setOpen(false)
       }
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
-  }, [open])
+  }, [open, variant, renaming, deleting])
 
   const userSearches = searches.filter((s) => s.scope === 'user')
   const sharedSearches = searches.filter((s) => s.scope === 'shared')
@@ -85,23 +89,40 @@ export function SavedSearchSelector({
     setFilterText('')
   }
 
-  const searchListContent = (
-    <>
-      <div className={variant === 'mobile' ? 'px-0 pb-2' : 'p-2 border-b border-gray-200 dark:border-gray-700'}>
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-          <input
-            type="text"
-            value={filterText}
-            onChange={(e) => setFilterText(e.target.value)}
-            placeholder={t('savedSearches.searchPlaceholder')}
-            className="w-full pl-8 pr-3 py-1.5 text-sm rounded border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            autoFocus
-          />
-        </div>
-      </div>
+  function handleMobileClose() {
+    setOpen(false)
+    setFilterText('')
+    setMobileMode('browse')
+  }
 
-      <div className="max-h-64 overflow-y-auto py-1">
+  function isFirst(search: SavedSearch, list: SavedSearch[]) {
+    return list.length > 0 && list[0].id === search.id
+  }
+
+  function isLast(search: SavedSearch, list: SavedSearch[]) {
+    return list.length > 0 && list[list.length - 1].id === search.id
+  }
+
+  // Shared search filter + search input
+  const searchInput = (
+    <div className={variant === 'mobile' ? 'px-0 pb-2' : 'p-2 border-b border-gray-200 dark:border-gray-700'}>
+      <div className="relative">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+        <input
+          type="text"
+          value={filterText}
+          onChange={(e) => setFilterText(e.target.value)}
+          placeholder={t('savedSearches.searchPlaceholder')}
+          className="w-full pl-8 pr-3 py-1.5 text-sm rounded border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          autoFocus={variant === 'desktop'}
+        />
+      </div>
+    </div>
+  )
+
+  function renderSearchList(showReorder: boolean, showEditActions: boolean, scrollable = true) {
+    return (
+      <div className={scrollable ? 'max-h-64 overflow-y-auto py-1' : 'py-1'}>
         {filteredUser.length === 0 && filteredShared.length === 0 && (
           <p className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400 text-center">
             {t('savedSearches.empty')}
@@ -119,9 +140,15 @@ export function SavedSearchSelector({
                 search={s}
                 isActive={s.id === activeSearchId}
                 canModify={canModify(s)}
+                showReorder={showReorder && canModify(s)}
+                showEditActions={showEditActions}
+                isFirst={isFirst(s, filteredUser)}
+                isLast={isLast(s, filteredUser)}
                 onSelect={() => handleSelect(s)}
                 onRename={() => { setRenaming(s); setRenameValue(s.name) }}
                 onDelete={() => setDeleting(s)}
+                onMoveUp={() => onReorder(s, 'up')}
+                onMoveDown={() => onReorder(s, 'down')}
               />
             ))}
           </>
@@ -139,30 +166,69 @@ export function SavedSearchSelector({
                 search={s}
                 isActive={s.id === activeSearchId}
                 canModify={canModify(s)}
+                showReorder={showReorder && canModify(s)}
+                showEditActions={showEditActions}
+                isFirst={isFirst(s, filteredShared)}
+                isLast={isLast(s, filteredShared)}
                 onSelect={() => handleSelect(s)}
                 onRename={() => { setRenaming(s); setRenameValue(s.name) }}
                 onDelete={() => setDeleting(s)}
+                onMoveUp={() => onReorder(s, 'up')}
+                onMoveDown={() => onReorder(s, 'down')}
               />
             ))}
           </>
         )}
       </div>
+    )
+  }
+
+  // Desktop: dropdown with always-visible reorder arrows
+  const desktopContent = (
+    <>
+      {searchInput}
+      {renderSearchList(true, true)}
     </>
+  )
+
+
+
+  const mobileTitle = (
+    <span className="flex items-center flex-1">
+      <span>{t('savedSearches.titleShort')}</span>
+      <span className="flex items-center justify-center gap-2 flex-1">
+        <button
+          onClick={() => setMobileMode(mobileMode === 'edit' ? 'browse' : 'edit')}
+          className={`p-2.5 rounded-md border transition-colors ${
+            mobileMode === 'edit'
+              ? 'bg-indigo-50 text-indigo-700 border-indigo-300 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-700'
+              : 'border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+          }`}
+          aria-label={t('savedSearches.editMode')}
+        >
+          <Pencil className="h-5 w-5" />
+        </button>
+        <button
+          onClick={() => setMobileMode(mobileMode === 'order' ? 'browse' : 'order')}
+          className={`p-2.5 rounded-md border transition-colors ${
+            mobileMode === 'order'
+              ? 'bg-indigo-50 text-indigo-700 border-indigo-300 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-700'
+              : 'border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+          }`}
+          aria-label={t('savedSearches.orderMode')}
+        >
+          <ArrowUpDown className="h-5 w-5" />
+        </button>
+      </span>
+    </span>
   )
 
   return (
     <>
-      <div className="relative" ref={dropdownRef}>
-        {variant === 'mobile' ? (
+      {variant === 'mobile' ? (
+        <>
           <button
-            ref={buttonRef}
-            onClick={() => {
-              if (!open && buttonRef.current) {
-                const rect = buttonRef.current.getBoundingClientRect()
-                setDropdownTop(rect.bottom + 4)
-              }
-              setOpen(!open)
-            }}
+            onClick={() => setOpen(true)}
             className="relative shrink-0 p-2.5 rounded-md border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
             aria-label={t('savedSearches.placeholder')}
           >
@@ -173,7 +239,18 @@ export function SavedSearchSelector({
               </span>
             )}
           </button>
-        ) : (
+
+          <Modal open={open} onClose={handleMobileClose} title={mobileTitle} position="top" containerClassName="!pt-[10.3rem]" className="!h-[60vh] !flex !flex-col !overflow-hidden">
+            <div className="flex flex-col flex-1 min-h-0">
+              {searchInput}
+              <div className="flex-1 overflow-y-auto">
+                {renderSearchList(mobileMode === 'order', mobileMode === 'edit', false)}
+              </div>
+            </div>
+          </Modal>
+        </>
+      ) : (
+        <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setOpen(!open)}
             className={`flex items-center gap-1.5 px-3 h-[39px] w-full text-sm font-medium rounded-md border transition-colors ${
@@ -188,17 +265,14 @@ export function SavedSearchSelector({
             )}
             <ChevronDown className="h-3.5 w-3.5 shrink-0" />
           </button>
-        )}
 
-        {open && (
-          <div
-            className={`z-50 rounded-md border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800 ${variant === 'mobile' ? 'fixed left-4 right-4' : 'absolute left-0 top-full mt-1 w-72'}`}
-            style={variant === 'mobile' ? { top: dropdownTop } : undefined}
-          >
-            {searchListContent}
-          </div>
-        )}
-      </div>
+          {open && (
+            <div className="absolute left-0 top-full mt-1 w-[22rem] z-50 rounded-md border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
+              {desktopContent}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Rename modal */}
       <Modal open={!!renaming} onClose={() => setRenaming(null)} title={t('savedSearches.renameTitle')}>
@@ -237,20 +311,32 @@ function SearchEntry({
   search,
   isActive,
   canModify,
+  showReorder,
+  showEditActions,
+  isFirst,
+  isLast,
   onSelect,
   onRename,
   onDelete,
+  onMoveUp,
+  onMoveDown,
 }: {
   search: SavedSearch
   isActive: boolean
   canModify: boolean
+  showReorder: boolean
+  showEditActions: boolean
+  isFirst: boolean
+  isLast: boolean
   onSelect: () => void
   onRename: () => void
   onDelete: () => void
+  onMoveUp: () => void
+  onMoveDown: () => void
 }) {
   return (
     <div
-      className={`group flex items-center gap-1 px-3 py-1.5 cursor-pointer ${
+      className={`group flex items-center gap-1 px-3 py-1.5 cursor-pointer overflow-hidden ${
         isActive
           ? 'bg-indigo-50 dark:bg-indigo-900/20'
           : 'hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -258,26 +344,48 @@ function SearchEntry({
     >
       <button
         onClick={onSelect}
-        className={`flex-1 text-left text-sm truncate ${
+        className={`flex-1 min-w-0 text-left text-sm truncate ${
           isActive ? 'text-indigo-700 dark:text-indigo-300 font-medium' : 'text-gray-700 dark:text-gray-300'
         }`}
       >
         {search.name}
       </button>
       {canModify && (
-        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-          <button
-            onClick={(e) => { e.stopPropagation(); onRename() }}
-            className="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-          >
-            <Pencil className="h-3 w-3" />
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); onDelete() }}
-            className="p-1 rounded text-gray-400 hover:text-red-500 dark:hover:text-red-400"
-          >
-            <Trash2 className="h-3 w-3" />
-          </button>
+        <div className={`flex items-center gap-0.5 shrink-0 ${showEditActions || showReorder ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
+          {showReorder && (
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); onMoveUp() }}
+                disabled={isFirst}
+                className="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:cursor-default"
+              >
+                <ChevronUp className="h-[18px] w-[18px]" />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onMoveDown() }}
+                disabled={isLast}
+                className="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:cursor-default"
+              >
+                <ChevronDown className="h-[18px] w-[18px]" />
+              </button>
+            </>
+          )}
+          {showEditActions && (
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); onRename() }}
+                className="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <Pencil className="h-3 w-3" />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onDelete() }}
+                className="p-1 rounded text-gray-400 hover:text-red-500 dark:hover:text-red-400"
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>

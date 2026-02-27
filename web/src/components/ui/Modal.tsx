@@ -12,10 +12,11 @@ interface ModalProps {
   size?: 'default' | 'full'
   dismissable?: boolean
   className?: string
+  containerClassName?: string
   children: ReactNode
 }
 
-export function Modal({ open, onClose, title, position = 'center', size = 'default', dismissable = true, className, children }: ModalProps) {
+export function Modal({ open, onClose, title, position = 'center', size = 'default', dismissable = true, className, containerClassName, children }: ModalProps) {
   const { incrementModalOpen, decrementModalOpen } = useKeyboardShortcutContext()
 
   useEffect(() => {
@@ -41,7 +42,7 @@ export function Modal({ open, onClose, title, position = 'center', size = 'defau
   if (!open) return null
 
   return createPortal(
-    <div className={`fixed inset-0 z-50 flex justify-center ${position === 'top' ? 'items-start pt-4' : 'items-center'}`}>
+    <div className={`fixed inset-0 z-50 flex justify-center ${position === 'top' ? 'items-start pt-4' : 'items-center'} ${containerClassName ?? ''}`}>
       <div className="fixed inset-0 bg-black/50" onClick={dismissable ? onClose : undefined} />
       <div className={`relative bg-white dark:bg-gray-800/40 dark:backdrop-blur-sm rounded-lg shadow-xl ${size === 'full' ? 'w-[96vw] h-[96vh] p-0 flex flex-col overflow-hidden' : 'max-w-lg w-full mx-4 p-6 max-h-[90vh] overflow-y-auto overscroll-contain'} ${className ?? ''}`}>
         {title && (

@@ -394,6 +394,22 @@ export async function deleteSavedSearch(
   if (!res.ok()) throw new Error(`Delete saved search failed (${res.status()}): ${await res.text()}`);
 }
 
+export async function updateSavedSearch(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  searchId: string,
+  data: { name?: string; filters?: Record<string, unknown>; view_mode?: string; position?: number },
+): Promise<{ id: string; name: string; scope: string; position: number }> {
+  const res = await request.patch(`${BASE_URL}/api/v1/projects/${projectKey}/saved-searches/${searchId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data,
+  });
+  if (!res.ok()) throw new Error(`Update saved search failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
 // --- Preferences ---
 
 export async function setPreference(

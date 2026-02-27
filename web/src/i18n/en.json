@@ -918,6 +918,7 @@
   "user.watchlistComingSoon": "Watchlist coming soon",
 
   "savedSearches.title": "Saved Searches",
+  "savedSearches.titleShort": "Saved",
   "savedSearches.mySearches": "My Searches",
   "savedSearches.shared": "Shared",
   "savedSearches.placeholder": "Saved Searches",
@@ -935,6 +936,8 @@
   "savedSearches.deleteConfirmTitle": "Delete Saved Search",
   "savedSearches.deleteConfirmBody": "Are you sure you want to delete <strong>{{name}}</strong>?",
   "savedSearches.renameTitle": "Rename Saved Search",
+  "savedSearches.editMode": "Edit",
+  "savedSearches.orderMode": "Order",
   "workitems.filters.save": "Save current filters",
   "workitems.filters.clearAll": "Clear all filters"
 }

@@ -34,6 +34,7 @@ type UpdateSavedSearchInput struct {
 	Name     *string
 	Filters  *model.SavedSearchFilters
 	ViewMode *string
+	Position *int
 }
 
 // SavedSearchService handles saved search business logic and authorization.
@@ -155,6 +156,12 @@ func (s *SavedSearchService) Update(ctx context.Context, info *model.AuthInfo, p
 			return nil, fmt.Errorf("invalid view mode %q: %w", *input.ViewMode, model.ErrValidation)
 		}
 		ss.ViewMode = *input.ViewMode
+	}
+	if input.Position != nil {
+		if *input.Position < 0 {
+			return nil, fmt.Errorf("position must be non-negative: %w", model.ErrValidation)
+		}
+		ss.Position = *input.Position
 	}
 
 	if err := s.savedSearches.Update(ctx, ss); err != nil {

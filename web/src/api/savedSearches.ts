@@ -35,6 +35,7 @@ export interface UpdateSavedSearchInput {
   name?: string
   filters?: SavedSearchFilters
   view_mode?: string
+  position?: number
 }
 
 // --- API Functions ---

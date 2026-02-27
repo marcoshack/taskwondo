@@ -228,7 +228,7 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
 
       {/* Mobile sort modal */}
       {onSort && onOrderChange && (
-        <Modal open={sortOpen} onClose={() => setSortOpen(false)} title={t('workitems.sort.title')}>
+        <Modal open={sortOpen} onClose={() => setSortOpen(false)} title={t('workitems.sort.title')} position="top" containerClassName="!pt-[10.3rem]">
           <div className="space-y-1">
             {sortOptions.map((opt) => {
               const isActive = sort === opt.key
@@ -281,7 +281,7 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
 
       {/* Mobile settings modal */}
       {onShowDatesChange && (
-        <Modal open={settingsOpen} onClose={() => setSettingsOpen(false)} title={t('workitems.settings.title')}>
+        <Modal open={settingsOpen} onClose={() => setSettingsOpen(false)} title={t('workitems.settings.title')} position="top" containerClassName="!pt-[10.3rem]">
           <label className="flex items-center justify-between cursor-pointer">
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('workitems.settings.showDates')}</span>
             <button
@@ -302,7 +302,7 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
       )}
 
       {/* Mobile filter modal */}
-      <Modal open={filtersOpen} onClose={() => setFiltersOpen(false)} title={
+      <Modal open={filtersOpen} onClose={() => setFiltersOpen(false)} position="top" containerClassName="!pt-[10.3rem]" title={
         <span className="flex items-center flex-1">
           <span>{t('workitems.filters.title')}</span>
           <span className="flex items-center justify-center gap-2 flex-1">

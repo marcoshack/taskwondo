@@ -419,6 +419,18 @@ export function WorkItemListPage() {
     })
   }
 
+  function handleReorderSearch(ss: SavedSearch, direction: 'up' | 'down') {
+    const group = (savedSearchList ?? []).filter((s) => s.scope === ss.scope)
+    const idx = group.findIndex((s) => s.id === ss.id)
+    if (idx < 0) return
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1
+    if (swapIdx < 0 || swapIdx >= group.length) return
+    const neighbor = group[swapIdx]
+    // Assign index-based positions so items with identical positions still swap correctly
+    updateSearchMutation.mutate({ searchId: ss.id, input: { position: swapIdx } })
+    updateSearchMutation.mutate({ searchId: neighbor.id, input: { position: idx } })
+  }
+
   function handleClearFilters() {
     const f: WorkItemFilter = defaultOpenStatuses ? { status: defaultOpenStatuses } : {}
     setFilter(f)
@@ -722,6 +734,7 @@ export function WorkItemListPage() {
             onSelect={handleSelectSearch}
             onRename={handleRenameSearch}
             onDelete={handleDeleteSearch}
+            onReorder={handleReorderSearch}
             canManageShared={canManageShared}
           />
         }
@@ -733,6 +746,7 @@ export function WorkItemListPage() {
             onSelect={handleSelectSearch}
             onRename={handleRenameSearch}
             onDelete={handleDeleteSearch}
+            onReorder={handleReorderSearch}
             canManageShared={canManageShared}
             variant="mobile"
           />

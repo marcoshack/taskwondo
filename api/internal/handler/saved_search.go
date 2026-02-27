@@ -37,6 +37,7 @@ type updateSavedSearchRequest struct {
 	Name     *string                   `json:"name,omitempty"`
 	Filters  *model.SavedSearchFilters `json:"filters,omitempty"`
 	ViewMode *string                   `json:"view_mode,omitempty"`
+	Position *int                      `json:"position,omitempty"`
 }
 
 // --- Response DTOs ---
@@ -152,6 +153,7 @@ func (h *SavedSearchHandler) Update(w http.ResponseWriter, r *http.Request) {
 		Name:     req.Name,
 		Filters:  req.Filters,
 		ViewMode: req.ViewMode,
+		Position: req.Position,
 	}
 
 	ss, err := h.savedSearches.Update(r.Context(), info, projectKey, searchID, input)
