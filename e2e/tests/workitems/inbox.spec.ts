@@ -429,7 +429,7 @@ test.describe('Inbox', () => {
     await dismissWelcomeModal(page);
 
     // Scope to the mobile card container (sm:hidden div) to avoid matching hidden desktop table rows
-    const mobileCards = page.locator('.sm\\:hidden');
+    const mobileCards = page.locator('.lg\\:hidden');
 
     // Wait for cards to render
     await expect(mobileCards.getByText('Mobile inbox item 1')).toBeVisible({ timeout: 10000 });
@@ -459,7 +459,7 @@ test.describe('Inbox', () => {
     // Navigate to inbox page and verify items are displayed (scope to mobile card container)
     await page.goto('/user/inbox');
     await dismissWelcomeModal(page);
-    const inboxCards = page.locator('.sm\\:hidden');
+    const inboxCards = page.locator('.lg\\:hidden');
     await expect(inboxCards.getByText('Mobile inbox item 1')).toBeVisible({ timeout: 10000 });
     await expect(inboxCards.getByText('Mobile inbox item 2')).toBeVisible();
   });
@@ -480,7 +480,7 @@ test.describe('Inbox', () => {
     await dismissWelcomeModal(page);
 
     // Scope to mobile card container
-    const mobileCards = page.locator('.sm\\:hidden');
+    const mobileCards = page.locator('.lg\\:hidden');
     await expect(mobileCards.getByText('Mobile remove inbox item')).toBeVisible({ timeout: 10000 });
 
     const card = mobileCards.locator('[role="button"]').filter({ hasText: 'Mobile remove inbox item' });
@@ -541,7 +541,7 @@ test.describe('Inbox', () => {
     await page.goto('/user/inbox');
     await dismissWelcomeModal(page);
 
-    const inboxCards = page.locator('.sm\\:hidden');
+    const inboxCards = page.locator('.lg\\:hidden');
     await expect(inboxCards.getByText('Edit mode test')).toBeVisible({ timeout: 10000 });
 
     // Controls should not be visible before enabling edit mode
@@ -577,7 +577,7 @@ test.describe('Inbox', () => {
     await page.goto('/user/inbox');
     await dismissWelcomeModal(page);
 
-    const inboxCards = page.locator('.sm\\:hidden');
+    const inboxCards = page.locator('.lg\\:hidden');
     await expect(inboxCards.getByText('Mobile edit remove')).toBeVisible({ timeout: 10000 });
     await page.screenshot({ path: 'test-results/inbox-mobile-edit-remove-1-before.png' });
 
@@ -738,7 +738,7 @@ test.describe('Inbox', () => {
     expect(list.items.some((i: { title: string }) => i.title === 'Inbox mobile created item')).toBe(true);
 
     // The inbox page should show the new item in mobile cards
-    const inboxCards = page.locator('.sm\\:hidden');
+    const inboxCards = page.locator('.lg\\:hidden');
     await expect(inboxCards.getByText('Inbox mobile created item')).toBeVisible({ timeout: 10000 });
   });
 
@@ -757,7 +757,7 @@ test.describe('Inbox', () => {
     await page.goto('/user/inbox');
     await dismissWelcomeModal(page);
 
-    const inboxCards = page.locator('.sm\\:hidden');
+    const inboxCards = page.locator('.lg\\:hidden');
     await expect(inboxCards.getByText('Mobile order 1')).toBeVisible({ timeout: 10000 });
     await expect(inboxCards.getByText('Mobile order 3')).toBeVisible();
     await page.screenshot({ path: 'test-results/inbox-mobile-edit-reorder-1-before.png' });

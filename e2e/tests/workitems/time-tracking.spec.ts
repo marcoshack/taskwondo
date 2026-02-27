@@ -138,7 +138,7 @@ test.describe('Time tracking', () => {
     await dismissWelcomeModal(page);
 
     // The sidebar should show the estimate and logged time
-    const sidebar = page.locator('.hidden.sm\\:block');
+    const sidebar = page.locator('.hidden.lg\\:block');
     await expect(sidebar.getByText('Estimate')).toBeVisible({ timeout: 10000 });
     await expect(sidebar.getByText('Logged')).toBeVisible();
 

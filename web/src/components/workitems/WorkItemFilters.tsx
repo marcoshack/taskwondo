@@ -119,7 +119,7 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
   return (
     <>
       {/* Desktop: inline layout */}
-      <div className="hidden sm:flex items-end gap-2">
+      <div className="hidden lg:flex items-end gap-2">
         {savedSearchSelector && (
           <div className="shrink-0 w-48">{savedSearchSelector}</div>
         )}
@@ -168,7 +168,7 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
       </div>
 
       {/* Mobile: search bar + icons on same row */}
-      <div className="flex sm:hidden items-center gap-2">
+      <div className="flex lg:hidden items-center gap-2">
         <div className="flex-1 min-w-0 relative">
           <Input
             placeholder={t('workitems.filters.search')}

@@ -134,7 +134,7 @@ function InboxRow({ item, isCompleted, isFirst, isLast, isActive, onRemove, onMo
         ) : (
           <button
             onClick={() => onRemove(item.id)}
-            className="sm:opacity-0 sm:group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity"
+            className="lg:opacity-0 lg:group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity"
             aria-label={t('inbox.removeFromInbox')}
           >
             <X className="h-4 w-4" />
@@ -519,7 +519,7 @@ function InboxListPage() {
         <div className="flex items-center gap-3">
           {/* Desktop: auto-hide toggle */}
           <Tooltip content={t('inbox.autoRemoveDescription')}>
-            <label className="hidden sm:flex items-center gap-2 cursor-pointer select-none">
+            <label className="hidden lg:flex items-center gap-2 cursor-pointer select-none">
               <span className="text-sm text-gray-600 dark:text-gray-400">{t('inbox.autoRemove')}</span>
               <button
                 type="button"
@@ -538,8 +538,8 @@ function InboxListPage() {
           </Tooltip>
           {/* New Item button */}
           <Button onClick={() => setShowCreate(true)}>
-            <span className="sm:hidden">{t('workitems.newShort')}</span>
-            <span className="hidden sm:inline">{t('workitems.new')}</span>
+            <span className="lg:hidden">{t('workitems.newShort')}</span>
+            <span className="hidden lg:inline">{t('workitems.new')}</span>
           </Button>
         </div>
       </div>
@@ -612,7 +612,7 @@ function InboxListPage() {
         {/* Mobile: edit toggle */}
         <button
           onClick={() => setEditing((v) => !v)}
-          className={`sm:hidden p-2 rounded-lg border transition-colors ${
+          className={`lg:hidden p-2 rounded-lg border transition-colors ${
             editing
               ? 'border-indigo-400 bg-indigo-50 text-indigo-600 dark:border-indigo-500 dark:bg-indigo-900/30 dark:text-indigo-400'
               : 'border-gray-300 dark:border-gray-600 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-300'
@@ -624,7 +624,7 @@ function InboxListPage() {
         {/* Mobile: settings button */}
         <button
           onClick={() => setSettingsOpen(true)}
-          className="sm:hidden p-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-300 transition-colors"
+          className="lg:hidden p-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-300 transition-colors"
           aria-label={t('inbox.settings')}
         >
           <Settings className="h-5 w-5" />
@@ -640,7 +640,7 @@ function InboxListPage() {
       ) : (
         <>
           {/* Desktop table */}
-          <div className="hidden sm:block overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+          <div className="hidden lg:block overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
             <table className="w-full table-fixed">
               <thead className="bg-gray-50 dark:bg-gray-800 group/thead">
                 <tr>
@@ -697,7 +697,7 @@ function InboxListPage() {
           </div>
 
           {/* Mobile cards */}
-          <div className="sm:hidden space-y-2">
+          <div className="lg:hidden space-y-2">
             {allItems.map((item, index) => (
               <InboxCard
                 key={item.id}

@@ -247,7 +247,7 @@ export function WorkItemDetailPage() {
         >
           &larr; {t(fromInbox ? 'workitems.backToInbox' : 'workitems.backToItems')}
         </button>
-        <span className="sm:hidden ml-auto flex items-center gap-1">
+        <span className="lg:hidden ml-auto flex items-center gap-1">
           {item && <InboxButton workItemId={item.id} inboxItemId={inboxItemId} className="p-1.5" />}
           <button
             onClick={() => setShowProperties(true)}
@@ -268,7 +268,7 @@ export function WorkItemDetailPage() {
               <Tooltip content={copiedId ? t('common.copied') : t('common.clickToCopy')}>
                 <button
                   type="button"
-                  className="text-base sm:text-base font-bold sm:font-semibold font-mono text-gray-600 sm:text-gray-500 dark:text-gray-400 dark:sm:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 cursor-pointer transition-colors"
+                  className="text-base lg:text-base font-bold lg:font-semibold font-mono text-gray-600 lg:text-gray-500 dark:text-gray-400 dark:lg:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 cursor-pointer transition-colors"
                   onClick={async (e) => {
                     e.stopPropagation()
                     try {
@@ -293,7 +293,7 @@ export function WorkItemDetailPage() {
               <TypeBadge type={item.type} />
               <StatusBadge status={item.status} statuses={statuses} />
               <PriorityBadge priority={item.priority} />
-              <span className="hidden sm:inline-flex">
+              <span className="hidden lg:inline-flex">
                 <Tooltip content={t('workitems.form.assignee')}>
                   <span className="inline-flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
                     <User className="h-3.5 w-3.5" />
@@ -304,12 +304,12 @@ export function WorkItemDetailPage() {
                 </Tooltip>
               </span>
               {item.due_date && (
-                <span className="hidden sm:inline-flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
+                <span className="hidden lg:inline-flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
                   <Calendar className="h-3.5 w-3.5" />
                   {item.due_date}
                 </span>
               )}
-              <span className="hidden sm:inline-flex">
+              <span className="hidden lg:inline-flex">
                 <Tooltip content={t(`workitems.visibilities.${item.visibility}.description`)}>
                   <span className={`inline-flex items-center gap-1 text-xs ${
                     item.visibility === 'portal' ? 'text-yellow-500 dark:text-yellow-400' :
@@ -323,7 +323,7 @@ export function WorkItemDetailPage() {
                   </span>
                 </Tooltip>
               </span>
-              <span className="hidden sm:inline-flex"><SLAIndicator sla={item.sla} /></span>
+              <span className="hidden lg:inline-flex"><SLAIndicator sla={item.sla} /></span>
               <CopyButton
                 text={[
                   '---',
@@ -341,13 +341,13 @@ export function WorkItemDetailPage() {
                 tooltip={t('common.copyAsMarkdown')}
                 className=""
               />
-              <span className="hidden sm:inline-flex">
+              <span className="hidden lg:inline-flex">
                 <InboxButton workItemId={item.id} inboxItemId={inboxItemId} className="p-1" />
               </span>
             </div>
 
             {/* Mobile metadata line */}
-            <div className="sm:hidden flex items-center gap-3 text-xs text-gray-400 dark:text-gray-500 mb-2 flex-wrap">
+            <div className="lg:hidden flex items-center gap-3 text-xs text-gray-400 dark:text-gray-500 mb-2 flex-wrap">
               <span className="inline-flex items-center gap-1">
                 <User className="h-3.5 w-3.5" />
                 {item.assignee_id
@@ -492,8 +492,8 @@ export function WorkItemDetailPage() {
                     className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 pb-2 flex items-center gap-1"
                     onClick={() => setSortOrder((s) => (s === 'desc' ? 'asc' : 'desc'))}
                   >
-                  <span className="text-base sm:text-xs">{sortOrder === 'desc' ? '\u2193' : '\u2191'}</span>
-                  <span className="hidden sm:inline">{sortOrder === 'desc' ? t('common.newestFirst') : t('common.oldestFirst')}</span>
+                  <span className="text-base lg:text-xs">{sortOrder === 'desc' ? '\u2193' : '\u2191'}</span>
+                  <span className="hidden lg:inline">{sortOrder === 'desc' ? t('common.newestFirst') : t('common.oldestFirst')}</span>
                   </button>
                 </Tooltip>
               )}
@@ -508,7 +508,7 @@ export function WorkItemDetailPage() {
         </div>
 
         {/* Right sidebar (desktop only) */}
-        <div className="hidden sm:block w-52 shrink-0">
+        <div className="hidden lg:block w-52 shrink-0">
           <DetailSidebar
             item={item}
             projectKey={projectKey ?? ''}

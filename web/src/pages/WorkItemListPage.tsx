@@ -617,7 +617,7 @@ export function WorkItemListPage() {
     {
       key: 'title',
       header: t('workitems.table.title'),
-      className: 'sm:!pr-2',
+      className: 'lg:!pr-2',
       resizable: false,
       sortKey: 'title',
       render: (row) => (
@@ -631,7 +631,7 @@ export function WorkItemListPage() {
             </span>
           </Tooltip>
           <span className="shrink-0 ml-auto" onClick={(e) => e.stopPropagation()}>
-            <span className={`${inboxByWorkItemId.get(row.id) ? 'opacity-100' : 'sm:opacity-0 sm:group-hover:opacity-100'} transition-opacity`}>
+            <span className={`${inboxByWorkItemId.get(row.id) ? 'opacity-100' : 'lg:opacity-0 lg:group-hover:opacity-100'} transition-opacity`}>
               <InboxButton workItemId={row.id} inboxItemId={inboxByWorkItemId.get(row.id)} />
             </span>
           </span>
@@ -641,7 +641,7 @@ export function WorkItemListPage() {
     {
       key: 'status',
       header: t('workitems.table.status'),
-      className: 'w-24 sm:!pl-3',
+      className: 'w-24 lg:!pl-3',
       sortKey: 'status',
       render: (row) => <StatusBadge status={row.status} statuses={allStatuses ?? statuses} />,
     },
@@ -672,11 +672,11 @@ export function WorkItemListPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 shrink-0">
-          <span className="sm:hidden">{t('workitems.titleShort')}</span>
-          <span className="hidden sm:inline">{t('workitems.title')}</span>
+          <span className="lg:hidden">{t('workitems.titleShort')}</span>
+          <span className="hidden lg:inline">{t('workitems.title')}</span>
         </h2>
         <div className="flex items-center gap-2">
-          <div className="hidden sm:block flex-1 min-w-0 max-w-md">
+          <div className="hidden lg:block flex-1 min-w-0 max-w-md">
             <WorkItemSearchBar search={search} onSearchChange={handleSearchChange} />
           </div>
           <div className="inline-flex rounded-md shadow-sm">
@@ -701,8 +701,8 @@ export function WorkItemListPage() {
           </div>
           {!readOnly && (
             <Button onClick={() => setShowCreate(true)} className="h-[39px] border border-transparent">
-              <span className="sm:hidden">{t('workitems.newShort')}</span>
-              <span className="hidden sm:inline">{t('workitems.new')}</span>
+              <span className="lg:hidden">{t('workitems.newShort')}</span>
+              <span className="hidden lg:inline">{t('workitems.new')}</span>
             </Button>
           )}
         </div>
@@ -810,7 +810,7 @@ export function WorkItemListPage() {
       ) : viewMode === 'list' ? (
         <>
           {/* Desktop: table view */}
-          <div className="hidden sm:block border dark:border-gray-700 rounded-lg overflow-hidden">
+          <div className="hidden lg:block border dark:border-gray-700 rounded-lg overflow-hidden">
             {!readOnly && (
               <div className="bg-gray-50 dark:bg-gray-800 px-6 py-2 border-b dark:border-gray-700">
                 <label className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
@@ -844,7 +844,7 @@ export function WorkItemListPage() {
           </div>
 
           {/* Mobile: card view */}
-          <div className="sm:hidden space-y-2">
+          <div className="lg:hidden space-y-2">
             {allItems.length === 0 ? (
               <p className="text-center text-sm text-gray-500 dark:text-gray-400 py-12">{t('workitems.empty')}</p>
             ) : (
