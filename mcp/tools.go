@@ -97,6 +97,7 @@ func updateWorkItemTool() mcp.Tool {
 		mcp.WithDescription("Update a work item's fields. Only provided fields are changed."),
 		mcp.WithString("display_id", mcp.Required(), mcp.Description("Work item display ID, e.g. TF-141")),
 		mcp.WithString("title", mcp.Description("New title")),
+		mcp.WithString("type", mcp.Description("New type: task, ticket, bug, feedback, epic")),
 		mcp.WithString("status", mcp.Description("New status name from list_statuses (must be a valid transition from current status)")),
 		mcp.WithString("priority", mcp.Description("New priority: critical, high, medium, low")),
 		mcp.WithString("description", mcp.Description("New description (markdown supported)")),
@@ -395,6 +396,9 @@ func handleUpdateWorkItem(_ context.Context, request mcp.CallToolRequest) (*mcp.
 	}
 	if v := request.GetString("status", ""); v != "" {
 		updates["status"] = v
+	}
+	if v := request.GetString("type", ""); v != "" {
+		updates["type"] = v
 	}
 	if v := request.GetString("priority", ""); v != "" {
 		updates["priority"] = v
