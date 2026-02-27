@@ -36,6 +36,25 @@ func Connect(_ context.Context, databaseURL string) (*sql.DB, error) {
 	return db, nil
 }
 
+// ConnectWithPool opens a connection pool to PostgreSQL with configurable pool sizes.
+func ConnectWithPool(_ context.Context, databaseURL string, maxOpen, maxIdle int) (*sql.DB, error) {
+	db, err := sql.Open("postgres", databaseURL)
+	if err != nil {
+		return nil, fmt.Errorf("opening database: %w", err)
+	}
+
+	db.SetMaxOpenConns(maxOpen)
+	db.SetMaxIdleConns(maxIdle)
+	db.SetConnMaxLifetime(5 * time.Minute)
+
+	if err := db.Ping(); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("pinging database: %w", err)
+	}
+
+	return db, nil
+}
+
 // Migrate runs all pending database migrations.
 func Migrate(ctx context.Context, db *sql.DB) error {
 	source, err := iofs.New(migrationsFS, "migrations")

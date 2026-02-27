@@ -48,6 +48,16 @@ services:
       retries: 10
     restart: "no"
 
+  nats:
+    image: nats:2-alpine
+    command: ["--jetstream", "--store_dir=/data", "--http_port=8222"]
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8222/healthz"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+    restart: "no"
+
   api:
     image: ghcr.io/marcoshack/taskwondo/api:e2e
     build:
@@ -58,6 +68,8 @@ services:
         condition: service_healthy
       minio-init:
         condition: service_completed_successfully
+      nats:
+        condition: service_healthy
     environment:
       API_PORT: "8080"
       DATABASE_URL: "postgres://e2euser:e2epass@postgres:5432/e2edb?sslmode=disable"
@@ -72,6 +84,7 @@ services:
       AUTH_RATE_LIMIT: "1000"
       AUTH_RATE_BURST: "100"
       BASE_URL: "http://web:80"
+      NATS_URL: "nats://nats:4222"
       LOG_LEVEL: "info"
       LOG_FORMAT: "text"
     healthcheck:
@@ -80,6 +93,28 @@ services:
       timeout: 5s
       retries: 15
       start_period: 10s
+    restart: "no"
+
+  worker:
+    image: ghcr.io/marcoshack/taskwondo/worker:e2e
+    build:
+      context: ./api
+      dockerfile: ../docker/Dockerfile.worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgres://e2euser:e2epass@postgres:5432/e2edb?sslmode=disable"
+      JWT_SECRET: "e2e-test-jwt-secret-at-least-32-chars-long"
+      STORAGE_ENDPOINT: "minio:9000"
+      STORAGE_ACCESS_KEY: "e2eminioaccess"
+      STORAGE_SECRET_KEY: "e2eminiosecret"
+      STORAGE_BUCKET: "taskwondo-attachments"
+      NATS_URL: "nats://nats:4222"
+      LOG_LEVEL: "info"
+      LOG_FORMAT: "text"
     restart: "no"
 
   web:

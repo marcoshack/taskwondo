@@ -11,6 +11,7 @@ build/
 
 # Go
 api/tmp/
+api/worker
 
 # Node
 web/node_modules/

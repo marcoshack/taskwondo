@@ -1,4 +1,4 @@
-.PHONY: build push help dev dev-db dev-api dev-web up down logs logs-api migrate migrate-new test test-e2e test-e2e-dev test-e2e-report check-env export import release build-mcp
+.PHONY: build push help dev dev-db dev-api dev-web dev-worker up down logs logs-api migrate migrate-new test test-e2e test-e2e-dev test-e2e-report check-env export import release build-mcp build-worker
 
 # Required environment variables (checked by sourcing .env)
 REQUIRED_VARS := POSTGRES_USER POSTGRES_PASSWORD MINIO_ROOT_USER MINIO_ROOT_PASSWORD JWT_SECRET DATABASE_URL STORAGE_ACCESS_KEY STORAGE_SECRET_KEY
@@ -8,7 +8,7 @@ CYAN := \033[36m
 GREEN := \033[32m
 RESET := \033[0m
 
-build: test build-mcp ## Build all Docker images and MCP server
+build: test build-worker build-mcp ## Build all Docker images, worker, and MCP server
 	@echo ""
 	@printf "$(CYAN)## Building Docker images...$(RESET)\n"
 	docker compose build
@@ -37,16 +37,17 @@ check-env: ## Verify .env exists and has all required variables
 
 # --- Development ---
 
-dev: check-env dev-services ## Start all services for development (API + Web)
+dev: check-env dev-services ## Start all services for development (API + Web + Worker)
 	trap 'kill 0' EXIT; \
 	(set -a && . ./.env && set +a && export DISCORD_REDIRECT_URI=http://localhost:5173/auth/discord/callback && cd api && air) & \
 	(cd web && npm run dev -- --host) & \
+	(set -a && . ./.env && set +a && cd api && air -c .air-worker.toml) & \
 	wait
 
-dev-services: check-env ## Start PostgreSQL and MinIO
+dev-services: check-env ## Start PostgreSQL, MinIO, and NATS
 	@echo ""
-	@printf "$(CYAN)## Starting dev services (PostgreSQL + MinIO)...$(RESET)\n"
-	docker compose up postgres minio minio-init -d
+	@printf "$(CYAN)## Starting dev services (PostgreSQL + MinIO + NATS)...$(RESET)\n"
+	docker compose up postgres minio minio-init nats -d
 	@printf "$(GREEN)## Dev services started$(RESET)\n"
 
 dev-db: dev-services ## Alias for dev-services (legacy)
@@ -56,6 +57,9 @@ dev-api: check-env dev-services ## Start API server with hot reload (requires ai
 
 dev-web: ## Start frontend dev server (Vite on :5173, proxies /api to :8080)
 	cd web && npm run dev
+
+dev-worker: check-env dev-services ## Start worker with hot reload (requires air)
+	set -a && . ./.env && set +a && cd api && air -c .air-worker.toml
 
 # --- Docker ---
 
@@ -80,7 +84,7 @@ logs-api: ## Tail API logs
 push: ## Push images to GHCR (usage: make push or IMAGE_TAG=v1.0.0 make push)
 	@echo ""
 	@printf "$(CYAN)## Pushing images to registry...$(RESET)\n"
-	docker compose push api web
+	docker compose push api web worker
 	@printf "$(GREEN)## Images pushed successfully$(RESET)\n"
 
 # --- Database ---
@@ -137,6 +141,11 @@ _release:
 	docker create --name taskwondo-api-extract taskwondo-api-builder true
 	docker cp taskwondo-api-extract:/bin/taskwondo build/release/taskwondo-$(VERSION)/bin/taskwondo
 	docker rm taskwondo-api-extract
+	@printf "$(CYAN)## Building Worker binary (Docker)...$(RESET)\n"
+	docker build -f docker/Dockerfile.worker --target builder -t taskwondo-worker-builder api
+	docker create --name taskwondo-worker-extract taskwondo-worker-builder true
+	docker cp taskwondo-worker-extract:/bin/taskwondo-worker build/release/taskwondo-$(VERSION)/bin/taskwondo-worker
+	docker rm taskwondo-worker-extract
 	@printf "$(CYAN)## Building Web bundle (Docker)...$(RESET)\n"
 	docker build -f docker/Dockerfile.web --target builder -t taskwondo-web-builder .
 	docker create --name taskwondo-web-extract taskwondo-web-builder true
@@ -155,6 +164,14 @@ _release:
 	@tar -tzf build/release/taskwondo-$(VERSION).tar.gz | head -20
 	@printf "$(GREEN)## Release v$(VERSION) built successfully$(RESET)\n"
 
+# --- Worker ---
+
+build-worker: ## Build the worker binary
+	@echo ""
+	@printf "$(CYAN)## Building worker...$(RESET)\n"
+	cd api && go build -o ../build/taskwondo-worker ./cmd/worker
+	@printf "$(GREEN)## Worker built successfully$(RESET)\n"
+
 # --- MCP Server ---
 
 build-mcp: ## Build the MCP server binary
@@ -165,10 +182,17 @@ build-mcp: ## Build the MCP server binary
 
 # --- Testing ---
 
+LIGHT_BLUE := \033[94m
+
 test: ## Run all tests
 	@echo ""
 	@printf "$(CYAN)## Running Go tests...$(RESET)\n"
-	cd api && go test ./... -v -race
+	cd api && go test ./... -v -race -cover 2>&1 | tee /tmp/taskwondo-test-output.txt
+	@echo ""
+	@printf "$(LIGHT_BLUE)## Coverage by package:$(RESET)\n"
+	@grep -E '^ok\s' /tmp/taskwondo-test-output.txt | sed 's|github.com/marcoshack/taskwondo/||' | awk '{pkg=$$2; for(i=1;i<=NF;i++) if($$i ~ /^coverage:/) {pct=$$(i+1); gsub(/%/,"",pct); printf "$(LIGHT_BLUE)   %-40s %s%%$(RESET)\n", pkg, pct}}' | sort
+	@total=$$(grep -oP 'coverage: \K[0-9.]+' /tmp/taskwondo-test-output.txt | awk '{s+=$$1; n++} END {if(n>0) printf "%.1f", s/n; else print "0"}'); \
+	printf "$(LIGHT_BLUE)   %-40s %s%%$(RESET)\n" "TOTAL (avg)" "$$total"
 	@printf "$(GREEN)## All tests passed$(RESET)\n"
 
 test-e2e: ## Run E2E tests in isolated Docker stack (no host deps)

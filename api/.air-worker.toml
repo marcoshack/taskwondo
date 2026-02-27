@@ -1,0 +1,17 @@
+root = "."
+
+[build]
+  cmd = "go build -o ./tmp/taskwondo-worker ./cmd/worker"
+  entrypoint = "./tmp/taskwondo-worker"
+  delay = 1000
+  exclude_dir = ["tmp", "vendor"]
+  exclude_regex = ["_test\\.go$"]
+  include_ext = ["go", "sql"]
+  kill_delay = "0s"
+  stop_on_error = true
+
+[log]
+  time = false
+
+[misc]
+  clean_on_exit = true

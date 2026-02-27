@@ -61,6 +61,12 @@ type Config struct {
 	// Rate limiting
 	AuthRateLimit int // requests per minute for auth endpoints
 	AuthRateBurst int // max burst for auth endpoints
+
+	// Worker
+	NatsURL        string // NATS server URL (required for worker, e.g. "nats://localhost:4222")
+	WorkerPoolSize int    // Number of concurrent worker goroutines (default: 10)
+	WorkerDBPool   int    // DB max open conns for worker (default: 10)
+	BackfillStats  bool   // If true, backfill historical stats on startup then continue
 }
 
 // Load reads configuration from environment variables with defaults.
@@ -114,6 +120,20 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("STORAGE_SECRET_KEY environment variable is required")
 	}
 
+	workerPoolSize := 10
+	if v := os.Getenv("WORKER_POOL_SIZE"); v != "" {
+		if parsed, err := strconv.Atoi(v); err == nil && parsed > 0 {
+			workerPoolSize = parsed
+		}
+	}
+
+	workerDBPool := 10
+	if v := os.Getenv("WORKER_DB_POOL"); v != "" {
+		if parsed, err := strconv.Atoi(v); err == nil && parsed > 0 {
+			workerDBPool = parsed
+		}
+	}
+
 	cfg := &Config{
 		DatabaseURL:         databaseURL,
 		APIPort:             envOrDefault("API_PORT", "8080"),
@@ -141,6 +161,10 @@ func Load() (*Config, error) {
 		EncryptionKey:       envOrDefault("ENCRYPTION_KEY", ""),
 		AuthRateLimit:       authRateLimit,
 		AuthRateBurst:       authRateBurst,
+		NatsURL:             envOrDefault("NATS_URL", ""),
+		WorkerPoolSize:      workerPoolSize,
+		WorkerDBPool:        workerDBPool,
+		BackfillStats:       envOrDefault("BACKFILL_STATS", "") == "true",
 	}
 
 	return cfg, nil
