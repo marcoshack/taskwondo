@@ -147,14 +147,14 @@ func main() {
 	// Initialize services
 	// Build OAuth providers from config
 	var oauthProviders []service.OAuthProvider
-	if cfg.DiscordClientID != "" && cfg.DiscordClientSecret != "" && cfg.DiscordRedirectURI != "" {
+	if cfg.DiscordClientID != "" && cfg.DiscordClientSecret != "" {
 		oauthProviders = append(oauthProviders, service.NewDiscordProvider(
-			cfg.DiscordClientID, cfg.DiscordClientSecret, cfg.DiscordRedirectURI, nil,
+			cfg.DiscordClientID, cfg.DiscordClientSecret, cfg.BaseURL+"/auth/discord/callback", nil,
 		))
 	}
-	if cfg.GoogleClientID != "" && cfg.GoogleClientSecret != "" && cfg.GoogleRedirectURI != "" {
+	if cfg.GoogleClientID != "" && cfg.GoogleClientSecret != "" {
 		oauthProviders = append(oauthProviders, service.NewGoogleProvider(
-			cfg.GoogleClientID, cfg.GoogleClientSecret, cfg.GoogleRedirectURI, nil,
+			cfg.GoogleClientID, cfg.GoogleClientSecret, cfg.BaseURL+"/auth/google/callback", nil,
 		))
 	}
 
@@ -570,35 +570,32 @@ func initEventPublisher(natsURL string) (service.EventPublisher, func()) {
 // are used only for initial seeding, then the DB config takes over.
 func seedOAuthConfig(ctx context.Context, settings service.SystemSettingRepositoryInterface, encryptor *crypto.Encryptor, cfg *config.Config) {
 	type providerEnv struct {
-		name        string
-		settingKey  string
-		enabledKey  string
-		clientID    string
-		secret      string
-		redirectURI string
+		name       string
+		settingKey string
+		enabledKey string
+		clientID   string
+		secret     string
 	}
 
 	providers := []providerEnv{
 		{
-			name:        "discord",
-			settingKey:  model.SettingOAuthDiscordConfig,
-			enabledKey:  model.SettingAuthDiscordEnabled,
-			clientID:    cfg.DiscordClientID,
-			secret:      cfg.DiscordClientSecret,
-			redirectURI: cfg.DiscordRedirectURI,
+			name:       "discord",
+			settingKey: model.SettingOAuthDiscordConfig,
+			enabledKey: model.SettingAuthDiscordEnabled,
+			clientID:   cfg.DiscordClientID,
+			secret:     cfg.DiscordClientSecret,
 		},
 		{
-			name:        "google",
-			settingKey:  model.SettingOAuthGoogleConfig,
-			enabledKey:  model.SettingAuthGoogleEnabled,
-			clientID:    cfg.GoogleClientID,
-			secret:      cfg.GoogleClientSecret,
-			redirectURI: cfg.GoogleRedirectURI,
+			name:       "google",
+			settingKey: model.SettingOAuthGoogleConfig,
+			enabledKey: model.SettingAuthGoogleEnabled,
+			clientID:   cfg.GoogleClientID,
+			secret:     cfg.GoogleClientSecret,
 		},
 	}
 
 	for _, p := range providers {
-		if p.clientID == "" || p.secret == "" || p.redirectURI == "" {
+		if p.clientID == "" || p.secret == "" {
 			continue // env vars not set, skip
 		}
 
@@ -619,7 +616,6 @@ func seedOAuthConfig(ctx context.Context, settings service.SystemSettingReposito
 		oauthCfg := model.OAuthProviderConfig{
 			ClientID:     p.clientID,
 			ClientSecret: encryptedSecret,
-			RedirectURI:  p.redirectURI,
 		}
 
 		value, err := json.Marshal(oauthCfg)

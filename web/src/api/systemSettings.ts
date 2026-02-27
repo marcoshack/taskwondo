@@ -69,7 +69,6 @@ export async function testSMTPConfig(): Promise<{ message: string }> {
 export interface OAuthProviderConfig {
   client_id: string
   client_secret: string
-  redirect_uri: string
 }
 
 export async function getOAuthConfig(provider: string): Promise<OAuthProviderConfig> {

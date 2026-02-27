@@ -78,10 +78,10 @@ func (c *SMTPConfig) Validate() error {
 
 // OAuthProviderConfig holds OAuth provider credentials stored as a system setting.
 // The enabled/disabled state is stored separately in auth_*_enabled settings.
+// The redirect URI is derived automatically from BaseURL + "/auth/{provider}/callback".
 type OAuthProviderConfig struct {
 	ClientID     string `json:"client_id"`
 	ClientSecret string `json:"client_secret"`
-	RedirectURI  string `json:"redirect_uri"`
 }
 
 // Validate checks that all required fields are present.
@@ -91,9 +91,6 @@ func (c *OAuthProviderConfig) Validate() error {
 	}
 	if c.ClientSecret == "" {
 		return fmt.Errorf("%w: client_secret is required", ErrValidation)
-	}
-	if c.RedirectURI == "" {
-		return fmt.Errorf("%w: redirect_uri is required", ErrValidation)
 	}
 	return nil
 }

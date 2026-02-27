@@ -6,14 +6,60 @@ import { Toggle } from '@/components/ui/Toggle'
 import { Input } from '@/components/ui/Input'
 import { Spinner } from '@/components/ui/Spinner'
 import { ExpandableConfigCard } from '@/components/ui/ExpandableConfigCard'
-import { TriangleAlert } from 'lucide-react'
+import { Copy, Check, TriangleAlert } from 'lucide-react'
 
 const PASSWORD_MASK = '••••••••'
 
 const emptyConfig: OAuthProviderConfig = {
   client_id: '',
   client_secret: '',
-  redirect_uri: '',
+}
+
+function RedirectUriField({ provider }: { provider: string }) {
+  const { t } = useTranslation()
+  const [copied, setCopied] = useState(false)
+  const redirectUri = `${window.location.origin}/auth/${provider}/callback`
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(redirectUri).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
+  return (
+    <div>
+      <label className="block text-sm mb-1">
+        <span className="font-medium text-gray-700 dark:text-gray-300">
+          {t('admin.authentication.oauth.redirectUri')}
+        </span>
+        <span className="ml-1.5 font-normal text-xs text-gray-400 dark:text-gray-500">
+          ({t('admin.authentication.oauth.redirectUriHint')})
+        </span>
+      </label>
+      <div className="relative">
+        <input
+          value={redirectUri}
+          readOnly
+          className="block w-full min-w-0 rounded-md border px-3 py-2 pr-10 text-sm shadow-sm border-gray-300 text-gray-500 bg-gray-50 dark:border-gray-600 dark:bg-gray-800/50 dark:text-gray-400 cursor-default"
+        />
+        <button
+          type="button"
+          onClick={handleCopy}
+          className="group absolute inset-y-0 right-0 flex items-center px-2.5"
+        >
+          {copied ? (
+            <Check className="h-4 w-4 text-green-500" />
+          ) : (
+            <Copy className="h-4 w-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" />
+          )}
+          <span className="absolute bottom-full right-0 mb-1.5 hidden group-hover:block whitespace-nowrap rounded bg-gray-900 dark:bg-gray-700 px-2 py-1 text-xs text-white shadow-lg">
+            {copied ? t('common.copied') : t('common.copy')}
+          </span>
+        </button>
+      </div>
+    </div>
+  )
 }
 
 function OAuthProviderCard({
@@ -54,7 +100,6 @@ function OAuthProviderCard({
   const isFormComplete = () => {
     return (
       cfg.client_id.trim() !== '' &&
-      cfg.redirect_uri.trim() !== '' &&
       (cfg.client_secret !== '' || (hasExistingConfig && savedConfig?.client_secret === PASSWORD_MASK && !secretTouched))
     )
   }
@@ -129,11 +174,7 @@ function OAuthProviderCard({
           }
         }}
       />
-      <Input
-        label={t('admin.authentication.oauth.redirectUri')}
-        value={cfg.redirect_uri}
-        onChange={(e) => updateField('redirect_uri', e.target.value)}
-      />
+      <RedirectUriField provider={provider} />
     </ExpandableConfigCard>
   )
 }

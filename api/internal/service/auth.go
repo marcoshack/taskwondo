@@ -149,11 +149,12 @@ func (s *AuthService) getProvider(ctx context.Context, name string) OAuthProvide
 					if err != nil {
 						log.Ctx(ctx).Error().Err(err).Str("provider", name).Msg("failed to decrypt oauth client secret, falling back to static provider")
 					} else {
+						redirectURI := s.baseURL + "/auth/" + name + "/callback"
 						switch name {
 						case model.OAuthProviderDiscord:
-							return NewDiscordProvider(cfg.ClientID, secret, cfg.RedirectURI, nil)
+							return NewDiscordProvider(cfg.ClientID, secret, redirectURI, nil)
 						case model.OAuthProviderGoogle:
-							return NewGoogleProvider(cfg.ClientID, secret, cfg.RedirectURI, nil)
+							return NewGoogleProvider(cfg.ClientID, secret, redirectURI, nil)
 						}
 					}
 				}
