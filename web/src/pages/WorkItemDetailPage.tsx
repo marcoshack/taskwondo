@@ -78,6 +78,7 @@ export function WorkItemDetailPage() {
   const [showDelete, setShowDelete] = useState(false)
   const [showProperties, setShowProperties] = useState(false)
   const [draggingOver, setDraggingOver] = useState(false)
+  const [copiedId, setCopiedId] = useState(false)
   const [highlightedAttachmentId, setHighlightedAttachmentId] = useState<string | null>(null)
   const [highlightedCommentId, setHighlightedCommentId] = useState<string | null>(null)
   const [previewTarget, setPreviewTarget] = useState<PreviewTarget | null>(null)
@@ -224,7 +225,7 @@ export function WorkItemDetailPage() {
 
   return (
     <div
-      className="space-y-4 relative"
+      className="space-y-4 relative overflow-x-hidden"
       onDragEnter={readOnly ? undefined : handlePageDragEnter}
       onDragLeave={readOnly ? undefined : handlePageDragLeave}
       onDragOver={readOnly ? undefined : handlePageDragOver}
@@ -264,15 +265,43 @@ export function WorkItemDetailPage() {
           {/* Header */}
           <div>
             <div className="flex items-center gap-2 mb-1 group/header flex-wrap">
-              <span className="text-base sm:text-sm font-bold sm:font-normal font-mono text-gray-600 sm:text-gray-400 dark:text-gray-400 dark:sm:text-gray-500">{item.display_id}</span>
+              <Tooltip content={copiedId ? t('common.copied') : t('common.clickToCopy')}>
+                <button
+                  type="button"
+                  className="text-base sm:text-base font-bold sm:font-semibold font-mono text-gray-600 sm:text-gray-500 dark:text-gray-400 dark:sm:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 cursor-pointer transition-colors"
+                  onClick={async (e) => {
+                    e.stopPropagation()
+                    try {
+                      await navigator.clipboard.writeText(item.display_id)
+                    } catch {
+                      const ta = document.createElement('textarea')
+                      ta.value = item.display_id
+                      ta.style.position = 'fixed'
+                      ta.style.opacity = '0'
+                      document.body.appendChild(ta)
+                      ta.select()
+                      document.execCommand('copy')
+                      document.body.removeChild(ta)
+                    }
+                    setCopiedId(true)
+                    setTimeout(() => setCopiedId(false), 2000)
+                  }}
+                >
+                  {item.display_id}
+                </button>
+              </Tooltip>
               <TypeBadge type={item.type} />
               <StatusBadge status={item.status} statuses={statuses} />
               <PriorityBadge priority={item.priority} />
-              <span className="hidden sm:inline-flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
-                <User className="h-3.5 w-3.5" />
-                {item.assignee_id
-                  ? members?.find(m => m.user_id === item.assignee_id)?.display_name ?? t('userPicker.unassigned')
-                  : t('userPicker.unassigned')}
+              <span className="hidden sm:inline-flex">
+                <Tooltip content={t('workitems.form.assignee')}>
+                  <span className="inline-flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
+                    <User className="h-3.5 w-3.5" />
+                    {item.assignee_id
+                      ? members?.find(m => m.user_id === item.assignee_id)?.display_name ?? t('userPicker.unassigned')
+                      : t('userPicker.unassigned')}
+                  </span>
+                </Tooltip>
               </span>
               {item.due_date && (
                 <span className="hidden sm:inline-flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
@@ -280,15 +309,19 @@ export function WorkItemDetailPage() {
                   {item.due_date}
                 </span>
               )}
-              <span className={`hidden sm:inline-flex items-center gap-1 text-xs ${
-                item.visibility === 'portal' ? 'text-yellow-500 dark:text-yellow-400' :
-                item.visibility === 'public' ? 'text-red-500 dark:text-red-400' :
-                'text-gray-400 dark:text-gray-500'
-              }`}>
-                {item.visibility === 'internal' && <Lock className="h-3.5 w-3.5" />}
-                {item.visibility === 'portal' && <Unlock className="h-3.5 w-3.5" />}
-                {item.visibility === 'public' && <Globe className="h-3.5 w-3.5" />}
-                {t(`workitems.visibilities.${item.visibility}`)}
+              <span className="hidden sm:inline-flex">
+                <Tooltip content={t(`workitems.visibilities.${item.visibility}.description`)}>
+                  <span className={`inline-flex items-center gap-1 text-xs ${
+                    item.visibility === 'portal' ? 'text-yellow-500 dark:text-yellow-400' :
+                    item.visibility === 'public' ? 'text-red-500 dark:text-red-400' :
+                    'text-gray-400 dark:text-gray-500'
+                  }`}>
+                    {item.visibility === 'internal' && <Lock className="h-3.5 w-3.5" />}
+                    {item.visibility === 'portal' && <Unlock className="h-3.5 w-3.5" />}
+                    {item.visibility === 'public' && <Globe className="h-3.5 w-3.5" />}
+                    {t(`workitems.visibilities.${item.visibility}`)}
+                  </span>
+                </Tooltip>
               </span>
               <span className="hidden sm:inline-flex"><SLAIndicator sla={item.sla} /></span>
               <CopyButton
@@ -308,6 +341,9 @@ export function WorkItemDetailPage() {
                 tooltip={t('common.copyAsMarkdown')}
                 className=""
               />
+              <span className="hidden sm:inline-flex">
+                <InboxButton workItemId={item.id} inboxItemId={inboxItemId} className="p-1" />
+              </span>
             </div>
 
             {/* Mobile metadata line */}

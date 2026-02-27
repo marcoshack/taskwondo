@@ -43,6 +43,8 @@ async function gotoIntegrations(page: any) {
   await page.goto('/admin/integrations');
   await page.waitForLoadState('networkidle');
   await dismissWelcomeModal(page);
+  // Expand the SMTP card so fields are visible
+  await page.getByRole('heading', { name: 'SMTP' }).click();
 }
 
 // SMTP config is a shared global resource — tests must run serially
@@ -163,6 +165,7 @@ test.describe('SMTP Configuration', () => {
     // Reload and wait for data to load
     await page.reload();
     await page.waitForLoadState('networkidle');
+    await page.getByRole('heading', { name: 'SMTP' }).click();
 
     // Verify password is still masked and from name persisted
     await expect(page.getByLabel('Password')).toHaveValue('••••••••');
@@ -239,6 +242,7 @@ test.describe('SMTP Configuration', () => {
     // Reload and verify encryption persisted
     await page.reload();
     await page.waitForLoadState('networkidle');
+    await page.getByRole('heading', { name: 'SMTP' }).click();
     await expect(page.locator('select')).toHaveValue('tls');
     await attach(page, testInfo, '01-encryption-persisted');
   });

@@ -1,16 +1,17 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Select } from '@/components/ui/Select'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { UserPicker } from '@/components/ui/UserPicker'
 import { Tooltip } from '@/components/ui/Tooltip'
+import { Modal } from '@/components/ui/Modal'
 import type { WorkItem, UpdateWorkItemInput } from '@/api/workitems'
 import { useTimeEntries } from '@/hooks/useWorkItems'
 import type { WorkflowStatus, Workflow } from '@/api/workflows'
 import type { ProjectMember, ProjectTypeWorkflow } from '@/api/projects'
 import type { Milestone } from '@/api/milestones'
-import { Megaphone, CalendarPlus, History, CheckCircle } from 'lucide-react'
+import { Megaphone, CalendarPlus, History, CheckCircle, Info, Lock, Unlock, Globe } from 'lucide-react'
 import { formatRelativeTime } from '@/utils/duration'
 
 interface DetailSidebarProps {
@@ -32,7 +33,7 @@ interface DetailSidebarProps {
 
 const PRIORITIES = ['low', 'medium', 'high', 'critical']
 const TYPES = ['task', 'ticket', 'bug', 'feedback', 'epic']
-const VISIBILITIES = ['internal', 'portal', 'public']
+const VISIBILITIES = ['internal', 'portal', 'public'] as const
 
 const MAX_COMPLEXITY = 1000000
 
@@ -64,6 +65,7 @@ export function DetailSidebar({ item, projectKey, itemNumber, statuses, allowedT
   const [pendingType, setPendingType] = useState<string | null>(null)
   const [statusWarning, setStatusWarning] = useState(false)
   const [complexityError, setComplexityError] = useState<string | undefined>(undefined)
+  const [showVisibilityInfo, setShowVisibilityInfo] = useState(false)
   const [estimateError, setEstimateError] = useState<string | undefined>(undefined)
   const { data: timeData } = useTimeEntries(projectKey, itemNumber)
 
@@ -326,11 +328,15 @@ export function DetailSidebar({ item, projectKey, itemNumber, statuses, allowedT
         </Select>
       </Field>
 
-      <Field label={t('workitems.form.visibility')}>
-        <Select value={item.visibility} onChange={(e) => onUpdate({ visibility: e.target.value })} disabled={readOnly}>
-          {VISIBILITIES.map((v) => <option key={v} value={v}>{t(`workitems.visibilities.${v}`)}</option>)}
-        </Select>
-      </Field>
+      <div>
+        <div className="flex items-center gap-1 mb-1">
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400">{t('workitems.form.visibility')}</label>
+          <button type="button" onClick={() => setShowVisibilityInfo(true)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-500 dark:hover:text-gray-300">
+            <Info className="h-3.5 w-3.5" />
+          </button>
+        </div>
+        <VisibilityPicker value={item.visibility} onChange={(v) => onUpdate({ visibility: v })} disabled={readOnly} />
+      </div>
 
       <Field label={t('workitems.form.dueDate')}>
         <Input
@@ -367,6 +373,26 @@ export function DetailSidebar({ item, projectKey, itemNumber, statuses, allowedT
           <Button variant="danger" size="sm" onClick={onDelete}>{t('workitems.detail.deleteItem')}</Button>
         </div>
       )}
+
+      <Modal open={showVisibilityInfo} onClose={() => setShowVisibilityInfo(false)} title={t('workitems.form.visibility')}>
+        <ul className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
+          <li>
+            <span className="inline-flex items-center gap-1 font-medium text-gray-500 dark:text-gray-400"><Lock className="h-3.5 w-3.5" />{t('workitems.visibilities.internal')}</span>
+            <span className="text-gray-400 dark:text-gray-500"> — </span>
+            {t('workitems.visibilities.internal.description')}
+          </li>
+          <li>
+            <span className="inline-flex items-center gap-1 font-medium text-yellow-500 dark:text-yellow-400"><Unlock className="h-3.5 w-3.5" />{t('workitems.visibilities.portal')}</span>
+            <span className="text-gray-400 dark:text-gray-500"> — </span>
+            {t('workitems.visibilities.portal.description')}
+          </li>
+          <li>
+            <span className="inline-flex items-center gap-1 font-medium text-red-500 dark:text-red-400"><Globe className="h-3.5 w-3.5" />{t('workitems.visibilities.public')}</span>
+            <span className="text-gray-400 dark:text-gray-500"> — </span>
+            {t('workitems.visibilities.public.description')}
+          </li>
+        </ul>
+      </Modal>
     </div>
   )
 }
@@ -376,6 +402,63 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     <div>
       <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{label}</label>
       {children}
+    </div>
+  )
+}
+
+const visibilityConfig = {
+  internal: { icon: Lock, color: 'text-gray-500 dark:text-gray-400' },
+  portal: { icon: Unlock, color: 'text-yellow-500 dark:text-yellow-400' },
+  public: { icon: Globe, color: 'text-red-500 dark:text-red-400' },
+} as const
+
+function VisibilityPicker({ value, onChange, disabled }: { value: string; onChange: (v: string) => void; disabled?: boolean }) {
+  const { t } = useTranslation()
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  const cfg = visibilityConfig[value as keyof typeof visibilityConfig] ?? visibilityConfig.internal
+  const Icon = cfg.icon
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => !disabled && setOpen(!open)}
+        className={`flex items-center gap-1.5 w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm shadow-sm bg-white dark:bg-gray-800 ${disabled ? 'opacity-50 cursor-not-allowed' : 'focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500'}`}
+      >
+        <Icon className={`h-3.5 w-3.5 ${cfg.color}`} />
+        <span className={cfg.color}>{t(`workitems.visibilities.${value}`)}</span>
+      </button>
+      {open && (
+        <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg">
+          {VISIBILITIES.map((v) => {
+            const c = visibilityConfig[v]
+            const VIcon = c.icon
+            return (
+              <button
+                key={v}
+                type="button"
+                className={`flex items-center gap-1.5 w-full px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 ${v === value ? 'bg-indigo-50 dark:bg-indigo-900/30' : ''}`}
+                onClick={() => { onChange(v); setOpen(false) }}
+              >
+                <VIcon className={`h-3.5 w-3.5 ${c.color}`} />
+                <span className={c.color}>{t(`workitems.visibilities.${v}`)}</span>
+              </button>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

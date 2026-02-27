@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { Badge } from '@/components/ui/Badge'
+import { Tooltip } from '@/components/ui/Tooltip'
 import type { WorkflowStatus } from '@/api/workflows'
 
 const categoryColors = {
@@ -20,5 +21,5 @@ export function StatusBadge({ status, statuses }: StatusBadgeProps) {
   const category = ws?.category ?? 'todo'
   const color = categoryColors[category as keyof typeof categoryColors] ?? 'gray'
   const label = t(`workitems.statuses.${status}`, { defaultValue: ws?.display_name ?? status })
-  return <Badge color={color}>{label}</Badge>
+  return <Tooltip content={t('workitems.form.status')}><Badge color={color}>{label}</Badge></Tooltip>
 }

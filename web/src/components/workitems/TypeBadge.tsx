@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { Badge } from '@/components/ui/Badge'
+import { Tooltip } from '@/components/ui/Tooltip'
 
 const typeColors = {
   bug: 'red',
@@ -14,5 +15,5 @@ export function TypeBadge({ type }: { type: string }) {
   const color = typeColors[type as keyof typeof typeColors] ?? 'gray'
   const key = `workitems.types.${type}`
   const translated = t(key)
-  return <Badge color={color}>{translated === key ? type : translated}</Badge>
+  return <Tooltip content={t('workitems.form.type')}><Badge color={color}>{translated === key ? type : translated}</Badge></Tooltip>
 }

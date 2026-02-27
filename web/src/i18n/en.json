@@ -32,6 +32,7 @@
   "common.loadMore": "Load more",
   "common.copyToClipboard": "Copy to clipboard",
   "common.copyAsMarkdown": "Copy work item as Markdown",
+  "common.clickToCopy": "Click to copy",
   "common.copied": "Copied!",
   "common.description": "Description",
   "common.noResults": "No results",
@@ -335,8 +336,11 @@
   "workitems.statuses.closed": "Closed",
 
   "workitems.visibilities.internal": "internal",
+  "workitems.visibilities.internal.description": "Only project members can see this item",
   "workitems.visibilities.portal": "portal",
+  "workitems.visibilities.portal.description": "Customers see limited info, members see everything",
   "workitems.visibilities.public": "public",
+  "workitems.visibilities.public.description": "Anyone with the link sees limited info, members see everything",
 
   "workitems.settings.title": "Settings",
   "workitems.settings.showDates": "Show dates",

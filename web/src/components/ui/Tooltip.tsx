@@ -6,6 +6,7 @@ interface TooltipProps {
   children: ReactNode
   position?: 'top' | 'bottom' | 'left' | 'right'
   className?: string
+  maxWidth?: number
 }
 
 const GAP = 6
@@ -61,7 +62,7 @@ const arrowClasses = {
   right: 'border-r-gray-600 dark:border-r-gray-600 border-y-transparent border-l-transparent',
 }
 
-export function Tooltip({ content, children, position = 'top', className }: TooltipProps) {
+export function Tooltip({ content, children, position = 'top', className, maxWidth }: TooltipProps) {
   const [visible, setVisible] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const triggerRef = useRef<HTMLSpanElement>(null)
@@ -112,9 +113,9 @@ export function Tooltip({ content, children, position = 'top', className }: Tool
       {visible && createPortal(
         <span
           ref={tooltipRef}
-          className="z-50 pointer-events-none whitespace-nowrap rounded bg-gray-600 dark:bg-gray-600 px-2 py-1 text-xs text-white shadow-lg animate-in fade-in duration-100"
+          className={`z-50 pointer-events-none rounded bg-gray-600 dark:bg-gray-600 px-2 py-1 text-xs text-white shadow-lg animate-in fade-in duration-100 ${maxWidth ? 'whitespace-normal' : 'whitespace-nowrap'}`}
           role="tooltip"
-          style={style}
+          style={{ ...style, ...(maxWidth ? { maxWidth } : {}) }}
         >
           {content}
           <span className={`absolute border-4 ${arrowClasses[position]}`} style={arrowStyle[position]} />
