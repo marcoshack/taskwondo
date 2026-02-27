@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
+
+	"github.com/marcoshack/taskwondo/internal/model"
 )
 
 // StatsRepository handles project stats snapshot persistence.
@@ -30,6 +33,7 @@ func (r *StatsRepository) SnapshotAll(ctx context.Context) error {
 	defer tx.Rollback()
 
 	// Project-level aggregates — upsert into the current hour bucket.
+	// Resolves workflow via default_workflow_id OR per-type workflow mapping.
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO project_stats_snapshots (project_id, todo_count, in_progress_count, done_count, cancelled_count, captured_at)
 		SELECT
@@ -40,9 +44,11 @@ func (r *StatsRepository) SnapshotAll(ctx context.Context) error {
 			COUNT(*) FILTER (WHERE ws.category = 'cancelled'),
 			date_trunc('hour', now())
 		FROM work_items wi
-		JOIN projects p          ON p.id = wi.project_id
-		JOIN workflows w         ON w.id = p.default_workflow_id
-		JOIN workflow_statuses ws ON ws.workflow_id = w.id AND ws.name = wi.status
+		JOIN projects p ON p.id = wi.project_id
+		LEFT JOIN project_type_workflows ptw ON ptw.project_id = p.id AND ptw.work_item_type = wi.type
+		JOIN workflow_statuses ws
+			ON ws.workflow_id = COALESCE(p.default_workflow_id, ptw.workflow_id)
+			AND ws.name = wi.status
 		WHERE wi.deleted_at IS NULL AND p.deleted_at IS NULL
 		GROUP BY p.id
 		ON CONFLICT (project_id, captured_at) WHERE user_id IS NULL
@@ -68,9 +74,11 @@ func (r *StatsRepository) SnapshotAll(ctx context.Context) error {
 			COUNT(*) FILTER (WHERE ws.category = 'cancelled'),
 			date_trunc('hour', now())
 		FROM work_items wi
-		JOIN projects p          ON p.id = wi.project_id
-		JOIN workflows w         ON w.id = p.default_workflow_id
-		JOIN workflow_statuses ws ON ws.workflow_id = w.id AND ws.name = wi.status
+		JOIN projects p ON p.id = wi.project_id
+		LEFT JOIN project_type_workflows ptw ON ptw.project_id = p.id AND ptw.work_item_type = wi.type
+		JOIN workflow_statuses ws
+			ON ws.workflow_id = COALESCE(p.default_workflow_id, ptw.workflow_id)
+			AND ws.name = wi.status
 		WHERE wi.deleted_at IS NULL AND p.deleted_at IS NULL AND wi.assignee_id IS NOT NULL
 		GROUP BY p.id, wi.assignee_id
 		ON CONFLICT (project_id, user_id, captured_at) WHERE user_id IS NOT NULL
@@ -228,6 +236,7 @@ func (r *StatsRepository) backfillAtTime(ctx context.Context, t time.Time) (int6
 			SELECT
 				wi.id,
 				wi.project_id,
+				wi.type,
 				COALESCE(
 					(SELECT e.new_value
 					 FROM work_item_events e
@@ -250,9 +259,11 @@ func (r *StatsRepository) backfillAtTime(ctx context.Context, t time.Time) (int6
 			COUNT(*) FILTER (WHERE ws.category = 'cancelled'),
 			$1
 		FROM item_status_at_t ist
-		JOIN projects p          ON p.id = ist.project_id
-		JOIN workflows w         ON w.id = p.default_workflow_id
-		JOIN workflow_statuses ws ON ws.workflow_id = w.id AND ws.name = ist.status_at_t
+		JOIN projects p ON p.id = ist.project_id
+		LEFT JOIN project_type_workflows ptw ON ptw.project_id = p.id AND ptw.work_item_type = ist.type
+		JOIN workflow_statuses ws
+			ON ws.workflow_id = COALESCE(p.default_workflow_id, ptw.workflow_id)
+			AND ws.name = ist.status_at_t
 		WHERE p.deleted_at IS NULL
 		GROUP BY ist.project_id
 	`, t)
@@ -268,6 +279,7 @@ func (r *StatsRepository) backfillAtTime(ctx context.Context, t time.Time) (int6
 			SELECT
 				wi.id,
 				wi.project_id,
+				wi.type,
 				COALESCE(
 					(SELECT e.new_value
 					 FROM work_item_events e
@@ -301,9 +313,11 @@ func (r *StatsRepository) backfillAtTime(ctx context.Context, t time.Time) (int6
 			COUNT(*) FILTER (WHERE ws.category = 'cancelled'),
 			$1
 		FROM item_state_at_t ist
-		JOIN projects p          ON p.id = ist.project_id
-		JOIN workflows w         ON w.id = p.default_workflow_id
-		JOIN workflow_statuses ws ON ws.workflow_id = w.id AND ws.name = ist.status_at_t
+		JOIN projects p ON p.id = ist.project_id
+		LEFT JOIN project_type_workflows ptw ON ptw.project_id = p.id AND ptw.work_item_type = ist.type
+		JOIN workflow_statuses ws
+			ON ws.workflow_id = COALESCE(p.default_workflow_id, ptw.workflow_id)
+			AND ws.name = ist.status_at_t
 		WHERE p.deleted_at IS NULL
 		  AND ist.assignee_at_t IS NOT NULL
 		  AND ist.assignee_at_t != ''
@@ -319,6 +333,33 @@ func (r *StatsRepository) backfillAtTime(ctx context.Context, t time.Time) (int6
 	}
 
 	return projectRows + userRows, nil
+}
+
+// Timeline returns project-level stats snapshots for the given project within
+// the time range [since, now], ordered chronologically.
+func (r *StatsRepository) Timeline(ctx context.Context, projectID uuid.UUID, since time.Time) ([]model.ProjectStatsSnapshot, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT id, project_id, todo_count, in_progress_count, done_count, cancelled_count, captured_at
+		FROM project_stats_snapshots
+		WHERE project_id = $1
+		  AND user_id IS NULL
+		  AND captured_at >= $2
+		ORDER BY captured_at ASC
+	`, projectID, since)
+	if err != nil {
+		return nil, fmt.Errorf("querying timeline: %w", err)
+	}
+	defer rows.Close()
+
+	var snapshots []model.ProjectStatsSnapshot
+	for rows.Next() {
+		var s model.ProjectStatsSnapshot
+		if err := rows.Scan(&s.ID, &s.ProjectID, &s.TodoCount, &s.InProgressCount, &s.DoneCount, &s.CancelledCount, &s.CapturedAt); err != nil {
+			return nil, fmt.Errorf("scanning snapshot: %w", err)
+		}
+		snapshots = append(snapshots, s)
+	}
+	return snapshots, rows.Err()
 }
 
 // DeleteBefore removes all snapshots older than the given time.

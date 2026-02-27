@@ -18,6 +18,7 @@ import { useWorkItems } from '@/hooks/useWorkItems'
 import { useProjectWorkflow } from '@/hooks/useWorkflows'
 import { Avatar } from '@/components/ui/Avatar'
 import { Spinner } from '@/components/ui/Spinner'
+import { StatsTimelineChart } from '@/components/stats/StatsTimelineChart'
 
 const closedCategories = new Set(['done', 'cancelled'])
 const primaryTypes = new Set(['task', 'ticket', 'bug'])
@@ -152,6 +153,8 @@ export function ProjectOverviewPage() {
           </div>
         )}
       </div>
+
+      <StatsTimelineChart projectKey={projectKey ?? ''} />
 
       <div>
         <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">

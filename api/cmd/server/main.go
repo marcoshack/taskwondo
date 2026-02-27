@@ -131,6 +131,7 @@ func main() {
 	inviteRepo := repository.NewProjectInviteRepository(db)
 	slaRepo := repository.NewSLARepository(db)
 	emailVerificationRepo := repository.NewEmailVerificationRepository(db)
+	statsRepo := repository.NewStatsRepository(db)
 
 	// Initialize storage
 	store, err := storage.NewMinIOStorage(
@@ -171,6 +172,7 @@ func main() {
 	userSettingService := service.NewUserSettingService(userSettingRepo, projectRepo, projectMemberRepo)
 	systemSettingService := service.NewSystemSettingService(systemSettingRepo)
 	adminService := service.NewAdminService(userRepo, projectRepo, projectMemberRepo)
+	statsService := service.NewStatsService(statsRepo, projectRepo, projectMemberRepo)
 
 	// Seed admin user if configured
 	if cfg.AdminEmail != "" && cfg.AdminPassword != "" {
@@ -238,6 +240,7 @@ func main() {
 	admin := handler.NewAdminHandler(adminService)
 	sla := handler.NewSLAHandler(slaService)
 	inbox := handler.NewInboxHandler(inboxService, slaService)
+	stats := handler.NewStatsHandler(statsService)
 
 	// Set up router
 	r := chi.NewRouter()
@@ -401,6 +404,9 @@ func main() {
 							r.Put("/", userSettings.Set)
 							r.Delete("/", userSettings.Delete)
 						})
+					})
+					r.Route("/stats", func(r chi.Router) {
+						r.Get("/timeline", stats.Timeline)
 					})
 					r.Route("/items", func(r chi.Router) {
 						r.Get("/", items.List)
