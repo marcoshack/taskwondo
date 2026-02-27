@@ -88,17 +88,11 @@ func main() {
 	scheduler := workers.NewScheduler(log.Logger)
 
 	statsSummarize := workers.NewStatsSummarizeTask(statsRepo, log.Logger)
-	statsCompact := workers.NewStatsCompactTask(statsRepo, 7*24*time.Hour, log.Logger)
 
 	scheduler.Add(workers.PeriodicTask{
 		Name:     "stats.summarize",
 		Interval: 5 * time.Minute,
 		Fn:       statsSummarize.Run,
-	})
-	scheduler.Add(workers.PeriodicTask{
-		Name:     "stats.compact",
-		Interval: 1 * time.Hour,
-		Fn:       statsCompact.Run,
 	})
 
 	// Run backfill if requested (before starting periodic tasks)

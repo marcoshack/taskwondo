@@ -9,8 +9,9 @@ CREATE TABLE project_stats_snapshots (
     captured_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Project-level queries: WHERE project_id = $1 AND user_id IS NULL ORDER BY captured_at DESC
-CREATE INDEX idx_stats_project_time ON project_stats_snapshots(project_id, captured_at DESC) WHERE user_id IS NULL;
+-- Unique partial indexes enable ON CONFLICT upsert into hourly buckets.
+-- Project-level (user_id IS NULL): one row per (project, hour)
+CREATE UNIQUE INDEX idx_stats_project_hour ON project_stats_snapshots(project_id, captured_at) WHERE user_id IS NULL;
 
--- Per-user queries: WHERE project_id = $1 AND user_id = $2 ORDER BY captured_at DESC
-CREATE INDEX idx_stats_project_user_time ON project_stats_snapshots(project_id, user_id, captured_at DESC) WHERE user_id IS NOT NULL;
+-- Per-user (user_id IS NOT NULL): one row per (project, user, hour)
+CREATE UNIQUE INDEX idx_stats_project_user_hour ON project_stats_snapshots(project_id, user_id, captured_at) WHERE user_id IS NOT NULL;

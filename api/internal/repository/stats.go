@@ -29,42 +29,56 @@ func (r *StatsRepository) SnapshotAll(ctx context.Context) error {
 	}
 	defer tx.Rollback()
 
-	// Project-level aggregates
+	// Project-level aggregates — upsert into the current hour bucket.
 	_, err = tx.ExecContext(ctx, `
-		INSERT INTO project_stats_snapshots (project_id, todo_count, in_progress_count, done_count, cancelled_count)
+		INSERT INTO project_stats_snapshots (project_id, todo_count, in_progress_count, done_count, cancelled_count, captured_at)
 		SELECT
 			p.id,
 			COUNT(*) FILTER (WHERE ws.category = 'todo'),
 			COUNT(*) FILTER (WHERE ws.category = 'in_progress'),
 			COUNT(*) FILTER (WHERE ws.category = 'done'),
-			COUNT(*) FILTER (WHERE ws.category = 'cancelled')
+			COUNT(*) FILTER (WHERE ws.category = 'cancelled'),
+			date_trunc('hour', now())
 		FROM work_items wi
 		JOIN projects p          ON p.id = wi.project_id
 		JOIN workflows w         ON w.id = p.default_workflow_id
 		JOIN workflow_statuses ws ON ws.workflow_id = w.id AND ws.name = wi.status
 		WHERE wi.deleted_at IS NULL AND p.deleted_at IS NULL
 		GROUP BY p.id
+		ON CONFLICT (project_id, captured_at) WHERE user_id IS NULL
+		DO UPDATE SET
+			todo_count        = EXCLUDED.todo_count,
+			in_progress_count = EXCLUDED.in_progress_count,
+			done_count        = EXCLUDED.done_count,
+			cancelled_count   = EXCLUDED.cancelled_count
 	`)
 	if err != nil {
 		return fmt.Errorf("inserting project-level snapshots: %w", err)
 	}
 
-	// Per-assignee breakdowns
+	// Per-assignee breakdowns — upsert into the current hour bucket.
 	_, err = tx.ExecContext(ctx, `
-		INSERT INTO project_stats_snapshots (project_id, user_id, todo_count, in_progress_count, done_count, cancelled_count)
+		INSERT INTO project_stats_snapshots (project_id, user_id, todo_count, in_progress_count, done_count, cancelled_count, captured_at)
 		SELECT
 			p.id,
 			wi.assignee_id,
 			COUNT(*) FILTER (WHERE ws.category = 'todo'),
 			COUNT(*) FILTER (WHERE ws.category = 'in_progress'),
 			COUNT(*) FILTER (WHERE ws.category = 'done'),
-			COUNT(*) FILTER (WHERE ws.category = 'cancelled')
+			COUNT(*) FILTER (WHERE ws.category = 'cancelled'),
+			date_trunc('hour', now())
 		FROM work_items wi
 		JOIN projects p          ON p.id = wi.project_id
 		JOIN workflows w         ON w.id = p.default_workflow_id
 		JOIN workflow_statuses ws ON ws.workflow_id = w.id AND ws.name = wi.status
 		WHERE wi.deleted_at IS NULL AND p.deleted_at IS NULL AND wi.assignee_id IS NOT NULL
 		GROUP BY p.id, wi.assignee_id
+		ON CONFLICT (project_id, user_id, captured_at) WHERE user_id IS NOT NULL
+		DO UPDATE SET
+			todo_count        = EXCLUDED.todo_count,
+			in_progress_count = EXCLUDED.in_progress_count,
+			done_count        = EXCLUDED.done_count,
+			cancelled_count   = EXCLUDED.cancelled_count
 	`)
 	if err != nil {
 		return fmt.Errorf("inserting per-assignee snapshots: %w", err)
