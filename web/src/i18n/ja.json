@@ -219,6 +219,7 @@
   "common.close": "閉じる",
   "common.copied": "コピー済み",
   "common.copyAsMarkdown": "作業項目をMarkdownでコピー",
+  "common.clickToCopy": "クリックしてコピー",
   "common.copyToClipboard": "コピー",
   "common.create": "作成",
   "common.copy": "コピー",
@@ -873,6 +874,9 @@
   "workitems.view.list": "リスト",
   "workitems.view.moveTo": "移動先...",
   "workitems.visibilities.internal": "内部",
+  "workitems.visibilities.internal.description": "プロジェクトメンバーのみがこのアイテムを閲覧できます",
   "workitems.visibilities.portal": "ポータル",
-  "workitems.visibilities.public": "公開"
+  "workitems.visibilities.portal.description": "顧客は限定情報を閲覧、メンバーはすべて閲覧可能",
+  "workitems.visibilities.public": "公開",
+  "workitems.visibilities.public.description": "リンクを持つ人は限定情報を閲覧、メンバーはすべて閲覧可能"
 }

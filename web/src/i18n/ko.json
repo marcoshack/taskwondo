@@ -219,6 +219,7 @@
   "common.close": "닫기",
   "common.copied": "복사됨!",
   "common.copyAsMarkdown": "작업 항목을 Markdown으로 복사",
+  "common.clickToCopy": "클릭하여 복사",
   "common.copyToClipboard": "복사",
   "common.create": "생성",
   "common.copy": "복사",
@@ -873,6 +874,9 @@
   "workitems.view.list": "목록",
   "workitems.view.moveTo": "이동...",
   "workitems.visibilities.internal": "내부",
+  "workitems.visibilities.internal.description": "프로젝트 멤버만 이 항목을 볼 수 있습니다",
   "workitems.visibilities.portal": "포털",
-  "workitems.visibilities.public": "공개"
+  "workitems.visibilities.portal.description": "고객은 제한된 정보를 볼 수 있고, 멤버는 모든 것을 볼 수 있습니다",
+  "workitems.visibilities.public": "공개",
+  "workitems.visibilities.public.description": "링크가 있는 사람은 제한된 정보를 볼 수 있고, 멤버는 모든 것을 볼 수 있습니다"
 }

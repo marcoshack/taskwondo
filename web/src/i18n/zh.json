@@ -219,6 +219,7 @@
   "common.close": "关闭",
   "common.copied": "已复制",
   "common.copyAsMarkdown": "复制工作项为 Markdown",
+  "common.clickToCopy": "点击复制",
   "common.copyToClipboard": "复制",
   "common.create": "创建",
   "common.copy": "复制",
@@ -873,6 +874,9 @@
   "workitems.view.list": "列表",
   "workitems.view.moveTo": "移至...",
   "workitems.visibilities.internal": "内部",
+  "workitems.visibilities.internal.description": "仅项目成员可以查看此项目",
   "workitems.visibilities.portal": "门户",
-  "workitems.visibilities.public": "公开"
+  "workitems.visibilities.portal.description": "客户查看有限信息，成员查看全部",
+  "workitems.visibilities.public": "公开",
+  "workitems.visibilities.public.description": "拥有链接的人查看有限信息，成员查看全部"
 }

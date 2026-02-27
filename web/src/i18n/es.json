@@ -219,6 +219,7 @@
   "common.close": "Cerrar",
   "common.copied": "¡Copiado!",
   "common.copyAsMarkdown": "Copiar elemento de trabajo como Markdown",
+  "common.clickToCopy": "Clic para copiar",
   "common.copyToClipboard": "Copiar",
   "common.create": "Crear",
   "common.copy": "Copiar",
@@ -873,6 +874,9 @@
   "workitems.view.list": "Lista",
   "workitems.view.moveTo": "Mover a...",
   "workitems.visibilities.internal": "interno",
+  "workitems.visibilities.internal.description": "Solo los miembros del proyecto pueden ver este elemento",
   "workitems.visibilities.portal": "portal",
-  "workitems.visibilities.public": "público"
+  "workitems.visibilities.portal.description": "Los clientes ven información limitada, los miembros ven todo",
+  "workitems.visibilities.public": "público",
+  "workitems.visibilities.public.description": "Cualquier persona con el enlace ve información limitada, los miembros ven todo"
 }

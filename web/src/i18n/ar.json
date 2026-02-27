@@ -219,6 +219,7 @@
   "common.close": "إغلاق",
   "common.copied": "تم النسخ!",
   "common.copyAsMarkdown": "نسخ عنصر العمل كـ Markdown",
+  "common.clickToCopy": "انقر للنسخ",
   "common.copyToClipboard": "نسخ",
   "common.create": "إنشاء",
   "common.copy": "نسخ",
@@ -873,6 +874,9 @@
   "workitems.view.list": "قائمة",
   "workitems.view.moveTo": "نقل إلى...",
   "workitems.visibilities.internal": "داخلي",
+  "workitems.visibilities.internal.description": "أعضاء المشروع فقط يمكنهم رؤية هذا العنصر",
   "workitems.visibilities.portal": "بوابة",
-  "workitems.visibilities.public": "عام"
+  "workitems.visibilities.portal.description": "العملاء يرون معلومات محدودة، الأعضاء يرون كل شيء",
+  "workitems.visibilities.public": "عام",
+  "workitems.visibilities.public.description": "أي شخص لديه الرابط يرى معلومات محدودة، الأعضاء يرون كل شيء"
 }
