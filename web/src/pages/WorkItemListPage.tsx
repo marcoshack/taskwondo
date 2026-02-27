@@ -600,6 +600,7 @@ export function WorkItemListPage() {
     {
       key: 'title',
       header: t('workitems.table.title'),
+      className: 'sm:!pr-2',
       sortKey: 'title',
       render: (row) => (
         <div className="flex items-center gap-1 min-w-0">
@@ -611,8 +612,8 @@ export function WorkItemListPage() {
               )}
             </span>
           </Tooltip>
-          <span className="shrink-0" onClick={(e) => e.stopPropagation()}>
-            <span className="sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+          <span className="shrink-0 ml-auto" onClick={(e) => e.stopPropagation()}>
+            <span className={`${inboxByWorkItemId.get(row.id) ? 'opacity-100' : 'sm:opacity-0 sm:group-hover:opacity-100'} transition-opacity`}>
               <InboxButton workItemId={row.id} inboxItemId={inboxByWorkItemId.get(row.id)} />
             </span>
           </span>
@@ -622,7 +623,7 @@ export function WorkItemListPage() {
     {
       key: 'status',
       header: t('workitems.table.status'),
-      className: 'w-32',
+      className: 'w-24 sm:!pl-3',
       sortKey: 'status',
       render: (row) => <StatusBadge status={row.status} statuses={allStatuses ?? statuses} />,
     },
