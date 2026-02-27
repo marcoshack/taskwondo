@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef } from 'react'
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { Routes, Route, useNavigate } from 'react-router-dom'
 import { Trans, useTranslation } from 'react-i18next'
 import { ChevronUp, ChevronDown, X, Search, BrushCleaning, Inbox, Check, Rss, Bookmark, Settings, User, History, Pencil } from 'lucide-react'
@@ -16,6 +16,7 @@ import { AppSidebar } from '@/components/AppSidebar'
 import { useSidebar } from '@/contexts/SidebarContext'
 import { useInboxItems, useRemoveFromInbox, useReorderInboxItem, useClearCompletedInbox, useAddToInbox } from '@/hooks/useInbox'
 import { usePreference, useSetPreference } from '@/hooks/usePreferences'
+import { useColumnWidths } from '@/hooks/useColumnWidths'
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
 import { useDebounce } from '@/hooks/useDebounce'
 import { listInboxItems, type InboxItem } from '@/api/inbox'
@@ -51,6 +52,7 @@ interface InboxRowProps {
   removedId: string | null
   reorderedId: string | null
   autoRemove: boolean
+  columnWidths: Record<string, number>
 }
 
 function getDescriptionPreview(description: string): string {
@@ -59,7 +61,7 @@ function getDescriptionPreview(description: string): string {
   return line.trim().replace(/^#+\s+/, '').replace(/[*_~`[\]]/g, '')
 }
 
-function InboxRow({ item, isCompleted, isFirst, isLast, isActive, onRemove, onMoveUp, onMoveDown, onClick, removedId, reorderedId, autoRemove }: InboxRowProps) {
+function InboxRow({ item, isCompleted, isFirst, isLast, isActive, onRemove, onMoveUp, onMoveDown, onClick, removedId, reorderedId, autoRemove, columnWidths }: InboxRowProps) {
   const { t } = useTranslation()
   const isRemoving = removedId === item.id
 
@@ -93,11 +95,11 @@ function InboxRow({ item, isCompleted, isFirst, isLast, isActive, onRemove, onMo
         </div>
       </td>
       {/* Display ID */}
-      <td className={`px-3 py-3 text-sm font-mono whitespace-nowrap ${isCompleted && !isRemoving ? 'text-gray-400 dark:text-gray-500' : 'text-gray-500 dark:text-gray-400'}`}>
+      <td style={columnWidths.display_id ? { width: columnWidths.display_id } : undefined} className={`px-3 py-3 text-sm font-mono whitespace-nowrap ${isCompleted && !isRemoving ? 'text-gray-400 dark:text-gray-500' : 'text-gray-500 dark:text-gray-400'} ${columnWidths.display_id ? '' : 'w-24'}`}>
         {item.display_id}
       </td>
       {/* Type */}
-      <td className={`px-3 py-3 whitespace-nowrap ${isCompleted && !isRemoving ? 'opacity-40' : ''}`}>
+      <td style={columnWidths.type ? { width: columnWidths.type } : undefined} className={`px-3 py-3 whitespace-nowrap ${isCompleted && !isRemoving ? 'opacity-40' : ''} ${columnWidths.type ? '' : 'w-20'}`}>
         <TypeBadge type={item.type} />
       </td>
       {/* Title */}
@@ -110,19 +112,19 @@ function InboxRow({ item, isCompleted, isFirst, isLast, isActive, onRemove, onMo
         )}
       </td>
       {/* Status — always shows color for visibility */}
-      <td className="px-3 py-3 whitespace-nowrap">
+      <td style={columnWidths.status ? { width: columnWidths.status } : undefined} className={`px-3 py-3 whitespace-nowrap ${columnWidths.status ? '' : 'w-28'}`}>
         <InboxStatusBadge status={item.status} category={item.status_category} />
       </td>
       {/* Priority */}
-      <td className={`px-3 py-3 whitespace-nowrap ${isCompleted && !isRemoving ? 'opacity-40' : ''}`}>
+      <td style={columnWidths.priority ? { width: columnWidths.priority } : undefined} className={`px-3 py-3 whitespace-nowrap ${isCompleted && !isRemoving ? 'opacity-40' : ''} ${columnWidths.priority ? '' : 'w-24'}`}>
         <PriorityBadge priority={item.priority} />
       </td>
       {/* SLA */}
-      <td className={`px-3 py-3 whitespace-nowrap overflow-hidden ${isCompleted && !isRemoving ? 'opacity-40' : ''}`}>
+      <td style={columnWidths.sla ? { width: columnWidths.sla } : undefined} className={`px-3 py-3 whitespace-nowrap overflow-hidden ${isCompleted && !isRemoving ? 'opacity-40' : ''} ${columnWidths.sla ? '' : 'w-[110px]'}`}>
         <SLAIndicator sla={item.sla} />
       </td>
       {/* Updated */}
-      <td className={`px-3 py-3 whitespace-nowrap text-sm text-right ${isCompleted && !isRemoving ? 'text-gray-300 dark:text-gray-600' : 'text-gray-500 dark:text-gray-400'}`}>
+      <td style={columnWidths.updated ? { width: columnWidths.updated } : undefined} className={`px-3 py-3 whitespace-nowrap text-sm text-right ${isCompleted && !isRemoving ? 'text-gray-300 dark:text-gray-600' : 'text-gray-500 dark:text-gray-400'} ${columnWidths.updated ? '' : 'w-[130px]'}`}>
         {new Date(item.updated_at).toLocaleDateString()}
       </td>
       {/* Remove button */}
@@ -254,6 +256,57 @@ function InboxListPage() {
   const [searchInput, setSearchInput] = useState('')
   const searchRef = useRef<HTMLInputElement>(null)
   const debouncedSearch = useDebounce(searchInput, 300)
+
+  const { columnWidths, onColumnResize, resetColumnWidth } = useColumnWidths('inbox')
+
+  // Column resize drag logic (mirrors DataTable)
+  const resizingRef = useRef<{ key: string; startX: number; startWidth: number } | null>(null)
+  const onResizeRef = useRef(onColumnResize)
+  onResizeRef.current = onColumnResize
+
+  const handleResizeMove = useRef((e: MouseEvent) => {
+    if (!resizingRef.current) return
+    const { key, startX, startWidth } = resizingRef.current
+    const diff = e.clientX - startX
+    const newWidth = Math.max(40, startWidth + diff)
+    onResizeRef.current?.(key, newWidth)
+  }).current
+
+  const handleResizeEnd = useRef(() => {
+    resizingRef.current = null
+    document.removeEventListener('mousemove', handleResizeMove)
+    document.removeEventListener('mouseup', handleResizeEnd)
+    document.body.style.cursor = ''
+    document.body.style.userSelect = ''
+    document.addEventListener('click', suppressClick, true)
+  }).current
+
+  const suppressClick = useRef((e: MouseEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+    document.removeEventListener('click', suppressClick, true)
+  }).current
+
+  useEffect(() => {
+    return () => {
+      document.removeEventListener('mousemove', handleResizeMove)
+      document.removeEventListener('mouseup', handleResizeEnd)
+      document.removeEventListener('click', suppressClick, true)
+    }
+  }, [handleResizeMove, handleResizeEnd, suppressClick])
+
+  const handleResizeStart = useCallback((e: React.MouseEvent, colKey: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const th = (e.target as HTMLElement).closest('th')
+    if (!th) return
+    const startWidth = th.getBoundingClientRect().width
+    resizingRef.current = { key: colKey, startX: e.clientX, startWidth }
+    document.addEventListener('mousemove', handleResizeMove)
+    document.addEventListener('mouseup', handleResizeEnd)
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+  }, [handleResizeMove, handleResizeEnd])
 
   const { data: autoRemovePref } = usePreference<boolean>('inbox_auto_remove')
   const autoRemove = autoRemovePref ?? true
@@ -589,16 +642,34 @@ function InboxListPage() {
           {/* Desktop table */}
           <div className="hidden sm:block overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
             <table className="w-full table-fixed">
-              <thead className="bg-gray-50 dark:bg-gray-800">
+              <thead className="bg-gray-50 dark:bg-gray-800 group/thead">
                 <tr>
                   <th className="w-10 px-1 py-3"></th>
-                  <th className="w-24 px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('workitems.table.id')}</th>
-                  <th className="w-20 px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('workitems.table.type')}</th>
+                  <th style={columnWidths.display_id ? { width: columnWidths.display_id } : undefined} className={`relative px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase ${columnWidths.display_id ? '' : 'w-24'}`}>
+                    {t('workitems.table.id')}
+                    <div className="absolute right-0.5 top-0 bottom-0 w-1.5 cursor-col-resize opacity-0 group-hover/thead:opacity-100 bg-indigo-300/40 hover:!bg-indigo-400/60 active:!bg-indigo-500/60 dark:bg-indigo-500/30 dark:hover:!bg-indigo-400/50 dark:active:!bg-indigo-500/50 transition-opacity z-10" onMouseDown={(e) => handleResizeStart(e, 'display_id')} onDoubleClick={(e) => { e.stopPropagation(); resetColumnWidth('display_id') }} />
+                  </th>
+                  <th style={columnWidths.type ? { width: columnWidths.type } : undefined} className={`relative px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase ${columnWidths.type ? '' : 'w-20'}`}>
+                    {t('workitems.table.type')}
+                    <div className="absolute right-0.5 top-0 bottom-0 w-1.5 cursor-col-resize opacity-0 group-hover/thead:opacity-100 bg-indigo-300/40 hover:!bg-indigo-400/60 active:!bg-indigo-500/60 dark:bg-indigo-500/30 dark:hover:!bg-indigo-400/50 dark:active:!bg-indigo-500/50 transition-opacity z-10" onMouseDown={(e) => handleResizeStart(e, 'type')} onDoubleClick={(e) => { e.stopPropagation(); resetColumnWidth('type') }} />
+                  </th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('workitems.table.title')}</th>
-                  <th className="w-28 px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('workitems.table.status')}</th>
-                  <th className="w-24 px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('workitems.table.priority')}</th>
-                  <th className="w-[110px] px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('sla.columnHeader')}</th>
-                  <th className="w-[130px] px-3 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('workitems.table.updated')}</th>
+                  <th style={columnWidths.status ? { width: columnWidths.status } : undefined} className={`relative px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase ${columnWidths.status ? '' : 'w-28'}`}>
+                    {t('workitems.table.status')}
+                    <div className="absolute right-0.5 top-0 bottom-0 w-1.5 cursor-col-resize opacity-0 group-hover/thead:opacity-100 bg-indigo-300/40 hover:!bg-indigo-400/60 active:!bg-indigo-500/60 dark:bg-indigo-500/30 dark:hover:!bg-indigo-400/50 dark:active:!bg-indigo-500/50 transition-opacity z-10" onMouseDown={(e) => handleResizeStart(e, 'status')} onDoubleClick={(e) => { e.stopPropagation(); resetColumnWidth('status') }} />
+                  </th>
+                  <th style={columnWidths.priority ? { width: columnWidths.priority } : undefined} className={`relative px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase ${columnWidths.priority ? '' : 'w-24'}`}>
+                    {t('workitems.table.priority')}
+                    <div className="absolute right-0.5 top-0 bottom-0 w-1.5 cursor-col-resize opacity-0 group-hover/thead:opacity-100 bg-indigo-300/40 hover:!bg-indigo-400/60 active:!bg-indigo-500/60 dark:bg-indigo-500/30 dark:hover:!bg-indigo-400/50 dark:active:!bg-indigo-500/50 transition-opacity z-10" onMouseDown={(e) => handleResizeStart(e, 'priority')} onDoubleClick={(e) => { e.stopPropagation(); resetColumnWidth('priority') }} />
+                  </th>
+                  <th style={columnWidths.sla ? { width: columnWidths.sla } : undefined} className={`relative px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase ${columnWidths.sla ? '' : 'w-[110px]'}`}>
+                    {t('sla.columnHeader')}
+                    <div className="absolute right-0.5 top-0 bottom-0 w-1.5 cursor-col-resize opacity-0 group-hover/thead:opacity-100 bg-indigo-300/40 hover:!bg-indigo-400/60 active:!bg-indigo-500/60 dark:bg-indigo-500/30 dark:hover:!bg-indigo-400/50 dark:active:!bg-indigo-500/50 transition-opacity z-10" onMouseDown={(e) => handleResizeStart(e, 'sla')} onDoubleClick={(e) => { e.stopPropagation(); resetColumnWidth('sla') }} />
+                  </th>
+                  <th style={columnWidths.updated ? { width: columnWidths.updated } : undefined} className={`relative px-3 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase ${columnWidths.updated ? '' : 'w-[130px]'}`}>
+                    {t('workitems.table.updated')}
+                    <div className="absolute right-0.5 top-0 bottom-0 w-1.5 cursor-col-resize opacity-0 group-hover/thead:opacity-100 bg-indigo-300/40 hover:!bg-indigo-400/60 active:!bg-indigo-500/60 dark:bg-indigo-500/30 dark:hover:!bg-indigo-400/50 dark:active:!bg-indigo-500/50 transition-opacity z-10" onMouseDown={(e) => handleResizeStart(e, 'updated')} onDoubleClick={(e) => { e.stopPropagation(); resetColumnWidth('updated') }} />
+                  </th>
                   <th className="w-10 px-2 py-3"></th>
                 </tr>
               </thead>
@@ -618,6 +689,7 @@ function InboxListPage() {
                     removedId={removedId}
                     reorderedId={reorderedId}
                     autoRemove={autoRemove}
+                    columnWidths={columnWidths}
                   />
                 ))}
               </tbody>

@@ -25,6 +25,7 @@ import { Tooltip } from '@/components/ui/Tooltip'
 import { formatRelativeTime } from '@/utils/duration'
 import { User, History, X, LayoutList, LayoutGrid } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
+import { useColumnWidths } from '@/hooks/useColumnWidths'
 import { useAuth } from '@/contexts/AuthContext'
 import { useInboxItems } from '@/hooks/useInbox'
 import { useSavedSearches, useCreateSavedSearch, useUpdateSavedSearch, useDeleteSavedSearch } from '@/hooks/useSavedSearches'
@@ -151,6 +152,9 @@ export function WorkItemListPage() {
   // Legacy: load old filter-only setting as fallback for migration
   const { data: savedFilterLegacy } = useUserSetting<SavedFilter>(projectKey ?? '', SETTINGS_KEY)
   const saveMutation = useSetUserSetting(projectKey ?? '')
+
+  // Column widths preference (global, persisted)
+  const { columnWidths, onColumnResize, resetColumnWidth } = useColumnWidths()
 
   // Show dates preference (global, persisted)
   const { data: showDatesPref } = usePreference<boolean>('showDates')
@@ -574,6 +578,7 @@ export function WorkItemListPage() {
       key: 'select',
       header: '',
       className: 'w-10',
+      resizable: false,
       render: (row: WorkItem) => (
         <input
           type="checkbox"
@@ -601,6 +606,7 @@ export function WorkItemListPage() {
       key: 'title',
       header: t('workitems.table.title'),
       className: 'sm:!pr-2',
+      resizable: false,
       sortKey: 'title',
       render: (row) => (
         <div className="flex items-center gap-1 min-w-0">
@@ -816,6 +822,10 @@ export function WorkItemListPage() {
               sortOrder={order}
               onSort={handleSort}
               activeRowIndex={activeRow}
+              resizable
+              columnWidths={columnWidths}
+              onColumnResize={onColumnResize}
+              onColumnResetWidth={resetColumnWidth}
             />
           </div>
 
