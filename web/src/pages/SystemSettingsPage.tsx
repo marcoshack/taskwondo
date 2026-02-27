@@ -1,6 +1,6 @@
 import { NavLink, Routes, Route, Navigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Settings, Users, Route as RouteIcon, Plug, KeyRound } from 'lucide-react'
+import { Settings, Users, Route as RouteIcon, Plug, KeyRound, ToggleRight } from 'lucide-react'
 import { useSidebar } from '@/contexts/SidebarContext'
 import { useNavigationGuard } from '@/contexts/NavigationGuardContext'
 import { SystemSettingsSidebar } from '@/components/SystemSettingsSidebar'
@@ -9,6 +9,7 @@ import { SystemGeneralPage } from './SystemGeneralPage'
 import { SystemWorkflowsPage } from './SystemWorkflowsPage'
 import { SystemIntegrationsPage } from './SystemIntegrationsPage'
 import { SystemAuthenticationPage } from './SystemAuthenticationPage'
+import { SystemFeaturesPage } from './SystemFeaturesPage'
 
 export function SystemSettingsPage() {
   const { t } = useTranslation()
@@ -21,6 +22,7 @@ export function SystemSettingsPage() {
     { to: 'workflows', label: t('admin.sidebar.workflows'), icon: RouteIcon },
     { to: 'integrations', label: t('admin.sidebar.integrations'), icon: Plug },
     { to: 'authentication', label: t('admin.sidebar.authentication'), icon: KeyRound },
+    { to: 'features', label: t('admin.sidebar.features'), icon: ToggleRight },
   ]
 
   return (
@@ -61,6 +63,7 @@ export function SystemSettingsPage() {
             <Route path="workflows" element={<SystemWorkflowsPage />} />
             <Route path="integrations" element={<SystemIntegrationsPage />} />
             <Route path="authentication" element={<SystemAuthenticationPage />} />
+            <Route path="features" element={<SystemFeaturesPage />} />
           </Routes>
         </div>
       </div>

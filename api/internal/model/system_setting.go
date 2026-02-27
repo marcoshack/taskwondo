@@ -17,6 +17,9 @@ const (
 	SettingAuthEmailRegistrationEnabled = "auth_email_registration_enabled"
 	SettingAuthDiscordEnabled           = "auth_discord_enabled"
 	SettingAuthGoogleEnabled            = "auth_google_enabled"
+
+	// Feature flags
+	SettingFeatureStatsTimeline = "feature_stats_timeline"
 )
 
 // SMTPEncryption constants for the Encryption field of SMTPConfig.

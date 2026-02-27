@@ -558,6 +558,7 @@
   "admin.sidebar.workflows": "Workflows",
   "admin.sidebar.integrations": "Integrations",
   "admin.sidebar.authentication": "Authentication",
+  "admin.sidebar.features": "Features",
 
   "admin.general.title": "General",
   "admin.general.description": "Configure general system settings.",
@@ -651,6 +652,11 @@
   "admin.authentication.discord.description": "Allow users to sign in with their Discord account.",
   "admin.authentication.google.title": "Google",
   "admin.authentication.google.description": "Allow users to sign in with their Google account.",
+
+  "admin.features.title": "Features",
+  "admin.features.description": "Enable or disable features globally across the platform.",
+  "admin.features.statsTimeline.title": "Activity Graph",
+  "admin.features.statsTimeline.description": "Show the activity timeline chart on project overview pages, displaying work item status trends over time.",
 
   "admin.integrations.title": "Integrations",
   "admin.integrations.description": "Configure external service integrations.",

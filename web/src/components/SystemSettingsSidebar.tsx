@@ -8,6 +8,7 @@ import {
   Route,
   Plug,
   KeyRound,
+  ToggleRight,
   PanelLeftClose,
   PanelLeftOpen,
 } from 'lucide-react'
@@ -25,6 +26,7 @@ export function SystemSettingsSidebar() {
     { to: 'workflows', label: t('admin.sidebar.workflows'), icon: Route, end: false },
     { to: 'integrations', label: t('admin.sidebar.integrations'), icon: Plug, end: false },
     { to: 'authentication', label: t('admin.sidebar.authentication'), icon: KeyRound, end: false },
+    { to: 'features', label: t('admin.sidebar.features'), icon: ToggleRight, end: false },
   ]
 
   function renderNavItems(showLabels: boolean) {

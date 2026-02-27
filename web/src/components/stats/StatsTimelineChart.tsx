@@ -12,6 +12,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { useStatsTimeline } from '@/hooks/useStats'
+import { usePublicSettings } from '@/hooks/useSystemSettings'
 import { Spinner } from '@/components/ui/Spinner'
 import type { StatsRange } from '@/api/stats'
 
@@ -28,9 +29,14 @@ function useDarkMode() {
 
 export function StatsTimelineChart({ projectKey }: Props) {
   const { t } = useTranslation()
+  const { data: publicSettings } = usePublicSettings()
   const [range_, setRange] = useState<StatsRange>('7d')
   const { data: points, isLoading } = useStatsTimeline(projectKey, range_)
   const isDark = useDarkMode()
+
+  // Feature toggle: hidden when explicitly disabled
+  const featureEnabled = publicSettings?.feature_stats_timeline !== false
+  if (!featureEnabled) return null
 
   const chartData = useMemo(() => {
     if (!points || points.length === 0) return []
