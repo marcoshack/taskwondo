@@ -1,9 +1,10 @@
-import { Navigate, Outlet } from 'react-router-dom'
+import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { Spinner } from '@/components/ui/Spinner'
 
 export function ProtectedRoute() {
   const { user, isLoading, forcePasswordChange } = useAuth()
+  const location = useLocation()
 
   if (isLoading) {
     return (
@@ -14,7 +15,9 @@ export function ProtectedRoute() {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />
+    const currentPath = location.pathname + location.search + location.hash
+    const loginUrl = currentPath && currentPath !== '/' ? `/login?next=${encodeURIComponent(currentPath)}` : '/login'
+    return <Navigate to={loginUrl} replace />
   }
 
   if (forcePasswordChange) {
