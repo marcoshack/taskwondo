@@ -29,7 +29,7 @@ Options:
                    (default: $GITHUB_RAW_URL)
   --dir DIR        Target directory (default: current directory)
   --export         Export database and attachments to a timestamped backup archive
-  --import FILE    Import data from a backup archive after setup
+  --import FILE    Import data from a backup archive (FILE is required)
   -y               Non-interactive mode: auto-generate all values, skip prompts
   -h, --help       Show this help message
 
@@ -43,22 +43,6 @@ Backup:
 EOF
     exit 0
 }
-
-# --- Argument parsing ---
-
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        --url)     BASE_URL="$2"; shift 2 ;;
-        --dir)     TARGET_DIR="$2"; shift 2 ;;
-        --export)  DO_EXPORT=true; shift ;;
-        --import)  IMPORT_FILE="$2"; shift 2 ;;
-        -y)        NON_INTERACTIVE=true; shift ;;
-        -h|--help) usage ;;
-        *)      echo "Unknown option: $1"; usage ;;
-    esac
-done
-
-BASE_URL="${BASE_URL:-$GITHUB_RAW_URL}"
 
 # --- Helpers ---
 
@@ -116,6 +100,26 @@ download_file() {
         error "curl or wget is required to download files."
     fi
 }
+
+# --- Argument parsing ---
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --url)     BASE_URL="$2"; shift 2 ;;
+        --dir)     TARGET_DIR="$2"; shift 2 ;;
+        --export)  DO_EXPORT=true; shift ;;
+        --import)
+            if [[ $# -lt 2 || "$2" == -* ]]; then
+                error "--import requires a backup archive path. Example: install.sh --import backup/taskwondo-export-20260228-0032.tar.gz"
+            fi
+            IMPORT_FILE="$2"; shift 2 ;;
+        -y)        NON_INTERACTIVE=true; shift ;;
+        -h|--help) usage ;;
+        *)      echo "Unknown option: $1"; usage ;;
+    esac
+done
+
+BASE_URL="${BASE_URL:-$GITHUB_RAW_URL}"
 
 # Load .env variables into the current shell (for docker compose commands).
 load_env() {
@@ -281,6 +285,30 @@ echo
 if $DO_EXPORT; then
     do_export
     exit 0
+fi
+
+# --- Import with existing .env: skip setup, restore directly ---
+
+if [[ -n "$IMPORT_FILE" ]]; then
+    ENV_FILE="$TARGET_DIR/.env"
+    COMPOSE_FILE="$TARGET_DIR/docker-compose.yml"
+
+    if [[ -f "$ENV_FILE" && -f "$COMPOSE_FILE" ]]; then
+        info "Found existing .env and docker-compose.yml — skipping setup."
+        echo
+        load_env
+        do_import "$IMPORT_FILE"
+        exit 0
+    elif [[ -f "$ENV_FILE" && ! -f "$COMPOSE_FILE" ]]; then
+        info "Found .env but docker-compose.yml is missing — downloading it."
+        download_file "$BASE_URL/docker-compose.yml" "$COMPOSE_FILE"
+        load_env
+        do_import "$IMPORT_FILE"
+        exit 0
+    else
+        info "No .env found — running full setup before import."
+        echo
+    fi
 fi
 
 # --- Setup requires openssl ---
