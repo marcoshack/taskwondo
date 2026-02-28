@@ -120,7 +120,7 @@ export function TimeEntryList({ projectKey, itemNumber, sortOrder = 'desc', read
           <div className="flex gap-2 items-center">
             <Input
               type="text"
-              className="flex-1 sm:flex-none sm:w-24 shrink-0"
+              className="flex-1 min-w-0 sm:flex-none sm:w-24 sm:shrink-0"
               value={duration}
               onChange={(e) => setDuration(e.target.value)}
               placeholder={t('timeTracking.durationPlaceholder')}
@@ -133,7 +133,7 @@ export function TimeEntryList({ projectKey, itemNumber, sortOrder = 'desc', read
             />
             <Input
               type="date"
-              className="flex-1 sm:flex-none shrink-0"
+              className="flex-1 min-w-0 sm:flex-none sm:shrink-0"
               value={startedAt}
               onChange={(e) => setStartedAt(e.target.value)}
             />
@@ -236,7 +236,7 @@ export function TimeEntryList({ projectKey, itemNumber, sortOrder = 'desc', read
               <div className="flex gap-2 items-center">
                 <Input
                   type="text"
-                  className="flex-1 sm:flex-none sm:w-24 shrink-0"
+                  className="flex-1 min-w-0 sm:flex-none sm:w-24 sm:shrink-0"
                   value={editDuration}
                   onChange={(e) => setEditDuration(e.target.value)}
                   placeholder={t('timeTracking.durationPlaceholder')}
@@ -247,7 +247,7 @@ export function TimeEntryList({ projectKey, itemNumber, sortOrder = 'desc', read
                 />
                 <Input
                   type="date"
-                  className="flex-1 sm:flex-none shrink-0"
+                  className="flex-1 min-w-0 sm:flex-none sm:shrink-0"
                   value={editStartedAt}
                   onChange={(e) => setEditStartedAt(e.target.value)}
                   onKeyDown={(e) => {
