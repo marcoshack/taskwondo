@@ -87,6 +87,7 @@ func main() {
 	typeWorkflowRepo := repository.NewProjectTypeWorkflowRepository(db)
 	inviteRepo := repository.NewProjectInviteRepository(db)
 	slaRepo := repository.NewSLARepository(db)
+	watcherRepo := repository.NewWatcherRepository(db)
 	emailVerificationRepo := repository.NewEmailVerificationRepository(db)
 	statsRepo := repository.NewStatsRepository(db)
 
@@ -134,7 +135,7 @@ func main() {
 	savedSearchService := service.NewSavedSearchService(savedSearchRepo, projectRepo, projectMemberRepo)
 	milestoneService := service.NewMilestoneService(milestoneRepo, projectRepo, projectMemberRepo)
 	slaService := service.NewSLAService(slaRepo, projectRepo, projectMemberRepo, workflowRepo)
-	workItemService := service.NewWorkItemService(workItemRepo, workItemEventRepo, commentRepo, relationRepo, attachmentRepo, timeEntryRepo, projectRepo, projectMemberRepo, workflowRepo, typeWorkflowRepo, queueRepo, milestoneRepo, slaRepo, slaService, store, cfg.MaxUploadSize)
+	workItemService := service.NewWorkItemService(workItemRepo, workItemEventRepo, commentRepo, relationRepo, attachmentRepo, timeEntryRepo, watcherRepo, projectRepo, projectMemberRepo, workflowRepo, typeWorkflowRepo, queueRepo, milestoneRepo, slaRepo, slaService, store, cfg.MaxUploadSize)
 	inboxService := service.NewInboxService(inboxRepo, projectMemberRepo)
 	userSettingService := service.NewUserSettingService(userSettingRepo, projectRepo, projectMemberRepo)
 	systemSettingService := service.NewSystemSettingService(systemSettingRepo)
@@ -289,6 +290,9 @@ func main() {
 				})
 			})
 
+			// User watchlist
+			r.Get("/user/watchlist", items.ListWatchedItemIDs)
+
 			// Workflows
 			r.Route("/workflows", func(r chi.Router) {
 				r.Get("/", workflows.List)
@@ -412,7 +416,13 @@ func main() {
 								r.Patch("/{timeEntryId}", items.UpdateTimeEntry)
 								r.Delete("/{timeEntryId}", items.DeleteTimeEntry)
 							})
-							r.Get("/events", items.ListEvents)
+							r.Route("/watchers", func(r chi.Router) {
+							r.Get("/", items.ListWatchers)
+							r.Post("/", items.AddWatcher)
+							r.Delete("/{userId}", items.RemoveWatcher)
+						})
+						r.Post("/watch", items.ToggleWatch)
+						r.Get("/events", items.ListEvents)
 						})
 					})
 				})

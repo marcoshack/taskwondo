@@ -72,6 +72,7 @@ export interface CreateWorkItemInput {
   milestone_id?: string
   visibility?: string
   due_date?: string
+  watcher_ids?: string[]
 }
 
 export interface UpdateWorkItemInput {
@@ -110,6 +111,25 @@ export interface Relation {
   relation_type: string
   created_by: string
   created_at: string
+}
+
+export interface Watcher {
+  id: string
+  user_id: string
+  display_name: string
+  email: string
+  added_by: string
+  added_by_name: string
+  created_at: string
+}
+
+export interface ViewerWatcherResponse {
+  me: { user_id: string; created_at: string } | null
+  other_count: number
+}
+
+export interface ToggleWatchResponse {
+  is_watching: boolean
 }
 
 export interface EventActor {
@@ -361,4 +381,57 @@ export async function deleteTimeEntry(
   await api.delete(
     `/projects/${projectKey}/items/${itemNumber}/time-entries/${entryId}`
   )
+}
+
+// --- Watcher Functions ---
+
+export async function listWatchers(projectKey: string, itemNumber: number) {
+  const res = await api.get<DataResponse<Watcher[] | ViewerWatcherResponse>>(
+    `/projects/${projectKey}/items/${itemNumber}/watchers`
+  )
+  return res.data.data
+}
+
+export async function addWatcher(projectKey: string, itemNumber: number, userId: string) {
+  const res = await api.post<DataResponse<Watcher>>(
+    `/projects/${projectKey}/items/${itemNumber}/watchers`,
+    { user_id: userId }
+  )
+  return res.data.data
+}
+
+export async function removeWatcher(projectKey: string, itemNumber: number, userId: string) {
+  await api.delete(`/projects/${projectKey}/items/${itemNumber}/watchers/${userId}`)
+}
+
+export async function toggleWatch(projectKey: string, itemNumber: number) {
+  const res = await api.post<DataResponse<ToggleWatchResponse>>(
+    `/projects/${projectKey}/items/${itemNumber}/watch`
+  )
+  return res.data.data
+}
+
+export async function listWatchedItemIDs(projectKey?: string) {
+  const params = new URLSearchParams()
+  if (projectKey) params.set('project', projectKey)
+  const res = await api.get<DataResponse<string[]>>('/user/watchlist', { params })
+  return res.data.data
+}
+
+export async function listWatchedItems(projectKeys: string[], filter: WorkItemFilter = {}) {
+  const params = new URLSearchParams()
+  if (projectKeys.length > 0) params.set('project', projectKeys.join(','))
+  params.set('mode', 'list')
+  if (filter.q) params.set('q', filter.q)
+  if (filter.type?.length) params.set('type', filter.type.join(','))
+  if (filter.status?.length) params.set('status', filter.status.join(','))
+  if (filter.priority?.length) params.set('priority', filter.priority.join(','))
+  if (filter.assignee?.length) params.set('assignees', filter.assignee.join(','))
+  if (filter.milestone?.length) params.set('milestones', filter.milestone.join(','))
+  if (filter.cursor) params.set('cursor', filter.cursor)
+  if (filter.limit) params.set('limit', String(filter.limit))
+  if (filter.sort) params.set('sort', filter.sort)
+  if (filter.order) params.set('order', filter.order)
+  const res = await api.get<WorkItemListResponse>('/user/watchlist', { params })
+  return res.data
 }

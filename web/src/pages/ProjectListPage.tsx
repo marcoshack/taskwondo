@@ -202,7 +202,7 @@ export function ProjectListPage() {
         <div className="flex-1 min-w-0">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('projects.title')}</h1>
-        <Button onClick={() => setShowCreate(true)}>{t('projects.new')}</Button>
+        <Button onClick={() => setShowCreate(true)} className="h-[39px] border border-transparent">{t('projects.new')}</Button>
       </div>
 
       {/* Search */}

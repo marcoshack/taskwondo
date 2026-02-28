@@ -26,6 +26,13 @@ import {
   deleteTimeEntry,
   type CreateTimeEntryInput,
   type UpdateTimeEntryInput,
+  listWatchers,
+  addWatcher,
+  removeWatcher,
+  toggleWatch,
+  listWatchedItemIDs,
+  listWatchedItems,
+  type WorkItemFilter as WIF,
 } from '@/api/workitems'
 
 export function useWorkItems(projectKey: string, filter: WorkItemFilter = {}) {
@@ -277,5 +284,62 @@ export function useDeleteTimeEntry(projectKey: string, itemNumber: number) {
       qc.invalidateQueries({ queryKey: ['projects', projectKey, 'items', itemNumber, 'timeEntries'] })
       qc.invalidateQueries({ queryKey: ['projects', projectKey, 'items', itemNumber, 'events'] })
     },
+  })
+}
+
+// --- Watcher hooks ---
+
+export function useWatchers(projectKey: string, itemNumber: number) {
+  return useQuery({
+    queryKey: ['projects', projectKey, 'items', itemNumber, 'watchers'],
+    queryFn: () => listWatchers(projectKey, itemNumber),
+    enabled: !!projectKey && itemNumber > 0,
+  })
+}
+
+export function useAddWatcher(projectKey: string, itemNumber: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (userId: string) => addWatcher(projectKey, itemNumber, userId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['projects', projectKey, 'items', itemNumber, 'watchers'] })
+      qc.invalidateQueries({ queryKey: ['watchedItems'] })
+    },
+  })
+}
+
+export function useRemoveWatcher(projectKey: string, itemNumber: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (userId: string) => removeWatcher(projectKey, itemNumber, userId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['projects', projectKey, 'items', itemNumber, 'watchers'] })
+      qc.invalidateQueries({ queryKey: ['watchedItems'] })
+    },
+  })
+}
+
+export function useToggleWatch(projectKey: string, itemNumber: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => toggleWatch(projectKey, itemNumber),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['projects', projectKey, 'items', itemNumber, 'watchers'] })
+      qc.invalidateQueries({ queryKey: ['watchedItems'] })
+    },
+  })
+}
+
+export function useWatchedItemIDs(projectKey?: string) {
+  return useQuery({
+    queryKey: ['watchedItems', projectKey ?? ''],
+    queryFn: () => listWatchedItemIDs(projectKey),
+  })
+}
+
+export function useWatchedItems(projectKeys: string[], filter: WIF = {}) {
+  return useQuery({
+    queryKey: ['watchedItems', 'list', projectKeys, filter],
+    queryFn: () => listWatchedItems(projectKeys, filter),
   })
 }

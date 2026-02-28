@@ -728,6 +728,83 @@ func (m *mockTimeEntryRepo) SumByWorkItem(_ context.Context, workItemID uuid.UUI
 	return total, nil
 }
 
+// --- Mock watcher repo ---
+
+type mockWatcherRepo struct {
+	watchers map[uuid.UUID]*model.WorkItemWatcher
+}
+
+func newMockWatcherRepo() *mockWatcherRepo {
+	return &mockWatcherRepo{watchers: make(map[uuid.UUID]*model.WorkItemWatcher)}
+}
+
+func (m *mockWatcherRepo) Create(_ context.Context, w *model.WorkItemWatcher) error {
+	for _, existing := range m.watchers {
+		if existing.WorkItemID == w.WorkItemID && existing.UserID == w.UserID {
+			w.ID = existing.ID
+			w.CreatedAt = existing.CreatedAt
+			return nil
+		}
+	}
+	w.CreatedAt = time.Now()
+	m.watchers[w.ID] = w
+	return nil
+}
+
+func (m *mockWatcherRepo) Delete(_ context.Context, workItemID, userID uuid.UUID) error {
+	for id, w := range m.watchers {
+		if w.WorkItemID == workItemID && w.UserID == userID {
+			delete(m.watchers, id)
+			return nil
+		}
+	}
+	return model.ErrNotFound
+}
+
+func (m *mockWatcherRepo) ListByWorkItem(_ context.Context, workItemID uuid.UUID) ([]model.WorkItemWatcherWithUser, error) {
+	var result []model.WorkItemWatcherWithUser
+	for _, w := range m.watchers {
+		if w.WorkItemID == workItemID {
+			result = append(result, model.WorkItemWatcherWithUser{
+				WorkItemWatcher: *w,
+				DisplayName:     "Test User",
+				Email:           "test@example.com",
+				AddedByName:     "Test User",
+			})
+		}
+	}
+	return result, nil
+}
+
+func (m *mockWatcherRepo) CountByWorkItem(_ context.Context, workItemID uuid.UUID) (int, error) {
+	count := 0
+	for _, w := range m.watchers {
+		if w.WorkItemID == workItemID {
+			count++
+		}
+	}
+	return count, nil
+}
+
+func (m *mockWatcherRepo) IsWatching(_ context.Context, workItemID, userID uuid.UUID) (bool, error) {
+	for _, w := range m.watchers {
+		if w.WorkItemID == workItemID && w.UserID == userID {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (m *mockWatcherRepo) ListWatchedItemIDs(_ context.Context, userID uuid.UUID, _ *uuid.UUID) ([]uuid.UUID, error) {
+	var result []uuid.UUID
+	for _, w := range m.watchers {
+		if w.UserID == userID {
+			result = append(result, w.WorkItemID)
+		}
+	}
+	return result, nil
+}
+
 // --- Mock storage ---
 
 type mockStorage struct {
@@ -917,7 +994,8 @@ func workItemTestSetup(t *testing.T) (*WorkItemHandler, *model.AuthInfo, string)
 	slaRepo := newMockSLARepo()
 	store := newMockStorage()
 	slaSvc := service.NewSLAService(slaRepo, projectRepo, memberRepo, workflowRepo)
-	svc := service.NewWorkItemService(itemRepo, eventRepo, commentRepo, relationRepo, attachRepo, timeEntryRepo, projectRepo, memberRepo, workflowRepo, typeWorkflowRepo, queueRepo, milestoneRepo, slaRepo, slaSvc, store, 50*1024*1024)
+	watcherRepo := newMockWatcherRepo()
+	svc := service.NewWorkItemService(itemRepo, eventRepo, commentRepo, relationRepo, attachRepo, timeEntryRepo, watcherRepo, projectRepo, memberRepo, workflowRepo, typeWorkflowRepo, queueRepo, milestoneRepo, slaRepo, slaSvc, store, 50*1024*1024)
 	h := NewWorkItemHandler(svc, slaSvc, 50*1024*1024)
 
 	info := &model.AuthInfo{
@@ -967,7 +1045,8 @@ func workItemTestSetupWithSLA(t *testing.T) *workItemSLASetup {
 	slaRepo := newMockSLARepo()
 	store := newMockStorage()
 	slaSvc := service.NewSLAService(slaRepo, projectRepo, memberRepo, workflowRepo)
-	svc := service.NewWorkItemService(itemRepo, eventRepo, commentRepo, relationRepo, attachRepo, timeEntryRepo, projectRepo, memberRepo, workflowRepo, typeWorkflowRepo, queueRepo, milestoneRepo, slaRepo, slaSvc, store, 50*1024*1024)
+	watcherRepo := newMockWatcherRepo()
+	svc := service.NewWorkItemService(itemRepo, eventRepo, commentRepo, relationRepo, attachRepo, timeEntryRepo, watcherRepo, projectRepo, memberRepo, workflowRepo, typeWorkflowRepo, queueRepo, milestoneRepo, slaRepo, slaSvc, store, 50*1024*1024)
 	h := NewWorkItemHandler(svc, slaSvc, 50*1024*1024)
 
 	info := &model.AuthInfo{

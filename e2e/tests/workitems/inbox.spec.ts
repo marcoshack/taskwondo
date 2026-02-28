@@ -268,7 +268,8 @@ test.describe('Inbox', () => {
     // Click Watchlist in sidebar
     await sidebar.getByText('Watchlist').click();
     await expect(page).toHaveURL(/\/user\/watchlist/);
-    await expect(page.getByText('Watchlist coming soon')).toBeVisible();
+    // Watchlist is now a real page — verify the heading or empty state is visible
+    await expect(page.getByText('Watchlist').first()).toBeVisible();
 
     // Click Inbox in sidebar to go back
     await sidebar.getByText('Inbox').click();

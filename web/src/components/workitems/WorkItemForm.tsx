@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -82,6 +82,7 @@ export function WorkItemForm({
   const [dueDate, setDueDate] = useState(initialValues.due_date ?? '')
   const [milestoneId, setMilestoneId] = useState(initialValues.milestone_id ?? '')
   const [status, setStatus] = useState(initialValues.status ?? '')
+  const [watcherIds, setWatcherIds] = useState<string[]>([])
 
   const descRef = useRef<HTMLTextAreaElement>(null)
   const descMention = useMentionAutocomplete({
@@ -124,6 +125,7 @@ export function WorkItemForm({
         milestone_id: milestoneId || undefined,
         visibility,
         due_date: dueDate || undefined,
+        watcher_ids: watcherIds.length > 0 ? watcherIds : undefined,
       })
     } else {
       const values: Record<string, unknown> = {}
@@ -231,6 +233,19 @@ export function WorkItemForm({
           <UserPicker members={members} value={assigneeId} onChange={setAssigneeId} disabled={disabledUntilType} />
         </div>
       </Tooltip>
+      {mode === 'create' && (
+        <Tooltip content={disabledTooltip} className="relative block">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('watchers.watchersField')}</label>
+            <MultiUserPicker
+              members={members}
+              selectedIds={watcherIds}
+              onChange={setWatcherIds}
+              disabled={disabledUntilType}
+            />
+          </div>
+        </Tooltip>
+      )}
       <Tooltip content={disabledTooltip} className="relative block">
         <Input label={t('workitems.form.labels')} value={labels} onChange={(e) => setLabels(e.target.value)} placeholder={t('workitems.form.labelsPlaceholder')} disabled={disabledUntilType} />
       </Tooltip>
@@ -264,5 +279,104 @@ export function WorkItemForm({
         </Button>
       </div>
     </form>
+  )
+}
+
+// --- Multi-user picker for watchers (includes viewers) ---
+
+interface MultiUserPickerProps {
+  members: ProjectMember[]
+  selectedIds: string[]
+  onChange: (ids: string[]) => void
+  disabled?: boolean
+}
+
+function MultiUserPicker({ members, selectedIds, onChange, disabled }: MultiUserPickerProps) {
+  const { t } = useTranslation()
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const ref = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const available = members.filter((m) => !selectedIds.includes(m.user_id))
+  const filtered = available.filter((m) => {
+    if (!search) return true
+    const q = search.toLowerCase()
+    return m.display_name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q)
+  })
+
+  const selectedMembers = selectedIds
+    .map((id) => members.find((m) => m.user_id === id))
+    .filter(Boolean) as ProjectMember[]
+
+  useEffect(() => {
+    if (!open) return
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false)
+        setSearch('')
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  return (
+    <div ref={ref} className="relative">
+      <div
+        className={`flex flex-wrap gap-1.5 min-h-[38px] rounded-md border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-sm bg-white dark:bg-gray-800 ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-text'}`}
+        onClick={() => { if (disabled) return; setOpen(true); setTimeout(() => inputRef.current?.focus(), 0) }}
+      >
+        {selectedMembers.map((m) => (
+          <span key={m.user_id} className="inline-flex items-center gap-1 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 text-xs font-medium">
+            {m.display_name}
+            <button
+              type="button"
+              className="hover:text-indigo-900 dark:hover:text-indigo-100"
+              onClick={(e) => { e.stopPropagation(); onChange(selectedIds.filter((id) => id !== m.user_id)) }}
+            >
+              ×
+            </button>
+          </span>
+        ))}
+        {selectedMembers.length === 0 && !open && (
+          <span className="text-gray-400 dark:text-gray-500 py-0.5">{t('watchers.pickWatchers')}</span>
+        )}
+      </div>
+
+      {open && (
+        <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg">
+          <div className="p-2">
+            <input
+              ref={inputRef}
+              className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              placeholder={t('userPicker.searchMembers')}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <ul className="max-h-48 overflow-auto">
+            {filtered.map((m) => (
+              <li key={m.user_id}>
+                <button
+                  type="button"
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  onClick={() => {
+                    onChange([...selectedIds, m.user_id])
+                    setSearch('')
+                  }}
+                >
+                  <div className="font-medium">{m.display_name}</div>
+                  <div className="text-xs text-gray-400">{m.email}</div>
+                </button>
+              </li>
+            ))}
+            {filtered.length === 0 && (
+              <li className="px-3 py-2 text-sm text-gray-400 dark:text-gray-500">{t('userPicker.noMembersFound')}</li>
+            )}
+          </ul>
+        </div>
+      )}
+    </div>
   )
 }

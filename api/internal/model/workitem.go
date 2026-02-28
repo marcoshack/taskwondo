@@ -89,6 +89,8 @@ type WorkItemFilter struct {
 	Labels        []string   // filter items that contain ALL these labels
 	ParentID   *uuid.UUID // children of a specific parent
 	ParentNone bool       // true = top-level items only (parent_id IS NULL)
+	ItemIDs          []uuid.UUID // filter to specific item IDs (used by watchlist)
+	SkipProjectFilter bool       // when true, do not add project_id condition (cross-project queries)
 	Search     string     // full-text search query
 	Sort       string     // sort field: created_at, updated_at, priority, due_date, item_number
 	Order      string     // asc or desc

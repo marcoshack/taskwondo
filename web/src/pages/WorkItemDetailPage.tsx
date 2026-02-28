@@ -31,14 +31,17 @@ import { SLAIndicator } from '@/components/SLAIndicator'
 import { useAuth } from '@/contexts/AuthContext'
 import { Settings2, User, Calendar, CalendarPlus, History, Lock, Unlock, Globe } from 'lucide-react'
 import { InboxButton } from '@/components/workitems/InboxButton'
+import { WatchButton } from '@/components/workitems/WatchButton'
+import { WatcherList } from '@/components/workitems/WatcherList'
 import { useInboxItems } from '@/hooks/useInbox'
+import { useWatchers } from '@/hooks/useWorkItems'
 import { formatRelativeTime } from '@/utils/duration'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { getMarkdownComponents } from '@/components/ui/markdownComponents'
 import { useNavigationGuard } from '@/contexts/NavigationGuardContext'
 
-type Tab = 'comments' | 'activity' | 'relations' | 'attachments' | 'time'
+type Tab = 'comments' | 'activity' | 'relations' | 'attachments' | 'time' | 'watchers'
 
 export function WorkItemDetailPage() {
   const { t } = useTranslation()
@@ -63,6 +66,17 @@ export function WorkItemDetailPage() {
     if (!item || !inboxData?.items) return undefined
     return inboxData.items.find((i) => i.work_item_id === item.id)?.id
   }, [item, inboxData])
+
+  // Watchers: check if current user is watching
+  const { data: watcherData } = useWatchers(projectKey ?? '', itemNumber)
+  const isWatching = useMemo(() => {
+    if (!watcherData || !user) return false
+    if (Array.isArray(watcherData)) {
+      return watcherData.some((w) => w.user_id === user.id)
+    }
+    // ViewerWatcherResponse
+    return !!(watcherData as { me: unknown }).me
+  }, [watcherData, user])
 
   const currentUserRole = members?.find((m) => m.user_id === user?.id)?.role ?? (user?.global_role === 'admin' ? 'owner' : null)
   const canEdit = user?.global_role === 'admin' || (currentUserRole != null && currentUserRole !== 'viewer')
@@ -221,6 +235,7 @@ export function WorkItemDetailPage() {
     { key: 'time', label: t('tabs.time') },
     { key: 'relations', label: t('tabs.relations') },
     { key: 'attachments', label: t('tabs.attachments') },
+    { key: 'watchers', label: t('watchers.watchersTab') },
   ]
 
   return (
@@ -249,6 +264,7 @@ export function WorkItemDetailPage() {
         </button>
         <span className="lg:hidden ml-auto flex items-center gap-1">
           {item && <InboxButton workItemId={item.id} inboxItemId={inboxItemId} className="p-1.5" />}
+          {item && <WatchButton projectKey={projectKey ?? ''} itemNumber={itemNumber} isWatching={isWatching} className="p-1.5" />}
           <button
             onClick={() => setShowProperties(true)}
             className="p-1.5 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
@@ -341,8 +357,9 @@ export function WorkItemDetailPage() {
                 tooltip={t('common.copyAsMarkdown')}
                 className=""
               />
-              <span className="hidden lg:inline-flex">
+              <span className="hidden lg:inline-flex items-center gap-1">
                 <InboxButton workItemId={item.id} inboxItemId={inboxItemId} className="p-1" />
+                <WatchButton projectKey={projectKey ?? ''} itemNumber={itemNumber} isWatching={isWatching} className="p-1" />
               </span>
             </div>
 
@@ -504,6 +521,7 @@ export function WorkItemDetailPage() {
             {activeTab === 'relations' && <RelationList projectKey={projectKey ?? ''} itemNumber={itemNumber} readOnly={readOnly} />}
             {activeTab === 'attachments' && <AttachmentList projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} highlightedAttachmentId={highlightedAttachmentId} onHighlightClear={() => setHighlightedAttachmentId(null)} onPreview={(a) => setPreviewTarget({ kind: 'attachment', attachment: a, projectKey: projectKey ?? '', itemNumber })} readOnly={readOnly} />}
             {activeTab === 'time' && <TimeEntryList projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} readOnly={readOnly} />}
+            {activeTab === 'watchers' && <WatcherList projectKey={projectKey ?? ''} itemNumber={itemNumber} members={members ?? []} currentUserRole={currentUserRole} />}
           </div>
         </div>
 

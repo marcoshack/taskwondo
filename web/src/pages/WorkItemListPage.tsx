@@ -22,8 +22,8 @@ import { CreateWorkItemModal } from '@/components/workitems/CreateWorkItemModal'
 import { BoardView } from '@/components/workitems/BoardView'
 import { SLAIndicator } from '@/components/SLAIndicator'
 import { Tooltip } from '@/components/ui/Tooltip'
-import { formatRelativeTime } from '@/utils/duration'
-import { User, History, X, LayoutList, LayoutGrid } from 'lucide-react'
+import { WorkItemMobileCard } from '@/components/workitems/WorkItemMobileCard'
+import { X, LayoutList, LayoutGrid } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { useColumnWidths } from '@/hooks/useColumnWidths'
 import { useAuth } from '@/contexts/AuthContext'
@@ -32,9 +32,11 @@ import { useSavedSearches, useCreateSavedSearch, useUpdateSavedSearch, useDelete
 import { SavedSearchSelector } from '@/components/workitems/SavedSearchSelector'
 import { SaveSearchModal } from '@/components/workitems/SaveSearchModal'
 import { InboxButton } from '@/components/workitems/InboxButton'
+import { WatchButton } from '@/components/workitems/WatchButton'
 
 import type { SavedSearch } from '@/api/savedSearches'
 import { listWorkItems, type WorkItem, type WorkItemFilter } from '@/api/workitems'
+import { useWatchedItemIDs } from '@/hooks/useWorkItems'
 
 type ViewMode = 'list' | 'board'
 
@@ -576,6 +578,10 @@ export function WorkItemListPage() {
     return map
   }, [inboxData])
 
+  // Watchers: track which items the current user is watching
+  const { data: watchedIds } = useWatchedItemIDs(projectKey ?? '')
+  const watchedItemIdSet = useMemo(() => new Set(watchedIds ?? []), [watchedIds])
+
   useKeyboardShortcut({ key: 'Escape' }, () => setActiveRow(-1), activeRow >= 0)
 
   // Items targeted for deletion: selected checkboxes take priority, otherwise highlighted row
@@ -630,7 +636,10 @@ export function WorkItemListPage() {
               )}
             </span>
           </Tooltip>
-          <span className="shrink-0 ml-auto" onClick={(e) => e.stopPropagation()}>
+          <span className="shrink-0 ml-auto flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+            <span className={`${watchedItemIdSet.has(row.id) ? 'opacity-100' : 'lg:opacity-0 lg:group-hover:opacity-100'} transition-opacity`}>
+              <WatchButton projectKey={projectKey ?? ''} itemNumber={row.item_number} isWatching={watchedItemIdSet.has(row.id)} />
+            </span>
             <span className={`${inboxByWorkItemId.get(row.id) ? 'opacity-100' : 'lg:opacity-0 lg:group-hover:opacity-100'} transition-opacity`}>
               <InboxButton workItemId={row.id} inboxItemId={inboxByWorkItemId.get(row.id)} />
             </span>
@@ -853,55 +862,20 @@ export function WorkItemListPage() {
                   ? members?.find(m => m.user_id === item.assignee_id)?.display_name ?? t('userPicker.unassigned')
                   : t('userPicker.unassigned')
                 return (
-                  <div
+                  <WorkItemMobileCard
                     key={item.id}
-                    className="relative w-full text-left rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 shadow-sm hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors cursor-pointer"
+                    item={item}
+                    statuses={allStatuses ?? statuses}
+                    showDates={showDates}
+                    assigneeName={assigneeName}
+                    inboxItemId={inboxByWorkItemId.get(item.id)}
+                    isWatching={watchedItemIdSet.has(item.id)}
                     onClick={() => {
                       sessionStorage.setItem(activeRowStorageKey, String(item.item_number))
                       sessionStorage.setItem(filterStorageKey, currentParamsString())
                       navigate(`/projects/${projectKey}/items/${item.item_number}`)
                     }}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault()
-                        sessionStorage.setItem(activeRowStorageKey, String(item.item_number))
-                        sessionStorage.setItem(filterStorageKey, currentParamsString())
-                        navigate(`/projects/${projectKey}/items/${item.item_number}`)
-                      }
-                    }}
-                  >
-                    <span className="absolute top-2 right-2" onClick={(e) => e.stopPropagation()}>
-                      <InboxButton workItemId={item.id} inboxItemId={inboxByWorkItemId.get(item.id)} />
-                    </span>
-                    <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pr-6">
-                      <span className="shrink-0 font-mono text-sm font-semibold text-gray-700 dark:text-gray-300">{item.display_id}</span>
-                      <span className="shrink-0 inline-flex"><TypeBadge type={item.type} /></span>
-                      <span className="shrink-0 inline-flex"><StatusBadge status={item.status} statuses={allStatuses ?? statuses} /></span>
-                      <span className="shrink-0 inline-flex"><PriorityBadge priority={item.priority} /></span>
-                      {!showDates && item.sla && (
-                        <span className="shrink-0 inline-flex ml-auto"><SLAIndicator sla={item.sla} compact /></span>
-                      )}
-                    </div>
-                    {showDates && (
-                      <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-400 dark:text-gray-500 overflow-x-auto scrollbar-none">
-                        <span className="shrink-0 inline-flex items-center gap-1">
-                          <User className="h-3 w-3" />
-                          <span className="truncate max-w-[8rem]">{assigneeName}</span>
-                        </span>
-                        <span className="shrink-0 inline-flex items-center gap-1">
-                          <History className="h-3 w-3" />
-                          {formatRelativeTime(item.updated_at)}
-                        </span>
-                        {item.sla && <span className="shrink-0 inline-flex"><SLAIndicator sla={item.sla} /></span>}
-                      </div>
-                    )}
-                    <p className="mt-1.5 text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{item.title}</p>
-                    {item.description && (
-                      <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400 truncate">{item.description}</p>
-                    )}
-                  </div>
+                  />
                 )
               })
             )}

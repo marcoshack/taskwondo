@@ -138,7 +138,7 @@ export async function createWorkItem(
   request: APIRequestContext,
   token: string,
   projectKey: string,
-  data: { title: string; type: string; description?: string; assignee_id?: string },
+  data: { title: string; type: string; description?: string; assignee_id?: string; watcher_ids?: string[] },
 ): Promise<{ id: string; item_number: number; display_id: string }> {
   const res = await request.post(`${BASE_URL}/api/v1/projects/${projectKey}/items`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -617,4 +617,78 @@ export async function createInvite(
   if (!res.ok()) throw new Error(`Create invite failed (${res.status()}): ${await res.text()}`);
   const body = await res.json();
   return body.data;
+}
+
+// --- Watchers ---
+
+export async function toggleWatch(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  itemNumber: number,
+): Promise<{ is_watching: boolean }> {
+  const res = await request.post(`${BASE_URL}/api/v1/projects/${projectKey}/items/${itemNumber}/watch`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`Toggle watch failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function addWatcher(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  itemNumber: number,
+  userId: string,
+): Promise<void> {
+  const res = await request.post(`${BASE_URL}/api/v1/projects/${projectKey}/items/${itemNumber}/watchers`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { user_id: userId },
+  });
+  if (!res.ok()) throw new Error(`Add watcher failed (${res.status()}): ${await res.text()}`);
+}
+
+export async function removeWatcher(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  itemNumber: number,
+  userId: string,
+): Promise<void> {
+  const res = await request.delete(`${BASE_URL}/api/v1/projects/${projectKey}/items/${itemNumber}/watchers/${userId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`Remove watcher failed (${res.status()}): ${await res.text()}`);
+}
+
+export async function listWatchers(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  itemNumber: number,
+): Promise<unknown> {
+  const res = await request.get(`${BASE_URL}/api/v1/projects/${projectKey}/items/${itemNumber}/watchers`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`List watchers failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function listWatchedItems(
+  request: APIRequestContext,
+  token: string,
+  projectKeys?: string | string[],
+): Promise<{ data: Array<{ id: string; title: string; item_number: number; display_id: string; project_key: string }>, meta: { total: number; has_more: boolean } }> {
+  const params = new URLSearchParams({ mode: 'list' });
+  if (projectKeys) {
+    const keys = Array.isArray(projectKeys) ? projectKeys.join(',') : projectKeys;
+    if (keys) params.set('project', keys);
+  }
+  const res = await request.get(`${BASE_URL}/api/v1/user/watchlist?${params}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`List watched items failed (${res.status()}): ${await res.text()}`);
+  return await res.json();
 }

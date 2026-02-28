@@ -69,6 +69,16 @@ type TimeEntryRepository interface {
 	SumByWorkItem(ctx context.Context, workItemID uuid.UUID) (int, error)
 }
 
+// WatcherRepository defines persistence operations for work item watchers.
+type WatcherRepository interface {
+	Create(ctx context.Context, watcher *model.WorkItemWatcher) error
+	Delete(ctx context.Context, workItemID, userID uuid.UUID) error
+	ListByWorkItem(ctx context.Context, workItemID uuid.UUID) ([]model.WorkItemWatcherWithUser, error)
+	CountByWorkItem(ctx context.Context, workItemID uuid.UUID) (int, error)
+	IsWatching(ctx context.Context, workItemID, userID uuid.UUID) (bool, error)
+	ListWatchedItemIDs(ctx context.Context, userID uuid.UUID, projectID *uuid.UUID) ([]uuid.UUID, error)
+}
+
 // EventPublisher publishes async events (e.g. notifications) to a message broker.
 type EventPublisher interface {
 	Publish(subject string, data any) error
@@ -89,6 +99,7 @@ type CreateWorkItemInput struct {
 	Visibility   string
 	DueDate      *time.Time
 	CustomFields map[string]interface{}
+	WatcherIDs   []uuid.UUID
 }
 
 // UpdateWorkItemInput holds the input for updating a work item.
@@ -171,6 +182,7 @@ type WorkItemService struct {
 	relations     WorkItemRelationRepository
 	attachments   AttachmentRepository
 	timeEntries   TimeEntryRepository
+	watchers      WatcherRepository
 	projects      ProjectRepository
 	members       ProjectMemberRepository
 	workflows     WorkflowRepository
@@ -192,6 +204,7 @@ func NewWorkItemService(
 	relations WorkItemRelationRepository,
 	attachments AttachmentRepository,
 	timeEntries TimeEntryRepository,
+	watchers WatcherRepository,
 	projects ProjectRepository,
 	members ProjectMemberRepository,
 	workflows WorkflowRepository,
@@ -210,6 +223,7 @@ func NewWorkItemService(
 		relations:     relations,
 		attachments:   attachments,
 		timeEntries:   timeEntries,
+		watchers:      watchers,
 		projects:      projects,
 		members:       members,
 		workflows:     workflows,
@@ -306,6 +320,13 @@ func (s *WorkItemService) Create(ctx context.Context, info *model.AuthInfo, proj
 		}
 	}
 
+	// Validate watcher IDs are project members
+	for _, watcherID := range input.WatcherIDs {
+		if _, err := s.members.GetByProjectAndUser(ctx, project.ID, watcherID); err != nil {
+			return nil, fmt.Errorf("watcher must be a project member: %w", model.ErrValidation)
+		}
+	}
+
 	labels := input.Labels
 	if labels == nil {
 		labels = []string{}
@@ -359,6 +380,19 @@ func (s *WorkItemService) Create(ctx context.Context, info *model.AuthInfo, proj
 	// Initialize SLA elapsed tracking for the initial status
 	if err := s.sla.InitElapsedOnCreate(ctx, item.ID, item.Status, time.Now()); err != nil {
 		log.Ctx(ctx).Warn().Err(err).Msg("failed to initialize SLA elapsed tracking")
+	}
+
+	// Bulk-insert watchers specified at creation time
+	for _, watcherUserID := range input.WatcherIDs {
+		w := &model.WorkItemWatcher{
+			ID:         uuid.New(),
+			WorkItemID: item.ID,
+			UserID:     watcherUserID,
+			AddedBy:    info.UserID,
+		}
+		if err := s.watchers.Create(ctx, w); err != nil {
+			log.Ctx(ctx).Warn().Err(err).Str("user_id", watcherUserID.String()).Msg("failed to add watcher on create")
+		}
 	}
 
 	// Publish assignment notification if item was created with an assignee
@@ -1687,6 +1721,301 @@ func isValidRelationType(t string) bool {
 		return true
 	}
 	return false
+}
+
+// --- Watcher methods ---
+
+// AddWatcher adds a user as a watcher on a work item.
+// Members/admins/owners can add any project member. Viewers can only add themselves.
+func (s *WorkItemService) AddWatcher(ctx context.Context, info *model.AuthInfo, projectKey string, itemNumber int, targetUserID uuid.UUID) (*model.WorkItemWatcher, error) {
+	project, err := s.projects.GetByKey(ctx, projectKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.requireMembership(ctx, info, project.ID); err != nil {
+		return nil, err
+	}
+
+	// Viewers can only add themselves
+	if info.GlobalRole != model.RoleAdmin {
+		member, err := s.members.GetByProjectAndUser(ctx, project.ID, info.UserID)
+		if err != nil {
+			return nil, fmt.Errorf("checking membership: %w", err)
+		}
+		if member.Role == model.ProjectRoleViewer && targetUserID != info.UserID {
+			return nil, model.ErrForbidden
+		}
+	}
+
+	// Verify target user is a project member
+	if _, err := s.members.GetByProjectAndUser(ctx, project.ID, targetUserID); err != nil {
+		if err == model.ErrNotFound {
+			return nil, fmt.Errorf("target user is not a project member: %w", model.ErrValidation)
+		}
+		return nil, fmt.Errorf("checking target membership: %w", err)
+	}
+
+	item, err := s.items.GetByProjectAndNumber(ctx, project.ID, itemNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	watcher := &model.WorkItemWatcher{
+		ID:         uuid.Must(uuid.NewV7()),
+		WorkItemID: item.ID,
+		UserID:     targetUserID,
+		AddedBy:    info.UserID,
+	}
+
+	if err := s.watchers.Create(ctx, watcher); err != nil {
+		return nil, fmt.Errorf("adding watcher: %w", err)
+	}
+
+	s.recordEventWithMetadata(ctx, item.ID, &info.UserID, "watcher_added", model.VisibilityInternal, map[string]interface{}{
+		"watcher_user_id": targetUserID.String(),
+	})
+
+	return watcher, nil
+}
+
+// RemoveWatcher removes a user from a work item's watchers.
+// Owners/admins can remove anyone. Members/viewers can only remove themselves.
+func (s *WorkItemService) RemoveWatcher(ctx context.Context, info *model.AuthInfo, projectKey string, itemNumber int, targetUserID uuid.UUID) error {
+	project, err := s.projects.GetByKey(ctx, projectKey)
+	if err != nil {
+		return err
+	}
+
+	if err := s.requireMembership(ctx, info, project.ID); err != nil {
+		return err
+	}
+
+	// Only owners/admins can remove other users
+	if targetUserID != info.UserID {
+		if err := s.requireRole(ctx, info, project.ID,
+			model.ProjectRoleOwner, model.ProjectRoleAdmin); err != nil {
+			return model.ErrForbidden
+		}
+	}
+
+	item, err := s.items.GetByProjectAndNumber(ctx, project.ID, itemNumber)
+	if err != nil {
+		return err
+	}
+
+	if err := s.watchers.Delete(ctx, item.ID, targetUserID); err != nil {
+		return fmt.Errorf("removing watcher: %w", err)
+	}
+
+	s.recordEventWithMetadata(ctx, item.ID, &info.UserID, "watcher_removed", model.VisibilityInternal, map[string]interface{}{
+		"watcher_user_id": targetUserID.String(),
+	})
+
+	return nil
+}
+
+// WatcherListResponse holds the response for listing watchers, which varies by role.
+type WatcherListResponse struct {
+	Watchers   []model.WorkItemWatcherWithUser `json:"watchers,omitempty"`
+	Me         *model.WorkItemWatcher          `json:"me,omitempty"`
+	OtherCount int                             `json:"other_count"`
+	IsViewer   bool                            `json:"-"`
+}
+
+// ListWatchers returns watchers for a work item.
+// Members/admins/owners see the full list. Viewers see only themselves + count.
+func (s *WorkItemService) ListWatchers(ctx context.Context, info *model.AuthInfo, projectKey string, itemNumber int) (*WatcherListResponse, error) {
+	project, err := s.projects.GetByKey(ctx, projectKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.requireMembership(ctx, info, project.ID); err != nil {
+		return nil, err
+	}
+
+	item, err := s.items.GetByProjectAndNumber(ctx, project.ID, itemNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	// Determine if user is a viewer
+	isViewer := false
+	if info.GlobalRole != model.RoleAdmin {
+		member, err := s.members.GetByProjectAndUser(ctx, project.ID, info.UserID)
+		if err != nil {
+			return nil, fmt.Errorf("checking membership: %w", err)
+		}
+		isViewer = member.Role == model.ProjectRoleViewer
+	}
+
+	if isViewer {
+		// Viewers: return their own entry + total count
+		isWatching, err := s.watchers.IsWatching(ctx, item.ID, info.UserID)
+		if err != nil {
+			return nil, fmt.Errorf("checking watch status: %w", err)
+		}
+
+		count, err := s.watchers.CountByWorkItem(ctx, item.ID)
+		if err != nil {
+			return nil, fmt.Errorf("counting watchers: %w", err)
+		}
+
+		resp := &WatcherListResponse{IsViewer: true}
+		if isWatching {
+			resp.Me = &model.WorkItemWatcher{
+				WorkItemID: item.ID,
+				UserID:     info.UserID,
+			}
+			resp.OtherCount = count - 1
+		} else {
+			resp.OtherCount = count
+		}
+		return resp, nil
+	}
+
+	// Non-viewers: return full list
+	watchers, err := s.watchers.ListByWorkItem(ctx, item.ID)
+	if err != nil {
+		return nil, fmt.Errorf("listing watchers: %w", err)
+	}
+
+	return &WatcherListResponse{
+		Watchers:   watchers,
+		OtherCount: len(watchers),
+	}, nil
+}
+
+// ToggleWatch toggles the current user's watch status on a work item.
+func (s *WorkItemService) ToggleWatch(ctx context.Context, info *model.AuthInfo, projectKey string, itemNumber int) (bool, error) {
+	project, err := s.projects.GetByKey(ctx, projectKey)
+	if err != nil {
+		return false, err
+	}
+
+	if err := s.requireMembership(ctx, info, project.ID); err != nil {
+		return false, err
+	}
+
+	item, err := s.items.GetByProjectAndNumber(ctx, project.ID, itemNumber)
+	if err != nil {
+		return false, err
+	}
+
+	watching, err := s.watchers.IsWatching(ctx, item.ID, info.UserID)
+	if err != nil {
+		return false, fmt.Errorf("checking watch status: %w", err)
+	}
+
+	if watching {
+		if err := s.watchers.Delete(ctx, item.ID, info.UserID); err != nil {
+			return false, fmt.Errorf("removing watch: %w", err)
+		}
+		s.recordEventWithMetadata(ctx, item.ID, &info.UserID, "watcher_removed", model.VisibilityInternal, map[string]interface{}{
+			"watcher_user_id": info.UserID.String(),
+		})
+		return false, nil
+	}
+
+	watcher := &model.WorkItemWatcher{
+		ID:         uuid.Must(uuid.NewV7()),
+		WorkItemID: item.ID,
+		UserID:     info.UserID,
+		AddedBy:    info.UserID,
+	}
+	if err := s.watchers.Create(ctx, watcher); err != nil {
+		return false, fmt.Errorf("adding watch: %w", err)
+	}
+	s.recordEventWithMetadata(ctx, item.ID, &info.UserID, "watcher_added", model.VisibilityInternal, map[string]interface{}{
+		"watcher_user_id": info.UserID.String(),
+	})
+	return true, nil
+}
+
+// ListWatchedItemIDs returns the IDs of work items the current user is watching, optionally scoped to a project.
+func (s *WorkItemService) ListWatchedItemIDs(ctx context.Context, info *model.AuthInfo, projectKey string) ([]uuid.UUID, error) {
+	var projectID *uuid.UUID
+	if projectKey != "" {
+		project, err := s.projects.GetByKey(ctx, projectKey)
+		if err != nil {
+			return nil, err
+		}
+		if err := s.requireMembership(ctx, info, project.ID); err != nil {
+			return nil, err
+		}
+		projectID = &project.ID
+	}
+
+	return s.watchers.ListWatchedItemIDs(ctx, info.UserID, projectID)
+}
+
+// ListWatchedItems returns work items that the current user is watching, with standard filters and pagination.
+// When projectKeys is empty, returns watched items across all projects the user is a member of.
+// When projectKeys has one entry, scopes to that project. When multiple, scopes to those projects.
+func (s *WorkItemService) ListWatchedItems(ctx context.Context, info *model.AuthInfo, projectKeys []string, filter *model.WorkItemFilter) (*model.WorkItemList, error) {
+	if len(projectKeys) == 1 {
+		// Single project: use original optimized path
+		project, err := s.projects.GetByKey(ctx, projectKeys[0])
+		if err != nil {
+			return nil, err
+		}
+		if err := s.requireMembership(ctx, info, project.ID); err != nil {
+			return nil, err
+		}
+		ids, err := s.watchers.ListWatchedItemIDs(ctx, info.UserID, &project.ID)
+		if err != nil {
+			return nil, fmt.Errorf("listing watched item IDs: %w", err)
+		}
+		if len(ids) == 0 {
+			return &model.WorkItemList{Items: []model.WorkItem{}}, nil
+		}
+		filter.ItemIDs = ids
+		return s.items.List(ctx, project.ID, filter)
+	}
+
+	// Multi-project or all-projects path
+	var projectIDs []uuid.UUID
+	if len(projectKeys) > 0 {
+		for _, key := range projectKeys {
+			project, err := s.projects.GetByKey(ctx, key)
+			if err != nil {
+				return nil, err
+			}
+			if err := s.requireMembership(ctx, info, project.ID); err != nil {
+				return nil, err
+			}
+			projectIDs = append(projectIDs, project.ID)
+		}
+	}
+
+	// Get watched item IDs across all or selected projects
+	var allIDs []uuid.UUID
+	if len(projectIDs) == 0 {
+		// All projects
+		ids, err := s.watchers.ListWatchedItemIDs(ctx, info.UserID, nil)
+		if err != nil {
+			return nil, fmt.Errorf("listing watched item IDs: %w", err)
+		}
+		allIDs = ids
+	} else {
+		for _, pid := range projectIDs {
+			pid := pid
+			ids, err := s.watchers.ListWatchedItemIDs(ctx, info.UserID, &pid)
+			if err != nil {
+				return nil, fmt.Errorf("listing watched item IDs: %w", err)
+			}
+			allIDs = append(allIDs, ids...)
+		}
+	}
+
+	if len(allIDs) == 0 {
+		return &model.WorkItemList{Items: []model.WorkItem{}}, nil
+	}
+
+	filter.ItemIDs = allIDs
+	filter.SkipProjectFilter = true
+	return s.items.List(ctx, uuid.Nil, filter)
 }
 
 // parseDisplayID parses a display ID like "INFRA-38" into project key and item number.

@@ -974,5 +974,25 @@
   "savedSearches.editMode": "Edit",
   "savedSearches.orderMode": "Order",
   "workitems.filters.save": "Save current filters",
-  "workitems.filters.clearAll": "Clear all filters"
+  "workitems.filters.clearAll": "Clear all filters",
+
+  "watchers.watch": "Watch",
+  "watchers.unwatch": "Unwatch",
+  "watchers.watchersTab": "Watchers",
+  "watchers.noWatchers": "No watchers yet",
+  "watchers.addWatcher": "Add watcher",
+  "watchers.youAreWatching": "You are watching this item",
+  "watchers.otherWatchers": "+ {{count}} other watchers",
+  "watchers.otherWatchers_one": "+ {{count}} other watcher",
+  "watchers.totalWatchers": "{{count}} watchers",
+  "watchers.totalWatchers_one": "{{count}} watcher",
+  "watchers.watchersField": "Watchers",
+  "watchers.pickWatchers": "Add watchers...",
+
+  "watchlist.title": "Watchlist",
+  "watchlist.titleShort": "Watchlist",
+  "watchlist.allProjects": "All Projects",
+  "watchlist.filterByProject": "Filter by Project",
+  "watchlist.empty": "You're not watching any items yet",
+  "watchlist.emptyHint": "Use the bell icon on work items to add them to your watchlist"
 }

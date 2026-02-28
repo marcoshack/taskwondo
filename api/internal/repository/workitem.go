@@ -89,7 +89,9 @@ func (r *WorkItemRepository) List(ctx context.Context, projectID uuid.UUID, filt
 	qb := &queryBuilder{argIndex: 0}
 
 	// Base condition
-	qb.add("project_id = ?", projectID)
+	if !filter.SkipProjectFilter {
+		qb.add("project_id = ?", projectID)
+	}
 	qb.add("deleted_at IS NULL")
 
 	// Type filter
@@ -156,6 +158,11 @@ func (r *WorkItemRepository) List(ctx context.Context, projectID uuid.UUID, filt
 		qb.addRaw("parent_id IS NULL")
 	} else if filter.ParentID != nil {
 		qb.add("parent_id = ?", *filter.ParentID)
+	}
+
+	// Item IDs filter (for watchlist)
+	if len(filter.ItemIDs) > 0 {
+		qb.add("id = ANY(?)", pq.Array(filter.ItemIDs))
 	}
 
 	// Full-text search (OR simple config to match display_id tokens like "TF-29")

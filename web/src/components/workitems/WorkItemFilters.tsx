@@ -32,11 +32,13 @@ interface WorkItemFiltersProps {
   hasActiveSearch?: boolean
   savedSearchSelector?: ReactNode
   savedSearchMobileButton?: ReactNode
+  leadingContent?: ReactNode
+  leadingContentMobileButton?: ReactNode
 }
 
 const closedCategories = new Set(['done', 'cancelled'])
 
-export function WorkItemFilters({ filter, onFilterChange, statuses, milestones = [], members = [], search, onSearchChange, sort, order, onSort, onOrderChange, showDates, onShowDatesChange, onSave, onClearFilters, hasUnsavedChanges, hasActiveSearch, savedSearchSelector, savedSearchMobileButton }: WorkItemFiltersProps) {
+export function WorkItemFilters({ filter, onFilterChange, statuses, milestones = [], members = [], search, onSearchChange, sort, order, onSort, onOrderChange, showDates, onShowDatesChange, onSave, onClearFilters, hasUnsavedChanges, hasActiveSearch, savedSearchSelector, savedSearchMobileButton, leadingContent, leadingContentMobileButton }: WorkItemFiltersProps) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const [filtersOpen, setFiltersOpen] = useState(false)
@@ -120,23 +122,26 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
     <>
       {/* Desktop: inline layout */}
       <div className="hidden lg:flex items-end gap-2">
+        {leadingContent && (
+          <div className="flex-1 min-w-0">{leadingContent}</div>
+        )}
         {savedSearchSelector && (
           <div className="shrink-0 w-48">{savedSearchSelector}</div>
         )}
-        <div className="flex-1 min-w-0">
+        <div className={leadingContent ? 'shrink-0 w-[200px]' : 'flex-1 min-w-0'}>
           <MultiSelect options={typeOptions} selected={filter.type ?? []} onChange={(v) => setArray('type', v)} placeholder={t('workitems.filters.allTypes')} />
         </div>
-        <div className="flex-1 min-w-0">
+        <div className={leadingContent ? 'shrink-0 w-[200px]' : 'flex-1 min-w-0'}>
           <MultiSelect options={priorityOptions} selected={filter.priority ?? []} onChange={(v) => setArray('priority', v)} placeholder={t('workitems.filters.allPriorities')} />
         </div>
-        <div className="flex-1 min-w-0">
+        <div className={leadingContent ? 'shrink-0 w-[200px]' : 'flex-1 min-w-0'}>
           <MultiSelect options={statusOptions} selected={filter.status ?? []} onChange={(v) => setArray('status', v)} placeholder={t('workitems.filters.allStatuses')} groupActions={statusGroupActions} />
         </div>
-        <div className="flex-1 min-w-0">
+        <div className={leadingContent ? 'shrink-0 w-[200px]' : 'flex-1 min-w-0'}>
           <MultiSelect options={assigneeOptions} selected={filter.assignee ?? []} onChange={(v) => setArray('assignee', v)} placeholder={t('workitems.filters.allAssignees')} searchable />
         </div>
         {milestones.length > 0 && (
-          <div className="flex-1 min-w-0">
+          <div className={leadingContent ? 'shrink-0 w-[200px]' : 'flex-1 min-w-0'}>
             <MultiSelect options={milestoneOptions} selected={filter.milestone ?? []} onChange={(v) => setArray('milestone', v)} placeholder={t('workitems.filters.allMilestones')} />
           </div>
         )}
@@ -174,7 +179,7 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
             placeholder={t('workitems.filters.search')}
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="pr-8"
+            className="!py-2.5 pr-8"
           />
           {search && (
             <button
@@ -186,6 +191,9 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
             </button>
           )}
         </div>
+        {leadingContentMobileButton && (
+          <div className="shrink-0">{leadingContentMobileButton}</div>
+        )}
         {savedSearchMobileButton && (
           <div className="shrink-0">{savedSearchMobileButton}</div>
         )}

@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { Routes, Route, useNavigate } from 'react-router-dom'
 import { Trans, useTranslation } from 'react-i18next'
-import { ChevronUp, ChevronDown, X, Search, BrushCleaning, Inbox, Check, Rss, Bookmark, Settings, User, History, Pencil } from 'lucide-react'
+import { ChevronUp, ChevronDown, X, Search, BrushCleaning, Inbox, Check, Rss, Settings, User, History, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { CreateWorkItemModal } from '@/components/workitems/CreateWorkItemModal'
 import { Modal } from '@/components/ui/Modal'
@@ -21,6 +21,7 @@ import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
 import { useDebounce } from '@/hooks/useDebounce'
 import { listInboxItems, type InboxItem } from '@/api/inbox'
 import { formatRelativeTime } from '@/utils/duration'
+import WatchlistPage from '@/pages/WatchlistPage'
 
 const categoryColors = {
   todo: 'gray',
@@ -537,7 +538,7 @@ function InboxListPage() {
             </label>
           </Tooltip>
           {/* New Item button */}
-          <Button onClick={() => setShowCreate(true)}>
+          <Button onClick={() => setShowCreate(true)} className="h-[39px] border border-transparent">
             <span className="lg:hidden">{t('workitems.newShort')}</span>
             <span className="hidden lg:inline">{t('workitems.new')}</span>
           </Button>
@@ -788,18 +789,6 @@ function FeedPage() {
     <div className="flex flex-col items-center justify-center h-64 text-gray-500 dark:text-gray-400">
       <Rss className="h-12 w-12 mb-4 opacity-30" />
       <p className="text-lg font-medium">{t('user.feedComingSoon')}</p>
-    </div>
-  )
-}
-
-// --- Watchlist Page (placeholder) ---
-
-function WatchlistPage() {
-  const { t } = useTranslation()
-  return (
-    <div className="flex flex-col items-center justify-center h-64 text-gray-500 dark:text-gray-400">
-      <Bookmark className="h-12 w-12 mb-4 opacity-30" />
-      <p className="text-lg font-medium">{t('user.watchlistComingSoon')}</p>
     </div>
   )
 }

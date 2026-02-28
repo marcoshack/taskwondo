@@ -48,6 +48,7 @@ type createWorkItemRequest struct {
 	Visibility   string                 `json:"visibility,omitempty"`
 	DueDate      *string                `json:"due_date,omitempty"`
 	CustomFields map[string]interface{} `json:"custom_fields,omitempty"`
+	WatcherIDs   []string               `json:"watcher_ids,omitempty"`
 }
 
 // --- Response DTOs ---
@@ -198,6 +199,15 @@ func (h *WorkItemHandler) Create(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		input.DueDate = &t
+	}
+
+	for _, idStr := range req.WatcherIDs {
+		id, err := uuid.Parse(idStr)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid watcher_ids format")
+			return
+		}
+		input.WatcherIDs = append(input.WatcherIDs, id)
 	}
 
 	item, err := h.items.Create(r.Context(), info, projectKey, input)
@@ -1529,6 +1539,320 @@ func (h *WorkItemHandler) DeleteTimeEntry(w http.ResponseWriter, r *http.Request
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// --- Watcher DTOs ---
+
+type addWatcherRequest struct {
+	UserID string `json:"user_id"`
+}
+
+type watcherResponse struct {
+	ID          uuid.UUID `json:"id"`
+	UserID      uuid.UUID `json:"user_id"`
+	DisplayName string    `json:"display_name"`
+	Email       string    `json:"email"`
+	AddedBy     uuid.UUID `json:"added_by"`
+	AddedByName string    `json:"added_by_name"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+type viewerWatcherResponse struct {
+	Me         *viewerWatcherMe `json:"me,omitempty"`
+	OtherCount int              `json:"other_count"`
+}
+
+type viewerWatcherMe struct {
+	UserID    uuid.UUID `json:"user_id"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type toggleWatchResponse struct {
+	IsWatching bool `json:"is_watching"`
+}
+
+// --- Watcher Handlers ---
+
+// ListWatchers returns all watchers for a work item.
+func (h *WorkItemHandler) ListWatchers(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	projectKey := chi.URLParam(r, "projectKey")
+	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		return
+	}
+
+	result, err := h.items.ListWatchers(r.Context(), info, projectKey, itemNumber)
+	if err != nil {
+		handleWorkItemError(w, r, err, "failed to list watchers")
+		return
+	}
+
+	if result.IsViewer {
+		resp := viewerWatcherResponse{
+			OtherCount: result.OtherCount,
+		}
+		if result.Me != nil {
+			resp.Me = &viewerWatcherMe{
+				UserID:    result.Me.UserID,
+				CreatedAt: result.Me.CreatedAt,
+			}
+		}
+		writeData(w, http.StatusOK, resp)
+		return
+	}
+
+	watchers := make([]watcherResponse, 0, len(result.Watchers))
+	for _, w := range result.Watchers {
+		watchers = append(watchers, watcherResponse{
+			ID:          w.ID,
+			UserID:      w.UserID,
+			DisplayName: w.DisplayName,
+			Email:       w.Email,
+			AddedBy:     w.AddedBy,
+			AddedByName: w.AddedByName,
+			CreatedAt:   w.CreatedAt,
+		})
+	}
+	writeData(w, http.StatusOK, watchers)
+}
+
+// AddWatcher adds a user as a watcher on a work item.
+func (h *WorkItemHandler) AddWatcher(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	projectKey := chi.URLParam(r, "projectKey")
+	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		return
+	}
+
+	var req addWatcherRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		return
+	}
+
+	if req.UserID == "" {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "user_id is required")
+		return
+	}
+
+	userID, err := uuid.Parse(req.UserID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid user_id")
+		return
+	}
+
+	watcher, err := h.items.AddWatcher(r.Context(), info, projectKey, itemNumber, userID)
+	if err != nil {
+		handleWorkItemError(w, r, err, "failed to add watcher")
+		return
+	}
+
+	writeData(w, http.StatusCreated, watcherResponse{
+		ID:        watcher.ID,
+		UserID:    watcher.UserID,
+		AddedBy:   watcher.AddedBy,
+		CreatedAt: watcher.CreatedAt,
+	})
+}
+
+// RemoveWatcher removes a user from a work item's watchers.
+func (h *WorkItemHandler) RemoveWatcher(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	projectKey := chi.URLParam(r, "projectKey")
+	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		return
+	}
+
+	userID, err := uuid.Parse(chi.URLParam(r, "userId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid user ID")
+		return
+	}
+
+	if err := h.items.RemoveWatcher(r.Context(), info, projectKey, itemNumber, userID); err != nil {
+		handleWorkItemError(w, r, err, "failed to remove watcher")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// ToggleWatch toggles the current user's watch status on a work item.
+func (h *WorkItemHandler) ToggleWatch(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	projectKey := chi.URLParam(r, "projectKey")
+	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		return
+	}
+
+	isWatching, err := h.items.ToggleWatch(r.Context(), info, projectKey, itemNumber)
+	if err != nil {
+		handleWorkItemError(w, r, err, "failed to toggle watch")
+		return
+	}
+
+	writeData(w, http.StatusOK, toggleWatchResponse{IsWatching: isWatching})
+}
+
+// ListWatchedItemIDs returns the IDs of work items the current user is watching.
+// When ?project=KEY is provided without ?mode=list, returns just IDs.
+// When ?mode=list&project=KEY is provided, returns full work items with filters.
+func (h *WorkItemHandler) ListWatchedItemIDs(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	q := r.URL.Query()
+	projectKey := q.Get("project")
+	mode := q.Get("mode")
+
+	// Full list mode: return work items with standard filters
+	// Supports comma-separated project keys or empty for all projects.
+	if mode == "list" {
+		var projectKeys []string
+		if projectKey != "" {
+			projectKeys = strings.Split(projectKey, ",")
+		}
+
+		filter := &model.WorkItemFilter{
+			Search: q.Get("q"),
+			Sort:   q.Get("sort"),
+			Order:  q.Get("order"),
+		}
+		if v := q.Get("type"); v != "" {
+			filter.Types = strings.Split(v, ",")
+		}
+		if v := q.Get("status"); v != "" {
+			filter.Statuses = strings.Split(v, ",")
+		}
+		if v := q.Get("priority"); v != "" {
+			filter.Priorities = strings.Split(v, ",")
+		}
+		// Parse assignees
+		if assigneeRaw := q.Get("assignees"); assigneeRaw != "" {
+			for _, part := range strings.Split(assigneeRaw, ",") {
+				part = strings.TrimSpace(part)
+				switch part {
+				case "me":
+					filter.AssigneeMe = true
+				case "unassigned":
+					filter.Unassigned = true
+				default:
+					id, err := uuid.Parse(part)
+					if err != nil {
+						writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid assignee parameter")
+						return
+					}
+					filter.AssigneeIDs = append(filter.AssigneeIDs, id)
+				}
+			}
+		}
+		// Parse milestones
+		if milestoneRaw := q.Get("milestones"); milestoneRaw != "" {
+			for _, part := range strings.Split(milestoneRaw, ",") {
+				part = strings.TrimSpace(part)
+				if part == "none" {
+					filter.MilestoneNone = true
+					continue
+				}
+				id, err := uuid.Parse(part)
+				if err != nil {
+					writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid milestone parameter")
+					return
+				}
+				filter.MilestoneIDs = append(filter.MilestoneIDs, id)
+			}
+		}
+		if v := q.Get("cursor"); v != "" {
+			id, err := uuid.Parse(v)
+			if err != nil {
+				writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid cursor")
+				return
+			}
+			filter.Cursor = &id
+		}
+		if v := q.Get("limit"); v != "" {
+			n, err := strconv.Atoi(v)
+			if err == nil && n > 0 {
+				filter.Limit = n
+			}
+		}
+
+		result, err := h.items.ListWatchedItems(r.Context(), info, projectKeys, filter)
+		if err != nil {
+			handleWorkItemError(w, r, err, "failed to list watched items")
+			return
+		}
+
+		// For cross-project responses, resolve project_key from display_id and compute SLA
+		items := make([]workItemResponse, len(result.Items))
+		for i := range result.Items {
+			pk := projectKey
+			if len(projectKeys) != 1 {
+				// Extract project key from display_id (e.g. "TF-42" → "TF")
+				if idx := strings.LastIndex(result.Items[i].DisplayID, "-"); idx > 0 {
+					pk = result.Items[i].DisplayID[:idx]
+				}
+			}
+			items[i] = toWorkItemResponse(&result.Items[i], pk)
+			if slaMap := h.sla.ComputeSLAForItems(r.Context(), pk, []model.WorkItem{result.Items[i]}); slaMap != nil {
+				items[i].SLA = slaMap[result.Items[i].ID]
+			}
+		}
+
+		writeJSON(w, http.StatusOK, map[string]interface{}{
+			"data": items,
+			"meta": map[string]interface{}{
+				"cursor":   result.Cursor,
+				"has_more": result.HasMore,
+				"total":    result.Total,
+			},
+		})
+		return
+	}
+
+	// Default: return just IDs
+	ids, err := h.items.ListWatchedItemIDs(r.Context(), info, projectKey)
+	if err != nil {
+		handleWorkItemError(w, r, err, "failed to list watched items")
+		return
+	}
+
+	if ids == nil {
+		ids = []uuid.UUID{}
+	}
+
+	writeData(w, http.StatusOK, ids)
 }
 
 // safeContentDisposition builds a sanitized Content-Disposition header value.
