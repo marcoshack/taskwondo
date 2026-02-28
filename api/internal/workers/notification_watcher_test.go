@@ -194,7 +194,7 @@ func TestNotificationWatcher_Execute_SkipsWhenPreferenceDisabled(t *testing.T) {
 	}
 }
 
-func TestNotificationWatcher_Execute_SkipsCommentEvents(t *testing.T) {
+func TestNotificationWatcher_Execute_SendsCommentNotification(t *testing.T) {
 	actorID := uuid.New()
 	watcherID := uuid.New()
 	projectID := uuid.New()
@@ -213,7 +213,65 @@ func TestNotificationWatcher_Execute_SkipsCommentEvents(t *testing.T) {
 		actorID: {ID: actorID, Email: "actor@example.com", DisplayName: "Actor"},
 	}}
 
-	prefs := model.NotificationPreferences{CommentsOnWatched: true, AnyUpdateOnWatched: true}
+	prefs := model.NotificationPreferences{CommentsOnWatched: true}
+	prefsJSON, _ := json.Marshal(prefs)
+	settings := &mockUserSettingRepo{settings: map[string]*model.UserSetting{
+		settingKey(watcherID, projectID, "notifications"): {
+			UserID:    watcherID,
+			ProjectID: &projectID,
+			Key:       "notifications",
+			Value:     prefsJSON,
+		},
+	}}
+	sender := &mockEmailSender{}
+
+	task := newTestWatcherTask(watcherRepo, users, settings, sender)
+
+	evt := model.WatcherEvent{
+		WorkItemID: workItemID,
+		ProjectKey: "TP",
+		ProjectID:  projectID,
+		ItemNumber: 1,
+		Title:      "Some task",
+		ActorID:    actorID,
+		EventType:  "comment_added",
+		Summary:    "New comment added",
+	}
+	payload, _ := json.Marshal(evt)
+
+	if err := task.Execute(context.Background(), payload); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(sender.sent) != 1 {
+		t.Fatalf("expected 1 email for comment notification, got %d", len(sender.sent))
+	}
+	if sender.sent[0].to != "watcher@example.com" {
+		t.Errorf("expected to=watcher@example.com, got %s", sender.sent[0].to)
+	}
+}
+
+func TestNotificationWatcher_Execute_SkipsCommentWhenDisabled(t *testing.T) {
+	actorID := uuid.New()
+	watcherID := uuid.New()
+	projectID := uuid.New()
+	workItemID := uuid.New()
+
+	watcherRepo := &mockWatcherRepo{watchers: map[uuid.UUID][]model.WorkItemWatcherWithUser{
+		workItemID: {
+			{
+				WorkItemWatcher: model.WorkItemWatcher{UserID: watcherID},
+				DisplayName:     "Watcher",
+				Email:           "watcher@example.com",
+			},
+		},
+	}}
+	users := &mockUserRepo{users: map[uuid.UUID]*model.User{
+		actorID: {ID: actorID, Email: "actor@example.com", DisplayName: "Actor"},
+	}}
+
+	// AnyUpdateOnWatched enabled but CommentsOnWatched disabled
+	prefs := model.NotificationPreferences{AnyUpdateOnWatched: true, CommentsOnWatched: false}
 	prefsJSON, _ := json.Marshal(prefs)
 	settings := &mockUserSettingRepo{settings: map[string]*model.UserSetting{
 		settingKey(watcherID, projectID, "notifications"): {
@@ -244,7 +302,7 @@ func TestNotificationWatcher_Execute_SkipsCommentEvents(t *testing.T) {
 	}
 
 	if len(sender.sent) != 0 {
-		t.Fatalf("expected 0 emails (comment events are coming soon), got %d", len(sender.sent))
+		t.Fatalf("expected 0 emails (comment pref disabled), got %d", len(sender.sent))
 	}
 }
 

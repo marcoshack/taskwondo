@@ -64,12 +64,6 @@ func (t *NotificationWatcherTask) Execute(ctx context.Context, payload []byte) e
 		Str("event_type", evt.EventType).
 		Logger()
 
-	// "comment_added" notifications are coming soon — skip for now
-	if evt.EventType == "comment_added" {
-		l.Debug().Msg("comment watcher notification not yet enabled, skipping")
-		return nil
-	}
-
 	// List all watchers for this work item
 	watchers, err := t.watchers.ListByWorkItem(ctx, evt.WorkItemID)
 	if err != nil {
@@ -94,7 +88,7 @@ func (t *NotificationWatcherTask) Execute(ctx context.Context, payload []byte) e
 		}
 
 		// Check watcher's notification preferences for this project
-		if !t.isWatcherEnabled(ctx, w.UserID, evt.ProjectID) {
+		if !t.isWatcherEnabled(ctx, w.UserID, evt.ProjectID, evt.EventType) {
 			l.Debug().Str("user_id", w.UserID.String()).Msg("watcher notification disabled for user")
 			continue
 		}
@@ -119,7 +113,7 @@ func (t *NotificationWatcherTask) Execute(ctx context.Context, payload []byte) e
 }
 
 // isWatcherEnabled checks whether the user has watcher notifications enabled for the project.
-func (t *NotificationWatcherTask) isWatcherEnabled(ctx context.Context, userID, projectID uuid.UUID) bool {
+func (t *NotificationWatcherTask) isWatcherEnabled(ctx context.Context, userID, projectID uuid.UUID, eventType string) bool {
 	setting, err := t.settings.Get(ctx, userID, &projectID, "notifications")
 	if err != nil {
 		// No setting found — default is false (opt-in)
@@ -132,6 +126,9 @@ func (t *NotificationWatcherTask) isWatcherEnabled(ctx context.Context, userID, 
 		return false
 	}
 
+	if eventType == "comment_added" {
+		return prefs.CommentsOnWatched
+	}
 	return prefs.AnyUpdateOnWatched
 }
 

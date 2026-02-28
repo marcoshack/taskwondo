@@ -274,7 +274,7 @@ test.describe('Watcher email notifications', () => {
     await api.deactivateUser(request, adminToken, userC.id).catch(() => {});
   });
 
-  test('comment notification is skipped (coming soon)', async ({
+  test('watcher receives email when a comment is added by another user', async ({
     request,
     testUser,
     testProject,
@@ -287,15 +287,15 @@ test.describe('Watcher email notifications', () => {
 
     // Create work item
     const item = await api.createWorkItem(request, testUser.token, testProject.key, {
-      title: 'Comment notification coming soon test',
+      title: 'Comment notification test',
       type: 'task',
     });
 
-    // User B watches the item and enables both watcher notification preferences
+    // User B watches the item and enables comment watcher notifications
     await api.toggleWatch(request, userB.token, testProject.key, item.item_number);
     await api.setProjectUserSetting(request, userB.token, testProject.key, 'notifications', {
       assigned_to_me: true,
-      any_update_on_watched: true,
+      any_update_on_watched: false,
       new_item_created: false,
       comments_on_assigned: false,
       comments_on_watched: true,
@@ -307,7 +307,57 @@ test.describe('Watcher email notifications', () => {
     // User A adds a comment
     await api.addComment(request, testUser.token, testProject.key, item.item_number, 'This is a test comment');
 
-    // Wait briefly and verify no email was sent (comment notifications are "coming soon")
+    // Wait for notification email to user B
+    const msg = await waitForMailTo(request, userB.email);
+
+    expect(msg.Subject).toContain(testProject.key);
+    expect(msg.Subject).toContain(`#${item.item_number}`);
+    expect(msg.Subject).toContain('updated');
+
+    // Verify email body contains the comment preview
+    const detail = await api.getMailpitMessage(request, msg.ID);
+    expect(detail.HTML).toContain('Comment notification test');
+    expect(detail.HTML).toContain(`/projects/${testProject.key}/items/${item.item_number}`);
+
+    // Cleanup
+    const adminToken = getAdminToken();
+    await api.deactivateUser(request, adminToken, userB.id).catch(() => {});
+  });
+
+  test('comment notification not sent when CommentsOnWatched is disabled', async ({
+    request,
+    testUser,
+    testProject,
+  }) => {
+    // Clear mailpit
+    await api.deleteMailpitMessages(request);
+
+    // Create user B and add to project
+    const userB = await createSecondUser(request, testProject.key, testUser.token);
+
+    // Create work item
+    const item = await api.createWorkItem(request, testUser.token, testProject.key, {
+      title: 'Comment notification disabled test',
+      type: 'task',
+    });
+
+    // User B watches the item but only enables field-change notifications (not comments)
+    await api.toggleWatch(request, userB.token, testProject.key, item.item_number);
+    await api.setProjectUserSetting(request, userB.token, testProject.key, 'notifications', {
+      assigned_to_me: true,
+      any_update_on_watched: true,
+      new_item_created: false,
+      comments_on_assigned: false,
+      comments_on_watched: false,
+      status_changes_intermediate: false,
+      status_changes_final: false,
+      added_to_project: false,
+    });
+
+    // User A adds a comment
+    await api.addComment(request, testUser.token, testProject.key, item.item_number, 'This comment should not trigger an email');
+
+    // Wait briefly and verify no email was sent
     await new Promise((r) => setTimeout(r, 3000));
     const messages = await api.getMailpitMessages(request);
     const commentEmail = messages.find((m: any) =>
