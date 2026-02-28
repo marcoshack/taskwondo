@@ -18,6 +18,7 @@ const (
 	SettingAuthDiscordEnabled           = "auth_discord_enabled"
 	SettingAuthGoogleEnabled            = "auth_google_enabled"
 	SettingAuthGitHubEnabled            = "auth_github_enabled"
+	SettingAuthMicrosoftEnabled         = "auth_microsoft_enabled"
 
 	// OAuth provider ordering (JSON array of provider names, e.g. ["discord","google","github"])
 	SettingOAuthProviderOrder = "oauth_provider_order"
@@ -25,7 +26,8 @@ const (
 	// OAuth provider configuration
 	SettingOAuthDiscordConfig = "oauth_discord_config"
 	SettingOAuthGoogleConfig  = "oauth_google_config"
-	SettingOAuthGitHubConfig  = "oauth_github_config"
+	SettingOAuthGitHubConfig     = "oauth_github_config"
+	SettingOAuthMicrosoftConfig  = "oauth_microsoft_config"
 
 	// Feature flags
 	SettingFeatureStatsTimeline = "feature_stats_timeline"
@@ -109,6 +111,8 @@ func OAuthConfigSettingKey(provider string) string {
 		return SettingOAuthGoogleConfig
 	case OAuthProviderGitHub:
 		return SettingOAuthGitHubConfig
+	case OAuthProviderMicrosoft:
+		return SettingOAuthMicrosoftConfig
 	default:
 		return ""
 	}

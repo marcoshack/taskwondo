@@ -8,9 +8,10 @@ import (
 
 // OAuth provider constants.
 const (
-	OAuthProviderDiscord = "discord"
-	OAuthProviderGoogle  = "google"
-	OAuthProviderGitHub  = "github"
+	OAuthProviderDiscord   = "discord"
+	OAuthProviderGoogle    = "google"
+	OAuthProviderGitHub    = "github"
+	OAuthProviderMicrosoft = "microsoft"
 )
 
 // OAuthAccount represents a linked external identity.
@@ -87,4 +88,12 @@ type GitHubEmail struct {
 	Email    string `json:"email"`
 	Primary  bool   `json:"primary"`
 	Verified bool   `json:"verified"`
+}
+
+// MicrosoftUser is the response from Microsoft Graph's /me endpoint.
+type MicrosoftUser struct {
+	ID                string `json:"id"`
+	DisplayName       string `json:"displayName"`
+	Mail              string `json:"mail"`
+	UserPrincipalName string `json:"userPrincipalName"`
 }

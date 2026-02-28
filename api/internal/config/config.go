@@ -48,6 +48,10 @@ type Config struct {
 	GitHubClientID     string
 	GitHubClientSecret string
 
+	// Microsoft OAuth
+	MicrosoftClientID     string
+	MicrosoftClientSecret string
+
 	// Storage (S3/MinIO)
 	StorageEndpoint  string
 	StorageAccessKey string
@@ -153,6 +157,8 @@ func Load() (*Config, error) {
 		GoogleClientSecret:  envOrDefault("GOOGLE_CLIENT_SECRET", ""),
 		GitHubClientID:      envOrDefault("GITHUB_CLIENT_ID", ""),
 		GitHubClientSecret:  envOrDefault("GITHUB_CLIENT_SECRET", ""),
+		MicrosoftClientID:      envOrDefault("MICROSOFT_CLIENT_ID", ""),
+		MicrosoftClientSecret:  envOrDefault("MICROSOFT_CLIENT_SECRET", ""),
 		StorageEndpoint:     envOrDefault("STORAGE_ENDPOINT", "localhost:9000"),
 		StorageAccessKey:    storageAccessKey,
 		StorageSecretKey:    storageSecretKey,

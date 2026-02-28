@@ -22,6 +22,7 @@ const SAME_VALUE_ALLOWED = new Set([
   'admin.authentication.discord.title',
   'admin.authentication.google.title',
   'admin.authentication.github.title',
+  'admin.authentication.microsoft.title',
   'brand.name',
 
   // Placeholder examples (emails, domains, format strings)

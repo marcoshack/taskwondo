@@ -88,9 +88,15 @@ const OAUTH_PROVIDERS: OAuthProviderDef[] = [
     descriptionKey: 'admin.authentication.github.description',
     enabledSettingKey: 'auth_github_enabled',
   },
+  {
+    provider: 'microsoft',
+    titleKey: 'admin.authentication.microsoft.title',
+    descriptionKey: 'admin.authentication.microsoft.description',
+    enabledSettingKey: 'auth_microsoft_enabled',
+  },
 ]
 
-const DEFAULT_PROVIDER_ORDER = ['discord', 'google', 'github']
+const DEFAULT_PROVIDER_ORDER = ['discord', 'google', 'github', 'microsoft']
 
 function sortProviders(providers: OAuthProviderDef[], order: string[]): OAuthProviderDef[] {
   const orderMap = new Map(order.map((p, i) => [p, i]))
@@ -296,6 +302,8 @@ export function SystemAuthenticationPage() {
       ? settings.auth_google_enabled === true : true,
     auth_github_enabled: settings.auth_github_enabled !== undefined
       ? settings.auth_github_enabled === true : true,
+    auth_microsoft_enabled: settings.auth_microsoft_enabled !== undefined
+      ? settings.auth_microsoft_enabled === true : true,
   }
 
   const handleReorder = (index: number, direction: 'up' | 'down') => {

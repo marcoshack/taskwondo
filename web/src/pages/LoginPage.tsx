@@ -37,6 +37,16 @@ const OAUTH_PROVIDERS: Record<string, { icon: React.ReactNode }> = {
       </svg>
     ),
   },
+  microsoft: {
+    icon: (
+      <svg className="w-5 h-5 mr-2" viewBox="0 0 23 23">
+        <rect x="1" y="1" width="10" height="10" fill="#F25022"/>
+        <rect x="12" y="1" width="10" height="10" fill="#7FBA00"/>
+        <rect x="1" y="12" width="10" height="10" fill="#00A4EF"/>
+        <rect x="12" y="12" width="10" height="10" fill="#FFB900"/>
+      </svg>
+    ),
+  },
 }
 
 const PENDING_INVITE_KEY = 'taskwondo_pending_invite'
@@ -101,7 +111,7 @@ export function LoginPage() {
 
   const providerOrder = Array.isArray(publicSettings?.oauth_provider_order)
     ? publicSettings.oauth_provider_order as string[]
-    : ['discord', 'google', 'github']
+    : ['discord', 'google', 'github', 'microsoft']
 
   const enabledProviders = providers
     ? Object.keys(OAUTH_PROVIDERS)

@@ -117,6 +117,11 @@ func main() {
 			cfg.GitHubClientID, cfg.GitHubClientSecret, cfg.BaseURL+"/auth/github/callback", nil,
 		))
 	}
+	if cfg.MicrosoftClientID != "" && cfg.MicrosoftClientSecret != "" {
+		oauthProviders = append(oauthProviders, service.NewMicrosoftProvider(
+			cfg.MicrosoftClientID, cfg.MicrosoftClientSecret, cfg.BaseURL+"/auth/microsoft/callback", nil,
+		))
+	}
 
 	authService := service.NewAuthService(
 		userRepo, apiKeyRepo, oauthAccountRepo,
@@ -558,6 +563,13 @@ func seedOAuthConfig(ctx context.Context, settings service.SystemSettingReposito
 			enabledKey: model.SettingAuthGitHubEnabled,
 			clientID:   cfg.GitHubClientID,
 			secret:     cfg.GitHubClientSecret,
+		},
+		{
+			name:       "microsoft",
+			settingKey: model.SettingOAuthMicrosoftConfig,
+			enabledKey: model.SettingAuthMicrosoftEnabled,
+			clientID:   cfg.MicrosoftClientID,
+			secret:     cfg.MicrosoftClientSecret,
 		},
 	}
 
