@@ -10,7 +10,7 @@ import { Spinner } from '@/components/ui/Spinner'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import { Tooltip } from '@/components/ui/Tooltip'
-import { Check, Trash2, Copy, Link } from 'lucide-react'
+import { Check, Trash2, Copy, Link, AlertTriangle } from 'lucide-react'
 import { UserSearchInput } from '@/components/UserSearchInput'
 import type { AxiosError } from 'axios'
 import type { UserSearchResult } from '@/api/auth'
@@ -415,7 +415,14 @@ export function ProjectSettingsPage() {
                 <select
                   className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   value={inviteRole}
-                  onChange={(e) => setInviteRole(e.target.value)}
+                  onChange={(e) => {
+                    const role = e.target.value
+                    setInviteRole(role)
+                    if (role === 'admin') {
+                      setInviteMaxUses('1')
+                      setInviteExpiration('1d')
+                    }
+                  }}
                 >
                   {ROLE_OPTIONS.map((role) => (
                     <option key={role} value={role}>{t(`projects.settings.roles.${role}`)}</option>
@@ -476,6 +483,12 @@ export function ProjectSettingsPage() {
                 <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
               )}
             </div>
+            {inviteRole === 'admin' && (
+              <div className="flex items-start gap-2 rounded-md bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 p-3 text-sm text-amber-800 dark:text-amber-200">
+                <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                <span>{t('projects.settings.inviteAdminWarning')}</span>
+              </div>
+            )}
           </div>
 
           {/* Invite list */}

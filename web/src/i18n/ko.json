@@ -508,6 +508,7 @@
   "projects.settings.hiddenMembers_other": "+ {{count}}명의 다른 멤버",
   "projects.settings.inviteCopied": "복사됨",
   "projects.settings.inviteCopy": "링크 복사",
+  "projects.settings.inviteAdminWarning": "관리자 초대는 전체 프로젝트 관리 접근 권한을 부여합니다. 링크가 유출되면 프로젝트 데이터가 노출될 수 있습니다. 주의하여 사용하세요.",
   "projects.settings.inviteCreateError": "초대 링크 생성에 실패했습니다.",
   "projects.settings.inviteDeleteError": "초대 링크 취소에 실패했습니다.",
   "projects.settings.inviteExpiration": "만료",

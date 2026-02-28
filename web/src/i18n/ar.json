@@ -508,6 +508,7 @@
   "projects.settings.hiddenMembers_other": "+ {{count}} أعضاء آخرين",
   "projects.settings.inviteCopied": "تم النسخ",
   "projects.settings.inviteCopy": "نسخ الرابط",
+  "projects.settings.inviteAdminWarning": "دعوات المسؤول تمنح صلاحية كاملة لإدارة المشروع. إذا تسرب الرابط، قد تتعرض بيانات مشروعك للخطر. استخدم بحذر.",
   "projects.settings.inviteCreateError": "فشل في إنشاء رابط الدعوة.",
   "projects.settings.inviteDeleteError": "فشل في إلغاء رابط الدعوة.",
   "projects.settings.inviteExpiration": "تنتهي",

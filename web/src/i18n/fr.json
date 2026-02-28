@@ -508,6 +508,7 @@
   "projects.settings.hiddenMembers_other": "+ {{count}} autres membres",
   "projects.settings.inviteCopied": "Copié",
   "projects.settings.inviteCopy": "Copier le lien",
+  "projects.settings.inviteAdminWarning": "Les invitations administrateur accordent un accès complet à la gestion du projet. Si le lien fuite, les données de votre projet pourraient être exposées. À utiliser avec prudence.",
   "projects.settings.inviteCreateError": "Échec de la création du lien d'invitation.",
   "projects.settings.inviteDeleteError": "Échec de la révocation du lien d'invitation.",
   "projects.settings.inviteExpiration": "Expire",

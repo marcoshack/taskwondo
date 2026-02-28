@@ -508,6 +508,7 @@
   "projects.settings.hiddenMembers_other": "+ {{count}} 人の他のメンバー",
   "projects.settings.inviteCopied": "コピーしました",
   "projects.settings.inviteCopy": "リンクをコピー",
+  "projects.settings.inviteAdminWarning": "管理者招待はプロジェクト管理への完全なアクセスを付与します。リンクが漏洩した場合、プロジェクトデータが露出する可能性があります。慎重にご使用ください。",
   "projects.settings.inviteCreateError": "招待リンクの作成に失敗しました。",
   "projects.settings.inviteDeleteError": "招待リンクの取り消しに失敗しました。",
   "projects.settings.inviteExpiration": "有効期限",

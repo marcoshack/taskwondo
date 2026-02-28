@@ -900,6 +900,7 @@
   "projects.settings.deleteInviteConfirmTitle": "Revoke Invite Link",
   "projects.settings.deleteInviteConfirmBody": "This invite link will stop working immediately. Anyone who has not yet used it will no longer be able to join.",
   "projects.settings.noInvites": "No invite links yet.",
+  "projects.settings.inviteAdminWarning": "Admin invites grant full project management access. If the link leaks, your project data could be exposed. Use with caution.",
   "projects.settings.inviteCreateError": "Failed to create invite link.",
   "projects.settings.inviteDeleteError": "Failed to revoke invite link.",
 

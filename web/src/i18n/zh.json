@@ -508,6 +508,7 @@
   "projects.settings.hiddenMembers_other": "+ {{count}} 个其他成员",
   "projects.settings.inviteCopied": "已复制",
   "projects.settings.inviteCopy": "复制链接",
+  "projects.settings.inviteAdminWarning": "管理员邀请将授予完整的项目管理权限。如果链接泄露，您的项目数据可能会被暴露。请谨慎使用。",
   "projects.settings.inviteCreateError": "创建邀请链接失败。",
   "projects.settings.inviteDeleteError": "撤销邀请链接失败。",
   "projects.settings.inviteExpiration": "过期",

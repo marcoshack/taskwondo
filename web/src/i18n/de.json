@@ -508,6 +508,7 @@
   "projects.settings.hiddenMembers_other": "+ {{count}} weitere Mitglieder",
   "projects.settings.inviteCopied": "Kopiert",
   "projects.settings.inviteCopy": "Link kopieren",
+  "projects.settings.inviteAdminWarning": "Admin-Einladungen gewähren vollen Zugriff auf die Projektverwaltung. Wenn der Link durchsickert, könnten Ihre Projektdaten offengelegt werden. Mit Vorsicht verwenden.",
   "projects.settings.inviteCreateError": "Einladungslink konnte nicht erstellt werden.",
   "projects.settings.inviteDeleteError": "Einladungslink konnte nicht widerrufen werden.",
   "projects.settings.inviteExpiration": "Läuft ab",
