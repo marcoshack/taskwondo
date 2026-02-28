@@ -97,7 +97,7 @@ export function RelationList({ projectKey, itemNumber, readOnly = false }: Relat
         {(relations ?? []).map((r) => {
           const linked = getLinkedInfo(r)
           return (
-            <div key={r.id} className="flex items-center justify-between text-sm py-1.5">
+            <div key={r.id} className="group/relation flex items-center justify-between text-sm py-1.5">
               <div className="flex items-center gap-2 min-w-0">
                 <span className="text-gray-500 dark:text-gray-400 shrink-0">{linked.label}</span>
                 <Link
@@ -115,10 +115,16 @@ export function RelationList({ projectKey, itemNumber, readOnly = false }: Relat
               </div>
               {!readOnly && (
                 <button
-                  className="text-xs text-red-400 hover:text-red-600 dark:hover:text-red-300 shrink-0 ml-2"
+                  className="group/del relative inline-flex items-center justify-center w-7 h-7 rounded-md text-red-400 hover:text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/30 transition-colors sm:opacity-0 sm:group-hover/relation:opacity-100 shrink-0 ml-2"
                   onClick={() => deleteMutation.mutate(r.id)}
+                  aria-label={t('common.remove')}
                 >
-                  {t('common.remove')}
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 4.5h10M6.5 4.5V3a1 1 0 011-1h1a1 1 0 011 1v1.5M5 4.5v8a1 1 0 001 1h4a1 1 0 001-1v-8" />
+                  </svg>
+                  <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs text-white bg-gray-900 dark:bg-gray-700 rounded whitespace-nowrap opacity-0 group-hover/del:opacity-100 transition-opacity">
+                    {t('common.remove')}
+                  </span>
                 </button>
               )}
             </div>
