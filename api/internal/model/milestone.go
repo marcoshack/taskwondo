@@ -24,10 +24,12 @@ type Milestone struct {
 	UpdatedAt   time.Time  `json:"updated_at"`
 }
 
-// MilestoneWithProgress is a Milestone enriched with work item counts.
+// MilestoneWithProgress is a Milestone enriched with work item counts and time aggregates.
 type MilestoneWithProgress struct {
 	Milestone
-	OpenCount   int `json:"open_count"`
-	ClosedCount int `json:"closed_count"`
-	TotalCount  int `json:"total_count"`
+	OpenCount             int `json:"open_count"`
+	ClosedCount           int `json:"closed_count"`
+	TotalCount            int `json:"total_count"`
+	TotalEstimatedSeconds int `json:"total_estimated_seconds"`
+	TotalSpentSeconds     int `json:"total_spent_seconds"`
 }

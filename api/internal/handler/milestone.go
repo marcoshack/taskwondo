@@ -42,31 +42,35 @@ type updateMilestoneRequest struct {
 // --- Response DTOs ---
 
 type milestoneResponse struct {
-	ID          uuid.UUID  `json:"id"`
-	ProjectID   uuid.UUID  `json:"project_id"`
-	Name        string     `json:"name"`
-	Description *string    `json:"description,omitempty"`
-	DueDate     *string    `json:"due_date,omitempty"`
-	Status      string     `json:"status"`
-	OpenCount   int        `json:"open_count"`
-	ClosedCount int        `json:"closed_count"`
-	TotalCount  int        `json:"total_count"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
+	ID                    uuid.UUID `json:"id"`
+	ProjectID             uuid.UUID `json:"project_id"`
+	Name                  string    `json:"name"`
+	Description           *string   `json:"description,omitempty"`
+	DueDate               *string   `json:"due_date,omitempty"`
+	Status                string    `json:"status"`
+	OpenCount             int       `json:"open_count"`
+	ClosedCount           int       `json:"closed_count"`
+	TotalCount            int       `json:"total_count"`
+	TotalEstimatedSeconds int       `json:"total_estimated_seconds"`
+	TotalSpentSeconds     int       `json:"total_spent_seconds"`
+	CreatedAt             time.Time `json:"created_at"`
+	UpdatedAt             time.Time `json:"updated_at"`
 }
 
 func toMilestoneResponse(mp *model.MilestoneWithProgress) milestoneResponse {
 	resp := milestoneResponse{
-		ID:          mp.ID,
-		ProjectID:   mp.ProjectID,
-		Name:        mp.Name,
-		Description: mp.Description,
-		Status:      mp.Status,
-		OpenCount:   mp.OpenCount,
-		ClosedCount: mp.ClosedCount,
-		TotalCount:  mp.TotalCount,
-		CreatedAt:   mp.CreatedAt,
-		UpdatedAt:   mp.UpdatedAt,
+		ID:                    mp.ID,
+		ProjectID:             mp.ProjectID,
+		Name:                  mp.Name,
+		Description:           mp.Description,
+		Status:                mp.Status,
+		OpenCount:             mp.OpenCount,
+		ClosedCount:           mp.ClosedCount,
+		TotalCount:            mp.TotalCount,
+		TotalEstimatedSeconds: mp.TotalEstimatedSeconds,
+		TotalSpentSeconds:     mp.TotalSpentSeconds,
+		CreatedAt:             mp.CreatedAt,
+		UpdatedAt:             mp.UpdatedAt,
 	}
 	if mp.DueDate != nil {
 		d := mp.DueDate.Format(time.DateOnly)

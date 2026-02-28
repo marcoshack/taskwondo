@@ -122,7 +122,16 @@ func (r *MilestoneRepository) attachProgress(ctx context.Context, m *model.Miles
 		`SELECT
 			COUNT(*) FILTER (WHERE ws.category IS NULL OR ws.category NOT IN ('done', 'cancelled')) AS open_count,
 			COUNT(*) FILTER (WHERE ws.category IN ('done', 'cancelled')) AS closed_count,
-			COUNT(*) AS total_count
+			COUNT(*) AS total_count,
+			COALESCE(SUM(wi.estimated_seconds), 0) AS total_estimated_seconds,
+			COALESCE((
+				SELECT SUM(te.duration_seconds)
+				FROM time_entries te
+				WHERE te.work_item_id IN (
+					SELECT wi2.id FROM work_items wi2
+					WHERE wi2.milestone_id = $1 AND wi2.deleted_at IS NULL
+				) AND te.deleted_at IS NULL
+			), 0) AS total_spent_seconds
 		 FROM work_items wi
 		 LEFT JOIN LATERAL (
 			SELECT ws2.category FROM workflow_statuses ws2
@@ -135,7 +144,7 @@ func (r *MilestoneRepository) attachProgress(ctx context.Context, m *model.Miles
 			LIMIT 1
 		 ) ws ON true
 		 WHERE wi.milestone_id = $1 AND wi.deleted_at IS NULL`, m.ID).
-		Scan(&mp.OpenCount, &mp.ClosedCount, &mp.TotalCount)
+		Scan(&mp.OpenCount, &mp.ClosedCount, &mp.TotalCount, &mp.TotalEstimatedSeconds, &mp.TotalSpentSeconds)
 	if err != nil {
 		return nil, fmt.Errorf("counting milestone progress: %w", err)
 	}

@@ -12,6 +12,8 @@ export interface Milestone {
   open_count: number
   closed_count: number
   total_count: number
+  total_estimated_seconds: number
+  total_spent_seconds: number
   created_at: string
   updated_at: string
 }

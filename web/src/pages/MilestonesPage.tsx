@@ -9,7 +9,8 @@ import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Modal } from '@/components/ui/Modal'
 import { Spinner } from '@/components/ui/Spinner'
-import { Plus, Pencil, Trash2, ChevronDown, ChevronRight, Check } from 'lucide-react'
+import { Plus, Pencil, Trash2, ChevronDown, ChevronRight, Check, Clock } from 'lucide-react'
+import { formatDuration } from '@/utils/duration'
 import type { Milestone, CreateMilestoneInput, UpdateMilestoneInput } from '@/api/milestones'
 import type { AxiosError } from 'axios'
 
@@ -259,6 +260,46 @@ function MilestoneCard({
           />
         </div>
       </div>
+
+      {/* Time tracking summary */}
+      {(milestone.total_estimated_seconds > 0 || milestone.total_spent_seconds > 0) && (
+        <div className="mt-2 flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+          <Clock className="h-3.5 w-3.5 shrink-0" />
+          {milestone.total_estimated_seconds > 0 && (
+            <span>
+              {t('milestones.timeEstimated', { time: formatDuration(milestone.total_estimated_seconds) })}
+            </span>
+          )}
+          {milestone.total_spent_seconds > 0 && (
+            <span>
+              {t('milestones.timeSpent', { time: formatDuration(milestone.total_spent_seconds) })}
+            </span>
+          )}
+          {milestone.total_estimated_seconds > 0 && milestone.total_spent_seconds > 0 && (
+            <TimeProgressBar estimated={milestone.total_estimated_seconds} spent={milestone.total_spent_seconds} />
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// --- Time Progress Bar ---
+
+function TimeProgressBar({ estimated, spent }: { estimated: number; spent: number }) {
+  const { t } = useTranslation()
+  const percent = Math.min(Math.round((spent / estimated) * 100), 100)
+  const isOver = spent > estimated
+
+  return (
+    <div className="flex items-center gap-1.5 flex-1 min-w-0" title={t('milestones.timeProgress', { percent })}>
+      <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 min-w-[40px]">
+        <div
+          className={`h-1.5 rounded-full transition-all ${isOver ? 'bg-red-500 dark:bg-red-400' : 'bg-blue-500 dark:bg-blue-400'}`}
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+      <span className={`shrink-0 ${isOver ? 'text-red-500 dark:text-red-400' : ''}`}>{percent}%</span>
     </div>
   )
 }
