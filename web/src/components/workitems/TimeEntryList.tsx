@@ -149,6 +149,27 @@ export function TimeEntryList({ projectKey, itemNumber, sortOrder = 'desc', read
               }}
             />
             <Button
+              className="hidden sm:block py-2 text-sm shrink-0"
+              onClick={handleCreate}
+              disabled={!parseDurationString(duration) || createMutation.isPending}
+            >
+              {createMutation.isPending ? t('timeTracking.logging') : t('timeTracking.logTime')}
+            </Button>
+          </div>
+          <div className="flex gap-2 items-center sm:hidden">
+            <Input
+              className="flex-1 min-w-0"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder={t('timeTracking.descriptionPlaceholder')}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && parseDurationString(duration)) {
+                  e.preventDefault()
+                  handleCreate()
+                }
+              }}
+            />
+            <Button
               className="py-2 text-sm shrink-0"
               onClick={handleCreate}
               disabled={!parseDurationString(duration) || createMutation.isPending}
@@ -156,18 +177,6 @@ export function TimeEntryList({ projectKey, itemNumber, sortOrder = 'desc', read
               {createMutation.isPending ? t('timeTracking.logging') : t('timeTracking.logTime')}
             </Button>
           </div>
-          <Input
-            className="sm:hidden"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder={t('timeTracking.descriptionPlaceholder')}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && parseDurationString(duration)) {
-                e.preventDefault()
-                handleCreate()
-              }
-            }}
-          />
         </div>
       )}
 
@@ -253,6 +262,32 @@ export function TimeEntryList({ projectKey, itemNumber, sortOrder = 'desc', read
                   }}
                 />
                 <Button
+                  className="hidden sm:block py-2 text-sm shrink-0 w-20"
+                  onClick={handleUpdate}
+                  disabled={!parseDurationString(editDuration) || updateMutation.isPending}
+                >
+                  {updateMutation.isPending ? t('common.saving') : t('common.save')}
+                </Button>
+                <Button
+                  className="hidden sm:block py-2 text-sm shrink-0 w-20"
+                  variant="ghost"
+                  onClick={() => setEditingId(null)}
+                >
+                  {t('common.cancel')}
+                </Button>
+              </div>
+              <div className="flex gap-2 items-center sm:hidden">
+                <Input
+                  className="flex-1 min-w-0"
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  placeholder={t('timeTracking.descriptionPlaceholder')}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') { e.preventDefault(); handleUpdate() }
+                    if (e.key === 'Escape') setEditingId(null)
+                  }}
+                />
+                <Button
                   className="py-2 text-sm shrink-0 w-20"
                   onClick={handleUpdate}
                   disabled={!parseDurationString(editDuration) || updateMutation.isPending}
@@ -267,16 +302,6 @@ export function TimeEntryList({ projectKey, itemNumber, sortOrder = 'desc', read
                   {t('common.cancel')}
                 </Button>
               </div>
-              <Input
-                className="sm:hidden"
-                value={editDescription}
-                onChange={(e) => setEditDescription(e.target.value)}
-                placeholder={t('timeTracking.descriptionPlaceholder')}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') { e.preventDefault(); handleUpdate() }
-                  if (e.key === 'Escape') setEditingId(null)
-                }}
-              />
             </div>
           )}
         </div>
