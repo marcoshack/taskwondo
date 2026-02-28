@@ -532,6 +532,18 @@ export async function setSystemSetting(
   if (!res.ok()) throw new Error(`Set system setting failed (${res.status()}): ${await res.text()}`);
 }
 
+export async function deleteSystemSetting(
+  request: APIRequestContext,
+  adminToken: string,
+  key: string,
+): Promise<void> {
+  const res = await request.delete(`${BASE_URL}/api/v1/admin/settings/${key}`, {
+    headers: { Authorization: `Bearer ${adminToken}` },
+  });
+  // 404 is fine — setting may not exist yet
+  if (!res.ok() && res.status() !== 404) throw new Error(`Delete system setting failed (${res.status()}): ${await res.text()}`);
+}
+
 /** Enable email auth (login + registration). Requires SMTP to be configured first. */
 export async function enableEmailAuth(
   request: APIRequestContext,

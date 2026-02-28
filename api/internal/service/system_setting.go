@@ -34,6 +34,21 @@ func (s *SystemSettingService) Set(ctx context.Context, info *model.AuthInfo, ke
 		return nil, err
 	}
 
+	// Prevent enabling an OAuth provider that has no configuration
+	if configKey := model.OAuthEnabledToConfigKey(key); configKey != "" {
+		var enabled bool
+		if err := json.Unmarshal(value, &enabled); err == nil && enabled {
+			cfgSetting, err := s.settings.Get(ctx, configKey)
+			if err != nil {
+				return nil, fmt.Errorf("%w: cannot enable provider without configuration — save Client ID and Secret first", model.ErrValidation)
+			}
+			var cfg model.OAuthProviderConfig
+			if err := json.Unmarshal(cfgSetting.Value, &cfg); err != nil || cfg.ClientID == "" {
+				return nil, fmt.Errorf("%w: cannot enable provider without configuration — save Client ID and Secret first", model.ErrValidation)
+			}
+		}
+	}
+
 	setting := &model.SystemSetting{
 		Key:   key,
 		Value: value,

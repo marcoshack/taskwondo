@@ -118,6 +118,23 @@ func OAuthConfigSettingKey(provider string) string {
 	}
 }
 
+// OAuthEnabledToConfigKey maps an auth_*_enabled setting key to its corresponding
+// oauth_*_config setting key. Returns empty string for non-OAuth enabled keys.
+func OAuthEnabledToConfigKey(enabledKey string) string {
+	switch enabledKey {
+	case SettingAuthDiscordEnabled:
+		return SettingOAuthDiscordConfig
+	case SettingAuthGoogleEnabled:
+		return SettingOAuthGoogleConfig
+	case SettingAuthGitHubEnabled:
+		return SettingOAuthGitHubConfig
+	case SettingAuthMicrosoftEnabled:
+		return SettingOAuthMicrosoftConfig
+	default:
+		return ""
+	}
+}
+
 // DefaultMaxProjectsPerUser is the fallback when the setting is not configured.
 const DefaultMaxProjectsPerUser = 5
 

@@ -58,6 +58,8 @@ adminTest.describe('GitHub Authentication — Admin Settings', () => {
   adminTest.beforeAll(async ({ request }) => {
     const adminToken = getAdminToken();
     await api.setSystemSetting(request, adminToken, 'auth_github_enabled', false);
+    // Clear any existing OAuth config so toggle starts disabled
+    await api.deleteSystemSetting(request, adminToken, 'oauth_github_config');
   });
 
   adminTest('displays GitHub provider card on authentication page', async ({ page }) => {
@@ -68,15 +70,12 @@ adminTest.describe('GitHub Authentication — Admin Settings', () => {
     await expect(card.getByText('Allow users to sign in with their GitHub account.')).toBeVisible();
   });
 
-  adminTest('GitHub toggle starts in disabled state', async ({ page }) => {
-    await gotoAuthSettings(page);
+  adminTest('toggle is disabled when provider has no configuration', async ({ page, request }) => {
+    // Ensure config is cleared right before this test
+    const adminToken = getAdminToken();
+    await api.deleteSystemSetting(request, adminToken, 'oauth_github_config');
+    await api.setSystemSetting(request, adminToken, 'auth_github_enabled', false);
 
-    const card = githubCard(page);
-    const toggle = card.getByRole('switch');
-    await expect(toggle).toHaveAttribute('aria-checked', 'false');
-  });
-
-  adminTest('clicking GitHub toggle enables it and persists after reload', async ({ page }) => {
     await gotoAuthSettings(page);
 
     const card = githubCard(page);
@@ -85,39 +84,8 @@ adminTest.describe('GitHub Authentication — Admin Settings', () => {
     // Toggle should be off
     await expect(toggle).toHaveAttribute('aria-checked', 'false');
 
-    // Click to enable
-    await toggle.click();
-    await expect(toggle).toHaveAttribute('aria-checked', 'true');
-
-    // Reload page — toggle should still be on (persisted to DB via API)
-    await page.reload();
-    await page.waitForLoadState('networkidle');
-    await dismissWelcomeModal(page);
-
-    const reloadedToggle = githubCard(page).getByRole('switch');
-    await expect(reloadedToggle).toHaveAttribute('aria-checked', 'true');
-  });
-
-  adminTest('clicking GitHub toggle again disables it and persists after reload', async ({ page }) => {
-    await gotoAuthSettings(page);
-
-    const card = githubCard(page);
-    const toggle = card.getByRole('switch');
-
-    // Toggle should be on from previous test
-    await expect(toggle).toHaveAttribute('aria-checked', 'true');
-
-    // Click to disable
-    await toggle.click();
-    await expect(toggle).toHaveAttribute('aria-checked', 'false');
-
-    // Reload page — toggle should still be off
-    await page.reload();
-    await page.waitForLoadState('networkidle');
-    await dismissWelcomeModal(page);
-
-    const reloadedToggle = githubCard(page).getByRole('switch');
-    await expect(reloadedToggle).toHaveAttribute('aria-checked', 'false');
+    // Toggle should be disabled (not clickable) since no config exists
+    await expect(toggle).toBeDisabled();
   });
 
   adminTest('expanding GitHub card shows credential fields and redirect URI', async ({ page }) => {
@@ -170,6 +138,60 @@ adminTest.describe('GitHub Authentication — Admin Settings', () => {
 
     // Client Secret should be masked (password mask)
     await expect(reloadedCard.getByLabel('Client Secret')).toHaveValue('••••••••');
+  });
+
+  adminTest('toggle is enabled after credentials are saved', async ({ page }) => {
+    await gotoAuthSettings(page);
+
+    const card = githubCard(page);
+    const toggle = card.getByRole('switch');
+
+    // Toggle should now be interactive (not disabled) since credentials are saved
+    await expect(toggle).toBeEnabled();
+  });
+
+  adminTest('clicking GitHub toggle enables it and persists after reload', async ({ page }) => {
+    await gotoAuthSettings(page);
+
+    const card = githubCard(page);
+    const toggle = card.getByRole('switch');
+
+    // Toggle should be off
+    await expect(toggle).toHaveAttribute('aria-checked', 'false');
+
+    // Click to enable
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-checked', 'true');
+
+    // Reload page — toggle should still be on (persisted to DB via API)
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    await dismissWelcomeModal(page);
+
+    const reloadedToggle = githubCard(page).getByRole('switch');
+    await expect(reloadedToggle).toHaveAttribute('aria-checked', 'true');
+  });
+
+  adminTest('clicking GitHub toggle again disables it and persists after reload', async ({ page }) => {
+    await gotoAuthSettings(page);
+
+    const card = githubCard(page);
+    const toggle = card.getByRole('switch');
+
+    // Toggle should be on from previous test
+    await expect(toggle).toHaveAttribute('aria-checked', 'true');
+
+    // Click to disable
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-checked', 'false');
+
+    // Reload page — toggle should still be off
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    await dismissWelcomeModal(page);
+
+    const reloadedToggle = githubCard(page).getByRole('switch');
+    await expect(reloadedToggle).toHaveAttribute('aria-checked', 'false');
   });
 
   // Clean up

@@ -191,8 +191,9 @@ function OAuthProviderCard({
     <ExpandableConfigCard
       title={t(titleKey)}
       description={t(descriptionKey)}
-      enabled={enabled}
+      enabled={hasExistingConfig && enabled}
       onToggle={(val) => onToggleEnabled(enabledSettingKey, val)}
+      toggleDisabled={!hasExistingConfig}
       expanded={expanded}
       onToggleExpand={() => setExpanded((prev) => !prev)}
       onSave={handleSave}
@@ -296,14 +297,10 @@ export function SystemAuthenticationPage() {
   const sortedProviders = sortProviders(OAUTH_PROVIDERS, providerOrder)
 
   const enabledMap: Record<string, boolean> = {
-    auth_discord_enabled: settings.auth_discord_enabled !== undefined
-      ? settings.auth_discord_enabled === true : true,
-    auth_google_enabled: settings.auth_google_enabled !== undefined
-      ? settings.auth_google_enabled === true : true,
-    auth_github_enabled: settings.auth_github_enabled !== undefined
-      ? settings.auth_github_enabled === true : true,
-    auth_microsoft_enabled: settings.auth_microsoft_enabled !== undefined
-      ? settings.auth_microsoft_enabled === true : true,
+    auth_discord_enabled: settings.auth_discord_enabled === true,
+    auth_google_enabled: settings.auth_google_enabled === true,
+    auth_github_enabled: settings.auth_github_enabled === true,
+    auth_microsoft_enabled: settings.auth_microsoft_enabled === true,
   }
 
   const handleReorder = (index: number, direction: 'up' | 'down') => {
