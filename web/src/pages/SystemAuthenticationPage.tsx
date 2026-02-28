@@ -195,6 +195,32 @@ function OAuthProviderCard({
       saving={setConfig.isPending}
       saved={saved}
       error={saveError}
+      headerExtra={
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            disabled={isFirst}
+            onClick={onMoveUp}
+            className="group relative rounded p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            <ArrowUp className="h-4 w-4" />
+            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block whitespace-nowrap rounded bg-gray-900 dark:bg-gray-700 px-2 py-1 text-xs text-white shadow-lg">
+              {t('admin.authentication.oauth.changeOrder')}
+            </span>
+          </button>
+          <button
+            type="button"
+            disabled={isLast}
+            onClick={onMoveDown}
+            className="group relative rounded p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            <ArrowDown className="h-4 w-4" />
+            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block whitespace-nowrap rounded bg-gray-900 dark:bg-gray-700 px-2 py-1 text-xs text-white shadow-lg">
+              {t('admin.authentication.oauth.changeOrder')}
+            </span>
+          </button>
+        </div>
+      }
     >
       {!hasExistingConfig && !localConfig && (
         <p className="text-sm text-amber-600 dark:text-amber-400">
@@ -222,30 +248,6 @@ function OAuthProviderCard({
         }}
       />
       <RedirectUriField provider={provider} />
-      <div className="flex items-center gap-2 pt-1">
-        <button
-          type="button"
-          disabled={isFirst}
-          onClick={onMoveUp}
-          className="group relative rounded p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed"
-        >
-          <ArrowUp className="h-4 w-4" />
-          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block whitespace-nowrap rounded bg-gray-900 dark:bg-gray-700 px-2 py-1 text-xs text-white shadow-lg">
-            {t('admin.authentication.oauth.changeOrder')}
-          </span>
-        </button>
-        <button
-          type="button"
-          disabled={isLast}
-          onClick={onMoveDown}
-          className="group relative rounded p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed"
-        >
-          <ArrowDown className="h-4 w-4" />
-          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block whitespace-nowrap rounded bg-gray-900 dark:bg-gray-700 px-2 py-1 text-xs text-white shadow-lg">
-            {t('admin.authentication.oauth.changeOrder')}
-          </span>
-        </button>
-      </div>
     </ExpandableConfigCard>
   )
 }

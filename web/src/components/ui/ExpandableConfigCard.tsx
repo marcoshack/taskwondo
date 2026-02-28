@@ -13,6 +13,7 @@ interface ExpandableConfigCardProps {
   expanded: boolean
   onToggleExpand: () => void
   children: ReactNode
+  headerExtra?: ReactNode
   onSave?: () => void
   onCancel?: () => void
   canSave?: boolean
@@ -32,6 +33,7 @@ export function ExpandableConfigCard({
   expanded,
   onToggleExpand,
   children,
+  headerExtra,
   onSave,
   onCancel,
   canSave = false,
@@ -46,7 +48,7 @@ export function ExpandableConfigCard({
   return (
     <div className="rounded-lg border border-gray-200 dark:border-gray-700">
       {/* Header — always visible */}
-      <div className="flex items-center justify-between p-6">
+      <div className={`flex justify-between p-6${headerExtra ? ' items-stretch' : ' items-center'}`}>
         <button
           type="button"
           className="flex flex-1 items-center gap-2 text-left"
@@ -66,8 +68,9 @@ export function ExpandableConfigCard({
             </p>
           </div>
         </button>
-        <div className="ml-4 shrink-0" onClick={(e) => e.stopPropagation()}>
+        <div className={`ml-4 shrink-0 flex flex-col items-center${headerExtra ? ' justify-between' : ''}`} onClick={(e) => e.stopPropagation()}>
           <Toggle enabled={enabled} onChange={onToggle} disabled={toggleDisabled} />
+          {headerExtra}
         </div>
       </div>
 
