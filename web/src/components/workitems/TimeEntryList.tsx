@@ -148,13 +148,15 @@ export function TimeEntryList({ projectKey, itemNumber, sortOrder = 'desc', read
                 }
               }}
             />
-            <Button
-              className="hidden sm:block py-2 text-sm shrink-0"
-              onClick={handleCreate}
-              disabled={!parseDurationString(duration) || createMutation.isPending}
-            >
-              {createMutation.isPending ? t('timeTracking.logging') : t('timeTracking.logTime')}
-            </Button>
+            <span className="hidden sm:contents">
+              <Button
+                className="py-2 text-sm shrink-0"
+                onClick={handleCreate}
+                disabled={!parseDurationString(duration) || createMutation.isPending}
+              >
+                {createMutation.isPending ? t('timeTracking.logging') : t('timeTracking.logTime')}
+              </Button>
+            </span>
           </div>
           <div className="flex gap-2 items-center sm:hidden">
             <Input
@@ -261,20 +263,22 @@ export function TimeEntryList({ projectKey, itemNumber, sortOrder = 'desc', read
                     if (e.key === 'Escape') setEditingId(null)
                   }}
                 />
-                <Button
-                  className="hidden sm:block py-2 text-sm shrink-0 w-20"
-                  onClick={handleUpdate}
-                  disabled={!parseDurationString(editDuration) || updateMutation.isPending}
-                >
-                  {updateMutation.isPending ? t('common.saving') : t('common.save')}
-                </Button>
-                <Button
-                  className="hidden sm:block py-2 text-sm shrink-0 w-20"
-                  variant="ghost"
-                  onClick={() => setEditingId(null)}
-                >
-                  {t('common.cancel')}
-                </Button>
+                <span className="hidden sm:contents">
+                  <Button
+                    className="py-2 text-sm shrink-0 w-20"
+                    onClick={handleUpdate}
+                    disabled={!parseDurationString(editDuration) || updateMutation.isPending}
+                  >
+                    {updateMutation.isPending ? t('common.saving') : t('common.save')}
+                  </Button>
+                  <Button
+                    className="py-2 text-sm shrink-0 w-20"
+                    variant="ghost"
+                    onClick={() => setEditingId(null)}
+                  >
+                    {t('common.cancel')}
+                  </Button>
+                </span>
               </div>
               <div className="flex gap-2 items-center sm:hidden">
                 <Input
