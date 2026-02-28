@@ -1499,3 +1499,139 @@ func TestEnabledProviders_WithSettings(t *testing.T) {
 		t.Fatal("email_login should be disabled")
 	}
 }
+
+func TestOAuthURL_GitHub(t *testing.T) {
+	userRepo := newMockUserRepo()
+	apiKeyRepo := newMockAPIKeyRepo()
+	oauthRepo := newMockOAuthAccountRepo()
+	github := NewGitHubProvider("github-client-id", "github-secret", "http://localhost:3000/auth/github/callback", nil)
+	svc := NewAuthService(userRepo, apiKeyRepo, oauthRepo, "test-secret-at-least-32-chars!!", 24*time.Hour,
+		[]OAuthProvider{github})
+
+	authURL, err := svc.OAuthURL(context.Background(), "github")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if !strings.Contains(authURL, "github.com/login/oauth/authorize") {
+		t.Fatalf("expected github authorize URL, got %s", authURL)
+	}
+	if !strings.Contains(authURL, "client_id=github-client-id") {
+		t.Fatalf("expected client_id in URL, got %s", authURL)
+	}
+	if !strings.Contains(authURL, "scope=user") {
+		t.Fatalf("expected scope in URL, got %s", authURL)
+	}
+}
+
+func TestOAuthCallback_GitHubFullSuccess(t *testing.T) {
+	userRepo := newMockUserRepo()
+	apiKeyRepo := newMockAPIKeyRepo()
+	oauthRepo := newMockOAuthAccountRepo()
+
+	githubServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/login/oauth/access_token":
+			json.NewEncoder(w).Encode(map[string]string{
+				"access_token": "mock-github-token",
+				"token_type":   "Bearer",
+			})
+		case "/user":
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"id":         12345,
+				"login":      "octocat",
+				"name":       "The Octocat",
+				"email":      "octocat@github.com",
+				"avatar_url": "https://avatars.githubusercontent.com/u/12345",
+			})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer githubServer.Close()
+
+	github := NewGitHubProvider("github-client-id", "github-secret", "http://localhost:3000/auth/github/callback", githubServer.Client())
+	github.baseURL = githubServer.URL
+	github.apiBaseURL = githubServer.URL
+
+	svc := NewAuthService(userRepo, apiKeyRepo, oauthRepo, "test-secret-at-least-32-chars!!", 24*time.Hour,
+		[]OAuthProvider{github})
+
+	state, err := svc.generateOAuthState()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	token, user, err := svc.OAuthCallback(context.Background(), "github", "valid-code", state)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if token == "" {
+		t.Fatal("expected non-empty token")
+	}
+	if user.Email != "octocat@github.com" {
+		t.Fatalf("expected email octocat@github.com, got %s", user.Email)
+	}
+	if user.DisplayName != "The Octocat" {
+		t.Fatalf("expected display name 'The Octocat', got %s", user.DisplayName)
+	}
+
+	accounts, _ := oauthRepo.ListByUserID(context.Background(), user.ID)
+	if len(accounts) != 1 {
+		t.Fatalf("expected 1 oauth account, got %d", len(accounts))
+	}
+	if accounts[0].Provider != model.OAuthProviderGitHub {
+		t.Fatalf("expected github provider, got %s", accounts[0].Provider)
+	}
+}
+
+func TestOAuthCallback_GitHubEmailFromEmailsEndpoint(t *testing.T) {
+	userRepo := newMockUserRepo()
+	apiKeyRepo := newMockAPIKeyRepo()
+	oauthRepo := newMockOAuthAccountRepo()
+
+	githubServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/login/oauth/access_token":
+			json.NewEncoder(w).Encode(map[string]string{
+				"access_token": "mock-github-token",
+				"token_type":   "Bearer",
+			})
+		case "/user":
+			// No public email
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"id":         67890,
+				"login":      "privateuser",
+				"name":       "Private User",
+				"avatar_url": "https://avatars.githubusercontent.com/u/67890",
+			})
+		case "/user/emails":
+			json.NewEncoder(w).Encode([]map[string]interface{}{
+				{"email": "secondary@example.com", "primary": false, "verified": true},
+				{"email": "primary@example.com", "primary": true, "verified": true},
+			})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer githubServer.Close()
+
+	github := NewGitHubProvider("github-client-id", "github-secret", "http://localhost:3000/auth/github/callback", githubServer.Client())
+	github.baseURL = githubServer.URL
+	github.apiBaseURL = githubServer.URL
+
+	svc := NewAuthService(userRepo, apiKeyRepo, oauthRepo, "test-secret-at-least-32-chars!!", 24*time.Hour,
+		[]OAuthProvider{github})
+
+	state, err := svc.generateOAuthState()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, user, err := svc.OAuthCallback(context.Background(), "github", "valid-code", state)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if user.Email != "primary@example.com" {
+		t.Fatalf("expected email primary@example.com, got %s", user.Email)
+	}
+}

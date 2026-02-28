@@ -208,6 +208,9 @@ export function SystemAuthenticationPage() {
   const googleEnabled = settings.auth_google_enabled !== undefined
     ? settings.auth_google_enabled === true
     : true // default: enabled if configured
+  const githubEnabled = settings.auth_github_enabled !== undefined
+    ? settings.auth_github_enabled === true
+    : true // default: enabled if configured
 
   // SMTP is configured if the config exists and is enabled
   const smtpConfigured = smtpConfig?.enabled === true
@@ -226,6 +229,11 @@ export function SystemAuthenticationPage() {
           {t('admin.authentication.description')}
         </p>
       </div>
+
+      {/* Email & Password section */}
+      <h3 className="text-base font-medium text-gray-700 dark:text-gray-300 pt-2">
+        {t('admin.authentication.section.emailPassword')}
+      </h3>
 
       {/* Email/Password Login */}
       <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-6">
@@ -270,6 +278,11 @@ export function SystemAuthenticationPage() {
         )}
       </div>
 
+      {/* OAuth Providers section */}
+      <h3 className="text-base font-medium text-gray-700 dark:text-gray-300 pt-2">
+        {t('admin.authentication.section.oauth')}
+      </h3>
+
       {/* Discord */}
       <OAuthProviderCard
         provider="discord"
@@ -287,6 +300,16 @@ export function SystemAuthenticationPage() {
         descriptionKey="admin.authentication.google.description"
         enabledSettingKey="auth_google_enabled"
         enabled={googleEnabled}
+        onToggleEnabled={handleToggle}
+      />
+
+      {/* GitHub */}
+      <OAuthProviderCard
+        provider="github"
+        titleKey="admin.authentication.github.title"
+        descriptionKey="admin.authentication.github.description"
+        enabledSettingKey="auth_github_enabled"
+        enabled={githubEnabled}
         onToggleEnabled={handleToggle}
       />
     </div>

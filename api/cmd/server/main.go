@@ -112,6 +112,11 @@ func main() {
 			cfg.GoogleClientID, cfg.GoogleClientSecret, cfg.BaseURL+"/auth/google/callback", nil,
 		))
 	}
+	if cfg.GitHubClientID != "" && cfg.GitHubClientSecret != "" {
+		oauthProviders = append(oauthProviders, service.NewGitHubProvider(
+			cfg.GitHubClientID, cfg.GitHubClientSecret, cfg.BaseURL+"/auth/github/callback", nil,
+		))
+	}
 
 	authService := service.NewAuthService(
 		userRepo, apiKeyRepo, oauthAccountRepo,
@@ -546,6 +551,13 @@ func seedOAuthConfig(ctx context.Context, settings service.SystemSettingReposito
 			enabledKey: model.SettingAuthGoogleEnabled,
 			clientID:   cfg.GoogleClientID,
 			secret:     cfg.GoogleClientSecret,
+		},
+		{
+			name:       "github",
+			settingKey: model.SettingOAuthGitHubConfig,
+			enabledKey: model.SettingAuthGitHubEnabled,
+			clientID:   cfg.GitHubClientID,
+			secret:     cfg.GitHubClientSecret,
 		},
 	}
 

@@ -260,6 +260,7 @@ func (h *SystemSettingHandler) TestSMTP(w http.ResponseWriter, r *http.Request) 
 var validOAuthProviders = map[string]bool{
 	model.OAuthProviderDiscord: true,
 	model.OAuthProviderGoogle:  true,
+	model.OAuthProviderGitHub:  true,
 }
 
 // GetOAuthConfig handles GET /api/v1/admin/settings/oauth_config/{provider}

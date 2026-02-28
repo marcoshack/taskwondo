@@ -17,10 +17,12 @@ const (
 	SettingAuthEmailRegistrationEnabled = "auth_email_registration_enabled"
 	SettingAuthDiscordEnabled           = "auth_discord_enabled"
 	SettingAuthGoogleEnabled            = "auth_google_enabled"
+	SettingAuthGitHubEnabled            = "auth_github_enabled"
 
 	// OAuth provider configuration
 	SettingOAuthDiscordConfig = "oauth_discord_config"
 	SettingOAuthGoogleConfig  = "oauth_google_config"
+	SettingOAuthGitHubConfig  = "oauth_github_config"
 
 	// Feature flags
 	SettingFeatureStatsTimeline = "feature_stats_timeline"
@@ -102,6 +104,8 @@ func OAuthConfigSettingKey(provider string) string {
 		return SettingOAuthDiscordConfig
 	case OAuthProviderGoogle:
 		return SettingOAuthGoogleConfig
+	case OAuthProviderGitHub:
+		return SettingOAuthGitHubConfig
 	default:
 		return ""
 	}

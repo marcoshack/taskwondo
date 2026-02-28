@@ -10,6 +10,7 @@ import (
 const (
 	OAuthProviderDiscord = "discord"
 	OAuthProviderGoogle  = "google"
+	OAuthProviderGitHub  = "github"
 )
 
 // OAuthAccount represents a linked external identity.
@@ -70,4 +71,20 @@ func (d *DiscordUser) DisplayName() string {
 		return *d.GlobalName
 	}
 	return d.Username
+}
+
+// GitHubUser is the response from GitHub's /user endpoint.
+type GitHubUser struct {
+	ID        int64   `json:"id"`
+	Login     string  `json:"login"`
+	Name      *string `json:"name"`
+	Email     *string `json:"email"`
+	AvatarURL string  `json:"avatar_url"`
+}
+
+// GitHubEmail is a single entry from GitHub's /user/emails endpoint.
+type GitHubEmail struct {
+	Email    string `json:"email"`
+	Primary  bool   `json:"primary"`
+	Verified bool   `json:"verified"`
 }

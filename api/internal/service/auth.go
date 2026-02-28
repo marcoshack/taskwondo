@@ -155,6 +155,8 @@ func (s *AuthService) getProvider(ctx context.Context, name string) OAuthProvide
 							return NewDiscordProvider(cfg.ClientID, secret, redirectURI, nil)
 						case model.OAuthProviderGoogle:
 							return NewGoogleProvider(cfg.ClientID, secret, redirectURI, nil)
+						case model.OAuthProviderGitHub:
+							return NewGitHubProvider(cfg.ClientID, secret, redirectURI, nil)
 						}
 					}
 				}
@@ -388,7 +390,7 @@ func (s *AuthService) EnabledProviders(ctx context.Context) map[string]bool {
 	result := make(map[string]bool, 4)
 
 	// Check each known OAuth provider — configured via DB or static env vars
-	for _, name := range []string{model.OAuthProviderDiscord, model.OAuthProviderGoogle} {
+	for _, name := range []string{model.OAuthProviderDiscord, model.OAuthProviderGoogle, model.OAuthProviderGitHub} {
 		if s.isOAuthConfigured(ctx, name) {
 			settingKey := ""
 			switch name {
@@ -396,6 +398,8 @@ func (s *AuthService) EnabledProviders(ctx context.Context) map[string]bool {
 				settingKey = model.SettingAuthDiscordEnabled
 			case model.OAuthProviderGoogle:
 				settingKey = model.SettingAuthGoogleEnabled
+			case model.OAuthProviderGitHub:
+				settingKey = model.SettingAuthGitHubEnabled
 			}
 			if settingKey != "" {
 				result[name] = s.getBoolSetting(ctx, settingKey, true)
