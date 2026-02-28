@@ -227,7 +227,7 @@ export function ProjectSettingsPage() {
   const memberIds = members?.map((m) => m.user_id) ?? []
 
   return (
-    <div className="max-w-3xl space-y-8">
+    <div className="max-w-3xl space-y-8 overflow-hidden">
       {/* General section */}
       <div>
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('projects.settings.general')}</h2>
@@ -339,7 +339,7 @@ export function ProjectSettingsPage() {
             const canEditRole = canManageMembers && (!memberIsOwner || isOwner)
 
             return (
-              <div key={member.user_id} className="flex items-center justify-between p-3">
+              <div key={member.user_id} className="flex flex-wrap items-center justify-between gap-2 p-3">
                 <div className="flex items-center gap-3 min-w-0">
                   <Avatar name={member.display_name} size="sm" />
                   <div className="min-w-0">
@@ -350,7 +350,7 @@ export function ProjectSettingsPage() {
                     <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{member.email}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
                   {canEditRole ? (
                     <>
                       {saved[`role:${member.user_id}`] && (
@@ -499,12 +499,12 @@ export function ProjectSettingsPage() {
 
                 return (
                   <div key={invite.id} className="p-3 space-y-2">
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-3">
                       <TruncatedName
                         name={invite.created_by_name}
-                        className="text-xs font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap truncate w-[80px] flex-shrink-0 inline-block mr-6"
+                        className="text-xs font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap truncate w-[80px] flex-shrink-0 inline-block"
                       />
-                      <code className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded text-gray-700 dark:text-gray-300 mr-6">
+                      <code className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded text-gray-700 dark:text-gray-300">
                         {invite.code}
                       </code>
                       <Badge color={ROLE_BADGE_COLORS[invite.role] ?? 'gray'}>
