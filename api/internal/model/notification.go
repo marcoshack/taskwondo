@@ -16,6 +16,7 @@ type AssignmentEvent struct {
 // NotificationPreferences holds per-project notification toggles stored in user_settings.
 type NotificationPreferences struct {
 	AssignedToMe              bool `json:"assigned_to_me"`
+	AnyUpdateOnWatched        bool `json:"any_update_on_watched"`
 	NewItemCreated            bool `json:"new_item_created"`
 	CommentsOnAssigned        bool `json:"comments_on_assigned"`
 	CommentsOnWatched         bool `json:"comments_on_watched"`
@@ -29,4 +30,19 @@ func DefaultNotificationPreferences() NotificationPreferences {
 	return NotificationPreferences{
 		AssignedToMe: true,
 	}
+}
+
+// WatcherEvent is published when a watched work item is modified.
+type WatcherEvent struct {
+	WorkItemID uuid.UUID `json:"work_item_id"`
+	ProjectKey string    `json:"project_key"`
+	ProjectID  uuid.UUID `json:"project_id"`
+	ItemNumber int       `json:"item_number"`
+	Title      string    `json:"title"`
+	ActorID    uuid.UUID `json:"actor_id"`
+	EventType  string    `json:"event_type"`            // "field_change", "comment_added"
+	FieldName  string    `json:"field_name,omitempty"`   // e.g. "status", "priority"
+	OldValue   string    `json:"old_value,omitempty"`
+	NewValue   string    `json:"new_value,omitempty"`
+	Summary    string    `json:"summary,omitempty"`      // human-readable change summary
 }

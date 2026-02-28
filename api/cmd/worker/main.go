@@ -101,11 +101,19 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to create dispatcher")
 	}
 
+	// Initialize watcher repository
+	watcherRepo := repository.NewWatcherRepository(db)
+
 	// Register event-driven tasks
 	notifyAssignment := workers.NewNotificationAssignmentTask(
 		userRepo, projectRepo, userSettingRepo, emailSender, cfg.BaseURL, log.Logger,
 	)
 	dispatcher.Register(notifyAssignment)
+
+	notifyWatcher := workers.NewNotificationWatcherTask(
+		watcherRepo, userRepo, userSettingRepo, emailSender, cfg.BaseURL, log.Logger,
+	)
+	dispatcher.Register(notifyWatcher)
 
 	// Start dispatcher
 	if err := dispatcher.Start(ctx); err != nil {

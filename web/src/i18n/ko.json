@@ -413,6 +413,8 @@
   "preferences.notifications.addedToProjectDesc": "프로젝트에 추가되었을 때",
   "preferences.notifications.assignedToMe": "나에게 할당됨",
   "preferences.notifications.assignedToMeDesc": "작업 항목이 나에게 할당되었을 때",
+  "preferences.notifications.anyUpdateOnWatched": "관심 항목의 모든 업데이트",
+  "preferences.notifications.anyUpdateOnWatchedDesc": "관심 등록한 작업 항목이 업데이트되면 이메일을 받습니다",
   "preferences.notifications.comingSoon": "곧 제공 예정",
   "preferences.notifications.commentsOnAssigned": "할당된 항목의 댓글",
   "preferences.notifications.commentsOnAssignedDesc": "나에게 할당된 작업 항목에 댓글이 달렸을 때",

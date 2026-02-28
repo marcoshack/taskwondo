@@ -413,6 +413,8 @@
   "preferences.notifications.addedToProjectDesc": "プロジェクトに追加されたとき",
   "preferences.notifications.assignedToMe": "自分に割り当て",
   "preferences.notifications.assignedToMeDesc": "作業項目があなたに割り当てられたとき",
+  "preferences.notifications.anyUpdateOnWatched": "ウォッチ中の項目の更新",
+  "preferences.notifications.anyUpdateOnWatchedDesc": "ウォッチしている作業項目が更新されたときにメールを受信します",
   "preferences.notifications.comingSoon": "近日公開",
   "preferences.notifications.commentsOnAssigned": "割り当て項目へのコメント",
   "preferences.notifications.commentsOnAssignedDesc": "あなたに割り当てられた作業項目にコメントがあったとき",

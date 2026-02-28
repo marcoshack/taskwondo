@@ -413,6 +413,8 @@
   "preferences.notifications.addedToProjectDesc": "عند إضافتك إلى مشروع",
   "preferences.notifications.assignedToMe": "تم التعيين لي",
   "preferences.notifications.assignedToMeDesc": "عند تعيين عنصر عمل لك",
+  "preferences.notifications.anyUpdateOnWatched": "أي تحديث على العناصر المراقبة",
+  "preferences.notifications.anyUpdateOnWatchedDesc": "تلقي بريد إلكتروني عند تحديث عنصر عمل تراقبه",
   "preferences.notifications.comingSoon": "قريباً",
   "preferences.notifications.commentsOnAssigned": "تعليقات على العناصر المعينة",
   "preferences.notifications.commentsOnAssignedDesc": "عندما يعلق شخص ما على عنصر عمل معين لك",

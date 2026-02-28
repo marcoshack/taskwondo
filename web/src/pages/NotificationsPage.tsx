@@ -7,6 +7,7 @@ import { Spinner } from '@/components/ui/Spinner'
 
 interface NotificationPreferences {
   assigned_to_me: boolean
+  any_update_on_watched: boolean
   new_item_created: boolean
   comments_on_assigned: boolean
   comments_on_watched: boolean
@@ -17,6 +18,7 @@ interface NotificationPreferences {
 
 const defaultPreferences: NotificationPreferences = {
   assigned_to_me: true,
+  any_update_on_watched: false,
   new_item_created: false,
   comments_on_assigned: false,
   comments_on_watched: false,
@@ -34,6 +36,7 @@ interface NotificationOption {
 
 const notificationOptions: NotificationOption[] = [
   { key: 'assigned_to_me', labelKey: 'preferences.notifications.assignedToMe', descKey: 'preferences.notifications.assignedToMeDesc', enabled: true },
+  { key: 'any_update_on_watched', labelKey: 'preferences.notifications.anyUpdateOnWatched', descKey: 'preferences.notifications.anyUpdateOnWatchedDesc', enabled: true },
   { key: 'new_item_created', labelKey: 'preferences.notifications.newItemCreated', descKey: 'preferences.notifications.newItemCreatedDesc', enabled: false },
   { key: 'comments_on_assigned', labelKey: 'preferences.notifications.commentsOnAssigned', descKey: 'preferences.notifications.commentsOnAssignedDesc', enabled: false },
   { key: 'comments_on_watched', labelKey: 'preferences.notifications.commentsOnWatched', descKey: 'preferences.notifications.commentsOnWatchedDesc', enabled: false },

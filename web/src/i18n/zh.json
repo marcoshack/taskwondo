@@ -413,6 +413,8 @@
   "preferences.notifications.addedToProjectDesc": "当您被添加到项目时",
   "preferences.notifications.assignedToMe": "分配给我",
   "preferences.notifications.assignedToMeDesc": "当工作项分配给您时",
+  "preferences.notifications.anyUpdateOnWatched": "关注项目的任何更新",
+  "preferences.notifications.anyUpdateOnWatchedDesc": "当您关注的工作项被更新时收到邮件通知",
   "preferences.notifications.comingSoon": "即将推出",
   "preferences.notifications.commentsOnAssigned": "已分配项目的评论",
   "preferences.notifications.commentsOnAssignedDesc": "当有人评论分配给您的工作项时",

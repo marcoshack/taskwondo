@@ -413,6 +413,8 @@
   "preferences.notifications.addedToProjectDesc": "Wenn Sie zu einem Projekt hinzugefügt werden",
   "preferences.notifications.assignedToMe": "Mir zugewiesen",
   "preferences.notifications.assignedToMeDesc": "Wenn Ihnen ein Arbeitselement zugewiesen wird",
+  "preferences.notifications.anyUpdateOnWatched": "Jede Aktualisierung bei beobachteten Elementen",
+  "preferences.notifications.anyUpdateOnWatchedDesc": "E-Mail erhalten, wenn ein beobachtetes Arbeitselement aktualisiert wird",
   "preferences.notifications.comingSoon": "Demnächst verfügbar",
   "preferences.notifications.commentsOnAssigned": "Kommentare zu zugewiesenen Elementen",
   "preferences.notifications.commentsOnAssignedDesc": "Wenn jemand ein Ihnen zugewiesenes Arbeitselement kommentiert",

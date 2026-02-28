@@ -483,12 +483,19 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 		return nil, err
 	}
 
+	// Track field changes for watcher notifications
+	type fieldChange struct {
+		field, oldVal, newVal string
+	}
+	var watcherChanges []fieldChange
+
 	// Apply changes and record events
 	if input.Title != nil && *input.Title != item.Title {
 		if strings.TrimSpace(*input.Title) == "" {
 			return nil, fmt.Errorf("title cannot be empty: %w", model.ErrValidation)
 		}
 		s.recordFieldChange(ctx, item.ID, &info.UserID, "title", item.Title, *input.Title)
+		watcherChanges = append(watcherChanges, fieldChange{"title", item.Title, *input.Title})
 		item.Title = *input.Title
 	}
 
@@ -499,6 +506,7 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 		}
 		if *input.Description != oldDesc {
 			s.recordFieldChange(ctx, item.ID, &info.UserID, "description", oldDesc, *input.Description)
+			watcherChanges = append(watcherChanges, fieldChange{"description", oldDesc, *input.Description})
 			item.Description = input.Description
 		}
 	}
@@ -553,6 +561,7 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 		}
 
 		s.recordFieldChange(ctx, item.ID, &info.UserID, "type", item.Type, *input.Type)
+		watcherChanges = append(watcherChanges, fieldChange{"type", item.Type, *input.Type})
 		item.Type = *input.Type
 		typeChanged = true
 	}
@@ -598,6 +607,7 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 		}
 
 		s.recordFieldChange(ctx, item.ID, &info.UserID, "status", item.Status, *input.Status)
+		watcherChanges = append(watcherChanges, fieldChange{"status", item.Status, *input.Status})
 		item.Status = *input.Status
 
 		// Recompute SLA deadline for the new status
@@ -622,12 +632,14 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 			return nil, fmt.Errorf("invalid priority %q: %w", *input.Priority, model.ErrValidation)
 		}
 		s.recordFieldChange(ctx, item.ID, &info.UserID, "priority", item.Priority, *input.Priority)
+		watcherChanges = append(watcherChanges, fieldChange{"priority", item.Priority, *input.Priority})
 		item.Priority = *input.Priority
 	}
 
 	if input.ClearAssignee {
 		if item.AssigneeID != nil {
 			s.recordEvent(ctx, item.ID, &info.UserID, "unassigned", strPtr("assignee_id"), strPtr(item.AssigneeID.String()), nil)
+			watcherChanges = append(watcherChanges, fieldChange{"assignee", item.AssigneeID.String(), ""})
 			item.AssigneeID = nil
 		}
 	} else if input.AssigneeID != nil {
@@ -646,6 +658,7 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 				return nil, fmt.Errorf("viewers cannot be assigned to work items: %w", model.ErrValidation)
 			}
 			s.recordEvent(ctx, item.ID, &info.UserID, "assigned", strPtr("assignee_id"), strPtr(oldAssignee), strPtr(newAssignee))
+			watcherChanges = append(watcherChanges, fieldChange{"assignee", oldAssignee, newAssignee})
 			item.AssigneeID = input.AssigneeID
 			s.publishAssignment(ctx, project.Key, item, info.UserID)
 		}
@@ -656,6 +669,7 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 		newLabels := strings.Join(*input.Labels, ",")
 		if oldLabels != newLabels {
 			s.recordFieldChange(ctx, item.ID, &info.UserID, "labels", oldLabels, newLabels)
+			watcherChanges = append(watcherChanges, fieldChange{"labels", oldLabels, newLabels})
 			item.Labels = *input.Labels
 		}
 	}
@@ -691,6 +705,7 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 	if input.ClearDueDate {
 		if item.DueDate != nil {
 			s.recordEvent(ctx, item.ID, &info.UserID, "due_date_cleared", strPtr("due_date"), strPtr(item.DueDate.Format(time.DateOnly)), nil)
+			watcherChanges = append(watcherChanges, fieldChange{"due_date", item.DueDate.Format(time.DateOnly), ""})
 			item.DueDate = nil
 		}
 	} else if input.DueDate != nil {
@@ -701,6 +716,7 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 		newDueDate := input.DueDate.Format(time.DateOnly)
 		if oldDueDate != newDueDate {
 			s.recordEvent(ctx, item.ID, &info.UserID, "due_date_set", strPtr("due_date"), strPtr(oldDueDate), strPtr(newDueDate))
+			watcherChanges = append(watcherChanges, fieldChange{"due_date", oldDueDate, newDueDate})
 			item.DueDate = input.DueDate
 		}
 	}
@@ -726,6 +742,9 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 	}
 
 	if input.ClearMilestone {
+		if item.MilestoneID != nil {
+			watcherChanges = append(watcherChanges, fieldChange{"milestone", item.MilestoneID.String(), ""})
+		}
 		item.MilestoneID = nil
 	} else if input.MilestoneID != nil {
 		// Validate milestone belongs to this project
@@ -735,6 +754,13 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 		}
 		if m.ProjectID != project.ID {
 			return nil, fmt.Errorf("milestone does not belong to this project: %w", model.ErrValidation)
+		}
+		oldMilestone := ""
+		if item.MilestoneID != nil {
+			oldMilestone = item.MilestoneID.String()
+		}
+		if oldMilestone != input.MilestoneID.String() {
+			watcherChanges = append(watcherChanges, fieldChange{"milestone", oldMilestone, input.MilestoneID.String()})
 		}
 		item.MilestoneID = input.MilestoneID
 	}
@@ -765,6 +791,11 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 
 	if err := s.items.Update(ctx, item); err != nil {
 		return nil, fmt.Errorf("updating work item: %w", err)
+	}
+
+	// Publish watcher notifications for all field changes (best-effort, after DB update)
+	for _, ch := range watcherChanges {
+		s.publishWatcherNotification(ctx, project.Key, project.ID, item, info.UserID, "field_change", ch.field, ch.oldVal, ch.newVal, "")
 	}
 
 	// Re-fetch to get updated timestamp
@@ -848,6 +879,13 @@ func (s *WorkItemService) CreateComment(ctx context.Context, info *model.AuthInf
 		"comment_id": comment.ID.String(),
 		"preview":    input.Body,
 	})
+
+	// Publish watcher notification for the new comment
+	preview := input.Body
+	if len(preview) > 100 {
+		preview = preview[:100] + "..."
+	}
+	s.publishWatcherNotification(ctx, projectKey, project.ID, item, info.UserID, "comment_added", "", "", "", preview)
 
 	// Re-fetch to get DB-assigned timestamps
 	return s.comments.GetByID(ctx, comment.ID)
@@ -1618,6 +1656,29 @@ func (s *WorkItemService) recordFieldChange(ctx context.Context, workItemID uuid
 		eventType = "priority_changed"
 	}
 	s.recordEvent(ctx, workItemID, actorID, eventType, &fieldName, &oldValue, &newValue)
+}
+
+// publishWatcherNotification publishes a watcher notification event (best-effort).
+func (s *WorkItemService) publishWatcherNotification(_ context.Context, projectKey string, projectID uuid.UUID, item *model.WorkItem, actorID uuid.UUID, eventType, fieldName, oldValue, newValue, summary string) {
+	if s.publisher == nil {
+		return
+	}
+	evt := model.WatcherEvent{
+		WorkItemID: item.ID,
+		ProjectKey: projectKey,
+		ProjectID:  projectID,
+		ItemNumber: item.ItemNumber,
+		Title:      item.Title,
+		ActorID:    actorID,
+		EventType:  eventType,
+		FieldName:  fieldName,
+		OldValue:   oldValue,
+		NewValue:   newValue,
+		Summary:    summary,
+	}
+	if err := s.publisher.Publish("notification.watcher", evt); err != nil {
+		log.Ctx(context.Background()).Warn().Err(err).Msg("failed to publish watcher notification")
+	}
 }
 
 // publishAssignment publishes an assignment notification event (best-effort).

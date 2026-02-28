@@ -518,6 +518,8 @@
   "preferences.notifications.noProjects": "You are not a member of any projects yet.",
   "preferences.notifications.assignedToMe": "Assigned to me",
   "preferences.notifications.assignedToMeDesc": "When a work item is assigned to you",
+  "preferences.notifications.anyUpdateOnWatched": "Any update on watched items",
+  "preferences.notifications.anyUpdateOnWatchedDesc": "Receive an email when a work item you are watching is updated",
   "preferences.notifications.newItemCreated": "New item created",
   "preferences.notifications.newItemCreatedDesc": "When a new work item is created in the project",
   "preferences.notifications.commentsOnAssigned": "Comments on assigned items",
