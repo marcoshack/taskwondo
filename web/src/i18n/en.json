@@ -33,7 +33,6 @@
   "common.copyToClipboard": "Copy to clipboard",
   "common.copyAsMarkdown": "Copy work item as Markdown",
   "common.clickToCopy": "Click to copy",
-  "common.copied": "Copied!",
   "common.description": "Description",
   "common.noResults": "No results",
   "common.you": "you",
@@ -657,6 +656,7 @@
   "admin.authentication.description": "Control which authentication methods are available.",
   "admin.authentication.section.emailPassword": "Email & Password",
   "admin.authentication.section.oauth": "OAuth Providers",
+  "admin.authentication.section.oauthDescription": "Configure external sign-in providers. The order below determines how they appear on the login page.",
   "admin.authentication.emailLogin.title": "Email/Password Login",
   "admin.authentication.emailLogin.description": "Allow users to sign in with their email address and password.",
   "admin.authentication.emailRegistration.title": "Email Registration",
@@ -675,6 +675,7 @@
   "admin.authentication.oauth.saved": "Configuration saved.",
   "admin.authentication.oauth.saveError": "Failed to save configuration.",
   "admin.authentication.oauth.notConfigured": "Not configured. Add credentials to enable this provider.",
+  "admin.authentication.oauth.changeOrder": "Change order",
 
   "admin.features.title": "Features",
   "admin.features.description": "Enable or disable features globally across the platform.",

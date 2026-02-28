@@ -15,6 +15,103 @@ const translations: Record<string, Record<string, string>> = {
 
 const enKeys = Object.keys(en).sort()
 
+// Keys where the translated value is legitimately the same as English.
+// Includes brand names, technical terms, cognates, and format-only strings.
+const SAME_VALUE_ALLOWED = new Set([
+  // Brand / proper nouns
+  'admin.authentication.discord.title',
+  'admin.authentication.google.title',
+  'admin.authentication.github.title',
+  'brand.name',
+
+  // Placeholder examples (emails, domains, format strings)
+  'admin.integrations.smtp.fromAddressPlaceholder',
+  'admin.integrations.smtp.fromNamePlaceholder',
+  'admin.integrations.smtp.imapHostPlaceholder',
+  'admin.integrations.smtp.smtpHostPlaceholder',
+  'admin.integrations.smtp.usernamePlaceholder',
+  'admin.integrations.smtp.encryptionStarttls',
+  'sla.durationPlaceholder',
+  'timeTracking.durationPlaceholder',
+  'projects.create.keyPlaceholder',
+
+  // Format-only strings (only interpolation variables, no translatable words)
+  'milestones.timeEstimated',
+  'milestones.timeSpent',
+  'milestones.timeProgress',
+  'projects.limitCounter',
+  'projects.overview.range_24h',
+  'projects.overview.range_3d',
+  'projects.overview.range_7d',
+  'sla.mode24x7',
+
+  // Technical terms / loanwords commonly kept in target languages
+  'activity.fields.description',
+  'activity.fields.labels',
+  'activity.fields.status',
+  'activity.fields.type',
+  'admin.general.title',
+  'admin.sidebar.general',
+  'admin.sidebar.workflows',
+  'admin.titleShort',
+  'admin.users.name',
+  'admin.users.status',
+  'admin.workflows.title',
+  'common.description',
+  'common.system',
+  'milestones.name',
+  'preferences.apiKeys.expiration',
+  'preferences.apiKeys.permissions',
+  'preferences.fontSizes.normal',
+  'preferences.notifications.title',
+  'preferences.sidebar.notifications',
+  'preferences.themes.system',
+  'projects.create.description',
+  'projects.create.name',
+  'projects.overview.bugs',
+  'projects.overview.tickets',
+  'projects.overview.total',
+  'projects.settings.general',
+  'projects.settings.workflows',
+  'projects.table.name',
+  'projects.table.total',
+  'shortcuts.actions',
+  'shortcuts.general',
+  'shortcuts.navigation',
+  'sidebar.menu',
+  'sidebar.workflows',
+  'sla.columnHeader',
+  'sla.status',
+  'tabs.relations',
+  'timeTracking.date',
+  'timeTracking.minutes',
+  'user.sidebar.feed',
+  'welcome.feed.title',
+  'welcome.workflows.title',
+  'workflows.title',
+  'workflows.transitions',
+  'workitems.detail.description',
+  'workitems.filters.allStatuses',
+  'workitems.filters.allTypes',
+  'workitems.form.description',
+  'workitems.form.labels',
+  'workitems.form.status',
+  'workitems.form.type',
+  'workitems.sort.status',
+  'workitems.sort.type',
+  'workitems.statuses.backlog',
+  'workitems.table.id',
+  'workitems.table.status',
+  'workitems.table.type',
+  'workitems.types.bug',
+  'workitems.types.epic',
+  'workitems.types.feedback',
+  'workitems.types.ticket',
+  'workitems.view.board',
+  'workitems.visibilities.portal',
+  'workitems.visibilities.public',
+])
+
 describe('i18n completeness', () => {
   for (const [lang, data] of Object.entries(translations)) {
     describe(lang, () => {
@@ -74,6 +171,13 @@ describe('i18n completeness', () => {
         }
 
         expect(mismatched, `Tag mismatches in ${lang}`).toEqual([])
+      })
+
+      it('has no untranslated values (same as English)', () => {
+        const untranslated = Object.entries(data)
+          .filter(([k, v]) => (en as Record<string, string>)[k] === v && !SAME_VALUE_ALLOWED.has(k))
+          .map(([k]) => k)
+        expect(untranslated, `Untranslated keys in ${lang}`).toEqual([])
       })
 
       it('has no empty values', () => {
