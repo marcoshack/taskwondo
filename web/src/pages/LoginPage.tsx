@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/Input'
 import { isAxiosError } from 'axios'
 import * as authApi from '@/api/auth'
 import { useBrand } from '@/contexts/BrandContext'
+import { usePublicSettings } from '@/hooks/useSystemSettings'
 import { PoweredByFooter } from '@/components/PoweredByFooter'
 import type { AuthProviders } from '@/api/auth'
 
@@ -50,6 +51,7 @@ export function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [providers, setProviders] = useState<AuthProviders | null>(null)
+  const { data: publicSettings } = usePublicSettings()
 
   useEffect(() => {
     authApi.getAuthProviders().then(setProviders).catch(() => {})
@@ -97,8 +99,18 @@ export function LoginPage() {
     }
   }
 
+  const providerOrder = Array.isArray(publicSettings?.oauth_provider_order)
+    ? publicSettings.oauth_provider_order as string[]
+    : ['discord', 'google', 'github']
+
   const enabledProviders = providers
-    ? Object.keys(OAUTH_PROVIDERS).filter((p) => providers[p])
+    ? Object.keys(OAUTH_PROVIDERS)
+        .filter((p) => providers[p])
+        .sort((a, b) => {
+          const ai = providerOrder.indexOf(a)
+          const bi = providerOrder.indexOf(b)
+          return (ai === -1 ? Infinity : ai) - (bi === -1 ? Infinity : bi)
+        })
     : []
 
   const emailLoginEnabled = providers ? providers.email_login !== false : true

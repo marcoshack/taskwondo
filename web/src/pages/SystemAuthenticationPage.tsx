@@ -6,7 +6,7 @@ import { Toggle } from '@/components/ui/Toggle'
 import { Input } from '@/components/ui/Input'
 import { Spinner } from '@/components/ui/Spinner'
 import { ExpandableConfigCard } from '@/components/ui/ExpandableConfigCard'
-import { Copy, Check, TriangleAlert } from 'lucide-react'
+import { Copy, Check, TriangleAlert, ArrowUp, ArrowDown } from 'lucide-react'
 
 const PASSWORD_MASK = '••••••••'
 
@@ -62,6 +62,45 @@ function RedirectUriField({ provider }: { provider: string }) {
   )
 }
 
+interface OAuthProviderDef {
+  provider: string
+  titleKey: string
+  descriptionKey: string
+  enabledSettingKey: string
+}
+
+const OAUTH_PROVIDERS: OAuthProviderDef[] = [
+  {
+    provider: 'discord',
+    titleKey: 'admin.authentication.discord.title',
+    descriptionKey: 'admin.authentication.discord.description',
+    enabledSettingKey: 'auth_discord_enabled',
+  },
+  {
+    provider: 'google',
+    titleKey: 'admin.authentication.google.title',
+    descriptionKey: 'admin.authentication.google.description',
+    enabledSettingKey: 'auth_google_enabled',
+  },
+  {
+    provider: 'github',
+    titleKey: 'admin.authentication.github.title',
+    descriptionKey: 'admin.authentication.github.description',
+    enabledSettingKey: 'auth_github_enabled',
+  },
+]
+
+const DEFAULT_PROVIDER_ORDER = ['discord', 'google', 'github']
+
+function sortProviders(providers: OAuthProviderDef[], order: string[]): OAuthProviderDef[] {
+  const orderMap = new Map(order.map((p, i) => [p, i]))
+  return [...providers].sort((a, b) => {
+    const ai = orderMap.get(a.provider) ?? Infinity
+    const bi = orderMap.get(b.provider) ?? Infinity
+    return ai - bi
+  })
+}
+
 function OAuthProviderCard({
   provider,
   titleKey,
@@ -69,6 +108,10 @@ function OAuthProviderCard({
   enabledSettingKey,
   enabled,
   onToggleEnabled,
+  isFirst,
+  isLast,
+  onMoveUp,
+  onMoveDown,
 }: {
   provider: string
   titleKey: string
@@ -76,6 +119,10 @@ function OAuthProviderCard({
   enabledSettingKey: string
   enabled: boolean
   onToggleEnabled: (key: string, value: boolean) => void
+  isFirst: boolean
+  isLast: boolean
+  onMoveUp: () => void
+  onMoveDown: () => void
 }) {
   const { t } = useTranslation()
   const { data: savedConfig, isLoading } = useOAuthConfig(provider)
@@ -175,6 +222,30 @@ function OAuthProviderCard({
         }}
       />
       <RedirectUriField provider={provider} />
+      <div className="flex items-center gap-2 pt-1">
+        <button
+          type="button"
+          disabled={isFirst}
+          onClick={onMoveUp}
+          className="group relative rounded p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed"
+        >
+          <ArrowUp className="h-4 w-4" />
+          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block whitespace-nowrap rounded bg-gray-900 dark:bg-gray-700 px-2 py-1 text-xs text-white shadow-lg">
+            {t('admin.authentication.oauth.changeOrder')}
+          </span>
+        </button>
+        <button
+          type="button"
+          disabled={isLast}
+          onClick={onMoveDown}
+          className="group relative rounded p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed"
+        >
+          <ArrowDown className="h-4 w-4" />
+          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block whitespace-nowrap rounded bg-gray-900 dark:bg-gray-700 px-2 py-1 text-xs text-white shadow-lg">
+            {t('admin.authentication.oauth.changeOrder')}
+          </span>
+        </button>
+      </div>
     </ExpandableConfigCard>
   )
 }
@@ -202,21 +273,34 @@ export function SystemAuthenticationPage() {
   const emailRegistrationEnabled = settings.auth_email_registration_enabled !== undefined
     ? settings.auth_email_registration_enabled === true
     : false // default: disabled
-  const discordEnabled = settings.auth_discord_enabled !== undefined
-    ? settings.auth_discord_enabled === true
-    : true // default: enabled if configured
-  const googleEnabled = settings.auth_google_enabled !== undefined
-    ? settings.auth_google_enabled === true
-    : true // default: enabled if configured
-  const githubEnabled = settings.auth_github_enabled !== undefined
-    ? settings.auth_github_enabled === true
-    : true // default: enabled if configured
 
   // SMTP is configured if the config exists and is enabled
   const smtpConfigured = smtpConfig?.enabled === true
 
   const handleToggle = (key: string, value: boolean) => {
     setSetting.mutate({ key, value })
+  }
+
+  // Provider ordering
+  const providerOrder = Array.isArray(settings.oauth_provider_order)
+    ? settings.oauth_provider_order as string[]
+    : DEFAULT_PROVIDER_ORDER
+  const sortedProviders = sortProviders(OAUTH_PROVIDERS, providerOrder)
+
+  const enabledMap: Record<string, boolean> = {
+    auth_discord_enabled: settings.auth_discord_enabled !== undefined
+      ? settings.auth_discord_enabled === true : true,
+    auth_google_enabled: settings.auth_google_enabled !== undefined
+      ? settings.auth_google_enabled === true : true,
+    auth_github_enabled: settings.auth_github_enabled !== undefined
+      ? settings.auth_github_enabled === true : true,
+  }
+
+  const handleReorder = (index: number, direction: 'up' | 'down') => {
+    const currentOrder = sortedProviders.map((p) => p.provider)
+    const swapIdx = direction === 'up' ? index - 1 : index + 1
+    ;[currentOrder[index], currentOrder[swapIdx]] = [currentOrder[swapIdx], currentOrder[index]]
+    setSetting.mutate({ key: 'oauth_provider_order', value: currentOrder })
   }
 
   return (
@@ -282,36 +366,25 @@ export function SystemAuthenticationPage() {
       <h3 className="text-base font-medium text-gray-700 dark:text-gray-300 pt-2">
         {t('admin.authentication.section.oauth')}
       </h3>
+      <p className="text-sm text-gray-500 dark:text-gray-400 -mt-4">
+        {t('admin.authentication.section.oauthDescription')}
+      </p>
 
-      {/* Discord */}
-      <OAuthProviderCard
-        provider="discord"
-        titleKey="admin.authentication.discord.title"
-        descriptionKey="admin.authentication.discord.description"
-        enabledSettingKey="auth_discord_enabled"
-        enabled={discordEnabled}
-        onToggleEnabled={handleToggle}
-      />
-
-      {/* Google */}
-      <OAuthProviderCard
-        provider="google"
-        titleKey="admin.authentication.google.title"
-        descriptionKey="admin.authentication.google.description"
-        enabledSettingKey="auth_google_enabled"
-        enabled={googleEnabled}
-        onToggleEnabled={handleToggle}
-      />
-
-      {/* GitHub */}
-      <OAuthProviderCard
-        provider="github"
-        titleKey="admin.authentication.github.title"
-        descriptionKey="admin.authentication.github.description"
-        enabledSettingKey="auth_github_enabled"
-        enabled={githubEnabled}
-        onToggleEnabled={handleToggle}
-      />
+      {sortedProviders.map((def, idx) => (
+        <OAuthProviderCard
+          key={def.provider}
+          provider={def.provider}
+          titleKey={def.titleKey}
+          descriptionKey={def.descriptionKey}
+          enabledSettingKey={def.enabledSettingKey}
+          enabled={enabledMap[def.enabledSettingKey]}
+          onToggleEnabled={handleToggle}
+          isFirst={idx === 0}
+          isLast={idx === sortedProviders.length - 1}
+          onMoveUp={() => handleReorder(idx, 'up')}
+          onMoveDown={() => handleReorder(idx, 'down')}
+        />
+      ))}
     </div>
   )
 }

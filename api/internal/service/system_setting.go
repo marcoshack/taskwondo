@@ -84,6 +84,7 @@ func (s *SystemSettingService) GetPublic(ctx context.Context) (map[string]json.R
 		model.SettingAuthDiscordEnabled,
 		model.SettingAuthGoogleEnabled,
 		model.SettingAuthGitHubEnabled,
+		model.SettingOAuthProviderOrder,
 		model.SettingFeatureStatsTimeline,
 	}
 	result := make(map[string]json.RawMessage)

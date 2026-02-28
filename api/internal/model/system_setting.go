@@ -19,6 +19,9 @@ const (
 	SettingAuthGoogleEnabled            = "auth_google_enabled"
 	SettingAuthGitHubEnabled            = "auth_github_enabled"
 
+	// OAuth provider ordering (JSON array of provider names, e.g. ["discord","google","github"])
+	SettingOAuthProviderOrder = "oauth_provider_order"
+
 	// OAuth provider configuration
 	SettingOAuthDiscordConfig = "oauth_discord_config"
 	SettingOAuthGoogleConfig  = "oauth_google_config"
