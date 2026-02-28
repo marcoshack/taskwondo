@@ -16,6 +16,7 @@ BASE_URL=""
 TARGET_DIR="."
 NON_INTERACTIVE=false
 IMPORT_FILE=""
+DO_EXPORT=false
 
 usage() {
     cat <<EOF
@@ -27,9 +28,18 @@ Options:
   --url URL        Base URL for downloading files
                    (default: $GITHUB_RAW_URL)
   --dir DIR        Target directory (default: current directory)
+  --export         Export database and attachments to a timestamped backup archive
   --import FILE    Import data from a backup archive after setup
   -y               Non-interactive mode: auto-generate all values, skip prompts
   -h, --help       Show this help message
+
+Backup:
+  --export creates backup/taskwondo-export-YYYYmmdd-HHMM.tar.gz containing
+  a full PostgreSQL dump and all MinIO attachment files. Requires a running
+  Taskwondo instance (docker compose up).
+
+  --import restores from a backup archive into a fresh instance. The database
+  must be empty (no tables). This is typically used during initial setup.
 EOF
     exit 0
 }
@@ -40,6 +50,7 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --url)     BASE_URL="$2"; shift 2 ;;
         --dir)     TARGET_DIR="$2"; shift 2 ;;
+        --export)  DO_EXPORT=true; shift ;;
         --import)  IMPORT_FILE="$2"; shift 2 ;;
         -y)        NON_INTERACTIVE=true; shift ;;
         -h|--help) usage ;;
@@ -106,20 +117,176 @@ download_file() {
     fi
 }
 
+# Load .env variables into the current shell (for docker compose commands).
+load_env() {
+    local env_file="$TARGET_DIR/.env"
+    if [[ ! -f "$env_file" ]]; then
+        error ".env file not found. Run install.sh first to generate it."
+    fi
+    set -a
+    # shellcheck disable=SC1090
+    source "$env_file"
+    set +a
+}
+
+# Wait for the postgres container to accept connections.
+wait_for_postgres() {
+    info "Waiting for PostgreSQL to be ready..."
+    local attempts=0
+    while ! docker compose -f "$TARGET_DIR/docker-compose.yml" exec -T postgres \
+        pg_isready -U "${POSTGRES_USER:-taskwondo}" &>/dev/null; do
+        attempts=$((attempts + 1))
+        if [[ $attempts -ge 30 ]]; then
+            error "Timed out waiting for PostgreSQL to be ready."
+        fi
+        sleep 1
+    done
+}
+
+# --- Export mode (runs before setup, exits early) ---
+
+do_export() {
+    load_env
+
+    local timestamp
+    timestamp="$(date +%Y%m%d-%H%M)"
+    local backup_dir="$TARGET_DIR/backup"
+    local tmp_dir
+    tmp_dir="$(mktemp -d)"
+    local archive="$backup_dir/taskwondo-export-${timestamp}.tar.gz"
+
+    mkdir -p "$backup_dir" "$tmp_dir/db" "$tmp_dir/attachments"
+
+    # 1. Dump database
+    info "Dumping database..."
+    docker compose -f "$TARGET_DIR/docker-compose.yml" exec -T postgres \
+        pg_dump -U "${POSTGRES_USER:-taskwondo}" \
+                -d "${POSTGRES_DB:-taskwondo}" \
+                --format=custom \
+        > "$tmp_dir/db/taskwondo.dump"
+
+    if [[ ! -s "$tmp_dir/db/taskwondo.dump" ]]; then
+        rm -rf "$tmp_dir"
+        error "Database dump is empty. Is the database running?"
+    fi
+
+    # 2. Mirror MinIO bucket
+    info "Copying attachment files from MinIO..."
+    docker compose -f "$TARGET_DIR/docker-compose.yml" run --rm \
+        -v "$tmp_dir/attachments:/backup" \
+        --entrypoint /bin/sh \
+        minio-init -c "
+            mc alias set local http://minio:9000 \$MINIO_ROOT_USER \$MINIO_ROOT_PASSWORD;
+            mc mirror --quiet local/\${MINIO_BUCKET:-taskwondo-attachments} /backup/ || true;
+        "
+
+    # 3. Create tar.gz archive
+    info "Creating backup archive..."
+    tar -czf "$archive" -C "$tmp_dir" db attachments
+
+    # Cleanup
+    rm -rf "$tmp_dir"
+
+    echo
+    ok "=== Export Complete ==="
+    echo
+    printf "  Archive: %s\n" "$archive"
+    printf "  Size:    %s\n" "$(du -h "$archive" | cut -f1)"
+    echo
+}
+
+# --- Import mode ---
+
+do_import() {
+    local import_file="$1"
+
+    if [[ ! -f "$import_file" ]]; then
+        error "Import file not found: $import_file"
+    fi
+
+    info "Importing data from: $import_file"
+    echo
+
+    local tmp_dir
+    tmp_dir="$(mktemp -d)"
+
+    # Extract archive
+    info "Extracting backup archive..."
+    tar -xzf "$import_file" -C "$tmp_dir"
+
+    if [[ ! -f "$tmp_dir/db/taskwondo.dump" ]]; then
+        rm -rf "$tmp_dir"
+        error "Invalid backup archive: missing db/taskwondo.dump"
+    fi
+
+    # Start database and storage services.
+    info "Starting database and storage services..."
+    cd "$TARGET_DIR"
+    docker compose -f docker-compose.yml up -d postgres minio minio-init
+
+    wait_for_postgres
+
+    # Restore database
+    info "Restoring database..."
+    docker compose -f docker-compose.yml exec -T postgres \
+        pg_restore -U "${POSTGRES_USER:-taskwondo}" \
+                   -d "${POSTGRES_DB:-taskwondo}" \
+                   --no-owner --no-privileges \
+        < "$tmp_dir/db/taskwondo.dump"
+
+    # Restore MinIO attachments (if any were exported)
+    if [[ -d "$tmp_dir/attachments" ]] && [[ -n "$(ls -A "$tmp_dir/attachments" 2>/dev/null)" ]]; then
+        info "Restoring attachment files to MinIO..."
+        docker compose -f docker-compose.yml run --rm \
+            -v "$tmp_dir/attachments:/backup:ro" \
+            --entrypoint /bin/sh \
+            minio-init -c "
+                mc alias set local http://minio:9000 \$MINIO_ROOT_USER \$MINIO_ROOT_PASSWORD;
+                mc mb --ignore-existing local/\${MINIO_BUCKET:-taskwondo-attachments};
+                mc mirror --quiet /backup/ local/\${MINIO_BUCKET:-taskwondo-attachments};
+            "
+    fi
+
+    # Cleanup
+    rm -rf "$tmp_dir"
+
+    # Start all services.
+    info "Starting all services..."
+    docker compose -f docker-compose.yml up -d
+
+    echo
+    ok "=== Taskwondo restored from backup and running ==="
+    echo
+    printf "  Web UI:  http://localhost:%s\n" "${WEB_PORT:-3000}"
+    printf "  API:     http://localhost:%s\n" "${API_PORT:-8080}"
+    echo
+}
+
 # --- Preflight checks ---
 
 info "Checking prerequisites..."
 
-check_command openssl
 check_command docker
 
 if ! docker compose version &>/dev/null; then
     error "docker compose (v2) is required but not found. Install Docker Compose v2."
 fi
 
-printf "  openssl:         %s\n" "$(openssl version 2>&1 | head -1)"
 printf "  docker:          %s\n" "$(docker --version 2>&1)"
 printf "  docker compose:  %s\n" "$(docker compose version 2>&1)"
+echo
+
+# --- Export: run and exit ---
+
+if $DO_EXPORT; then
+    do_export
+    exit 0
+fi
+
+# --- Setup requires openssl ---
+
+check_command openssl
+printf "  openssl:         %s\n" "$(openssl version 2>&1 | head -1)"
 echo
 
 # --- Ensure target directory exists ---
@@ -267,49 +434,11 @@ printf "  Web UI:  http://localhost:%s\n" "${vars[WEB_PORT]:-3000}"
 printf "  API:     http://localhost:%s\n" "${vars[API_PORT]:-8080}"
 echo
 
-# --- Import from backup ---
+# --- Import from backup or show next steps ---
 
 if [[ -n "$IMPORT_FILE" ]]; then
-    if [[ ! -f "$IMPORT_FILE" ]]; then
-        error "Import file not found: $IMPORT_FILE"
-    fi
-
-    info "Importing data from: $IMPORT_FILE"
-    echo
-
-    # Copy import file to backups directory.
-    mkdir -p "$TARGET_DIR/backups"
-    cp "$IMPORT_FILE" "$TARGET_DIR/backups/taskwondo-import.tar.gz"
-
-    # Start database and storage services.
-    info "Starting database and storage services..."
-    cd "$TARGET_DIR"
-    docker compose -f docker-compose.yml up -d postgres minio minio-init
-
-    info "Waiting for services to be healthy..."
-    local_attempts=0
-    while ! docker compose -f docker-compose.yml exec -T postgres pg_isready -U "${vars[POSTGRES_USER]:-taskwondo}" &>/dev/null; do
-        local_attempts=$((local_attempts + 1))
-        if [[ $local_attempts -ge 30 ]]; then
-            error "Timed out waiting for database to be ready."
-        fi
-        sleep 1
-    done
-
-    # Run import.
-    info "Running import..."
-    IMPORT_FILE=taskwondo-import.tar.gz docker compose -f docker-compose.yml run --rm import
-
-    # Start all services.
-    info "Starting all services..."
-    docker compose -f docker-compose.yml up -d
-
-    echo
-    ok "=== Taskwondo restored from backup and running ==="
-    echo
-    printf "  Web UI:  http://localhost:%s\n" "${vars[WEB_PORT]:-3000}"
-    printf "  API:     http://localhost:%s\n" "${vars[API_PORT]:-8080}"
-    echo
+    load_env
+    do_import "$IMPORT_FILE"
 else
     printf "  Admin email:     %s\n" "${vars[ADMIN_EMAIL]:-not set}"
     printf "  Admin password:  %s\n" "${vars[ADMIN_PASSWORD]:-not set}"

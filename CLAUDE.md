@@ -56,7 +56,6 @@ api/internal/
   repository/   — SQL queries implementing service interfaces
   service/      — Business logic, RBAC authorization
   storage/      — Storage interface + MinIO/S3 implementation (attachments)
-  dataport/     — Data export/import
 ```
 
 ### React Frontend (`web/src/`)

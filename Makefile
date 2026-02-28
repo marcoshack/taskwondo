@@ -1,4 +1,4 @@
-.PHONY: build push help dev dev-db dev-api dev-web dev-worker up down logs logs-api migrate migrate-new test test-api test-web test-e2e test-e2e-dev test-e2e-report check-env export import release build-mcp build-worker
+.PHONY: build push help dev dev-db dev-api dev-web dev-worker up down logs logs-api migrate migrate-new test test-api test-web test-e2e test-e2e-dev test-e2e-report check-env release build-mcp build-worker
 
 # Required environment variables (checked by sourcing .env)
 REQUIRED_VARS := POSTGRES_USER POSTGRES_PASSWORD MINIO_ROOT_USER MINIO_ROOT_PASSWORD JWT_SECRET DATABASE_URL STORAGE_ACCESS_KEY STORAGE_SECRET_KEY
@@ -101,21 +101,6 @@ migrate-new: ## Create a new migration (usage: make migrate-new name=create_user
 	touch "api/internal/database/migrations/$${num}_$(name).up.sql"; \
 	touch "api/internal/database/migrations/$${num}_$(name).down.sql"; \
 	echo "Created migrations: $${num}_$(name).{up,down}.sql"
-
-# --- Data Export/Import ---
-
-export: check-env ## Export all data to backups/taskwondo-export.tar.gz
-	@echo ""
-	@printf "$(CYAN)## Exporting data...$(RESET)\n"
-	mkdir -p backups
-	docker compose run --rm export
-	@printf "$(GREEN)## Export completed$(RESET)\n"
-
-import: check-env ## Import data from backups/ (IMPORT_FILE=filename.tar.gz)
-	@echo ""
-	@printf "$(CYAN)## Importing data...$(RESET)\n"
-	docker compose run --rm import
-	@printf "$(GREEN)## Import completed$(RESET)\n"
 
 # --- Release ---
 
