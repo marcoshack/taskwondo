@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Check, X } from 'lucide-react'
 import { useTimeEntries, useCreateTimeEntry, useUpdateTimeEntry, useDeleteTimeEntry } from '@/hooks/useWorkItems'
 import { useAuth } from '@/contexts/AuthContext'
 import { useMembers } from '@/hooks/useProjects'
@@ -119,7 +120,7 @@ export function TimeEntryList({ projectKey, itemNumber, sortOrder = 'desc', read
           <div className="flex gap-2 items-center">
             <Input
               type="text"
-              className="w-24 shrink-0"
+              className="flex-1 sm:flex-none sm:w-24 shrink-0"
               value={duration}
               onChange={(e) => setDuration(e.target.value)}
               placeholder={t('timeTracking.durationPlaceholder')}
@@ -132,7 +133,7 @@ export function TimeEntryList({ projectKey, itemNumber, sortOrder = 'desc', read
             />
             <Input
               type="date"
-              className="shrink-0"
+              className="flex-1 sm:flex-none shrink-0"
               value={startedAt}
               onChange={(e) => setStartedAt(e.target.value)}
             />
@@ -235,7 +236,7 @@ export function TimeEntryList({ projectKey, itemNumber, sortOrder = 'desc', read
               <div className="flex gap-2 items-center">
                 <Input
                   type="text"
-                  className="w-24 shrink-0"
+                  className="flex-1 sm:flex-none sm:w-24 shrink-0"
                   value={editDuration}
                   onChange={(e) => setEditDuration(e.target.value)}
                   placeholder={t('timeTracking.durationPlaceholder')}
@@ -246,7 +247,7 @@ export function TimeEntryList({ projectKey, itemNumber, sortOrder = 'desc', read
                 />
                 <Input
                   type="date"
-                  className="shrink-0"
+                  className="flex-1 sm:flex-none shrink-0"
                   value={editStartedAt}
                   onChange={(e) => setEditStartedAt(e.target.value)}
                   onKeyDown={(e) => {
@@ -291,20 +292,23 @@ export function TimeEntryList({ projectKey, itemNumber, sortOrder = 'desc', read
                     if (e.key === 'Escape') setEditingId(null)
                   }}
                 />
-                <Button
-                  className="py-2 text-sm shrink-0 w-20"
+                <button
+                  type="button"
+                  className="shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-md border border-indigo-500 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-400 dark:text-indigo-400 dark:hover:bg-indigo-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={handleUpdate}
                   disabled={!parseDurationString(editDuration) || updateMutation.isPending}
+                  aria-label={t('common.save')}
                 >
-                  {updateMutation.isPending ? t('common.saving') : t('common.save')}
-                </Button>
-                <Button
-                  className="py-2 text-sm shrink-0 w-20"
-                  variant="ghost"
+                  <Check className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  className="shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-md border border-gray-300 text-gray-500 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700 transition-colors"
                   onClick={() => setEditingId(null)}
+                  aria-label={t('common.cancel')}
                 >
-                  {t('common.cancel')}
-                </Button>
+                  <X className="w-4 h-4" />
+                </button>
               </div>
             </div>
           )}
