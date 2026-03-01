@@ -27,7 +27,7 @@ export function AppearancePage() {
           <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
             {t('preferences.theme')}
           </h2>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {themes.map((th) => (
               <button
                 key={th.value}
@@ -86,7 +86,7 @@ export function AppearancePage() {
           <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
             {t('preferences.fontSize')}
           </h2>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {fontSizes.map((fs) => (
               <button
                 key={fs.value}
@@ -108,7 +108,7 @@ export function AppearancePage() {
           <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
             {t('preferences.language')}
           </h2>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {availableLanguages.map((lang) => (
               <button
                 key={lang.value}

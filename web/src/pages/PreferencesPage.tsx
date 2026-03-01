@@ -20,7 +20,7 @@ export function PreferencesPage() {
   ]
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 overflow-x-hidden">
       {/* Mobile top bar with navigation icons */}
       <nav className="flex sm:hidden mb-4 overflow-hidden">
         {navItems.map((item) => (

@@ -141,7 +141,7 @@ export function AppShell() {
                 <ProjectKeyBadge size="nav-mobile">{activeProject.key}</ProjectKeyBadge>
               </button>
             )}
-            <div className="relative flex items-center gap-2" ref={menuRef}>
+            <div className="relative flex items-center gap-2 shrink-0" ref={menuRef}>
               <button
                 onClick={() => guardedNavigate('/user/inbox')}
                 className="relative p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
