@@ -247,6 +247,95 @@ func TestMilestoneHandler_Delete(t *testing.T) {
 	}
 }
 
+func TestMilestoneHandler_Stats(t *testing.T) {
+	h, info, projectKey := milestoneTestSetup(t)
+
+	// Create a milestone first
+	body := `{"name":"Stats Test"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/"+projectKey+"/milestones", bytes.NewBufferString(body))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", projectKey)
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), info))
+	w := httptest.NewRecorder()
+	h.Create(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var createResp struct {
+		Data struct {
+			ID string `json:"id"`
+		} `json:"data"`
+	}
+	json.NewDecoder(w.Body).Decode(&createResp)
+
+	// Now call Stats
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/projects/"+projectKey+"/milestones/"+createResp.Data.ID+"/stats", nil)
+	rctx = chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", projectKey)
+	rctx.URLParams.Add("milestoneId", createResp.Data.ID)
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), info))
+	w = httptest.NewRecorder()
+
+	h.Stats(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var statsResp struct {
+		Data struct {
+			ByType     map[string]interface{} `json:"by_type"`
+			ByPriority map[string]interface{} `json:"by_priority"`
+			ByLabel    map[string]interface{} `json:"by_label"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(w.Body).Decode(&statsResp); err != nil {
+		t.Fatalf("failed to decode stats response: %v", err)
+	}
+	if statsResp.Data.ByType == nil {
+		t.Fatal("expected by_type to be present")
+	}
+}
+
+func TestMilestoneHandler_Stats_Unauthenticated(t *testing.T) {
+	h, _, projectKey := milestoneTestSetup(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/projects/"+projectKey+"/milestones/"+uuid.New().String()+"/stats", nil)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", projectKey)
+	rctx.URLParams.Add("milestoneId", uuid.New().String())
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+	w := httptest.NewRecorder()
+
+	h.Stats(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", w.Code)
+	}
+}
+
+func TestMilestoneHandler_Stats_InvalidID(t *testing.T) {
+	h, info, projectKey := milestoneTestSetup(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/projects/"+projectKey+"/milestones/invalid/stats", nil)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", projectKey)
+	rctx.URLParams.Add("milestoneId", "invalid")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), info))
+	w := httptest.NewRecorder()
+
+	h.Stats(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", w.Code)
+	}
+}
+
 func TestMilestoneHandler_Unauthenticated(t *testing.T) {
 	h, _, projectKey := milestoneTestSetup(t)
 

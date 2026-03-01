@@ -265,6 +265,30 @@ func (h *MilestoneHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// Stats handles GET /api/v1/projects/{projectKey}/milestones/{milestoneId}/stats
+func (h *MilestoneHandler) Stats(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	projectKey := chi.URLParam(r, "projectKey")
+	milestoneID, err := uuid.Parse(chi.URLParam(r, "milestoneId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid milestone ID")
+		return
+	}
+
+	stats, err := h.milestones.Stats(r.Context(), info, projectKey, milestoneID)
+	if err != nil {
+		handleMilestoneError(w, r, err, "failed to get milestone stats")
+		return
+	}
+
+	writeData(w, http.StatusOK, stats)
+}
+
 func handleMilestoneError(w http.ResponseWriter, r *http.Request, err error, logMsg string) {
 	if errors.Is(err, model.ErrNotFound) {
 		writeError(w, http.StatusNotFound, "NOT_FOUND", "milestone not found")

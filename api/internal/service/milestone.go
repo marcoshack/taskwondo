@@ -21,6 +21,7 @@ type MilestoneRepository interface {
 	ListWithProgress(ctx context.Context, projectID uuid.UUID) ([]model.MilestoneWithProgress, error)
 	Update(ctx context.Context, m *model.Milestone) error
 	Delete(ctx context.Context, id uuid.UUID) error
+	Stats(ctx context.Context, milestoneID uuid.UUID) (*model.MilestoneStats, error)
 }
 
 // CreateMilestoneInput holds the input for creating a milestone.
@@ -205,6 +206,29 @@ func (s *MilestoneService) Delete(ctx context.Context, info *model.AuthInfo, pro
 	}
 
 	return s.milestones.Delete(ctx, milestoneID)
+}
+
+// Stats returns aggregate statistics for a milestone's work items.
+func (s *MilestoneService) Stats(ctx context.Context, info *model.AuthInfo, projectKey string, milestoneID uuid.UUID) (*model.MilestoneStats, error) {
+	project, err := s.projects.GetByKey(ctx, projectKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.requireMembership(ctx, info, project.ID); err != nil {
+		return nil, err
+	}
+
+	m, err := s.milestones.GetByID(ctx, milestoneID)
+	if err != nil {
+		return nil, err
+	}
+
+	if m.ProjectID != project.ID {
+		return nil, model.ErrNotFound
+	}
+
+	return s.milestones.Stats(ctx, milestoneID)
 }
 
 func (s *MilestoneService) requireMembership(ctx context.Context, info *model.AuthInfo, projectID uuid.UUID) error {

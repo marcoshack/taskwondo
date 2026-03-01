@@ -11,6 +11,7 @@ import { ProjectSettingsPage } from './ProjectSettingsPage'
 import { ProjectOverviewPage } from './ProjectOverviewPage'
 import { ProjectWorkflowsPage } from './ProjectWorkflowsPage'
 import { MilestonesPage } from './MilestonesPage'
+import { MilestoneDashboardPage } from './MilestoneDashboardPage'
 
 function QueuesPage() {
   const { t } = useTranslation()
@@ -55,6 +56,7 @@ export function ProjectDetailPage() {
             <Route path="items/:itemNumber" element={<WorkItemDetailPage />} />
             <Route path="queues" element={<QueuesPage />} />
             <Route path="milestones" element={<MilestonesPage />} />
+            <Route path="milestones/:milestoneId" element={<MilestoneDashboardPage />} />
             <Route path="workflows" element={<ProjectWorkflowsPage />} />
             <Route path="settings" element={<ProjectSettingsPage />} />
           </Routes>

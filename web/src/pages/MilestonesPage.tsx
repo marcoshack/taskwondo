@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import { Trans, useTranslation } from 'react-i18next'
 import { useMilestones, useCreateMilestone, useUpdateMilestone, useDeleteMilestone } from '@/hooks/useMilestones'
 import { useMembers } from '@/hooks/useProjects'
@@ -139,7 +139,7 @@ export function MilestonesPage() {
               <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">{t('milestones.statusOpen')} ({openMilestones.length})</h3>
               <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
                 {openMilestones.map((m) => (
-                  <MilestoneCard key={m.id} milestone={m} canManage={canManage} saved={savedId === m.id} onEdit={() => openEditor(m)} onDelete={() => setDeleteTarget(m)} />
+                  <MilestoneCard key={m.id} milestone={m} projectKey={projectKey ?? ''} canManage={canManage} saved={savedId === m.id} onEdit={() => openEditor(m)} onDelete={() => setDeleteTarget(m)} />
                 ))}
               </div>
             </div>
@@ -157,7 +157,7 @@ export function MilestonesPage() {
               {closedExpanded && (
                 <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
                   {closedMilestones.map((m) => (
-                    <MilestoneCard key={m.id} milestone={m} canManage={canManage} saved={savedId === m.id} onEdit={() => openEditor(m)} onDelete={() => setDeleteTarget(m)} />
+                    <MilestoneCard key={m.id} milestone={m} projectKey={projectKey ?? ''} canManage={canManage} saved={savedId === m.id} onEdit={() => openEditor(m)} onDelete={() => setDeleteTarget(m)} />
                   ))}
                 </div>
               )}
@@ -202,12 +202,14 @@ export function MilestonesPage() {
 
 function MilestoneCard({
   milestone,
+  projectKey,
   canManage,
   saved,
   onEdit,
   onDelete,
 }: {
   milestone: Milestone
+  projectKey: string
   canManage: boolean
   saved: boolean
   onEdit: () => void
@@ -221,7 +223,7 @@ function MilestoneCard({
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">{milestone.name}</span>
+            <Link to={`/projects/${projectKey}/milestones/${milestone.id}`} className="text-lg font-semibold text-gray-900 dark:text-gray-100 hover:text-indigo-600 dark:hover:text-indigo-400">{milestone.name}</Link>
             {milestone.due_date && <DueDateLabel dueDate={milestone.due_date} isClosed={milestone.status === 'closed'} />}
           </div>
           {milestone.description && (

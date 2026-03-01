@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   listMilestones,
   getMilestone,
+  getMilestoneStats,
   createMilestone,
   updateMilestone,
   deleteMilestone,
@@ -21,6 +22,14 @@ export function useMilestone(projectKey: string, milestoneId: string) {
   return useQuery({
     queryKey: ['projects', projectKey, 'milestones', milestoneId],
     queryFn: () => getMilestone(projectKey, milestoneId),
+    enabled: !!projectKey && !!milestoneId,
+  })
+}
+
+export function useMilestoneStats(projectKey: string, milestoneId: string) {
+  return useQuery({
+    queryKey: ['projects', projectKey, 'milestones', milestoneId, 'stats'],
+    queryFn: () => getMilestoneStats(projectKey, milestoneId),
     enabled: !!projectKey && !!milestoneId,
   })
 }

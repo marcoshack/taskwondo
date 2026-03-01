@@ -632,6 +632,14 @@ func (m *mockMilestoneRepo) Delete(_ context.Context, id uuid.UUID) error {
 	return nil
 }
 
+func (m *mockMilestoneRepo) Stats(_ context.Context, _ uuid.UUID) (*model.MilestoneStats, error) {
+	return &model.MilestoneStats{
+		ByType:     make(map[string]model.StatusCount),
+		ByPriority: make(map[string]model.StatusCount),
+		ByLabel:    make(map[string]int),
+	}, nil
+}
+
 // --- Mock attachment repo ---
 
 type mockAttachmentRepo struct {

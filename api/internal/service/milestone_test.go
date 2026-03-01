@@ -443,3 +443,92 @@ func TestMilestoneGet_AdminBypass(t *testing.T) {
 		t.Fatalf("expected name 'v1', got %s", result.Name)
 	}
 }
+
+func TestMilestoneStats_Success(t *testing.T) {
+	svc, milestoneRepo, projectRepo, memberRepo := newTestMilestoneService()
+	info := userAuthInfo()
+	project := setupMilestoneProject(t, projectRepo, memberRepo, info, model.ProjectRoleMember)
+
+	m := &model.Milestone{
+		ID:        uuid.New(),
+		ProjectID: project.ID,
+		Name:      "v1.0",
+		Status:    model.MilestoneStatusOpen,
+	}
+	milestoneRepo.Create(context.Background(), m)
+
+	stats, err := svc.Stats(context.Background(), info, "MILE", m.ID)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if stats == nil {
+		t.Fatal("expected stats to be non-nil")
+	}
+	if stats.ByType == nil || stats.ByPriority == nil || stats.ByLabel == nil {
+		t.Fatal("expected all stats maps to be initialized")
+	}
+}
+
+func TestMilestoneStats_WrongProject(t *testing.T) {
+	svc, milestoneRepo, projectRepo, memberRepo := newTestMilestoneService()
+	info := userAuthInfo()
+	setupMilestoneProject(t, projectRepo, memberRepo, info, model.ProjectRoleMember)
+
+	m := &model.Milestone{
+		ID:        uuid.New(),
+		ProjectID: uuid.New(), // different project
+		Name:      "Other",
+		Status:    model.MilestoneStatusOpen,
+	}
+	milestoneRepo.Create(context.Background(), m)
+
+	_, err := svc.Stats(context.Background(), info, "MILE", m.ID)
+	if !errors.Is(err, model.ErrNotFound) {
+		t.Fatalf("expected ErrNotFound for wrong project, got %v", err)
+	}
+}
+
+func TestMilestoneStats_NonMemberDenied(t *testing.T) {
+	svc, milestoneRepo, projectRepo, _ := newTestMilestoneService()
+	info := userAuthInfo()
+
+	project := &model.Project{ID: uuid.New(), Name: "Test", Key: "MILE"}
+	projectRepo.Create(context.Background(), project)
+
+	m := &model.Milestone{
+		ID:        uuid.New(),
+		ProjectID: project.ID,
+		Name:      "v1.0",
+		Status:    model.MilestoneStatusOpen,
+	}
+	milestoneRepo.Create(context.Background(), m)
+
+	_, err := svc.Stats(context.Background(), info, "MILE", m.ID)
+	if !errors.Is(err, model.ErrNotFound) {
+		t.Fatalf("expected ErrNotFound for non-member, got %v", err)
+	}
+}
+
+func TestMilestoneStats_AdminBypass(t *testing.T) {
+	svc, milestoneRepo, projectRepo, _ := newTestMilestoneService()
+	admin := adminAuthInfo()
+
+	project := &model.Project{ID: uuid.New(), Name: "Test", Key: "MILE"}
+	projectRepo.Create(context.Background(), project)
+
+	m := &model.Milestone{
+		ID:        uuid.New(),
+		ProjectID: project.ID,
+		Name:      "v1.0",
+		Status:    model.MilestoneStatusOpen,
+	}
+	milestoneRepo.Create(context.Background(), m)
+
+	stats, err := svc.Stats(context.Background(), admin, "MILE", m.ID)
+	if err != nil {
+		t.Fatalf("expected no error for admin, got %v", err)
+	}
+	if stats == nil {
+		t.Fatal("expected stats to be non-nil")
+	}
+}

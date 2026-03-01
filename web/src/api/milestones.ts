@@ -60,3 +60,21 @@ export async function updateMilestone(projectKey: string, milestoneId: string, i
 export async function deleteMilestone(projectKey: string, milestoneId: string) {
   await api.delete(`/projects/${projectKey}/milestones/${milestoneId}`)
 }
+
+// --- Stats Types ---
+
+export interface StatusCount {
+  open: number
+  closed: number
+}
+
+export interface MilestoneStats {
+  by_type: Record<string, StatusCount>
+  by_priority: Record<string, StatusCount>
+  by_label: Record<string, number>
+}
+
+export async function getMilestoneStats(projectKey: string, milestoneId: string) {
+  const res = await api.get<DataResponse<MilestoneStats>>(`/projects/${projectKey}/milestones/${milestoneId}/stats`)
+  return res.data.data
+}

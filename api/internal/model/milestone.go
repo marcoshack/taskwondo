@@ -33,3 +33,16 @@ type MilestoneWithProgress struct {
 	TotalEstimatedSeconds int `json:"total_estimated_seconds"`
 	TotalSpentSeconds     int `json:"total_spent_seconds"`
 }
+
+// MilestoneStats holds aggregate counts for a milestone's work items.
+type MilestoneStats struct {
+	ByType     map[string]StatusCount `json:"by_type"`
+	ByPriority map[string]StatusCount `json:"by_priority"`
+	ByLabel    map[string]int         `json:"by_label"`
+}
+
+// StatusCount holds open and closed counts for an aggregate bucket.
+type StatusCount struct {
+	Open   int `json:"open"`
+	Closed int `json:"closed"`
+}

@@ -383,6 +383,7 @@ func main() {
 							r.Get("/", milestones.Get)
 							r.Patch("/", milestones.Update)
 							r.Delete("/", milestones.Delete)
+							r.Get("/stats", milestones.Stats)
 						})
 					})
 					r.Route("/user-settings", func(r chi.Router) {

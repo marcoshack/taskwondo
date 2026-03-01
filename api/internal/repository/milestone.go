@@ -115,6 +115,75 @@ func (r *MilestoneRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
+// Stats returns aggregate counts by type, priority, and label for a milestone's work items.
+func (r *MilestoneRepository) Stats(ctx context.Context, milestoneID uuid.UUID) (*model.MilestoneStats, error) {
+	stats := &model.MilestoneStats{
+		ByType:     make(map[string]model.StatusCount),
+		ByPriority: make(map[string]model.StatusCount),
+		ByLabel:    make(map[string]int),
+	}
+
+	// Counts by type and priority
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT wi.type, wi.priority,
+			COUNT(*) FILTER (WHERE wi.resolved_at IS NULL) AS open_count,
+			COUNT(*) FILTER (WHERE wi.resolved_at IS NOT NULL) AS closed_count
+		 FROM work_items wi
+		 WHERE wi.milestone_id = $1 AND wi.deleted_at IS NULL
+		 GROUP BY wi.type, wi.priority`, milestoneID)
+	if err != nil {
+		return nil, fmt.Errorf("querying milestone stats: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var typ, priority string
+		var openCount, closedCount int
+		if err := rows.Scan(&typ, &priority, &openCount, &closedCount); err != nil {
+			return nil, fmt.Errorf("scanning milestone stats row: %w", err)
+		}
+
+		tc := stats.ByType[typ]
+		tc.Open += openCount
+		tc.Closed += closedCount
+		stats.ByType[typ] = tc
+
+		pc := stats.ByPriority[priority]
+		pc.Open += openCount
+		pc.Closed += closedCount
+		stats.ByPriority[priority] = pc
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating milestone stats: %w", err)
+	}
+
+	// Counts by label
+	labelRows, err := r.db.QueryContext(ctx,
+		`SELECT label, COUNT(*) AS count
+		 FROM work_items wi, unnest(wi.labels) AS label
+		 WHERE wi.milestone_id = $1 AND wi.deleted_at IS NULL
+		 GROUP BY label
+		 ORDER BY count DESC`, milestoneID)
+	if err != nil {
+		return nil, fmt.Errorf("querying milestone label stats: %w", err)
+	}
+	defer labelRows.Close()
+
+	for labelRows.Next() {
+		var label string
+		var count int
+		if err := labelRows.Scan(&label, &count); err != nil {
+			return nil, fmt.Errorf("scanning milestone label stats row: %w", err)
+		}
+		stats.ByLabel[label] = count
+	}
+	if err := labelRows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating milestone label stats: %w", err)
+	}
+
+	return stats, nil
+}
+
 func (r *MilestoneRepository) attachProgress(ctx context.Context, m *model.Milestone) (*model.MilestoneWithProgress, error) {
 	mp := &model.MilestoneWithProgress{Milestone: *m}
 
