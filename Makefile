@@ -1,4 +1,4 @@
-.PHONY: build push help dev dev-db dev-api dev-web dev-worker up down logs logs-api migrate migrate-new test test-api test-web test-e2e test-e2e-dev test-e2e-report check-env release build-mcp build-worker
+.PHONY: build push help dev dev-db dev-api dev-web dev-worker up down logs logs-api migrate migrate-new test test-api test-web test-e2e test-e2e-dev test-e2e-report check-env release build-mcp build-mcp-windows build-mcpb build-worker
 
 # Required environment variables (checked by sourcing .env)
 REQUIRED_VARS := POSTGRES_USER POSTGRES_PASSWORD MINIO_ROOT_USER MINIO_ROOT_PASSWORD JWT_SECRET DATABASE_URL STORAGE_ACCESS_KEY STORAGE_SECRET_KEY
@@ -178,6 +178,20 @@ build-mcp: ## Build the MCP server binary
 	@printf "$(CYAN)## Building MCP server...$(RESET)\n"
 	$(MAKE) -C mcp build
 	@printf "$(GREEN)## MCP server built successfully$(RESET)\n"
+
+build-mcp-windows: ## Build the MCP server binary for Windows
+	@echo ""
+	@printf "$(CYAN)## Building MCP server for Windows...$(RESET)\n"
+	$(MAKE) -C mcp build-windows
+	@printf "$(GREEN)## MCP server (Windows) built successfully$(RESET)\n"
+
+# --- MCPB Bundle ---
+
+build-mcpb: build-mcp-windows ## Build the MCPB bundle for Claude Desktop (usage: RELEASE_VERSION=0.3.0 make build-mcpb)
+	@echo ""
+	@printf "$(CYAN)## Building MCPB bundle...$(RESET)\n"
+	$(MAKE) -C mcpb build VERSION=$(RELEASE_VERSION)
+	@printf "$(GREEN)## MCPB bundle built successfully$(RESET)\n"
 
 # --- Testing ---
 

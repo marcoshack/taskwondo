@@ -1,0 +1,49 @@
+{
+  "manifest_version": "0.1",
+  "name": "taskwondo",
+  "version": "0.3.0",
+  "display_name": "Taskwondo",
+  "description": "Project management and work item tracking with Taskwondo",
+  "long_description": "Connect Claude Desktop to your Taskwondo instance for full project management capabilities. Create and manage projects, work items, milestones, queues, and more — all from within Claude.",
+  "author": {
+    "name": "Marcos Hack",
+    "url": "https://github.com/marcoshack/taskwondo"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/marcoshack/taskwondo"
+  },
+  "license": "MIT",
+  "server": {
+    "type": "binary",
+    "entry_point": "server/taskwondo-mcp.exe",
+    "mcp_config": {
+      "command": "${__dirname}/server/taskwondo-mcp.exe",
+      "env": {
+        "TASKWONDO_URL": "${user_config.server_url}",
+        "TASKWONDO_API_KEY": "${user_config.api_key}"
+      },
+      "platform_overrides": {}
+    }
+  },
+  "user_config": {
+    "server_url": {
+      "type": "string",
+      "title": "Server URL",
+      "description": "Your Taskwondo server URL (e.g. https://taskwondo.example.com)",
+      "required": true
+    },
+    "api_key": {
+      "type": "string",
+      "title": "API Key",
+      "description": "Optional: your Taskwondo API key. Leave blank to use browser login instead.",
+      "required": false,
+      "sensitive": true
+    }
+  },
+  "compatibility": {
+    "platforms": ["win32"]
+  },
+  "tools_generated": true,
+  "keywords": ["project-management", "work-items", "task-tracking", "taskwondo"]
+}
