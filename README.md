@@ -2,6 +2,14 @@
 
 A self-hosted project management and issue tracking tool. Simple, practical, and easy on the eyes. Deploy with a single Docker Compose command — every feature included, no paid tiers, no strings attached. Your backlog doesn't stand a chance! 🥋
 
+## Screenshots
+
+![Project Overview](docs/screenshots/taskwondo-project-overview.png)
+
+![Work Items](docs/screenshots/taskwondo-workitems.png)
+
+See [more screenshots](docs/overview.md) for a full walkthrough of features.
+
 ## Features
 
 - **Projects** with role-based membership (owner, admin, member) and unique keys (e.g. `PROJ`)
