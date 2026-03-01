@@ -66,7 +66,7 @@ func (r *WatcherRepository) Delete(ctx context.Context, workItemID, userID uuid.
 func (r *WatcherRepository) ListByWorkItem(ctx context.Context, workItemID uuid.UUID) ([]model.WorkItemWatcherWithUser, error) {
 	rows, err := r.db.QueryContext(ctx,
 		`SELECT w.id, w.work_item_id, w.user_id, w.added_by, w.created_at,
-		        u.display_name, u.email,
+		        u.display_name, u.email, u.avatar_url,
 		        ab.display_name
 		 FROM work_item_watchers w
 		 JOIN users u ON u.id = w.user_id
@@ -83,7 +83,7 @@ func (r *WatcherRepository) ListByWorkItem(ctx context.Context, workItemID uuid.
 		var w model.WorkItemWatcherWithUser
 		if err := rows.Scan(
 			&w.ID, &w.WorkItemID, &w.UserID, &w.AddedBy, &w.CreatedAt,
-			&w.DisplayName, &w.Email,
+			&w.DisplayName, &w.Email, &w.AvatarURL,
 			&w.AddedByName,
 		); err != nil {
 			return nil, fmt.Errorf("scanning watcher: %w", err)

@@ -1552,6 +1552,7 @@ type watcherResponse struct {
 	UserID      uuid.UUID `json:"user_id"`
 	DisplayName string    `json:"display_name"`
 	Email       string    `json:"email"`
+	AvatarURL   *string   `json:"avatar_url,omitempty"`
 	AddedBy     uuid.UUID `json:"added_by"`
 	AddedByName string    `json:"added_by_name"`
 	CreatedAt   time.Time `json:"created_at"`
@@ -1615,6 +1616,7 @@ func (h *WorkItemHandler) ListWatchers(w http.ResponseWriter, r *http.Request) {
 			UserID:      w.UserID,
 			DisplayName: w.DisplayName,
 			Email:       w.Email,
+			AvatarURL:   avatarURL(w.AvatarURL, w.UserID, 0),
 			AddedBy:     w.AddedBy,
 			AddedByName: w.AddedByName,
 			CreatedAt:   w.CreatedAt,

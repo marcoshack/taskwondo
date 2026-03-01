@@ -109,7 +109,7 @@ func toMemberResponse(m *model.ProjectMemberWithUser) memberResponse {
 		UserID:      m.UserID,
 		Email:       m.Email,
 		DisplayName: m.DisplayName,
-		AvatarURL:   m.AvatarURL,
+		AvatarURL:   avatarURL(m.AvatarURL, m.UserID, 0),
 		Role:        m.Role,
 		CreatedAt:   m.CreatedAt,
 	}

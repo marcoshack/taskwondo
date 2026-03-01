@@ -4,6 +4,7 @@ import { Bell, X } from 'lucide-react'
 import { useWatchers, useAddWatcher, useRemoveWatcher, useToggleWatch } from '@/hooks/useWorkItems'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
+import { Avatar } from '@/components/ui/Avatar'
 import { useAuth } from '@/contexts/AuthContext'
 import type { Watcher, ViewerWatcherResponse } from '@/api/workitems'
 import type { ProjectMember } from '@/api/projects'
@@ -103,9 +104,7 @@ export function WatcherList({ projectKey, itemNumber, members, currentUserRole }
             return (
               <div key={w.id} className="group/watcher flex items-center justify-between text-sm py-1.5">
                 <div className="flex items-center gap-2 min-w-0">
-                  <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs font-medium text-gray-600 dark:text-gray-300 shrink-0">
-                    {w.display_name.charAt(0).toUpperCase()}
-                  </div>
+                  <Avatar name={w.display_name} avatarUrl={w.avatar_url} size="sm" />
                   <span className="text-gray-900 dark:text-gray-100 truncate">{w.display_name}</span>
                   <span className="text-gray-400 dark:text-gray-500 text-xs truncate">{w.email}</span>
                   {isSelf && (
@@ -204,8 +203,13 @@ function AddWatcherForm({ members, existingWatcherIds, onAdd, isPending }: AddWa
                     setSearch('')
                   }}
                 >
-                  <div className="font-medium">{m.display_name}</div>
-                  <div className="text-xs text-gray-400">{m.email}</div>
+                  <div className="flex items-center gap-2">
+                    <Avatar name={m.display_name} avatarUrl={m.avatar_url} size="xs" />
+                    <div>
+                      <div className="font-medium">{m.display_name}</div>
+                      <div className="text-xs text-gray-400">{m.email}</div>
+                    </div>
+                  </div>
                 </button>
               </li>
             ))}

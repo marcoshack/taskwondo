@@ -118,6 +118,7 @@ export interface Watcher {
   user_id: string
   display_name: string
   email: string
+  avatar_url?: string
   added_by: string
   added_by_name: string
   created_at: string

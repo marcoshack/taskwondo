@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"time"
@@ -53,15 +52,7 @@ func toUserResponse(u *model.User) userResponse {
 		DisplayName: u.DisplayName,
 		GlobalRole:  u.GlobalRole,
 	}
-	if u.AvatarURL != nil && *u.AvatarURL != "" {
-		// For storage keys, serve via the avatar endpoint with cache-busting version
-		if len(*u.AvatarURL) > 0 && (*u.AvatarURL)[0] != 'h' {
-			url := fmt.Sprintf("/api/v1/users/%s/avatar?v=%d", u.ID, u.UpdatedAt.Unix())
-			resp.AvatarURL = &url
-		} else {
-			resp.AvatarURL = u.AvatarURL
-		}
-	}
+	resp.AvatarURL = avatarURL(u.AvatarURL, u.ID, u.UpdatedAt.Unix())
 	return resp
 }
 

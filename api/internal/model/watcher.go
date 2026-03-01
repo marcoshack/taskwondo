@@ -18,7 +18,8 @@ type WorkItemWatcher struct {
 // WorkItemWatcherWithUser is a watcher enriched with user display info.
 type WorkItemWatcherWithUser struct {
 	WorkItemWatcher
-	DisplayName string `json:"display_name"`
-	Email       string `json:"email"`
-	AddedByName string `json:"added_by_name"`
+	DisplayName string  `json:"display_name"`
+	Email       string  `json:"email"`
+	AvatarURL   *string `json:"avatar_url,omitempty"`
+	AddedByName string  `json:"added_by_name"`
 }

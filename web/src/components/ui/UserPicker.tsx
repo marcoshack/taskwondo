@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ProjectMember } from '@/api/projects'
+import { Avatar } from '@/components/ui/Avatar'
 
 interface UserPickerProps {
   members: ProjectMember[]
@@ -51,7 +52,10 @@ export function UserPicker({ members, value, onChange, placeholder, disabled }: 
         disabled={disabled}
       >
         {selected ? (
-          <span className="text-gray-900 dark:text-gray-100">{selected.display_name}</span>
+          <span className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
+            <Avatar name={selected.display_name} avatarUrl={selected.avatar_url} size="xs" />
+            {selected.display_name}
+          </span>
         ) : (
           <span className="text-gray-400 dark:text-gray-500">{value ? t('userPicker.unknownUser') : t('userPicker.unassigned')}</span>
         )}
@@ -91,8 +95,13 @@ export function UserPicker({ members, value, onChange, placeholder, disabled }: 
                   }`}
                   onClick={() => { onChange(m.user_id); setOpen(false); setSearch('') }}
                 >
-                  <div className="font-medium">{m.display_name}</div>
-                  <div className="text-xs text-gray-400">{m.email}</div>
+                  <div className="flex items-center gap-2">
+                    <Avatar name={m.display_name} avatarUrl={m.avatar_url} size="xs" />
+                    <div>
+                      <div className="font-medium">{m.display_name}</div>
+                      <div className="text-xs text-gray-400">{m.email}</div>
+                    </div>
+                  </div>
                 </button>
               </li>
             ))}
