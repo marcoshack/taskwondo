@@ -6,9 +6,40 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      web: ${{ steps.filter.outputs.web }}
+      e2e: ${{ steps.filter.outputs.e2e }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            api:
+              - 'api/**'
+            web:
+              - 'web/**'
+            e2e:
+              - 'e2e/**'
+              - 'scripts/**'
+              - 'docker/**'
+              - 'docker-compose*.yml'
+              - 'Makefile'
+
   test-api:
     name: Go tests
+    needs: changes
+    if: needs.changes.outputs.api == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,6 +54,8 @@ jobs:
 
   test-web:
     name: Frontend tests
+    needs: changes
+    if: needs.changes.outputs.api == 'true' || needs.changes.outputs.web == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -44,6 +77,8 @@ jobs:
 
   test-e2e:
     name: E2E tests
+    needs: changes
+    if: needs.changes.outputs.api == 'true' || needs.changes.outputs.web == 'true' || needs.changes.outputs.e2e == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
