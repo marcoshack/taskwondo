@@ -74,6 +74,7 @@ func listWorkItemsTool() mcp.Tool {
 		mcp.WithArray("priority", mcp.WithStringItems(), mcp.Description("Filter by priority: critical, high, medium, low")),
 		mcp.WithArray("type", mcp.WithStringItems(), mcp.Description("Filter by type: task, ticket, bug, feedback, epic")),
 		mcp.WithString("assignee", mcp.Description("Filter by assignee: 'me', 'unassigned', or user email")),
+		mcp.WithArray("milestone", mcp.WithStringItems(), mcp.Description("Filter by milestone UUIDs (from list_milestones). Use ['none'] for items with no milestone.")),
 		mcp.WithString("search", mcp.Description("Full-text search query")),
 		mcp.WithNumber("limit", mcp.Description("Max results to return (default 20)")),
 	)
@@ -309,6 +310,7 @@ func handleListWorkItems(_ context.Context, request mcp.CallToolRequest) (*mcp.C
 		Priorities: request.GetStringSlice("priority", nil),
 		Types:      request.GetStringSlice("type", nil),
 		Assignee:   request.GetString("assignee", ""),
+		Milestones: request.GetStringSlice("milestone", nil),
 		Search:     request.GetString("search", ""),
 		Limit:      request.GetInt("limit", 20),
 	}
@@ -325,8 +327,12 @@ func handleListWorkItems(_ context.Context, request mcp.CallToolRequest) (*mcp.C
 	var sb strings.Builder
 	fmt.Fprintf(&sb, "Found %d work items (total: %d):\n\n", len(result.Items), result.Total)
 	for _, item := range result.Items {
-		fmt.Fprintf(&sb, "- **%s** [%s] %s (status: %s, priority: %s)\n",
-			item.DisplayID, item.Type, item.Title, item.Status, item.Priority)
+		labelStr := ""
+		if len(item.Labels) > 0 {
+			labelStr = fmt.Sprintf(", labels: %s", strings.Join(item.Labels, ", "))
+		}
+		fmt.Fprintf(&sb, "- **%s** [%s] %s (status: %s, priority: %s%s)\n",
+			item.DisplayID, item.Type, item.Title, item.Status, item.Priority, labelStr)
 	}
 	if result.HasMore {
 		sb.WriteString("\n(more results available — increase limit or refine filters)")

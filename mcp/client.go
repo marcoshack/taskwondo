@@ -231,6 +231,7 @@ type ListWorkItemsParams struct {
 	Priorities []string
 	Types      []string
 	Assignee   string
+	Milestones []string
 	Search     string
 	Limit      int
 }
@@ -251,6 +252,9 @@ func (c *Client) ListWorkItems(params ListWorkItemsParams) (*WorkItemList, error
 	}
 	if params.Assignee != "" {
 		q.Set("assignees", params.Assignee)
+	}
+	if len(params.Milestones) > 0 {
+		q.Set("milestones", strings.Join(params.Milestones, ","))
 	}
 	if params.Limit > 0 {
 		q.Set("limit", fmt.Sprintf("%d", params.Limit))
