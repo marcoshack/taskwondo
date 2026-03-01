@@ -1,6 +1,6 @@
 # Taskwondo
 
-A self-hosted project management and issue tracking tool. Single Docker Compose stack, no external dependencies.
+A self-hosted project management and issue tracking tool. Simple, practical, and easy on the eyes. Deploy with a single Docker Compose command — every feature included, no paid tiers, no strings attached. Your backlog doesn't stand a chance! 🥋
 
 ## Features
 
