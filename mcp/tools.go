@@ -105,6 +105,7 @@ func updateWorkItemTool() mcp.Tool {
 		mcp.WithArray("labels", mcp.WithStringItems(), mcp.Description("New labels (replaces existing)")),
 		mcp.WithString("due_date", mcp.Description("Due date YYYY-MM-DD, or 'none' to clear")),
 		mcp.WithString("milestone_id", mcp.Description("Milestone UUID, or 'none' to clear")),
+		mcp.WithNumber("estimated_seconds", mcp.Description("Time estimate in seconds, or 0 to clear")),
 	)
 }
 
@@ -434,6 +435,14 @@ func handleUpdateWorkItem(_ context.Context, request mcp.CallToolRequest) (*mcp.
 			updates["milestone_id"] = nil
 		} else {
 			updates["milestone_id"] = v
+		}
+	}
+	if _, ok := request.GetArguments()["estimated_seconds"]; ok {
+		seconds := request.GetInt("estimated_seconds", -1)
+		if seconds == 0 {
+			updates["estimated_seconds"] = nil
+		} else if seconds > 0 {
+			updates["estimated_seconds"] = seconds
 		}
 	}
 
