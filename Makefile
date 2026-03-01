@@ -81,10 +81,24 @@ logs: ## Tail logs from all services
 logs-api: ## Tail API logs
 	docker compose logs -f api
 
-push: ## Push images to GHCR (usage: make push or IMAGE_TAG=v1.0.0 make push)
+GHCR_REPO := ghcr.io/marcoshack/taskwondo
+PUSH_IMAGES := api web worker
+
+push: ## Push images to GHCR (usage: RELEASE_VERSION=0.2.0 make push)
 	@echo ""
-	@printf "$(CYAN)## Pushing images to registry...$(RESET)\n"
-	docker compose push api web worker
+	@if [ -z "$(RELEASE_VERSION)" ]; then \
+		printf "$(CYAN)## Pushing images as latest...$(RESET)\n"; \
+		IMAGE_TAG=latest docker compose build api web worker; \
+		IMAGE_TAG=latest docker compose push api web worker; \
+	else \
+		printf "$(CYAN)## Pushing images as $(RELEASE_VERSION) + latest...$(RESET)\n"; \
+		IMAGE_TAG=latest docker compose build api web worker; \
+		for img in $(PUSH_IMAGES); do \
+			docker tag $(GHCR_REPO)/$$img:latest $(GHCR_REPO)/$$img:$(RELEASE_VERSION); \
+			docker push $(GHCR_REPO)/$$img:$(RELEASE_VERSION); \
+			docker push $(GHCR_REPO)/$$img:latest; \
+		done; \
+	fi
 	@printf "$(GREEN)## Images pushed successfully$(RESET)\n"
 
 # --- Database ---
