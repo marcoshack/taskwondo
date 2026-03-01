@@ -1,0 +1,2 @@
+-- No-op: we cannot reliably distinguish backfilled values from service-set values.
+-- This migration is safe to leave in place.
