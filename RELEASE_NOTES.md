@@ -1,3 +1,63 @@
+# v0.2.0
+
+Major productivity features for daily work item management, project invite links, background job processing with NATS JetStream, an MCP server for AI tool integration, broader authentication options, and 100+ automated E2E tests.
+
+## New Features
+
+- **Time tracking** — log time entries on work items with duration, description, and start time
+- **Work item watchers** — watch items and receive notifications on changes and comments
+- **Personal inbox** — "Work Next" queue for triaging and prioritizing your own work, with reordering
+- **Saved searches** — save and reorder work item filter combinations for quick access
+- **Email notifications** — assignment and watcher notifications via SMTP
+- **MCP server** — Model Context Protocol integration with full API coverage (work items, comments, relations, attachments, time entries, inbox, milestones)
+- **Project invite links** — share a link to let users join a project with a specific role
+- **Project activity graph** — stats timeline on the project overview page (feature-toggled)
+- **Mermaid diagrams** — render mermaid syntax in markdown fields
+- **Description preview** — expandable description snippets in list view
+- **Async worker system** — background job processing with NATS JetStream
+- **Email registration** — self-service sign-up with email verification, configurable in auth settings
+- **OAuth providers** — GitHub and Microsoft OAuth sign-in alongside existing Discord and Google
+- **OAuth provider ordering** — configure the display order of sign-in providers
+- **Welcome onboarding** — carousel walkthrough for new users
+
+## Improvements
+
+- **Data export/import** replaced with `pg_dump`/`pg_restore` + `mc mirror` for reliability
+- **Admin workflow management** in system settings
+- **Viewer role enforcement** — read-only access, prevented from assignment
+- **API key management** with scoped permissions in user preferences
+- **Activity diffs** — full multiline diffs with line-level and word-level highlighting on click
+- **Resizable table columns** with persistent widths per user
+- **Assignee filter** shows project members with search
+- **Status filter** quick-select links for Open and Closed
+- **Multi-value milestone filter** with back-to-list persistence
+- **Milestone cards** show time estimate/spent totals
+- **Work item form** requires type selection before filling fields
+- **Tooltips, click-to-copy, and visibility info** on work item detail page
+- **Workflow status translations** in settings pages
+- **Responsive card view** for screens under 1024px (tablets in portrait, phones)
+- **E2E test infrastructure** — fully containerized Playwright tests with `make test-e2e`
+- **i18n test** to detect untranslated keys automatically
+
+## Bug Fixes
+
+- Fix milestone progress counter using `resolved_at` instead of workflow category lookup
+- Preserve original URL across login redirect
+- Fix project member list overflow on mobile
+- Fix OAuth toggle enabled without provider configuration
+- Fix keyboard shortcut `g then i` navigating to wrong route
+- Fix paste/drop image upload in comment edit mode
+- Fix SLA color feedback when paused
+- Auto-reset status when changing work item type across workflows
+- Fix new work items defaulting to Backlog instead of Open
+- Fix filter state persistence across navigation and reload
+- Fix saved search dropdown causing filter row layout shift
+- Fix milestone dropdown missing in mobile properties modal
+- Fix relations form layout cropping on mobile
+- Fix various mobile layout issues (comments, time entries, cards, sidebar, menus)
+
+---
+
 # v0.1.0
 
 First public release of Taskwondo, a self-hosted project management and issue tracking tool.

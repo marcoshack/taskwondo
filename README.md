@@ -1,87 +1,67 @@
 # Taskwondo
 
-**A self-hosted task and ticket management system with integrated project management and public-facing support portal.**
+A self-hosted project management and issue tracking tool. Single Docker Compose stack, no external dependencies.
 
-Taskwondo combines project/task management (like a simplified JIRA) with a ticketing system for incident tracking and customer support — all in a single, tightly integrated platform.
+## Features
 
-## Why Taskwondo?
-
-Most self-hosted project management tools fall into two camps:
-- **Enterprise behemoths** with 10+ services, multiple databases, and painful setup (looking at you, Plane)
-- **Glorified to-do lists** that lack the workflow, automation, and integration capabilities needed for real operations
-
-Taskwondo sits in the middle: powerful enough for real project management and incident tracking, simple enough to deploy with a minimal Docker Compose stack.
-
-## Core Concepts
-
-### Unified Work Item Model
-
-Tasks, tickets, bugs, and feedback are all **work items** — the same underlying data model with different workflows, visibility rules, and automation triggers. This means:
-
-- A customer support ticket can be directly linked to an engineering task
-- An automated alert from Prometheus creates a ticket that links to the project tracking its resolution
-- A public feedback item can be promoted to an internal feature task
-- All history, comments, and relationships are preserved across types
-
-### Projects & Queues
-
-- **Projects** organize internal work (tasks, bugs, epics) with boards, milestones, and sprint-like cycles
-- **Queues** handle inbound work (support tickets, alerts, feedback) with triage workflows and SLA tracking
-- Both use the same work item model, so cross-referencing is native
-
-### Public Portal
-
-A scoped, read-only (plus submission) interface where external users (players, community members, customers) can:
-- Submit tickets and feedback
-- Track the status of their submissions
-- See public comments and resolutions
-- Browse a knowledge base of resolved issues
-
-### Automation & Integrations
-
-- **Webhook receiver** for Prometheus Alertmanager / Grafana alerts → auto-create tickets
-- **Discord bot** for notifications and quick ticket creation
-- **Email inbound** (optional) for ticket creation via email
-- **Automation rules** for auto-assignment, labeling, status transitions, and escalation
+- **Projects** with role-based membership (owner, admin, member) and unique keys (e.g. `PROJ`)
+- **Work items** — tasks, bugs, tickets, feedback, and epics with per-project sequential numbering (`PROJ-1`, `PROJ-2`)
+- **Kanban board** with drag-and-drop status changes, or list view with sortable columns
+- **Customizable workflows** — define statuses, transitions, and per-type workflow mappings
+- **Milestones** with progress tracking and due dates
+- **Queues** for organizing incoming work (support, alerts, feedback)
+- **Comments** with markdown, edit history, and paste-to-upload images
+- **Relations** — blocks, relates to, duplicates — with cross-project support
+- **File attachments** with preview modal and inline images
+- **Full-text search** across titles and descriptions
+- **SLA tracking** with business hours, timezone support, and deadline indicators
+- **Activity timeline** with field change diffs
+- **API keys** (`twk_` prefix) for programmatic access
+- **9 languages** — English, Portuguese, Spanish, French, German, Japanese, Chinese, Korean, Arabic (RTL)
+- **Dark mode**, configurable font size, keyboard shortcuts, responsive mobile layout
+- **Data export/import** for backup and restore
 
 ## Tech Stack
 
 | Component | Technology |
-|-----------|-----------|
-| Backend API | Go (stdlib net/http + chi router) |
+|-----------|------------|
+| API | Go (chi router) |
 | Database | PostgreSQL 16 |
-| Frontend | React 18 + TypeScript + Vite |
-| Styling | Tailwind CSS |
-| Auth | JWT + API keys (optional OIDC) |
-| Deployment | Docker Compose (3 services: api, frontend, postgres) |
-| Observability | OpenTelemetry → Prometheus/Grafana |
+| Frontend | React + TypeScript + Vite + Tailwind CSS |
+| Storage | S3-compatible (MinIO included) |
+| Events | NATS JetStream |
+| Auth | JWT + API keys, optional OAuth (Discord, Google, GitHub, Microsoft) |
+| Deployment | Docker Compose (5 containers) |
 
-## Deployment
+## Quick Start
 
 ```bash
-# Clone and configure
-git clone https://github.com/youruser/taskwondo.git
+git clone https://github.com/marcoshack/taskwondo.git
 cd taskwondo
-./install.sh
-
-# Start
-docker compose up -d
-
-# Access
-# Frontend:     http://localhost:3000
-# API:          http://localhost:8080
-# Health check: http://localhost:8080/healthz
+./install.sh --docker    # generates .env, pulls images, starts services
 ```
 
-## Documentation
+Then open [http://localhost:3000](http://localhost:3000) and log in with the admin credentials printed by the installer.
 
-- [Architecture](docs/architecture.md) — System design, component details, deployment model
-- [Data Model](docs/data-model.md) — Entities, relationships, database schema
-- [API Design](docs/api-design.md) — REST endpoints, request/response schemas, auth
-- [Access Control](docs/access-control.md) - How user permissions are structured
-- [Workflows](docs/workflows.md) — Work item lifecycles, automation rules, state machines
-- [Public Portal](docs/public-portal.md) — Public interface spec, permissions, submission flow
-- [Integrations](docs/integrations.md) — Prometheus, Discord, email, webhooks
+For manual installation without Docker, see [MANUAL_INSTALL.md](MANUAL_INSTALL.md).
+
+## Development
+
+Requires Go 1.25+, Node.js 22+, Docker.
+
+```bash
+cp .env.template .env          # configure local settings
+make dev                       # starts Postgres + MinIO + API (hot-reload) + Vite dev server
+```
+
+Run tests:
+
+```bash
+make test                      # Go tests + frontend build
+make test-e2e                  # Playwright E2E tests (fully containerized)
+```
+
+See [AGENTS.md](AGENTS.md) for full architecture notes and conventions.
 
 ## License
 

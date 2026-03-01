@@ -138,7 +138,7 @@ _release:
 	@printf "$(CYAN)## Building API binary (Docker)...$(RESET)\n"
 	docker build -f docker/Dockerfile.api --target builder -t taskwondo-api-builder api
 	docker create --name taskwondo-api-extract taskwondo-api-builder true
-	docker cp taskwondo-api-extract:/bin/taskwondo build/release/taskwondo-$(VERSION)/bin/taskwondo
+	docker cp taskwondo-api-extract:/bin/taskwondo build/release/taskwondo-$(VERSION)/bin/taskwondo-api
 	docker rm taskwondo-api-extract
 	@printf "$(CYAN)## Building Worker binary (Docker)...$(RESET)\n"
 	docker build -f docker/Dockerfile.worker --target builder -t taskwondo-worker-builder api
@@ -152,7 +152,7 @@ _release:
 	docker rm taskwondo-web-extract
 	cp .env.template build/release/taskwondo-$(VERSION)/.env.template
 	cp docker/nginx.conf build/release/taskwondo-$(VERSION)/nginx.conf
-	cp docs/install/manual-install.md build/release/taskwondo-$(VERSION)/README.md
+	cp MANUAL_INSTALL.md build/release/taskwondo-$(VERSION)/README.md
 	@printf "$(CYAN)## Packaging tarball...$(RESET)\n"
 	tar -czf build/release/taskwondo-$(VERSION).tar.gz -C build/release taskwondo-$(VERSION)
 	@echo ""

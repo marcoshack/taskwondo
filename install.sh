@@ -4,12 +4,10 @@ set -euo pipefail
 # =============================================================================
 # Taskwondo Setup Script
 # =============================================================================
-# Creates a .env file from .env.template, auto-generating secrets and
-# prompting for user-defined values.
+# Generates .env from .env.template, manages Docker Compose deployment,
+# and handles backup/restore.
 #
-# Works in two modes:
-#   Local:  when .env.template and docker-compose.yml exist in the target dir
-#   Remote: downloads both files from GitHub (or a custom URL)
+# Run ./install.sh or ./install.sh -h for usage.
 
 GITHUB_RAW_URL="https://raw.githubusercontent.com/marcoshack/taskwondo/main"
 BASE_URL=""
@@ -17,29 +15,36 @@ TARGET_DIR="."
 NON_INTERACTIVE=false
 IMPORT_FILE=""
 DO_EXPORT=false
+DO_DOCKER=false
+DO_MANUAL_SETUP=false
+DO_MANUAL_INFO=false
 
 usage() {
     cat <<EOF
-Usage: $(basename "$0") [options]
+Usage: $(basename "$0") <mode> [options]
 
-Sets up Taskwondo by generating a .env file from the configuration template.
+Modes:
+  --docker               Docker Compose setup — generates .env, downloads
+                         docker-compose.yml if needed, and starts services
+  --manual-setup         Generate .env for standalone deployment (no Docker required)
+  --manual-setup-info    Show all configuration variables with descriptions
+  --export               Export database and attachments to a backup archive
+  --import FILE          Import data from a backup archive
 
 Options:
-  --url URL        Base URL for downloading files
-                   (default: $GITHUB_RAW_URL)
-  --dir DIR        Target directory (default: current directory)
-  --export         Export database and attachments to a timestamped backup archive
-  --import FILE    Import data from a backup archive (FILE is required)
-  -y               Non-interactive mode: auto-generate all values, skip prompts
-  -h, --help       Show this help message
+  --url URL              Base URL for downloading files
+                         (default: $GITHUB_RAW_URL)
+  --dir DIR              Target directory (default: current directory)
+  -y                     Non-interactive mode: auto-generate all values, skip prompts
+  -h, --help             Show this help message
 
-Backup:
-  --export creates backup/taskwondo-export-YYYYmmdd-HHMM.tar.gz containing
-  a full PostgreSQL dump and all MinIO attachment files. Requires a running
-  Taskwondo instance (docker compose up).
-
-  --import restores from a backup archive into a fresh instance. The database
-  must be empty (no tables). This is typically used during initial setup.
+Examples:
+  $(basename "$0") --docker                  # Interactive Docker setup
+  $(basename "$0") --docker -y               # Non-interactive Docker setup
+  $(basename "$0") --manual-setup            # Generate .env for manual deployment
+  $(basename "$0") --manual-setup-info       # Show configuration reference
+  $(basename "$0") --export                  # Backup database and attachments
+  $(basename "$0") --import backup.tar.gz    # Restore from backup
 EOF
     exit 0
 }
@@ -105,21 +110,131 @@ download_file() {
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --url)     BASE_URL="$2"; shift 2 ;;
-        --dir)     TARGET_DIR="$2"; shift 2 ;;
-        --export)  DO_EXPORT=true; shift ;;
+        --docker)          DO_DOCKER=true; shift ;;
+        --manual-setup)    DO_MANUAL_SETUP=true; shift ;;
+        --manual-setup-info) DO_MANUAL_INFO=true; shift ;;
+        --export)          DO_EXPORT=true; shift ;;
         --import)
             if [[ $# -lt 2 || "$2" == -* ]]; then
                 error "--import requires a backup archive path. Example: install.sh --import backup/taskwondo-export-20260228-0032.tar.gz"
             fi
             IMPORT_FILE="$2"; shift 2 ;;
+        --url)     BASE_URL="$2"; shift 2 ;;
+        --dir)     TARGET_DIR="$2"; shift 2 ;;
         -y)        NON_INTERACTIVE=true; shift ;;
         -h|--help) usage ;;
-        *)      echo "Unknown option: $1"; usage ;;
+        *)      echo "Unknown option: $1"; echo; usage ;;
     esac
 done
 
 BASE_URL="${BASE_URL:-$GITHUB_RAW_URL}"
+
+# If no mode specified, show help
+if ! $DO_DOCKER && ! $DO_MANUAL_SETUP && ! $DO_MANUAL_INFO && ! $DO_EXPORT && [[ -z "$IMPORT_FILE" ]]; then
+    usage
+fi
+
+# =============================================================================
+# --manual-setup-info: Show configuration reference (no Docker needed)
+# =============================================================================
+
+do_manual_info() {
+    local template_file="$TARGET_DIR/.env.template"
+
+    if [[ ! -f "$template_file" ]]; then
+        info "Downloading .env.template..."
+        download_file "$BASE_URL/.env.template" "$template_file"
+    fi
+
+    local required_vars=()
+    local optional_vars=()
+    local pending_level=""
+    local pending_desc=""
+
+    # Parse @manual annotations followed by KEY=value lines
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        if [[ "$line" =~ ^#\ @manual\ (required|optional)\ (.+)$ ]]; then
+            pending_level="${BASH_REMATCH[1]}"
+            pending_desc="${BASH_REMATCH[2]}"
+            continue
+        fi
+
+        if [[ -n "$pending_level" && "$line" =~ ^([A-Z_][A-Z0-9_]*)=(.*)$ ]]; then
+            local key="${BASH_REMATCH[1]}"
+            local value="${BASH_REMATCH[2]}"
+            local default=""
+
+            # Determine default value (skip markers)
+            case "$value" in
+                __GENERATE_*__|__PROMPT:*__|__DERIVE:*__|__COPY:*__|__OPTIONAL__)
+                    default=""
+                    ;;
+                *)
+                    default="$value"
+                    ;;
+            esac
+
+            local entry="${key}|${pending_desc}|${default}"
+            if [[ "$pending_level" == "required" ]]; then
+                required_vars+=("$entry")
+            else
+                optional_vars+=("$entry")
+            fi
+        fi
+
+        pending_level=""
+        pending_desc=""
+    done < "$template_file"
+
+    # Print aligned tables
+    echo
+    ok "=== Taskwondo Configuration Reference ==="
+    echo
+
+    if [[ ${#required_vars[@]} -gt 0 ]]; then
+        info "Required:"
+        echo
+        printf "  \033[1m%-25s %s\033[0m\n" "Variable" "Description"
+        printf "  %-25s %s\n" "--------" "-----------"
+        for entry in "${required_vars[@]}"; do
+            IFS='|' read -r key desc default <<< "$entry"
+            printf "  %-25s %s\n" "$key" "$desc"
+        done
+        echo
+    fi
+
+    if [[ ${#optional_vars[@]} -gt 0 ]]; then
+        # Compute max default width for alignment
+        local max_default=7  # minimum: length of "Default"
+        for entry in "${optional_vars[@]}"; do
+            IFS='|' read -r _key _desc default <<< "$entry"
+            local len=${#default}
+            if [[ $len -gt $max_default ]]; then
+                max_default=$len
+            fi
+        done
+        local dw=$((max_default + 2))  # padding
+
+        info "Optional:"
+        echo
+        printf "  \033[1m%-25s %-${dw}s %s\033[0m\n" "Variable" "Default" "Description"
+        printf "  %-25s %-${dw}s %s\n" "--------" "-------" "-----------"
+        for entry in "${optional_vars[@]}"; do
+            IFS='|' read -r key desc default <<< "$entry"
+            printf "  %-25s %-${dw}s %s\n" "$key" "${default:--}" "$desc"
+        done
+        echo
+    fi
+}
+
+if $DO_MANUAL_INFO; then
+    do_manual_info
+    exit 0
+fi
+
+# =============================================================================
+# Shared: .env generation from template
+# =============================================================================
 
 # Load .env variables into the current shell (for docker compose commands).
 load_env() {
@@ -132,6 +247,156 @@ load_env() {
     source "$env_file"
     set +a
 }
+
+# Generate .env from template. Processes all markers.
+generate_env() {
+    local template_file="$TARGET_DIR/.env.template"
+
+    if [[ ! -f "$template_file" ]]; then
+        info "Downloading .env.template..."
+        download_file "$BASE_URL/.env.template" "$template_file"
+    fi
+
+    # Check for existing .env
+    local env_file="$TARGET_DIR/.env"
+    if [[ -f "$env_file" ]]; then
+        if $NON_INTERACTIVE; then
+            warn ".env already exists, overwriting (non-interactive mode)."
+        else
+            read -rp "$(warn '.env already exists. Overwrite? [y/N] ')" confirm </dev/tty
+            if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+                info "Aborted. Existing .env was not modified."
+                exit 0
+            fi
+        fi
+    fi
+
+    check_command openssl
+
+    info "Generating .env..."
+    echo
+
+    # Associative array to store generated values (for __COPY__ and __DERIVE__)
+    declare -A vars
+    output="# Taskwondo Configuration"$'\n'
+    output+="# Generated by install.sh on $(date -u +%Y-%m-%dT%H:%M:%SZ)"$'\n'
+    in_header=true
+
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        # Skip the template header block (top comments before first blank line)
+        if $in_header; then
+            if [[ -z "$line" ]]; then
+                in_header=false
+                output+=$'\n'
+            fi
+            continue
+        fi
+
+        # Skip comment lines that document template markers or @manual annotations
+        if [[ "$line" =~ ^#.*__ ]] || [[ "$line" =~ ^#\ @manual ]]; then
+            continue
+        fi
+
+        # Blank lines and comments: pass through
+        if [[ -z "$line" || "$line" =~ ^# ]]; then
+            output+="$line"$'\n'
+            continue
+        fi
+
+        # Split KEY=VALUE
+        if [[ "$line" =~ ^([A-Z_][A-Z0-9_]*)=(.*) ]]; then
+            key="${BASH_REMATCH[1]}"
+            value="${BASH_REMATCH[2]}"
+        else
+            # Not a KEY=VALUE line, pass through
+            output+="$line"$'\n'
+            continue
+        fi
+
+        # Process marker values
+        case "$value" in
+            __GENERATE_HEX_32__)
+                value="$(generate_hex_32)"
+                ;;
+            __GENERATE_PASSWORD__)
+                value="$(generate_password)"
+                ;;
+            __PROMPT:*__)
+                # Extract description and optional default from __PROMPT:desc [default]__
+                local_desc="${value#__PROMPT:}"
+                local_desc="${local_desc%__}"
+                local_default=""
+                if [[ "$local_desc" =~ \[([^]]*)\]$ ]]; then
+                    local_default="${BASH_REMATCH[1]}"
+                    local_desc="${local_desc% \[*\]}"
+                fi
+                value="$(prompt_value "$local_desc" "$local_default")"
+                ;;
+            __COPY:*__)
+                # Copy value from another variable
+                local_ref="${value#__COPY:}"
+                local_ref="${local_ref%__}"
+                value="${vars[$local_ref]:-}"
+                ;;
+            __DERIVE:*__)
+                # Evaluate shell expression with current vars
+                local_expr="${value#__DERIVE:}"
+                local_expr="${local_expr%__}"
+                # Substitute ${VAR} references with actual values
+                for var_name in "${!vars[@]}"; do
+                    local_expr="${local_expr//\$\{$var_name\}/${vars[$var_name]}}"
+                done
+                value="$local_expr"
+                ;;
+            __OPTIONAL__)
+                value=""
+                ;;
+            # Default: keep value as-is
+        esac
+
+        vars["$key"]="$value"
+        output+="$key=$value"$'\n'
+
+    done < "$template_file"
+
+    # Write .env
+    printf '%s' "$output" > "$env_file"
+}
+
+# =============================================================================
+# --manual-setup: Generate .env without Docker
+# =============================================================================
+
+if $DO_MANUAL_SETUP; then
+    mkdir -p "$TARGET_DIR"
+    generate_env
+
+    echo
+    ok "=== .env Generated ==="
+    echo
+    info "Next steps:"
+    echo "  1. Edit .env with your database and storage settings"
+    echo "  2. See MANUAL_INSTALL.md for deployment instructions"
+    echo "  3. Run: ./install.sh --manual-setup-info  for configuration reference"
+    echo
+    exit 0
+fi
+
+# =============================================================================
+# Docker-dependent modes below — check prerequisites
+# =============================================================================
+
+info "Checking prerequisites..."
+
+check_command docker
+
+if ! docker compose version &>/dev/null; then
+    error "docker compose (v2) is required but not found. Install Docker Compose v2."
+fi
+
+printf "  docker:          %s\n" "$(docker --version 2>&1)"
+printf "  docker compose:  %s\n" "$(docker compose version 2>&1)"
+echo
 
 # Wait for the postgres container to accept connections.
 wait_for_postgres() {
@@ -147,7 +412,9 @@ wait_for_postgres() {
     done
 }
 
-# --- Export mode (runs before setup, exits early) ---
+# =============================================================================
+# --export
+# =============================================================================
 
 do_export() {
     load_env
@@ -199,7 +466,14 @@ do_export() {
     echo
 }
 
-# --- Import mode ---
+if $DO_EXPORT; then
+    do_export
+    exit 0
+fi
+
+# =============================================================================
+# --import
+# =============================================================================
 
 do_import() {
     local import_file="$1"
@@ -266,29 +540,6 @@ do_import() {
     echo
 }
 
-# --- Preflight checks ---
-
-info "Checking prerequisites..."
-
-check_command docker
-
-if ! docker compose version &>/dev/null; then
-    error "docker compose (v2) is required but not found. Install Docker Compose v2."
-fi
-
-printf "  docker:          %s\n" "$(docker --version 2>&1)"
-printf "  docker compose:  %s\n" "$(docker compose version 2>&1)"
-echo
-
-# --- Export: run and exit ---
-
-if $DO_EXPORT; then
-    do_export
-    exit 0
-fi
-
-# --- Import with existing .env: skip setup, restore directly ---
-
 if [[ -n "$IMPORT_FILE" ]]; then
     ENV_FILE="$TARGET_DIR/.env"
     COMPOSE_FILE="$TARGET_DIR/docker-compose.yml"
@@ -311,20 +562,19 @@ if [[ -n "$IMPORT_FILE" ]]; then
     fi
 fi
 
-# --- Setup requires openssl ---
+# =============================================================================
+# --docker: Full Docker Compose setup
+# =============================================================================
 
 check_command openssl
 printf "  openssl:         %s\n" "$(openssl version 2>&1 | head -1)"
 echo
 
-# --- Ensure target directory exists ---
-
 mkdir -p "$TARGET_DIR"
 
-# --- Determine mode: local or remote ---
-
-TEMPLATE_FILE="$TARGET_DIR/.env.template"
+# Ensure docker-compose.yml exists
 COMPOSE_FILE="$TARGET_DIR/docker-compose.yml"
+TEMPLATE_FILE="$TARGET_DIR/.env.template"
 
 if [[ -f "$TEMPLATE_FILE" && -f "$COMPOSE_FILE" ]]; then
     info "Local mode: using files from $TARGET_DIR"
@@ -345,116 +595,9 @@ else
     echo
 fi
 
-# --- Check for existing .env ---
+generate_env
 
-ENV_FILE="$TARGET_DIR/.env"
-
-if [[ -f "$ENV_FILE" ]]; then
-    if $NON_INTERACTIVE; then
-        warn ".env already exists, overwriting (non-interactive mode)."
-    else
-        read -rp "$(warn '.env already exists. Overwrite? [y/N] ')" confirm </dev/tty
-        if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
-            info "Aborted. Existing .env was not modified."
-            exit 0
-        fi
-    fi
-fi
-
-# --- Parse template and generate .env ---
-
-info "Generating .env..."
-echo
-
-# Associative array to store generated values (for __COPY__ and __DERIVE__)
-declare -A vars
-output="# Taskwondo Configuration"$'\n'
-output+="# Generated by install.sh on $(date -u +%Y-%m-%dT%H:%M:%SZ)"$'\n'
-in_header=true
-
-while IFS= read -r line || [[ -n "$line" ]]; do
-    # Skip the template header block (top comments before first blank line)
-    if $in_header; then
-        if [[ -z "$line" ]]; then
-            in_header=false
-            output+=$'\n'
-        fi
-        continue
-    fi
-
-    # Skip comment lines that document template markers
-    if [[ "$line" =~ ^#.*__ ]]; then
-        continue
-    fi
-
-    # Blank lines and comments: pass through
-    if [[ -z "$line" || "$line" =~ ^# ]]; then
-        output+="$line"$'\n'
-        continue
-    fi
-
-    # Split KEY=VALUE
-    if [[ "$line" =~ ^([A-Z_][A-Z0-9_]*)=(.*) ]]; then
-        key="${BASH_REMATCH[1]}"
-        value="${BASH_REMATCH[2]}"
-    else
-        # Not a KEY=VALUE line, pass through
-        output+="$line"$'\n'
-        continue
-    fi
-
-    # Process marker values
-    case "$value" in
-        __GENERATE_HEX_32__)
-            value="$(generate_hex_32)"
-            ;;
-        __GENERATE_PASSWORD__)
-            value="$(generate_password)"
-            ;;
-        __PROMPT:*__)
-            # Extract description and optional default from __PROMPT:desc [default]__
-            local_desc="${value#__PROMPT:}"
-            local_desc="${local_desc%__}"
-            local_default=""
-            if [[ "$local_desc" =~ \[([^]]*)\]$ ]]; then
-                local_default="${BASH_REMATCH[1]}"
-                local_desc="${local_desc% \[*\]}"
-            fi
-            value="$(prompt_value "$local_desc" "$local_default")"
-            ;;
-        __COPY:*__)
-            # Copy value from another variable
-            local_ref="${value#__COPY:}"
-            local_ref="${local_ref%__}"
-            value="${vars[$local_ref]:-}"
-            ;;
-        __DERIVE:*__)
-            # Evaluate shell expression with current vars
-            local_expr="${value#__DERIVE:}"
-            local_expr="${local_expr%__}"
-            # Substitute ${VAR} references with actual values
-            for var_name in "${!vars[@]}"; do
-                local_expr="${local_expr//\$\{$var_name\}/${vars[$var_name]}}"
-            done
-            value="$local_expr"
-            ;;
-        __OPTIONAL__)
-            value=""
-            ;;
-        # Default: keep value as-is
-    esac
-
-    vars["$key"]="$value"
-    output+="$key=$value"$'\n'
-
-done < "$TEMPLATE_FILE"
-
-# --- Write .env ---
-
-printf '%s' "$output" > "$ENV_FILE"
-
-# --- Summary ---
-
+# Summary
 echo
 ok "=== Taskwondo Setup Complete ==="
 echo
@@ -462,8 +605,7 @@ printf "  Web UI:  http://localhost:%s\n" "${vars[WEB_PORT]:-3000}"
 printf "  API:     http://localhost:%s\n" "${vars[API_PORT]:-8080}"
 echo
 
-# --- Import from backup or show next steps ---
-
+# Import from backup or show next steps
 if [[ -n "$IMPORT_FILE" ]]; then
     load_env
     do_import "$IMPORT_FILE"
