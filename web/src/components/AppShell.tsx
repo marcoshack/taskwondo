@@ -211,7 +211,7 @@ export function AppShell() {
           </div>
         </div>
       </nav>
-      <AppSidebar mobileOnly />
+      <AppSidebar mobileOnly projectKey={activeProjectKey} />
       <main className="flex-1">
         <Outlet />
       </main>

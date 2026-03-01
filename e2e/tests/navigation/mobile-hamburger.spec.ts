@@ -95,4 +95,42 @@ test.describe('Mobile hamburger menu', () => {
     await expect(dropdown.getByText('Inbox')).toBeVisible();
     await expect(dropdown.getByText('Projects')).toBeVisible();
   });
+
+  test('shows project context navigation items in hamburger menu', async ({ page, testProject }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto(`/projects/${testProject.key}/items`);
+    await dismissWelcomeModal(page);
+
+    const hamburger = page.getByRole('button', { name: /menu/i });
+    await hamburger.click();
+
+    const dropdown = page.locator('.fixed.inset-0.z-40');
+    await expect(dropdown).toBeVisible();
+
+    // Project context items must appear in mobile menu (TF-215 bug fix)
+    await expect(dropdown.getByText('Overview')).toBeVisible();
+    await expect(dropdown.getByText('Items')).toBeVisible();
+    await expect(dropdown.getByText('Queues')).toBeVisible();
+    await expect(dropdown.getByText('Milestones')).toBeVisible();
+    await expect(dropdown.getByText('Workflows')).toBeVisible();
+    await expect(dropdown.getByText('Settings')).toBeVisible();
+  });
+
+  test('mobile hamburger project nav items navigate correctly', async ({ page, testProject }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto(`/projects/${testProject.key}/items`);
+    await dismissWelcomeModal(page);
+
+    // Navigate to Overview via hamburger
+    const hamburger = page.getByRole('button', { name: /menu/i });
+    await hamburger.click();
+
+    const dropdown = page.locator('.fixed.inset-0.z-40');
+    await dropdown.getByText('Overview').click();
+
+    await expect(page).toHaveURL(new RegExp(`/projects/${testProject.key}/?$`), { timeout: 5000 });
+
+    // Menu should close after navigation
+    await expect(dropdown).not.toBeVisible();
+  });
 });
