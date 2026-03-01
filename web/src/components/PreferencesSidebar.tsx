@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useSidebar } from '@/contexts/SidebarContext'
 import {
+  User,
   Palette,
   Key,
   Bell,
@@ -16,6 +17,7 @@ export function PreferencesSidebar() {
   const base = '/preferences'
 
   const navItems: { to: string; label: string; icon: LucideIcon; end: boolean }[] = [
+    { to: 'profile', label: t('preferences.sidebar.profile'), icon: User, end: false },
     { to: 'appearance', label: t('preferences.sidebar.appearance'), icon: Palette, end: false },
     { to: 'notifications', label: t('preferences.sidebar.notifications'), icon: Bell, end: false },
     { to: 'api-keys', label: t('preferences.sidebar.apiKeys'), icon: Key, end: false },

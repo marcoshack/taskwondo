@@ -184,7 +184,7 @@ export function ProjectOverviewPage() {
             <div className="flex flex-wrap gap-3 items-center">
               {members.map((member) => (
                 <div key={member.user_id} className="flex items-center gap-2">
-                  <Avatar name={member.display_name} size="sm" />
+                  <Avatar name={member.display_name} avatarUrl={member.avatar_url} size="sm" />
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                       {member.display_name}

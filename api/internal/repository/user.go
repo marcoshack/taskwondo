@@ -62,6 +62,24 @@ func (r *UserRepository) UpdateLastLogin(ctx context.Context, id uuid.UUID) erro
 	return nil
 }
 
+// UpdateDisplayName sets the display_name for a user.
+func (r *UserRepository) UpdateDisplayName(ctx context.Context, id uuid.UUID, displayName string) error {
+	result, err := r.db.ExecContext(ctx,
+		`UPDATE users SET display_name = $1, updated_at = now() WHERE id = $2`,
+		displayName, id)
+	if err != nil {
+		return fmt.Errorf("updating display name: %w", err)
+	}
+	n, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("checking rows affected: %w", err)
+	}
+	if n == 0 {
+		return model.ErrNotFound
+	}
+	return nil
+}
+
 // UpdateAvatarURL sets the avatar_url for a user.
 func (r *UserRepository) UpdateAvatarURL(ctx context.Context, id uuid.UUID, avatarURL string) error {
 	_, err := r.db.ExecContext(ctx,

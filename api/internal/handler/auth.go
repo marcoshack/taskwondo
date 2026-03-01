@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -41,15 +43,26 @@ type userResponse struct {
 	Email       string    `json:"email"`
 	DisplayName string    `json:"display_name"`
 	GlobalRole  string    `json:"global_role"`
+	AvatarURL   *string   `json:"avatar_url,omitempty"`
 }
 
 func toUserResponse(u *model.User) userResponse {
-	return userResponse{
+	resp := userResponse{
 		ID:          u.ID,
 		Email:       u.Email,
 		DisplayName: u.DisplayName,
 		GlobalRole:  u.GlobalRole,
 	}
+	if u.AvatarURL != nil && *u.AvatarURL != "" {
+		// For storage keys, serve via the avatar endpoint with cache-busting version
+		if len(*u.AvatarURL) > 0 && (*u.AvatarURL)[0] != 'h' {
+			url := fmt.Sprintf("/api/v1/users/%s/avatar?v=%d", u.ID, u.UpdatedAt.Unix())
+			resp.AvatarURL = &url
+		} else {
+			resp.AvatarURL = u.AvatarURL
+		}
+	}
+	return resp
 }
 
 // Login authenticates a user with email and password.
@@ -512,4 +525,127 @@ func (h *AuthHandler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeData(w, http.StatusOK, resp)
+}
+
+// Profile endpoints
+
+type updateProfileRequest struct {
+	DisplayName string `json:"display_name"`
+}
+
+// UpdateProfile handles PATCH /api/v1/user/profile.
+func (h *AuthHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	var req updateProfileRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		return
+	}
+
+	user, err := h.auth.UpdateProfile(r.Context(), info.UserID, req.DisplayName)
+	if err != nil {
+		if errors.Is(err, model.ErrValidation) {
+			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+			return
+		}
+		log.Ctx(r.Context()).Error().Err(err).Msg("failed to update profile")
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		return
+	}
+
+	writeData(w, http.StatusOK, toUserResponse(user))
+}
+
+// UploadAvatar handles POST /api/v1/user/avatar.
+func (h *AuthHandler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	if err := r.ParseMultipartForm(2 << 20); err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid multipart form")
+		return
+	}
+
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "file is required")
+		return
+	}
+	defer file.Close()
+
+	contentType := header.Header.Get("Content-Type")
+	if contentType != "image/jpeg" && contentType != "image/png" {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "only JPEG and PNG files are allowed")
+		return
+	}
+
+	if header.Size > 2<<20 {
+		writeError(w, http.StatusRequestEntityTooLarge, "VALIDATION_ERROR", "file must be under 2 MB")
+		return
+	}
+
+	user, err := h.auth.UploadAvatar(r.Context(), info.UserID, file, header.Size, contentType)
+	if err != nil {
+		if errors.Is(err, model.ErrValidation) {
+			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+			return
+		}
+		log.Ctx(r.Context()).Error().Err(err).Msg("failed to upload avatar")
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		return
+	}
+
+	writeData(w, http.StatusOK, toUserResponse(user))
+}
+
+// DeleteAvatar handles DELETE /api/v1/user/avatar.
+func (h *AuthHandler) DeleteAvatar(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	user, err := h.auth.DeleteAvatar(r.Context(), info.UserID)
+	if err != nil {
+		log.Ctx(r.Context()).Error().Err(err).Msg("failed to delete avatar")
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		return
+	}
+
+	writeData(w, http.StatusOK, toUserResponse(user))
+}
+
+// GetUserAvatar handles GET /api/v1/users/{userId}/avatar.
+func (h *AuthHandler) GetUserAvatar(w http.ResponseWriter, r *http.Request) {
+	userID, err := uuid.Parse(chi.URLParam(r, "userId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid user ID")
+		return
+	}
+
+	size := r.URL.Query().Get("size")
+	reader, contentType, err := h.auth.GetAvatarFile(r.Context(), userID, size)
+	if err != nil {
+		if errors.Is(err, model.ErrNotFound) {
+			writeError(w, http.StatusNotFound, "NOT_FOUND", "avatar not found")
+			return
+		}
+		log.Ctx(r.Context()).Error().Err(err).Msg("failed to get avatar")
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		return
+	}
+	defer reader.Close()
+
+	w.Header().Set("Content-Type", contentType)
+	w.Header().Set("Cache-Control", "public, max-age=3600")
+	io.Copy(w, reader)
 }

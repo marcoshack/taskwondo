@@ -1,8 +1,12 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
+	"image"
+	"image/jpeg"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -59,9 +63,22 @@ func (m *mockUserRepo) UpdateLastLogin(_ context.Context, id uuid.UUID) error {
 	return nil
 }
 
+func (m *mockUserRepo) UpdateDisplayName(_ context.Context, id uuid.UUID, displayName string) error {
+	u, ok := m.byID[id]
+	if !ok {
+		return model.ErrNotFound
+	}
+	u.DisplayName = displayName
+	return nil
+}
+
 func (m *mockUserRepo) UpdateAvatarURL(_ context.Context, id uuid.UUID, avatarURL string) error {
 	if u, ok := m.byID[id]; ok {
-		u.AvatarURL = &avatarURL
+		if avatarURL == "" {
+			u.AvatarURL = nil
+		} else {
+			u.AvatarURL = &avatarURL
+		}
 	}
 	return nil
 }
@@ -1635,3 +1652,126 @@ func TestOAuthCallback_GitHubEmailFromEmailsEndpoint(t *testing.T) {
 		t.Fatalf("expected email primary@example.com, got %s", user.Email)
 	}
 }
+
+// --- Profile tests ---
+
+func TestUpdateProfile_Success(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	user := createTestUser(t, userRepo, "user@test.com", "password123", model.RoleUser)
+
+	updated, err := svc.UpdateProfile(context.Background(), user.ID, "New Name")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated.DisplayName != "New Name" {
+		t.Fatalf("expected display name 'New Name', got '%s'", updated.DisplayName)
+	}
+}
+
+func TestUpdateProfile_EmptyName(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	user := createTestUser(t, userRepo, "user@test.com", "password123", model.RoleUser)
+
+	_, err := svc.UpdateProfile(context.Background(), user.ID, "")
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation, got %v", err)
+	}
+}
+
+func TestUpdateProfile_TooLong(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	user := createTestUser(t, userRepo, "user@test.com", "password123", model.RoleUser)
+
+	longName := strings.Repeat("a", 101)
+	_, err := svc.UpdateProfile(context.Background(), user.ID, longName)
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation, got %v", err)
+	}
+}
+
+func TestUploadAvatar_InvalidContentType(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	svc.SetStorage(newMockStorage())
+	user := createTestUser(t, userRepo, "user@test.com", "password123", model.RoleUser)
+
+	_, err := svc.UploadAvatar(context.Background(), user.ID, strings.NewReader("data"), 100, "text/plain")
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation, got %v", err)
+	}
+}
+
+func TestUploadAvatar_TooLarge(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	svc.SetStorage(newMockStorage())
+	user := createTestUser(t, userRepo, "user@test.com", "password123", model.RoleUser)
+
+	_, err := svc.UploadAvatar(context.Background(), user.ID, strings.NewReader("data"), 3<<20, "image/jpeg")
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation, got %v", err)
+	}
+}
+
+func TestUploadAvatar_Success(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	store := newMockStorage()
+	svc.SetStorage(store)
+	user := createTestUser(t, userRepo, "user@test.com", "password123", model.RoleUser)
+
+	// Create a minimal valid JPEG
+	img := image.NewRGBA(image.Rect(0, 0, 200, 200))
+	var buf bytes.Buffer
+	if err := jpeg.Encode(&buf, img, nil); err != nil {
+		t.Fatal(err)
+	}
+
+	updated, err := svc.UploadAvatar(context.Background(), user.ID, &buf, int64(buf.Len()), "image/jpeg")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated.AvatarURL == nil {
+		t.Fatal("expected avatar_url to be set")
+	}
+	expectedKey := "avatars/" + user.ID.String() + "/thumb.jpg"
+	if *updated.AvatarURL != expectedKey {
+		t.Fatalf("expected avatar_url '%s', got '%s'", expectedKey, *updated.AvatarURL)
+	}
+	if _, ok := store.objects[expectedKey]; !ok {
+		t.Fatal("expected thumbnail to be stored")
+	}
+}
+
+func TestDeleteAvatar_Success(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	store := newMockStorage()
+	svc.SetStorage(store)
+	user := createTestUser(t, userRepo, "user@test.com", "password123", model.RoleUser)
+
+	// Set an avatar first
+	thumbKey := "avatars/" + user.ID.String() + "/thumb.jpg"
+	user.AvatarURL = &thumbKey
+	store.objects[thumbKey] = []byte("thumb-data")
+
+	updated, err := svc.DeleteAvatar(context.Background(), user.ID)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated.AvatarURL != nil {
+		t.Fatalf("expected avatar_url to be nil, got %v", *updated.AvatarURL)
+	}
+}
+
+func TestDeleteAvatar_NoAvatar(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	svc.SetStorage(newMockStorage())
+	user := createTestUser(t, userRepo, "user@test.com", "password123", model.RoleUser)
+
+	updated, err := svc.DeleteAvatar(context.Background(), user.ID)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated.AvatarURL != nil {
+		t.Fatalf("expected avatar_url to be nil")
+	}
+}
+
+// mockStorage is defined in workitem_test.go (same package)

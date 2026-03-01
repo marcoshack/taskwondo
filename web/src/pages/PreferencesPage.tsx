@@ -1,8 +1,9 @@
 import { NavLink, Routes, Route, Navigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Palette, Key, Bell } from 'lucide-react'
+import { Palette, Key, Bell, User } from 'lucide-react'
 import { useSidebar } from '@/contexts/SidebarContext'
 import { PreferencesSidebar } from '@/components/PreferencesSidebar'
+import { ProfilePage } from './ProfilePage'
 import { AppearancePage } from './AppearancePage'
 import { NotificationsPage } from './NotificationsPage'
 import { APIKeysPage } from './APIKeysPage'
@@ -12,6 +13,7 @@ export function PreferencesPage() {
   const { collapsed } = useSidebar('settings')
 
   const navItems = [
+    { to: 'profile', label: t('preferences.sidebar.profile'), icon: User },
     { to: 'appearance', label: t('preferences.sidebar.appearance'), icon: Palette },
     { to: 'notifications', label: t('preferences.sidebar.notifications'), icon: Bell },
     { to: 'api-keys', label: t('preferences.sidebar.apiKeys'), icon: Key },
@@ -43,7 +45,8 @@ export function PreferencesPage() {
         <PreferencesSidebar />
         <div className="flex-1 min-w-0 max-w-3xl">
           <Routes>
-            <Route index element={<Navigate to="appearance" replace />} />
+            <Route index element={<Navigate to="profile" replace />} />
+            <Route path="profile" element={<ProfilePage />} />
             <Route path="appearance" element={<AppearancePage />} />
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="api-keys" element={<APIKeysPage />} />

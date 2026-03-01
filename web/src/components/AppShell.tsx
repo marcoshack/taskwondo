@@ -166,7 +166,7 @@ export function AppShell() {
                 onClick={() => setMenuOpen(!menuOpen)}
                 className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
               >
-                <Avatar name={user?.display_name ?? ''} size="sm" />
+                <Avatar name={user?.display_name ?? ''} avatarUrl={user?.avatar_url} size="sm" />
                 <span className="hidden sm:block">{user?.display_name}</span>
               </button>
               {menuOpen && (

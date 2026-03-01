@@ -288,7 +288,7 @@ export function ProjectSettingsPage() {
           <div className="flex gap-2 items-end">
             {selectedUser ? (
               <div className="flex-1 min-w-0 flex items-center gap-2 rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm bg-white dark:bg-gray-800">
-                <span className="shrink-0"><Avatar name={selectedUser.display_name} size="xs" /></span>
+                <span className="shrink-0"><Avatar name={selectedUser.display_name} avatarUrl={selectedUser.avatar_url} size="xs" /></span>
                 <span className="truncate text-gray-900 dark:text-gray-100">{selectedUser.display_name}</span>
                 <span className="truncate text-gray-400 text-xs hidden sm:inline">{selectedUser.email}</span>
                 <button
@@ -341,7 +341,7 @@ export function ProjectSettingsPage() {
             return (
               <div key={member.user_id} className="flex flex-wrap items-center justify-between gap-2 p-3">
                 <div className="flex items-center gap-3 min-w-0">
-                  <Avatar name={member.display_name} size="sm" />
+                  <Avatar name={member.display_name} avatarUrl={member.avatar_url} size="sm" />
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                       {member.display_name}

@@ -36,9 +36,9 @@ test.describe('API Key Management', () => {
     await dismissWelcomeModal(page);
 
     await page.goto('/preferences');
-    // Should redirect to /preferences/appearance
-    await expect(page).toHaveURL(/preferences\/appearance/);
-    await attach(page, testInfo, '01-appearance-page');
+    // Should redirect to /preferences/profile
+    await expect(page).toHaveURL(/preferences\/profile/);
+    await attach(page, testInfo, '01-profile-page');
 
     // Click the API Keys sidebar link
     await page.getByRole('link', { name: 'API Keys' }).click();

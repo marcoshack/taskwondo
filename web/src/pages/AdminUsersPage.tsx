@@ -333,7 +333,7 @@ export function AdminUsersPage() {
                     <button className="text-gray-400 shrink-0">
                       {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                     </button>
-                    <Avatar name={u.display_name} size="sm" />
+                    <Avatar name={u.display_name} avatarUrl={u.avatar_url} size="sm" />
                     <div className="min-w-0 flex-1">
                       {/* Desktop: name + email on separate lines */}
                       <div className="hidden sm:block">

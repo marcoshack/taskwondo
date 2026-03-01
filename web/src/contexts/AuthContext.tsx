@@ -11,6 +11,7 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>
   loginWithToken: (token: string, user: User) => void
   clearForcePasswordChange: (newToken: string) => void
+  updateUser: (user: User) => void
   logout: () => void
 }
 
@@ -53,6 +54,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setForcePasswordChange(false)
   }, [])
 
+  const updateUser = useCallback((updatedUser: User) => {
+    setUser(updatedUser)
+  }, [])
+
   const logout = useCallback(() => {
     clearToken()
     setUser(null)
@@ -60,7 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, forcePasswordChange, login, loginWithToken, clearForcePasswordChange, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, forcePasswordChange, login, loginWithToken, clearForcePasswordChange, updateUser, logout }}>
       {children}
     </AuthContext.Provider>
   )

@@ -69,6 +69,10 @@ export function TimeEntryList({ projectKey, itemNumber, sortOrder = 'desc', read
     return member?.display_name ?? t('common.unknown')
   }
 
+  function authorAvatarUrl(authorId: string): string | undefined {
+    return members?.find((m) => m.user_id === authorId)?.avatar_url
+  }
+
   function handleCreate() {
     const durationSeconds = parseDurationString(duration)
     if (!durationSeconds) return
@@ -195,7 +199,7 @@ export function TimeEntryList({ projectKey, itemNumber, sortOrder = 'desc', read
         >
           <div className="flex items-center justify-between gap-2 mb-1">
             <div className="flex items-center gap-2 min-w-0">
-              <Avatar name={authorName(entry.user_id)} size="xs" />
+              <Avatar name={authorName(entry.user_id)} avatarUrl={authorAvatarUrl(entry.user_id)} size="xs" />
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300 shrink-0">{authorName(entry.user_id)}</span>
               <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 shrink-0">
                 {formatDuration(entry.duration_seconds)}

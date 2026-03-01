@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Tooltip } from './Tooltip'
 
 const sizeClasses = {
@@ -5,10 +6,12 @@ const sizeClasses = {
   sm: 'h-6 w-6 text-xs',
   md: 'h-8 w-8 text-sm',
   lg: 'h-10 w-10 text-base',
+  xl: 'h-28 w-28 text-3xl',
 } as const
 
 interface AvatarProps {
   name: string
+  avatarUrl?: string
   size?: keyof typeof sizeClasses
 }
 
@@ -22,7 +25,22 @@ function getInitials(name: string): string {
     .toUpperCase()
 }
 
-export function Avatar({ name, size = 'md' }: AvatarProps) {
+export function Avatar({ name, avatarUrl, size = 'md' }: AvatarProps) {
+  const [imgError, setImgError] = useState(false)
+
+  if (avatarUrl && !imgError) {
+    return (
+      <Tooltip content={name}>
+        <img
+          src={avatarUrl}
+          alt={name}
+          onError={() => setImgError(true)}
+          className={`inline-flex rounded-full object-cover ${sizeClasses[size]}`}
+        />
+      </Tooltip>
+    )
+  }
+
   return (
     <Tooltip content={name}>
       <span

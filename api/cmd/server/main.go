@@ -192,6 +192,9 @@ func main() {
 	// Configure encryptor on auth service (for decrypting OAuth secrets from DB)
 	authService.SetEncryptor(encryptor)
 
+	// Configure storage for avatar uploads
+	authService.SetStorage(store)
+
 	// Seed OAuth config from env vars if not already in DB
 	seedOAuthConfig(ctx, systemSettingRepo, encryptor, cfg)
 
@@ -248,6 +251,9 @@ func main() {
 		// Public invite info (unauthenticated)
 		r.Get("/invites/{code}", projects.GetInviteInfo)
 
+		// Public avatar serving (loaded by <img> tags which can't send JWT)
+		r.Get("/users/{userId}/avatar", auth.GetUserAvatar)
+
 		// Authenticated routes
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.Auth(authService))
@@ -256,6 +262,11 @@ func main() {
 			r.Post("/auth/logout", auth.Logout)
 			r.Get("/auth/me", auth.Me)
 			r.Post("/auth/change-password", auth.ChangePassword)
+
+			// User profile
+			r.Patch("/user/profile", auth.UpdateProfile)
+			r.Post("/user/avatar", auth.UploadAvatar)
+			r.Delete("/user/avatar", auth.DeleteAvatar)
 
 			// API key management
 			r.Get("/user/api-keys", auth.ListAPIKeys)

@@ -138,6 +138,11 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
     return member?.display_name ?? t('common.unknown')
   }
 
+  function authorAvatarUrl(authorId: string | null): string | undefined {
+    if (!authorId) return undefined
+    return members?.find((m) => m.user_id === authorId)?.avatar_url
+  }
+
   if (isLoading) return <Spinner size="sm" />
 
   return (
@@ -235,7 +240,7 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
             <>
               <div className="flex items-center justify-between gap-2 mb-1">
                 <div className="flex items-center gap-2 min-w-0">
-                  <Avatar name={authorName(c.author_id)} size="xs" />
+                  <Avatar name={authorName(c.author_id)} avatarUrl={authorAvatarUrl(c.author_id)} size="xs" />
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300 shrink-0">{authorName(c.author_id)}</span>
                   <ScrollableDate date={c.created_at} />
                   {c.edit_count > 0 && <span className="text-xs text-gray-400 dark:text-gray-500 italic shrink-0">{t('comments.editCount', { count: c.edit_count })}</span>}

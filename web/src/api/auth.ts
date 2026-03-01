@@ -5,6 +5,7 @@ export interface User {
   email: string
   display_name: string
   global_role: string
+  avatar_url?: string
 }
 
 interface LoginResponse {
@@ -45,6 +46,7 @@ export interface UserSearchResult {
   email: string
   display_name: string
   global_role: string
+  avatar_url?: string
 }
 
 export async function searchUsers(query: string) {
@@ -146,5 +148,26 @@ export async function changePassword(oldPassword: string, newPassword: string) {
     old_password: oldPassword,
     new_password: newPassword,
   })
+  return res.data.data
+}
+
+// Profile
+
+export async function updateProfile(displayName: string) {
+  const res = await api.patch<{ data: User }>('/user/profile', { display_name: displayName })
+  return res.data.data
+}
+
+export async function uploadAvatar(file: Blob) {
+  const formData = new FormData()
+  formData.append('file', file)
+  const res = await api.post<{ data: User }>('/user/avatar', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return res.data.data
+}
+
+export async function deleteAvatar() {
+  const res = await api.delete<{ data: User }>('/user/avatar')
   return res.data.data
 }

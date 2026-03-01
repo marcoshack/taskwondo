@@ -11,6 +11,10 @@ import (
 	"errors"
 	"fmt"
 	"html"
+	"image"
+	"image/jpeg"
+	"image/png"
+	"io"
 	"strconv"
 	"strings"
 	"time"
@@ -19,9 +23,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/image/draw"
 
 	"github.com/marcoshack/taskwondo/internal/crypto"
 	"github.com/marcoshack/taskwondo/internal/model"
+	"github.com/marcoshack/taskwondo/internal/storage"
 )
 
 // UserRepository defines the persistence operations the auth service needs for users.
@@ -30,6 +36,7 @@ type UserRepository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*model.User, error)
 	Create(ctx context.Context, user *model.User) error
 	UpdateLastLogin(ctx context.Context, id uuid.UUID) error
+	UpdateDisplayName(ctx context.Context, id uuid.UUID, displayName string) error
 	UpdateAvatarURL(ctx context.Context, id uuid.UUID, avatarURL string) error
 	UpdatePasswordHash(ctx context.Context, id uuid.UUID, hash string, forceChange bool) error
 	Search(ctx context.Context, query string) ([]model.User, error)
@@ -91,6 +98,7 @@ type AuthService struct {
 	settings           AuthSettingsReader
 	emailSender        EmailSender
 	encryptor          *crypto.Encryptor
+	storage            storage.Storage
 	baseURL            string
 	jwtSecret          []byte
 	jwtExpiry          time.Duration
@@ -126,6 +134,11 @@ func (s *AuthService) SetEmailVerification(repo EmailVerificationRepo, settings 
 	s.settings = settings
 	s.emailSender = sender
 	s.baseURL = baseURL
+}
+
+// SetStorage configures the storage backend for avatar uploads.
+func (s *AuthService) SetStorage(store storage.Storage) {
+	s.storage = store
 }
 
 // SetEncryptor configures the encryptor used to decrypt OAuth client secrets from DB.
@@ -694,7 +707,7 @@ func (s *AuthService) findOrCreateOAuthUser(ctx context.Context, provider string
 		if !user.IsActive {
 			return nil, model.ErrAccountDisabled
 		}
-		if info.AvatarURL != "" {
+		if info.AvatarURL != "" && !hasUploadedAvatar(user) {
 			if err := s.users.UpdateAvatarURL(ctx, user.ID, info.AvatarURL); err != nil {
 				log.Ctx(ctx).Warn().Err(err).Msg("failed to update avatar")
 			} else {
@@ -745,7 +758,7 @@ func (s *AuthService) findOrCreateOAuthUser(ctx context.Context, provider string
 		if !user.IsActive {
 			return nil, model.ErrAccountDisabled
 		}
-		if user.AvatarURL == nil && info.AvatarURL != "" {
+		if info.AvatarURL != "" && !hasUploadedAvatar(user) {
 			if err := s.users.UpdateAvatarURL(ctx, user.ID, info.AvatarURL); err != nil {
 				log.Ctx(ctx).Warn().Err(err).Msg("failed to update avatar")
 			} else {
@@ -868,6 +881,184 @@ func (s *AuthService) ChangePassword(ctx context.Context, userID uuid.UUID, oldP
 func HashAPIKey(key string) string {
 	h := sha256.Sum256([]byte(key))
 	return hex.EncodeToString(h[:])
+}
+
+const maxAvatarSize = 2 << 20 // 2 MB
+const thumbSize = 128
+const thumbSizeLarge = 256
+
+// UpdateProfile updates the user's display name.
+func (s *AuthService) UpdateProfile(ctx context.Context, userID uuid.UUID, displayName string) (*model.User, error) {
+	displayName = strings.TrimSpace(displayName)
+	if displayName == "" {
+		return nil, fmt.Errorf("%w: display name is required", model.ErrValidation)
+	}
+	if len(displayName) > 100 {
+		return nil, fmt.Errorf("%w: display name must be 100 characters or fewer", model.ErrValidation)
+	}
+
+	if err := s.users.UpdateDisplayName(ctx, userID, displayName); err != nil {
+		return nil, fmt.Errorf("updating display name: %w", err)
+	}
+
+	return s.users.GetByID(ctx, userID)
+}
+
+// UploadAvatar processes and stores a user's avatar image.
+// It generates a 128x128 thumbnail and stores both the original and thumbnail.
+func (s *AuthService) UploadAvatar(ctx context.Context, userID uuid.UUID, file io.Reader, size int64, contentType string) (*model.User, error) {
+	if s.storage == nil {
+		return nil, fmt.Errorf("%w: storage is not configured", model.ErrValidation)
+	}
+
+	if size > maxAvatarSize {
+		return nil, fmt.Errorf("%w: file must be under 2 MB", model.ErrValidation)
+	}
+
+	if contentType != "image/jpeg" && contentType != "image/png" {
+		return nil, fmt.Errorf("%w: only JPEG and PNG files are allowed", model.ErrValidation)
+	}
+
+	// Decode the image
+	var src image.Image
+	var err error
+	switch contentType {
+	case "image/jpeg":
+		src, err = jpeg.Decode(file)
+	case "image/png":
+		src, err = png.Decode(file)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("%w: invalid image file", model.ErrValidation)
+	}
+
+	// Generate thumbnails (center-crop to square, then resize)
+	for _, ts := range []struct {
+		size int
+		key  string
+	}{
+		{thumbSize, fmt.Sprintf("avatars/%s/thumb.jpg", userID)},
+		{thumbSizeLarge, fmt.Sprintf("avatars/%s/large.jpg", userID)},
+	} {
+		thumb := generateThumbnail(src, ts.size)
+		var buf strings.Builder
+		if err := jpeg.Encode(io.Writer(&buf), thumb, &jpeg.Options{Quality: 85}); err != nil {
+			return nil, fmt.Errorf("encoding thumbnail (%d): %w", ts.size, err)
+		}
+		if _, err := s.storage.Put(ctx, ts.key, strings.NewReader(buf.String()), int64(buf.Len()), "image/jpeg"); err != nil {
+			return nil, fmt.Errorf("storing thumbnail (%d): %w", ts.size, err)
+		}
+	}
+
+	// Update avatar_url in DB to the thumb storage key
+	if err := s.users.UpdateAvatarURL(ctx, userID, fmt.Sprintf("avatars/%s/thumb.jpg", userID)); err != nil {
+		return nil, fmt.Errorf("updating avatar url: %w", err)
+	}
+
+	return s.users.GetByID(ctx, userID)
+}
+
+// DeleteAvatar removes the user's avatar from storage and clears avatar_url.
+func (s *AuthService) DeleteAvatar(ctx context.Context, userID uuid.UUID) (*model.User, error) {
+	user, err := s.users.GetByID(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("getting user: %w", err)
+	}
+
+	if user.AvatarURL != nil && *user.AvatarURL != "" {
+		// Delete both sizes from storage (ignore errors — may be an OAuth URL)
+		for _, key := range []string{
+			fmt.Sprintf("avatars/%s/thumb.jpg", userID),
+			fmt.Sprintf("avatars/%s/large.jpg", userID),
+		} {
+			if err := s.storage.Delete(ctx, key); err != nil {
+				log.Ctx(ctx).Warn().Err(err).Str("key", key).Msg("failed to delete avatar from storage")
+			}
+		}
+	}
+
+	// Clear avatar_url in DB
+	if err := s.users.UpdateAvatarURL(ctx, userID, ""); err != nil {
+		return nil, fmt.Errorf("clearing avatar url: %w", err)
+	}
+
+	return s.users.GetByID(ctx, userID)
+}
+
+// GetAvatarFile retrieves a user's avatar thumbnail from storage.
+// When size is "large", it returns the 256px variant (falls back to the default 128px thumb).
+func (s *AuthService) GetAvatarFile(ctx context.Context, userID uuid.UUID, size string) (io.ReadCloser, string, error) {
+	if s.storage == nil {
+		return nil, "", model.ErrNotFound
+	}
+
+	user, err := s.users.GetByID(ctx, userID)
+	if err != nil {
+		return nil, "", fmt.Errorf("getting user: %w", err)
+	}
+
+	if user.AvatarURL == nil || *user.AvatarURL == "" {
+		return nil, "", model.ErrNotFound
+	}
+
+	// If it's an external URL (OAuth avatar), return not found — client should use the URL directly
+	if strings.HasPrefix(*user.AvatarURL, "http") {
+		return nil, "", model.ErrNotFound
+	}
+
+	key := *user.AvatarURL
+	if size == "large" {
+		largeKey := fmt.Sprintf("avatars/%s/large.jpg", userID)
+		if probe, _, err := s.storage.Get(ctx, largeKey); err == nil {
+			probe.Close()
+			key = largeKey
+		}
+	}
+
+	reader, info, err := s.storage.Get(ctx, key)
+	if err != nil {
+		return nil, "", fmt.Errorf("getting avatar from storage: %w", err)
+	}
+
+	return reader, info.ContentType, nil
+}
+
+// generateThumbnail center-crops the source image to a square, then resizes to the given dimension.
+func generateThumbnail(src image.Image, size int) image.Image {
+	bounds := src.Bounds()
+	w, h := bounds.Dx(), bounds.Dy()
+
+	// Center-crop to square
+	var cropRect image.Rectangle
+	if w > h {
+		offset := (w - h) / 2
+		cropRect = image.Rect(bounds.Min.X+offset, bounds.Min.Y, bounds.Min.X+offset+h, bounds.Max.Y)
+	} else {
+		offset := (h - w) / 2
+		cropRect = image.Rect(bounds.Min.X, bounds.Min.Y+offset, bounds.Max.X, bounds.Min.Y+offset+w)
+	}
+
+	// Create the cropped sub-image
+	type subImager interface {
+		SubImage(r image.Rectangle) image.Image
+	}
+	var cropped image.Image
+	if si, ok := src.(subImager); ok {
+		cropped = si.SubImage(cropRect)
+	} else {
+		cropped = src // fallback — use full image
+	}
+
+	// Resize to target size using high-quality CatmullRom interpolation
+	dst := image.NewRGBA(image.Rect(0, 0, size, size))
+	draw.CatmullRom.Scale(dst, dst.Bounds(), cropped, cropped.Bounds(), draw.Over, nil)
+	return dst
+}
+
+// hasUploadedAvatar returns true when the user has a custom-uploaded avatar
+// (stored in our object storage) as opposed to an OAuth provider URL or no avatar.
+func hasUploadedAvatar(u *model.User) bool {
+	return u.AvatarURL != nil && *u.AvatarURL != "" && !strings.HasPrefix(*u.AvatarURL, "http")
 }
 
 func ptrStr(s *string) string {

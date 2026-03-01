@@ -61,9 +61,22 @@ func (m *mockUserRepo) UpdateLastLogin(_ context.Context, id uuid.UUID) error {
 	return nil
 }
 
+func (m *mockUserRepo) UpdateDisplayName(_ context.Context, id uuid.UUID, displayName string) error {
+	u, ok := m.byID[id]
+	if !ok {
+		return model.ErrNotFound
+	}
+	u.DisplayName = displayName
+	return nil
+}
+
 func (m *mockUserRepo) UpdateAvatarURL(_ context.Context, id uuid.UUID, avatarURL string) error {
 	if u, ok := m.byID[id]; ok {
-		u.AvatarURL = &avatarURL
+		if avatarURL == "" {
+			u.AvatarURL = nil
+		} else {
+			u.AvatarURL = &avatarURL
+		}
 	}
 	return nil
 }
@@ -788,6 +801,85 @@ func TestVerifyEmailHandler_InvalidToken(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	h.VerifyEmail(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+// --- Profile handler tests ---
+
+func TestUpdateProfileHandler_Success(t *testing.T) {
+	h, authSvc, token := testSetup(t)
+	_ = authSvc
+
+	body := `{"display_name":"Updated Name"}`
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/user/profile", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	info, _ := authSvc.ValidateJWT(token)
+	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), info))
+	w := httptest.NewRecorder()
+
+	h.UpdateProfile(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]any
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data := resp["data"].(map[string]any)
+	if data["display_name"] != "Updated Name" {
+		t.Fatalf("expected 'Updated Name', got '%v'", data["display_name"])
+	}
+}
+
+func TestUpdateProfileHandler_EmptyName(t *testing.T) {
+	h, authSvc, token := testSetup(t)
+
+	body := `{"display_name":""}`
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/user/profile", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	info, _ := authSvc.ValidateJWT(token)
+	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), info))
+	w := httptest.NewRecorder()
+
+	h.UpdateProfile(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestDeleteAvatarHandler_Success(t *testing.T) {
+	h, authSvc, token := testSetup(t)
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/user/avatar", nil)
+	info, _ := authSvc.ValidateJWT(token)
+	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), info))
+	w := httptest.NewRecorder()
+
+	h.DeleteAvatar(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestGetUserAvatarHandler_NotFound(t *testing.T) {
+	h, _, _ := testSetup(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/users/"+uuid.New().String()+"/avatar", nil)
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("userId", uuid.New().String())
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+	w := httptest.NewRecorder()
+
+	h.GetUserAvatar(w, req)
 
 	if w.Code != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d: %s", w.Code, w.Body.String())
