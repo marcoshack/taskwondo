@@ -120,6 +120,12 @@ jobs:
 
       - name: Build and push images
         run: IMAGE_TAG=latest docker compose build api web worker && IMAGE_TAG=latest docker compose push api web worker
+        env:
+          POSTGRES_USER: build
+          POSTGRES_PASSWORD: build
+          JWT_SECRET: build
+          MINIO_ROOT_USER: build
+          MINIO_ROOT_PASSWORD: build
 
   smoke-test:
     name: Smoke test
