@@ -17,6 +17,7 @@ jobs:
     outputs:
       api: ${{ steps.filter.outputs.api }}
       web: ${{ steps.filter.outputs.web }}
+      docker: ${{ steps.filter.outputs.docker }}
       e2e: ${{ steps.filter.outputs.e2e }}
     steps:
       - uses: actions/checkout@v4
@@ -29,6 +30,9 @@ jobs:
               - 'api/**'
             web:
               - 'web/**'
+            docker:
+              - 'docker/**'
+              - 'docker-compose*.yml'
             e2e:
               - 'e2e/**'
               - 'scripts/**'
@@ -93,3 +97,26 @@ jobs:
           name: playwright-report
           path: e2e/playwright-report/
           retention-days: 7
+
+  publish:
+    name: Publish Docker images
+    needs: [changes, test-api, test-web, test-e2e]
+    if: >-
+      github.ref == 'refs/heads/main' && github.event_name == 'push'
+      && !contains(needs.*.result, 'failure')
+      && (needs.changes.outputs.api == 'true' || needs.changes.outputs.web == 'true' || needs.changes.outputs.docker == 'true')
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push images
+        run: IMAGE_TAG=latest docker compose build api web worker && IMAGE_TAG=latest docker compose push api web worker
