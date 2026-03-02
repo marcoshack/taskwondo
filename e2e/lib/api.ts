@@ -692,3 +692,27 @@ export async function listWatchedItems(
   if (!res.ok()) throw new Error(`List watched items failed (${res.status()}): ${await res.text()}`);
   return await res.json();
 }
+
+// --- Attachments ---
+
+export async function uploadAttachment(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  itemNumber: number,
+  filename: string,
+  content: Buffer,
+  contentType: string,
+  comment?: string,
+): Promise<{ id: string; filename: string }> {
+  const res = await request.post(`${BASE_URL}/api/v1/projects/${projectKey}/items/${itemNumber}/attachments`, {
+    headers: { Authorization: `Bearer ${token}` },
+    multipart: {
+      file: { name: filename, mimeType: contentType, buffer: content },
+      ...(comment ? { comment } : {}),
+    },
+  });
+  if (!res.ok()) throw new Error(`Upload attachment failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}

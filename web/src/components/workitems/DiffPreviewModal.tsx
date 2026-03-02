@@ -28,7 +28,7 @@ export function DiffPreviewModal({ target, onClose }: DiffPreviewModalProps) {
       <div className="flex flex-col h-full">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 shrink-0">
-          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{title}</span>
+          <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate min-w-0">{title}</span>
           <button
             className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
             onClick={onClose}
