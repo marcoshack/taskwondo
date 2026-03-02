@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"html"
+	"net/mail"
 	"image"
 	"image/jpeg"
 	"image/png"
@@ -500,9 +501,11 @@ func (s *AuthService) RequestRegistration(ctx context.Context, email, displayNam
 	// Validate inputs
 	email = strings.TrimSpace(email)
 	displayName = strings.TrimSpace(displayName)
-	if email == "" || !strings.Contains(email, "@") {
+	addr, err := mail.ParseAddress(email)
+	if err != nil || addr.Address != email {
 		return fmt.Errorf("%w: valid email is required", model.ErrValidation)
 	}
+	email = addr.Address
 	if displayName == "" {
 		return fmt.Errorf("%w: display name is required", model.ErrValidation)
 	}
@@ -511,7 +514,7 @@ func (s *AuthService) RequestRegistration(ctx context.Context, email, displayNam
 	}
 
 	// Check user doesn't already exist
-	_, err := s.users.GetByEmail(ctx, email)
+	_, err = s.users.GetByEmail(ctx, email)
 	if err == nil {
 		return fmt.Errorf("%w: a user with this email already exists", model.ErrAlreadyExists)
 	}

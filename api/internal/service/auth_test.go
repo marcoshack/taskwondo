@@ -1426,9 +1426,27 @@ func TestRequestRegistration_InvalidEmail(t *testing.T) {
 	svc, _, _, settings, _ := newTestAuthServiceWithEmail()
 	settings.setBool(model.SettingAuthEmailRegistrationEnabled, true)
 
-	err := svc.RequestRegistration(context.Background(), "invalid", "New User", "")
-	if err == nil {
-		t.Fatal("expected validation error for invalid email")
+	cases := []struct {
+		name  string
+		email string
+	}{
+		{"no at sign", "invalid"},
+		{"empty string", ""},
+		{"at only", "@"},
+		{"no domain", "user@"},
+		{"no local part", "@domain"},
+		{"spaces", "user @example.com"},
+		{"display name format", "User <user@example.com>"},
+		{"double at", "user@@example.com"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := svc.RequestRegistration(context.Background(), tc.email, "New User", "")
+			if err == nil {
+				t.Fatalf("expected validation error for email %q", tc.email)
+			}
+		})
 	}
 }
 

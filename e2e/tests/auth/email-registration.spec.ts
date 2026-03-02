@@ -103,4 +103,14 @@ test.describe('Email Registration', () => {
     // Should show an error
     await expect(page.locator('.text-red-600, .text-red-400')).toBeVisible({ timeout: 5000 });
   });
+
+  test('registration API rejects malformed emails', async ({ request }) => {
+    const malformedEmails = ['@invalid', 'user@', 'no-at-sign', 'User <user@example.com>'];
+    for (const email of malformedEmails) {
+      const res = await request.post('/api/v1/auth/register', {
+        data: { email, display_name: 'Bad Email User' },
+      });
+      expect(res.status(), `expected 400 for email "${email}"`).toBe(400);
+    }
+  });
 });
