@@ -120,3 +120,21 @@ jobs:
 
       - name: Build and push images
         run: IMAGE_TAG=latest docker compose build api web worker && IMAGE_TAG=latest docker compose push api web worker
+
+  smoke-test:
+    name: Smoke test
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for deployment and check health
+        run: |
+          for i in $(seq 1 20); do
+            if curl -sf ${{ secrets.STAGING_URL }}/healthz && curl -sf ${{ secrets.STAGING_URL }}/readyz; then
+              echo "Health checks passed"
+              exit 0
+            fi
+            echo "Attempt $i/20 - waiting 10s..."
+            sleep 10
+          done
+          echo "Health checks failed after 200s"
+          exit 1
