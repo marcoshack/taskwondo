@@ -743,6 +743,140 @@ test.describe('Inbox', () => {
     await expect(inboxCards.getByText('Inbox mobile created item')).toBeVisible({ timeout: 10000 });
   });
 
+  test('refresh button manual refresh', async ({ request, testUser, testProject, page }) => {
+    const item = await api.createWorkItem(request, testUser.token, testProject.key, {
+      title: 'Refresh test item',
+      type: 'task',
+    });
+    await api.addToInbox(request, testUser.token, item.id);
+
+    await page.goto('/user/inbox');
+    await dismissWelcomeModal(page);
+
+    // Verify the item appears
+    await expect(page.getByRole('table').getByText('Refresh test item')).toBeVisible({ timeout: 10000 });
+
+    // The refresh button should be visible with "Refresh" text
+    const refreshBtn = page.getByRole('button', { name: 'Refresh', exact: true });
+    await expect(refreshBtn).toBeVisible();
+
+    // Click refresh — the spinning icon should appear briefly
+    await refreshBtn.click();
+
+    // After refresh, the item should still be visible (data unchanged)
+    await expect(page.getByRole('table').getByText('Refresh test item')).toBeVisible();
+  });
+
+  test('refresh dropdown opens and allows selecting auto-refresh interval', async ({ request, testUser, testProject, page }) => {
+    const item = await api.createWorkItem(request, testUser.token, testProject.key, {
+      title: 'Auto-refresh dropdown test',
+      type: 'task',
+    });
+    await api.addToInbox(request, testUser.token, item.id);
+
+    await page.goto('/user/inbox');
+    await dismissWelcomeModal(page);
+
+    await expect(page.getByRole('table').getByText('Auto-refresh dropdown test')).toBeVisible({ timeout: 10000 });
+
+    // Click the dropdown chevron (aria-label "Auto-refresh")
+    const dropdownToggle = page.getByRole('button', { name: 'Auto-refresh' });
+    await expect(dropdownToggle).toBeVisible();
+    await dropdownToggle.click();
+
+    // Dropdown should open with interval options
+    await expect(page.getByRole('button', { name: 'Off' })).toBeVisible({ timeout: 3000 });
+    await expect(page.getByRole('button', { name: '5s' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '10s' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '30s' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '1m', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: '5m', exact: true })).toBeVisible();
+
+    // Select 30s
+    await page.getByRole('button', { name: '30s' }).click();
+
+    // Dropdown should close
+    await expect(page.getByRole('button', { name: 'Off' })).not.toBeVisible({ timeout: 3000 });
+
+    // The button label should update to show "30s"
+    await expect(page.getByRole('button', { name: 'Refresh', exact: true }).getByText('30s')).toBeVisible();
+  });
+
+  test('auto-refresh interval persists across page reloads', async ({ request, testUser, testProject, page }) => {
+    const item = await api.createWorkItem(request, testUser.token, testProject.key, {
+      title: 'Persist refresh test',
+      type: 'task',
+    });
+    await api.addToInbox(request, testUser.token, item.id);
+
+    await page.goto('/user/inbox');
+    await dismissWelcomeModal(page);
+
+    await expect(page.getByRole('table').getByText('Persist refresh test')).toBeVisible({ timeout: 10000 });
+
+    // Open dropdown and select 1m
+    await page.getByRole('button', { name: 'Auto-refresh' }).click();
+    await page.getByRole('button', { name: '1m', exact: true }).click();
+
+    // Reload the page
+    await page.reload();
+    await dismissWelcomeModal(page);
+
+    // Wait for the page to load
+    await expect(page.getByRole('table').getByText('Persist refresh test')).toBeVisible({ timeout: 10000 });
+
+    // The button should still show "1m"
+    await expect(page.getByRole('button', { name: 'Refresh', exact: true }).getByText('1m', { exact: true })).toBeVisible({ timeout: 5000 });
+  });
+
+  test('refresh dropdown closes on Escape key', async ({ request, testUser, testProject, page }) => {
+    const item = await api.createWorkItem(request, testUser.token, testProject.key, {
+      title: 'Escape close test',
+      type: 'task',
+    });
+    await api.addToInbox(request, testUser.token, item.id);
+
+    await page.goto('/user/inbox');
+    await dismissWelcomeModal(page);
+
+    await expect(page.getByRole('table').getByText('Escape close test')).toBeVisible({ timeout: 10000 });
+
+    // Open dropdown
+    await page.getByRole('button', { name: 'Auto-refresh' }).click();
+    await expect(page.getByRole('button', { name: 'Off' })).toBeVisible({ timeout: 3000 });
+
+    // Press Escape to close
+    await page.keyboard.press('Escape');
+
+    // Dropdown should close
+    await expect(page.getByRole('button', { name: 'Off' })).not.toBeVisible({ timeout: 3000 });
+  });
+
+  test('selecting Off disables auto-refresh', async ({ request, testUser, testProject, page }) => {
+    const item = await api.createWorkItem(request, testUser.token, testProject.key, {
+      title: 'Disable auto-refresh test',
+      type: 'task',
+    });
+    await api.addToInbox(request, testUser.token, item.id);
+
+    await page.goto('/user/inbox');
+    await dismissWelcomeModal(page);
+
+    await expect(page.getByRole('table').getByText('Disable auto-refresh test')).toBeVisible({ timeout: 10000 });
+
+    // Set an interval first
+    await page.getByRole('button', { name: 'Auto-refresh' }).click();
+    await page.getByRole('button', { name: '10s' }).click();
+    await expect(page.getByRole('button', { name: 'Refresh', exact: true }).getByText('10s')).toBeVisible();
+
+    // Now turn it off
+    await page.getByRole('button', { name: 'Auto-refresh' }).click();
+    await page.getByRole('button', { name: 'Off' }).click();
+
+    // Label should revert to "Refresh"
+    await expect(page.getByRole('button', { name: 'Refresh', exact: true }).getByText('Refresh')).toBeVisible();
+  });
+
   test('mobile edit mode reorder items', async ({ request, testUser, testProject, page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
 

@@ -9,10 +9,11 @@ import {
   type InboxFilter,
 } from '@/api/inbox'
 
-export function useInboxItems(filter: InboxFilter = {}) {
+export function useInboxItems(filter: InboxFilter = {}, refetchInterval?: number) {
   return useQuery({
     queryKey: ['inbox', 'items', filter],
     queryFn: () => listInboxItems(filter),
+    refetchInterval: refetchInterval || undefined,
   })
 }
 

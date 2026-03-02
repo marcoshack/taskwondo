@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/Badge'
 import { PriorityBadge } from '@/components/workitems/PriorityBadge'
 import { TypeBadge } from '@/components/workitems/TypeBadge'
 import { Tooltip } from '@/components/ui/Tooltip'
+import { RefreshButton, type RefreshInterval } from '@/components/ui/RefreshButton'
 import { SLAIndicator } from '@/components/SLAIndicator'
 import { AppSidebar } from '@/components/AppSidebar'
 import { useSidebar } from '@/contexts/SidebarContext'
@@ -313,12 +314,17 @@ function InboxListPage() {
   const autoRemove = autoRemovePref ?? true
   const { data: skipRemoveConfirmPref } = usePreference<boolean>('inbox_skip_remove_confirm')
   const skipRemoveConfirm = skipRemoveConfirmPref ?? false
+  const { data: refreshIntervalPref } = usePreference<number>('inbox_refresh_interval')
+  const [refreshInterval, setRefreshInterval] = useState<RefreshInterval>(0)
+  useEffect(() => {
+    if (refreshIntervalPref !== undefined) setRefreshInterval(refreshIntervalPref as RefreshInterval)
+  }, [refreshIntervalPref])
   const setPreferenceMutation = useSetPreference()
 
-  const { data, isLoading } = useInboxItems({
+  const { data, isLoading, refetch, isFetching } = useInboxItems({
     search: debouncedSearch || undefined,
     include_completed: true,
-  })
+  }, refreshInterval)
 
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -590,6 +596,16 @@ function InboxListPage() {
             </button>
           )}
         </div>
+        {/* Refresh / auto-refresh */}
+        <RefreshButton
+          interval={refreshInterval}
+          onIntervalChange={(val) => {
+            setRefreshInterval(val)
+            setPreferenceMutation.mutate({ key: 'inbox_refresh_interval', value: val })
+          }}
+          onRefresh={() => refetch()}
+          isRefreshing={isFetching}
+        />
         {/* Clear completed */}
         <Tooltip content={completedItems.length > 0 ? `${t('inbox.clearCompleted')} (${completedItems.length})` : t('inbox.noCompletedItems')}>
           <button
