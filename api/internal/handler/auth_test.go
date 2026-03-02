@@ -152,6 +152,15 @@ func (m *mockAPIKeyRepo) Delete(_ context.Context, id, userID uuid.UUID) error {
 	return nil
 }
 
+func (m *mockAPIKeyRepo) UpdateName(_ context.Context, id, userID uuid.UUID, name string) error {
+	k, ok := m.byID[id]
+	if !ok || k.UserID != userID {
+		return model.ErrNotFound
+	}
+	k.Name = name
+	return nil
+}
+
 func (m *mockAPIKeyRepo) UpdateLastUsed(_ context.Context, _ uuid.UUID) error {
 	return nil
 }
@@ -591,6 +600,93 @@ func TestLogin_Handler_ReturnsForcePasswordChange(t *testing.T) {
 	data := resp["data"].(map[string]interface{})
 	if data["force_password_change"] != false {
 		t.Fatalf("expected force_password_change=false for seeded admin, got %v", data["force_password_change"])
+	}
+}
+
+func TestRenameAPIKey_Success(t *testing.T) {
+	h, authSvc, token := testSetup(t)
+
+	info, _ := authSvc.ValidateJWT(token)
+	apiKey, _, _ := authSvc.CreateAPIKey(context.Background(), info.UserID, "Old Name", nil, nil)
+
+	body := `{"name":"New Name"}`
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/user/api-keys/"+apiKey.ID.String(), bytes.NewBufferString(body))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("keyId", apiKey.ID.String())
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	h.RenameAPIKey(w, req)
+
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("expected 204, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestRenameAPIKey_EmptyName(t *testing.T) {
+	h, authSvc, token := testSetup(t)
+
+	info, _ := authSvc.ValidateJWT(token)
+	apiKey, _, _ := authSvc.CreateAPIKey(context.Background(), info.UserID, "Some Key", nil, nil)
+
+	body := `{"name":""}`
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/user/api-keys/"+apiKey.ID.String(), bytes.NewBufferString(body))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("keyId", apiKey.ID.String())
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	h.RenameAPIKey(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestRenameAPIKey_NotFound(t *testing.T) {
+	h, authSvc, token := testSetup(t)
+
+	info, _ := authSvc.ValidateJWT(token)
+
+	body := `{"name":"New Name"}`
+	fakeID := uuid.New()
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/user/api-keys/"+fakeID.String(), bytes.NewBufferString(body))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("keyId", fakeID.String())
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	h.RenameAPIKey(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestRenameAPIKey_InvalidKeyID(t *testing.T) {
+	h, authSvc, token := testSetup(t)
+
+	info, _ := authSvc.ValidateJWT(token)
+
+	body := `{"name":"New Name"}`
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/user/api-keys/not-a-uuid", bytes.NewBufferString(body))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("keyId", "not-a-uuid")
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	h.RenameAPIKey(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
 	}
 }
 

@@ -271,6 +271,7 @@ func main() {
 			// API key management
 			r.Get("/user/api-keys", auth.ListAPIKeys)
 			r.Post("/user/api-keys", auth.CreateAPIKey)
+			r.Patch("/user/api-keys/{keyId}", auth.RenameAPIKey)
 			r.Delete("/user/api-keys/{keyId}", auth.DeleteAPIKey)
 
 			// User search

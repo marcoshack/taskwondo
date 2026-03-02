@@ -154,6 +154,15 @@ func (m *mockAPIKeyRepo) Delete(_ context.Context, id, userID uuid.UUID) error {
 	return nil
 }
 
+func (m *mockAPIKeyRepo) UpdateName(_ context.Context, id, userID uuid.UUID, name string) error {
+	k, ok := m.byID[id]
+	if !ok || k.UserID != userID {
+		return model.ErrNotFound
+	}
+	k.Name = name
+	return nil
+}
+
 func (m *mockAPIKeyRepo) UpdateLastUsed(_ context.Context, id uuid.UUID) error {
 	return nil
 }
@@ -471,6 +480,62 @@ func TestListAndDeleteAPIKeys(t *testing.T) {
 	keys, _ = svc.ListAPIKeys(context.Background(), user.ID)
 	if len(keys) != 1 {
 		t.Fatalf("expected 1 key after delete, got %d", len(keys))
+	}
+}
+
+func TestRenameAPIKey_Success(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	user := createTestUser(t, userRepo, "test@example.com", "password123", model.RoleUser)
+
+	key, _, _ := svc.CreateAPIKey(context.Background(), user.ID, "Old Name", nil, nil)
+
+	err := svc.RenameAPIKey(context.Background(), key.ID, user.ID, "New Name")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+}
+
+func TestRenameAPIKey_EmptyName(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	user := createTestUser(t, userRepo, "test@example.com", "password123", model.RoleUser)
+
+	key, _, _ := svc.CreateAPIKey(context.Background(), user.ID, "Some Key", nil, nil)
+
+	err := svc.RenameAPIKey(context.Background(), key.ID, user.ID, "")
+	if err == nil {
+		t.Fatal("expected validation error for empty name")
+	}
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation, got %v", err)
+	}
+}
+
+func TestRenameAPIKey_NotFound(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	user := createTestUser(t, userRepo, "test@example.com", "password123", model.RoleUser)
+
+	err := svc.RenameAPIKey(context.Background(), uuid.New(), user.ID, "New Name")
+	if err == nil {
+		t.Fatal("expected not found error")
+	}
+	if !errors.Is(err, model.ErrNotFound) {
+		t.Fatalf("expected ErrNotFound, got %v", err)
+	}
+}
+
+func TestRenameAPIKey_TooLong(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	user := createTestUser(t, userRepo, "test@example.com", "password123", model.RoleUser)
+
+	key, _, _ := svc.CreateAPIKey(context.Background(), user.ID, "Some Key", nil, nil)
+
+	longName := strings.Repeat("a", 101)
+	err := svc.RenameAPIKey(context.Background(), key.ID, user.ID, longName)
+	if err == nil {
+		t.Fatal("expected validation error for name too long")
+	}
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation, got %v", err)
 	}
 }
 

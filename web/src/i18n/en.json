@@ -525,6 +525,8 @@
   "preferences.apiKeys.expiresAt": "Expires",
   "preferences.apiKeys.expired": "Expired",
   "preferences.apiKeys.noExpiration": "Never",
+  "preferences.apiKeys.rename": "Rename",
+  "preferences.apiKeys.renameKey": "Rename API Key",
   "preferences.apiKeys.deleteConfirmTitle": "Delete API Key",
   "preferences.apiKeys.deleteConfirmBody": "Are you sure you want to delete the API key <bold>{{name}}</bold>? Any applications using this key will lose access.",
 

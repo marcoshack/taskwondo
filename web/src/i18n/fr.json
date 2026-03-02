@@ -389,6 +389,8 @@
   "preferences.apiKeys.createNew": "Créer une nouvelle clé",
   "preferences.apiKeys.createdAt": "Créée le",
   "preferences.apiKeys.deleteConfirmBody": "Voulez-vous vraiment supprimer la clé API <bold>{{name}}</bold> ? Les applications utilisant cette clé perdront l'accès.",
+  "preferences.apiKeys.rename": "Renommer",
+  "preferences.apiKeys.renameKey": "Renommer la clé API",
   "preferences.apiKeys.deleteConfirmTitle": "Supprimer la clé API",
   "preferences.apiKeys.description": "Les clés API permettent un accès programmatique à l'API en votre nom.",
   "preferences.apiKeys.dismiss": "Terminé",

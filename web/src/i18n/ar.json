@@ -389,6 +389,8 @@
   "preferences.apiKeys.createNew": "إنشاء مفتاح جديد",
   "preferences.apiKeys.createdAt": "تاريخ الإنشاء",
   "preferences.apiKeys.deleteConfirmBody": "هل أنت متأكد من حذف مفتاح API <bold>{{name}}</bold>؟ ستفقد أي تطبيقات تستخدم هذا المفتاح إمكانية الوصول.",
+  "preferences.apiKeys.rename": "إعادة تسمية",
+  "preferences.apiKeys.renameKey": "إعادة تسمية مفتاح API",
   "preferences.apiKeys.deleteConfirmTitle": "حذف مفتاح API",
   "preferences.apiKeys.description": "تتيح مفاتيح API الوصول البرمجي إلى واجهة API نيابة عنك.",
   "preferences.apiKeys.dismiss": "تم",

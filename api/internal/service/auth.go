@@ -48,6 +48,7 @@ type APIKeyRepository interface {
 	GetByKeyHash(ctx context.Context, keyHash string) (*model.APIKey, error)
 	ListByUserID(ctx context.Context, userID uuid.UUID) ([]model.APIKey, error)
 	Delete(ctx context.Context, id, userID uuid.UUID) error
+	UpdateName(ctx context.Context, id, userID uuid.UUID, name string) error
 	UpdateLastUsed(ctx context.Context, id uuid.UUID) error
 }
 
@@ -357,6 +358,18 @@ func (s *AuthService) CreateAPIKey(ctx context.Context, userID uuid.UUID, name s
 // ListAPIKeys returns all API keys for a user.
 func (s *AuthService) ListAPIKeys(ctx context.Context, userID uuid.UUID) ([]model.APIKey, error) {
 	return s.apiKeys.ListByUserID(ctx, userID)
+}
+
+// RenameAPIKey updates the display name of an API key, scoped to the owning user.
+func (s *AuthService) RenameAPIKey(ctx context.Context, id, userID uuid.UUID, name string) error {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return fmt.Errorf("%w: name is required", model.ErrValidation)
+	}
+	if len(name) > 100 {
+		return fmt.Errorf("%w: name must be 100 characters or fewer", model.ErrValidation)
+	}
+	return s.apiKeys.UpdateName(ctx, id, userID, name)
 }
 
 // DeleteAPIKey deletes an API key, scoped to the owning user.

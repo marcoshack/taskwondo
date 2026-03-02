@@ -118,6 +118,10 @@ export async function listAPIKeys() {
   return res.data.data
 }
 
+export async function renameAPIKey(id: string, name: string) {
+  await api.patch(`/user/api-keys/${id}`, { name })
+}
+
 export async function deleteAPIKey(id: string) {
   await api.delete(`/user/api-keys/${id}`)
 }

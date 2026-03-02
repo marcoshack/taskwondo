@@ -389,6 +389,8 @@
   "preferences.apiKeys.createNew": "Criar Nova Chave",
   "preferences.apiKeys.createdAt": "Criada em",
   "preferences.apiKeys.deleteConfirmBody": "Tem certeza que deseja excluir a chave API <bold>{{name}}</bold>? Qualquer aplicação usando esta chave perderá o acesso.",
+  "preferences.apiKeys.rename": "Renomear",
+  "preferences.apiKeys.renameKey": "Renomear chave de API",
   "preferences.apiKeys.deleteConfirmTitle": "Excluir Chave API",
   "preferences.apiKeys.description": "Chaves API permitem acesso programático à API em seu nome.",
   "preferences.apiKeys.dismiss": "Concluído",

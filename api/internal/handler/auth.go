@@ -391,6 +391,43 @@ func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+type renameAPIKeyRequest struct {
+	Name string `json:"name"`
+}
+
+// RenameAPIKey updates the display name of an API key.
+func (h *AuthHandler) RenameAPIKey(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+
+	keyID, err := uuid.Parse(chi.URLParam(r, "keyId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid key ID")
+		return
+	}
+
+	var req renameAPIKeyRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		return
+	}
+
+	if err := h.auth.RenameAPIKey(r.Context(), keyID, info.UserID, req.Name); err != nil {
+		if errors.Is(err, model.ErrValidation) {
+			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+			return
+		}
+		if errors.Is(err, model.ErrNotFound) {
+			writeError(w, http.StatusNotFound, "NOT_FOUND", "api key not found")
+			return
+		}
+		log.Ctx(r.Context()).Error().Err(err).Msg("failed to rename api key")
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // DeleteAPIKey deletes an API key by ID.
 func (h *AuthHandler) DeleteAPIKey(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())

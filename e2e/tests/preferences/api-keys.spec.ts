@@ -135,6 +135,60 @@ test.describe('API Key Management', () => {
     await attach(page, testInfo, '01-validation-error');
   });
 
+  test('rename an API key inline', async ({ page }, testInfo) => {
+    await navigateToAPIKeys(page);
+
+    // Create a key first
+    await createKey(page, 'Original Name');
+    await page.getByRole('button', { name: 'Done' }).click();
+    await expect(page.getByText('Original Name')).toBeVisible();
+    await attach(page, testInfo, '01-key-created');
+
+    // Click the pencil/edit icon to start renaming
+    await page.locator('button:has(.lucide-pencil)').click();
+
+    // Verify the inline edit input is visible (it gets autofocus)
+    const editInput = page.getByRole('textbox').last();
+    await expect(editInput).toBeVisible();
+    await expect(editInput).toHaveValue('Original Name');
+    await attach(page, testInfo, '02-inline-edit');
+
+    // Clear and type new name
+    await editInput.clear();
+    await editInput.fill('Renamed Key');
+
+    // Submit by clicking the check icon
+    await page.locator('button:has(.lucide-check)').click();
+
+    // Verify the name was updated (green check appears briefly, then the new name stays)
+    await expect(page.getByText('Renamed Key')).toBeVisible();
+    await attach(page, testInfo, '03-key-renamed');
+  });
+
+  test('cancel API key rename with Escape', async ({ page }, testInfo) => {
+    await navigateToAPIKeys(page);
+
+    // Create a key first
+    await createKey(page, 'Keep This Name');
+    await page.getByRole('button', { name: 'Done' }).click();
+    await expect(page.getByText('Keep This Name')).toBeVisible();
+
+    // Start editing
+    await page.locator('button:has(.lucide-pencil)').click();
+    const editInput = page.getByRole('textbox').last();
+    await expect(editInput).toBeVisible();
+
+    // Type a new name but cancel with Escape
+    await editInput.clear();
+    await editInput.fill('Should Not Save');
+    await page.keyboard.press('Escape');
+
+    // Verify the original name is still shown
+    await expect(page.getByText('Keep This Name')).toBeVisible();
+    await expect(page.getByText('Should Not Save')).not.toBeVisible();
+    await attach(page, testInfo, '01-rename-cancelled');
+  });
+
   test('navigate between appearance and API keys via sidebar', async ({ page }, testInfo) => {
     await navigateToAPIKeys(page);
     await attach(page, testInfo, '01-api-keys-page');

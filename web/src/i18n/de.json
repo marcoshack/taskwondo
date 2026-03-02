@@ -389,6 +389,8 @@
   "preferences.apiKeys.createNew": "Neuen Schlüssel erstellen",
   "preferences.apiKeys.createdAt": "Erstellt",
   "preferences.apiKeys.deleteConfirmBody": "Möchten Sie den API-Schlüssel <bold>{{name}}</bold> wirklich löschen? Alle Anwendungen, die diesen Schlüssel verwenden, verlieren den Zugriff.",
+  "preferences.apiKeys.rename": "Umbenennen",
+  "preferences.apiKeys.renameKey": "API-Schlüssel umbenennen",
   "preferences.apiKeys.deleteConfirmTitle": "API-Schlüssel löschen",
   "preferences.apiKeys.description": "API-Schlüssel ermöglichen den programmatischen Zugriff auf die API in Ihrem Namen.",
   "preferences.apiKeys.dismiss": "Fertig",

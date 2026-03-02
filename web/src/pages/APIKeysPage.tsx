@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { useTranslation, Trans } from 'react-i18next'
-import { Trash2, Key, AlertTriangle } from 'lucide-react'
+import { Trash2, Key, AlertTriangle, Pencil, Check, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { Spinner } from '@/components/ui/Spinner'
 import { Badge } from '@/components/ui/Badge'
 import { CopyButton } from '@/components/ui/CopyButton'
-import { useAPIKeys, useCreateAPIKey, useDeleteAPIKey } from '@/hooks/useAPIKeys'
+import { useAPIKeys, useCreateAPIKey, useRenameAPIKey, useDeleteAPIKey } from '@/hooks/useAPIKeys'
 import type { APIKey, CreatedAPIKey } from '@/api/auth'
 
 const EXPIRATION_OPTIONS = [
@@ -29,6 +29,7 @@ export function APIKeysPage() {
   const { t } = useTranslation()
   const { data: keys, isLoading } = useAPIKeys()
   const createMutation = useCreateAPIKey()
+  const renameMutation = useRenameAPIKey()
   const deleteMutation = useDeleteAPIKey()
 
   const [name, setName] = useState('')
@@ -37,6 +38,9 @@ export function APIKeysPage() {
   const [error, setError] = useState('')
   const [createdKey, setCreatedKey] = useState<CreatedAPIKey | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<APIKey | null>(null)
+  const [editingKeyId, setEditingKeyId] = useState<string | null>(null)
+  const [editingName, setEditingName] = useState('')
+  const [savedId, setSavedId] = useState<string | null>(null)
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
@@ -68,6 +72,20 @@ export function APIKeysPage() {
     try {
       await deleteMutation.mutateAsync(deleteTarget.id)
       setDeleteTarget(null)
+    } catch {
+      // error handled by mutation
+    }
+  }
+
+  async function handleRename(keyId: string) {
+    const trimmed = editingName.trim()
+    if (!trimmed) return
+    try {
+      await renameMutation.mutateAsync({ id: keyId, name: trimmed })
+      setEditingKeyId(null)
+      setEditingName('')
+      setSavedId(keyId)
+      setTimeout(() => setSavedId(null), 2000)
     } catch {
       // error handled by mutation
     }
@@ -171,12 +189,45 @@ export function APIKeysPage() {
         <div className="rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-200 dark:divide-gray-700">
           {keys.map((key) => {
             const exp = formatExpiration(key)
+            const isEditing = editingKeyId === key.id
             return (
               <div key={key.id} className="p-4 bg-white dark:bg-gray-800 first:rounded-t-lg last:rounded-b-lg">
                 <div className="flex items-center justify-between">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="font-medium text-gray-900 dark:text-gray-100">{key.name}</span>
+                      {isEditing ? (
+                        <form
+                          className="flex items-center gap-1"
+                          onSubmit={(e) => { e.preventDefault(); handleRename(key.id) }}
+                        >
+                          <Input
+                            value={editingName}
+                            onChange={(e) => setEditingName(e.target.value)}
+                            className="h-7 text-sm w-48"
+                            autoFocus
+                            onKeyDown={(e) => { if (e.key === 'Escape') { setEditingKeyId(null); setEditingName('') } }}
+                          />
+                          <button
+                            type="submit"
+                            className="p-1 text-gray-400 hover:text-green-600 dark:hover:text-green-400 transition-colors"
+                            disabled={renameMutation.isPending}
+                          >
+                            <Check className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                            onClick={() => { setEditingKeyId(null); setEditingName('') }}
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </form>
+                      ) : (
+                        <>
+                          <span className="font-medium text-gray-900 dark:text-gray-100">{key.name}</span>
+                          {savedId === key.id && <Check className="h-4 w-4 text-green-500" />}
+                        </>
+                      )}
                       <Badge color="gray">{permissionLabel(key.permissions)}</Badge>
                       {exp.expired && <Badge color="red">{exp.text}</Badge>}
                     </div>
@@ -188,13 +239,25 @@ export function APIKeysPage() {
                       {!key.expires_at && <span>{t('preferences.apiKeys.expiresAt')}: {t('preferences.apiKeys.noExpiration')}</span>}
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-                    onClick={() => setDeleteTarget(key)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    {!isEditing && (
+                      <button
+                        type="button"
+                        className="p-1.5 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                        onClick={() => { setEditingKeyId(key.id); setEditingName(key.name) }}
+                        title={t('preferences.apiKeys.rename')}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                      onClick={() => setDeleteTarget(key)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             )

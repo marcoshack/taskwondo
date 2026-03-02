@@ -389,6 +389,8 @@
   "preferences.apiKeys.createNew": "创建新密钥",
   "preferences.apiKeys.createdAt": "创建时间",
   "preferences.apiKeys.deleteConfirmBody": "确定要删除 API 密钥<bold>{{name}}</bold>吗？使用此密钥的应用将失去访问权限。",
+  "preferences.apiKeys.rename": "重命名",
+  "preferences.apiKeys.renameKey": "重命名 API 密钥",
   "preferences.apiKeys.deleteConfirmTitle": "删除 API 密钥",
   "preferences.apiKeys.description": "API 密钥允许以编程方式代表您访问 API。",
   "preferences.apiKeys.dismiss": "完成",

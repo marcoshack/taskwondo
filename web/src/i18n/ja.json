@@ -389,6 +389,8 @@
   "preferences.apiKeys.createNew": "新しいキーを作成",
   "preferences.apiKeys.createdAt": "作成日",
   "preferences.apiKeys.deleteConfirmBody": "APIキー<bold>{{name}}</bold>を削除してもよろしいですか？このキーを使用しているアプリケーションはアクセスできなくなります。",
+  "preferences.apiKeys.rename": "名前変更",
+  "preferences.apiKeys.renameKey": "APIキーの名前変更",
   "preferences.apiKeys.deleteConfirmTitle": "APIキーを削除",
   "preferences.apiKeys.description": "APIキーを使用すると、プログラムからAPIにアクセスできます。",
   "preferences.apiKeys.dismiss": "完了",

@@ -119,6 +119,25 @@ func (r *APIKeyRepository) Delete(ctx context.Context, id, userID uuid.UUID) err
 	return nil
 }
 
+// UpdateName updates the name of an API key, scoped to a user.
+func (r *APIKeyRepository) UpdateName(ctx context.Context, id, userID uuid.UUID, name string) error {
+	result, err := r.db.ExecContext(ctx,
+		`UPDATE api_keys SET name = $1 WHERE id = $2 AND user_id = $3`, name, id, userID)
+	if err != nil {
+		return fmt.Errorf("updating api key name: %w", err)
+	}
+
+	n, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("checking rows affected: %w", err)
+	}
+	if n == 0 {
+		return model.ErrNotFound
+	}
+
+	return nil
+}
+
 // UpdateLastUsed sets the last_used_at timestamp to now.
 func (r *APIKeyRepository) UpdateLastUsed(ctx context.Context, id uuid.UUID) error {
 	_, err := r.db.ExecContext(ctx,
