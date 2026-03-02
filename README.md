@@ -51,6 +51,15 @@ cd taskwondo
 
 Then open [http://localhost:3000](http://localhost:3000) and log in with the admin credentials printed by the installer.
 
+To start Taskwondo automatically on boot, install the included systemd service:
+
+```bash
+sudo cp docker/taskwondo.service /etc/systemd/system/
+sudo sed -i "s|/path/to/your/taskwondo|$(pwd)|" /etc/systemd/system/taskwondo.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now taskwondo
+```
+
 For manual installation without Docker, see [MANUAL_INSTALL.md](MANUAL_INSTALL.md).
 
 ## Development
