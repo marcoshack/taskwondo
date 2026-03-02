@@ -10,6 +10,7 @@ import { Spinner } from '@/components/ui/Spinner'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
+import { ScrollableRow } from '@/components/ui/ScrollableRow'
 import { isPreviewable } from './FilePreviewModal'
 
 interface AttachmentListProps {
@@ -128,18 +129,20 @@ export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc', hig
           }`}
         >
           <div className="flex-1 min-w-0">
-            <button
-              onClick={() => {
-                if (onPreview && isPreviewable(a)) {
-                  onPreview(a)
-                } else {
-                  handleDownload(a.id, a.filename)
-                }
-              }}
-              className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline truncate block text-left cursor-pointer"
-            >
-              {a.filename}
-            </button>
+            <ScrollableRow gradientFrom="from-white dark:from-gray-900">
+              <button
+                onClick={() => {
+                  if (onPreview && isPreviewable(a)) {
+                    onPreview(a)
+                  } else {
+                    handleDownload(a.id, a.filename)
+                  }
+                }}
+                className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline whitespace-nowrap text-left cursor-pointer"
+              >
+                {a.filename}
+              </button>
+            </ScrollableRow>
             {editingCommentId === a.id ? (
               <div className="flex items-center gap-1 mt-0.5">
                 <input
