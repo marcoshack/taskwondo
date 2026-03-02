@@ -102,7 +102,8 @@ jobs:
     name: Publish Docker images
     needs: [changes, test-api, test-web, test-e2e]
     if: >-
-      github.ref == 'refs/heads/main' && github.event_name == 'push'
+      always()
+      && github.ref == 'refs/heads/main' && github.event_name == 'push'
       && !contains(needs.*.result, 'failure')
       && (needs.changes.outputs.api == 'true' || needs.changes.outputs.web == 'true' || needs.changes.outputs.docker == 'true')
     runs-on: ubuntu-latest

@@ -32,9 +32,6 @@ test.describe('Email Registration', () => {
     const displayName = `Reg User ${uniqueId}`;
     const password = 'SecurePass123!';
 
-    // Clear Mailpit before test
-    await api.deleteMailpitMessages(request);
-
     // Step 1: Navigate to login page and click "Create an account"
     await page.goto('/login');
     await page.waitForLoadState('networkidle');
@@ -51,17 +48,8 @@ test.describe('Email Registration', () => {
     await expect(page.getByText('Check your email')).toBeVisible({ timeout: 10000 });
     await expect(page.getByText(email)).toBeVisible();
 
-    // Step 4: Retrieve the verification email from Mailpit
-    let messages: Awaited<ReturnType<typeof api.getMailpitMessages>> = [];
-    for (let i = 0; i < 10; i++) {
-      messages = await api.getMailpitMessages(request);
-      if (messages.length > 0) break;
-      await page.waitForTimeout(500);
-    }
-    expect(messages.length).toBeGreaterThan(0);
-
-    const msg = await api.getMailpitMessage(request, messages[0].ID);
-    expect(msg.To[0].Address).toBe(email);
+    // Step 4: Retrieve the verification email from Mailpit (search by recipient)
+    const msg = await api.waitForMailpitMessage(request, email);
     expect(msg.Subject).toContain('Verify');
 
     // Step 5: Extract the verification URL from the email HTML

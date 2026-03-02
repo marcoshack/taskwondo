@@ -602,6 +602,38 @@ export async function deleteMailpitMessages(
   await request.delete(`${MAILPIT_URL}/api/v1/messages`);
 }
 
+export async function searchMailpitMessages(
+  request: APIRequestContext,
+  query: string,
+): Promise<MailpitMessage[]> {
+  const res = await request.get(`${MAILPIT_URL}/api/v1/search`, {
+    params: { query },
+  });
+  if (!res.ok()) throw new Error(`Mailpit search failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.messages ?? [];
+}
+
+/**
+ * Poll Mailpit for a message sent to a specific email address.
+ * Returns the full message detail once found, or throws after timeout.
+ */
+export async function waitForMailpitMessage(
+  request: APIRequestContext,
+  recipientEmail: string,
+  { timeoutMs = 5000, intervalMs = 500 } = {},
+): Promise<MailpitMessageDetail> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const messages = await searchMailpitMessages(request, `to:${recipientEmail}`);
+    if (messages.length > 0) {
+      return getMailpitMessage(request, messages[0].ID);
+    }
+    await new Promise((r) => setTimeout(r, intervalMs));
+  }
+  throw new Error(`No Mailpit message found for ${recipientEmail} within ${timeoutMs}ms`);
+}
+
 // --- Invites ---
 
 export async function createInvite(

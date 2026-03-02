@@ -38,9 +38,6 @@ test.describe('Invite + Email Registration', () => {
     await api.createProject(request, adminToken, projectKey, `Invite Test ${uniqueId}`);
     const invite = await api.createInvite(request, adminToken, projectKey, 'member');
 
-    // Clear Mailpit before test
-    await api.deleteMailpitMessages(request);
-
     // Step 1: Navigate to the invite link (unauthenticated)
     await page.goto(`/invite/${invite.code}`);
     await page.waitForLoadState('networkidle');
@@ -63,17 +60,8 @@ test.describe('Invite + Email Registration', () => {
     // Step 4: Verify "check your email" message
     await expect(page.getByText('Check your email')).toBeVisible({ timeout: 10000 });
 
-    // Step 5: Retrieve the verification email from Mailpit
-    let messages: Awaited<ReturnType<typeof api.getMailpitMessages>> = [];
-    for (let i = 0; i < 10; i++) {
-      messages = await api.getMailpitMessages(request);
-      if (messages.length > 0) break;
-      await page.waitForTimeout(500);
-    }
-    expect(messages.length).toBeGreaterThan(0);
-
-    const msg = await api.getMailpitMessage(request, messages[0].ID);
-    expect(msg.To[0].Address).toBe(email);
+    // Step 5: Retrieve the verification email from Mailpit (search by recipient)
+    const msg = await api.waitForMailpitMessage(request, email);
 
     // Step 6: Extract the verification URL from the email HTML
     const urlMatch = msg.HTML.match(/href="([^"]*verify-email[^"]*)"/);
