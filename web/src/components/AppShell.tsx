@@ -10,7 +10,7 @@ import { Avatar } from '@/components/ui/Avatar'
 import { Modal } from '@/components/ui/Modal'
 import { ProjectKeyBadge } from '@/components/ui/ProjectKeyBadge'
 import { Spinner } from '@/components/ui/Spinner'
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react'
 import { useKeyboardShortcutContext } from '@/contexts/KeyboardShortcutContext'
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
 import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal'
@@ -69,22 +69,24 @@ export function AppShell() {
   }, [menuOpen])
 
   // Sequential combos: g-p (project switcher), g-i (inbox), g-o (project items)
+  // useLayoutEffect ensures combos are registered before paint, so keyboard
+  // shortcuts are available as soon as the UI is visible (prevents flaky E2E tests).
   const { registerSequentialCombo } = useKeyboardShortcutContext()
-  useEffect(() => {
+  useLayoutEffect(() => {
     return registerSequentialCombo({
       id: 'go-to-projects',
       keys: ['g', 'p'],
       callback: () => setSwitcherOpen(true),
     })
   }, [registerSequentialCombo])
-  useEffect(() => {
+  useLayoutEffect(() => {
     return registerSequentialCombo({
       id: 'go-to-inbox',
       keys: ['g', 'i'],
       callback: () => guardedNavigate('/user/inbox'),
     })
   }, [registerSequentialCombo])
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!activeProjectKey) return
     return registerSequentialCombo({
       id: 'go-to-items',

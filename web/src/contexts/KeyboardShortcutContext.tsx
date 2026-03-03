@@ -1,4 +1,4 @@
-import { createContext, useContext, useRef, useCallback, useEffect } from 'react'
+import { createContext, useContext, useRef, useCallback, useLayoutEffect } from 'react'
 import type { ReactNode } from 'react'
 
 interface SequentialCombo {
@@ -41,7 +41,7 @@ export function KeyboardShortcutProvider({ children }: { children: ReactNode }) 
     }
   }, [])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (modalOpenCount.current > 0) return
 
