@@ -15,6 +15,7 @@ services:
     environment:
       # Always listen on port 8080 inside the container
       - API_PORT=8080
+      # Always connect to postgres on port :5432 as it connectes directly through docker network, not the mapped port
       - DATABASE_URL=postgres://${POSTGRES_USER:?required}:${POSTGRES_PASSWORD:?required}@postgres:5432/${POSTGRES_DB:-taskwondo}?sslmode=disable
       - JWT_SECRET=${JWT_SECRET:?required — generate a random string of at least 32 chars}
       - STORAGE_ENDPOINT=minio:9000
