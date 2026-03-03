@@ -257,7 +257,8 @@ function InboxListPage() {
 
   const [searchInput, setSearchInput] = useState('')
   const searchRef = useRef<HTMLInputElement>(null)
-  const debouncedSearch = useDebounce(searchInput, 300)
+  const [searchFocused, setSearchFocused] = useState(false)
+  const debouncedSearch = useDebounce(searchInput, 500)
 
   const { columnWidths, onColumnResize, resetColumnWidth } = useColumnWidths('inbox')
 
@@ -324,7 +325,7 @@ function InboxListPage() {
   const { data, isLoading, refetch, isFetching } = useInboxItems({
     search: debouncedSearch || undefined,
     include_completed: true,
-  }, refreshInterval)
+  }, searchFocused ? 0 : refreshInterval)
 
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -584,6 +585,8 @@ function InboxListPage() {
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder={t('inbox.searchPlaceholder')}
             className="pl-10 pr-8"
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
             onKeyDown={(e) => { if (e.key === 'Escape') searchRef.current?.blur() }}
           />
           {searchInput && (

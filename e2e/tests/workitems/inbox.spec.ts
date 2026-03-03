@@ -918,4 +918,44 @@ test.describe('Inbox', () => {
     expect(list.items[1].title).toBe('Mobile order 3');
     expect(list.items[2].title).toBe('Mobile order 2');
   });
+
+  test('search input retains focus while typing', async ({ request, testUser, testProject, page }) => {
+    // Create items with distinct titles so search narrows results
+    const item1 = await api.createWorkItem(request, testUser.token, testProject.key, {
+      title: 'Alpha search focus test',
+      type: 'task',
+    });
+    const item2 = await api.createWorkItem(request, testUser.token, testProject.key, {
+      title: 'Beta unrelated item',
+      type: 'task',
+    });
+    await api.addToInbox(request, testUser.token, item1.id);
+    await api.addToInbox(request, testUser.token, item2.id);
+
+    await page.goto('/user/inbox');
+    await dismissWelcomeModal(page);
+
+    const table = page.getByRole('table');
+    await expect(table.getByText('Alpha search focus test')).toBeVisible({ timeout: 10000 });
+
+    // Focus the search input and type slowly with pauses to simulate real typing
+    const searchInput = page.getByPlaceholder(/search/i);
+    await searchInput.click();
+    await expect(searchInput).toBeFocused();
+
+    // Type character by character with pauses longer than the old 300ms debounce
+    // but shorter than the new 500ms debounce — this is the scenario that broke before
+    await searchInput.pressSequentially('Alpha', { delay: 150 });
+
+    // The input must still be focused after typing (the core bug: focus was lost)
+    await expect(searchInput).toBeFocused();
+    await expect(searchInput).toHaveValue('Alpha');
+
+    // Wait for debounce to fire and results to update
+    await expect(table.getByText('Alpha search focus test')).toBeVisible({ timeout: 5000 });
+    await expect(table.getByText('Beta unrelated item')).not.toBeVisible({ timeout: 5000 });
+
+    // Input must still be focused after search results update
+    await expect(searchInput).toBeFocused();
+  });
 });

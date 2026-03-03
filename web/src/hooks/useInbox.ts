@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import {
   listInboxItems,
   addToInbox,
@@ -14,6 +14,7 @@ export function useInboxItems(filter: InboxFilter = {}, refetchInterval?: number
     queryKey: ['inbox', 'items', filter],
     queryFn: () => listInboxItems(filter),
     refetchInterval: refetchInterval || undefined,
+    placeholderData: keepPreviousData,
   })
 }
 
