@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useCallback, type ReactNode } from 'react'
+import { useRef, useState, useEffect, useCallback, forwardRef, type ReactNode } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface ScrollableRowProps {
@@ -10,7 +10,7 @@ interface ScrollableRowProps {
   gradientFrom?: string
 }
 
-export function ScrollableRow({ children, className = '', contentClassName = '', gradientFrom = 'from-white dark:from-gray-800' }: ScrollableRowProps) {
+export const ScrollableRow = forwardRef<HTMLDivElement, ScrollableRowProps>(function ScrollableRow({ children, className = '', contentClassName = '', gradientFrom = 'from-white dark:from-gray-800' }, forwardedRef) {
   const ref = useRef<HTMLDivElement>(null)
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(false)
@@ -32,7 +32,7 @@ export function ScrollableRow({ children, className = '', contentClassName = '',
   }, [checkScroll])
 
   return (
-    <div className={`relative ${className}`}>
+    <div ref={forwardedRef} className={`relative ${className}`}>
       {canScrollLeft && (
         <>
           <span className={`absolute left-0 top-0 bottom-0 w-5 bg-gradient-to-r ${gradientFrom} to-transparent z-10 pointer-events-none`} />
@@ -54,4 +54,4 @@ export function ScrollableRow({ children, className = '', contentClassName = '',
       )}
     </div>
   )
-}
+})

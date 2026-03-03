@@ -66,9 +66,15 @@ function getDescriptionPreview(description: string): string {
 function InboxRow({ item, isCompleted, isFirst, isLast, isActive, onRemove, onMoveUp, onMoveDown, onClick, removedId, reorderedId, autoRemove, columnWidths }: InboxRowProps) {
   const { t } = useTranslation()
   const isRemoving = removedId === item.id
+  const rowRef = useRef<HTMLTableRowElement>(null)
+
+  useEffect(() => {
+    if (isActive) rowRef.current?.scrollIntoView({ block: 'nearest' })
+  }, [isActive])
 
   return (
     <tr
+      ref={rowRef}
       className={`group border-b border-gray-200 dark:border-gray-700
         ${reorderedId === item.id ? 'animate-[inbox-highlight_1s_ease-in-out]' : ''}
         ${isRemoving && autoRemove ? 'transition-all duration-300 opacity-0 -translate-y-2' : ''}
@@ -170,9 +176,15 @@ function InboxCard({ item, isCompleted, isFirst, isLast, isActive, editing, onRe
   const isRemoving = removedId === item.id
   const dimmed = isCompleted && !isRemoving
   const assigneeName = item.assignee_display_name || t('userPicker.unassigned')
+  const cardRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (isActive) cardRef.current?.scrollIntoView({ block: 'nearest' })
+  }, [isActive])
 
   return (
     <div
+      ref={cardRef}
       className={`flex items-stretch gap-0 rounded-lg border bg-white dark:bg-gray-800 shadow-sm transition-colors
         ${isActive ? 'border-indigo-400 dark:border-indigo-500 ring-1 ring-indigo-300 dark:ring-indigo-600' : 'border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600'}
         ${reorderedId === item.id ? 'animate-[inbox-highlight_1s_ease-in-out]' : ''}
@@ -366,6 +378,8 @@ function InboxListPage() {
   const [removedId, setRemovedId] = useState<string | null>(null)
   const [reorderedId, setReorderedId] = useState<string | null>(null)
   const [activeRow, setActiveRow] = useState(-1)
+  const activeRowStorageKey = 'taskwondo_activeRow_inbox'
+  const restoredRef = useRef(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [removeConfirmItem, setRemoveConfirmItem] = useState<InboxItem | null>(null)
   const [dontShowAgainChecked, setDontShowAgainChecked] = useState(false)
@@ -415,6 +429,7 @@ function InboxListPage() {
   }, [skipRemoveConfirm, handleRemove])
 
   const handleClick = useCallback((item: InboxItem) => {
+    sessionStorage.setItem(activeRowStorageKey, item.id)
     navigate(`/projects/${item.project_key}/items/${item.display_id.split('-')[1]}`, { state: { from: 'inbox' } })
   }, [navigate])
 
@@ -442,6 +457,18 @@ function InboxListPage() {
       },
     })
   }, [allItems, reorderMutation])
+
+  // Restore active row from sessionStorage after navigating back
+  useEffect(() => {
+    if (restoredRef.current || allItems.length === 0) return
+    const stored = sessionStorage.getItem(activeRowStorageKey)
+    if (stored) {
+      const idx = allItems.findIndex((i) => i.id === stored)
+      if (idx >= 0) setActiveRow(idx)
+      sessionStorage.removeItem(activeRowStorageKey)
+    }
+    restoredRef.current = true
+  }, [allItems])
 
   // Keyboard navigation
   useKeyboardShortcut({ key: 'c' }, () => setShowCreate(true))

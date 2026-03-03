@@ -29,7 +29,7 @@ test.describe('Back link navigation', () => {
     await expect(page).toHaveURL(new RegExp(`/projects/${testProject.key}/items`), { timeout: 10000 });
   });
 
-  test('from inbox shows "Back to inbox" and navigates back', async ({ request, testUser, testProject, page }) => {
+  test('from inbox navigates back and highlights the previously opened item', async ({ request, testUser, testProject, page }) => {
     const item = await api.createWorkItem(request, testUser.token, testProject.key, {
       title: 'Back link inbox test',
       type: 'task',
@@ -39,17 +39,19 @@ test.describe('Back link navigation', () => {
     await page.goto('/user/inbox');
     await dismissWelcomeModal(page);
 
+    // Store active row key should be set after click
     await page.getByRole('table').getByText('Back link inbox test').click();
     await expect(page).toHaveURL(new RegExp(`/projects/${testProject.key}/items/${item.item_number}`), { timeout: 10000 });
 
-    const backLink = page.getByText('Back to inbox');
-    await expect(backLink).toBeVisible();
-
-    await backLink.click();
+    await page.getByText('Back to inbox').click();
     await expect(page).toHaveURL(/\/user\/inbox/, { timeout: 10000 });
+
+    // The previously clicked row should be highlighted (InboxRow uses bg-indigo-50 for isActive)
+    const highlightedRow = page.locator('tr.bg-indigo-50').filter({ hasText: 'Back link inbox test' });
+    await expect(highlightedRow).toBeVisible({ timeout: 5000 });
   });
 
-  test('from watchlist shows "Back to watchlist" and navigates back', async ({ request, testUser, testProject, page }) => {
+  test('from watchlist navigates back and highlights the previously opened item', async ({ request, testUser, testProject, page }) => {
     const item = await api.createWorkItem(request, testUser.token, testProject.key, {
       title: 'Back link watchlist test',
       type: 'task',
@@ -62,14 +64,15 @@ test.describe('Back link navigation', () => {
     await page.getByRole('table').getByText('Back link watchlist test').click();
     await expect(page).toHaveURL(new RegExp(`/projects/${testProject.key}/items/${item.item_number}`), { timeout: 10000 });
 
-    const backLink = page.getByText('Back to watchlist');
-    await expect(backLink).toBeVisible();
-
-    await backLink.click();
+    await page.getByText('Back to watchlist').click();
     await expect(page).toHaveURL(/\/user\/watchlist/, { timeout: 10000 });
+
+    // DataTable uses ring-indigo-500 for active row highlight
+    const highlightedRow = page.locator('tr.ring-indigo-500').filter({ hasText: 'Back link watchlist test' });
+    await expect(highlightedRow).toBeVisible({ timeout: 5000 });
   });
 
-  test('from milestone dashboard shows "Back to milestone" and navigates back', async ({ request, testUser, testProject, page }) => {
+  test('from milestone dashboard navigates back and highlights the previously opened item', async ({ request, testUser, testProject, page }) => {
     const milestone = await api.createMilestone(request, testUser.token, testProject.key, {
       name: 'Back link milestone',
     });
@@ -87,10 +90,11 @@ test.describe('Back link navigation', () => {
     await page.getByText('Back link milestone test').first().click();
     await expect(page).toHaveURL(new RegExp(`/projects/${testProject.key}/items/${item.item_number}`), { timeout: 10000 });
 
-    const backLink = page.getByText('Back to milestone');
-    await expect(backLink).toBeVisible();
-
-    await backLink.click();
+    await page.getByText('Back to milestone').click();
     await expect(page).toHaveURL(new RegExp(`/projects/${testProject.key}/milestones/${milestone.id}`), { timeout: 10000 });
+
+    // MilestoneDashboardPage WorkItemRow uses bg-indigo-50 for active
+    const highlightedRow = page.locator('.bg-indigo-50').filter({ hasText: 'Back link milestone test' });
+    await expect(highlightedRow).toBeVisible({ timeout: 5000 });
   });
 });

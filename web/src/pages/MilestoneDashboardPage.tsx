@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ChevronRight, Pencil, Clock } from 'lucide-react'
@@ -461,9 +461,33 @@ function WorkItemsTable({
 }) {
   const { t } = useTranslation()
   const [expanded, setExpanded] = useState(false)
+  const [activeItemNumber, setActiveItemNumber] = useState(-1)
+  const restoredRef = useRef(false)
+  const activeRowStorageKey = `taskwondo_activeRow_milestone_${milestoneId}`
 
   const visibleItems = expanded ? items : items.slice(0, ITEMS_PREVIEW_LIMIT)
   const hasHiddenItems = items.length > ITEMS_PREVIEW_LIMIT
+
+  // Restore active row from sessionStorage after navigating back
+  useEffect(() => {
+    if (restoredRef.current || items.length === 0) return
+    const stored = sessionStorage.getItem(activeRowStorageKey)
+    if (stored) {
+      const itemNumber = parseInt(stored, 10)
+      if (items.some((i) => i.item_number === itemNumber)) {
+        setActiveItemNumber(itemNumber)
+        // Auto-expand if the item is beyond the preview limit
+        const idx = items.findIndex((i) => i.item_number === itemNumber)
+        if (idx >= ITEMS_PREVIEW_LIMIT) setExpanded(true)
+      }
+      sessionStorage.removeItem(activeRowStorageKey)
+    }
+    restoredRef.current = true
+  }, [items, activeRowStorageKey])
+
+  const handleItemClick = useCallback((itemNumber: number) => {
+    sessionStorage.setItem(activeRowStorageKey, String(itemNumber))
+  }, [activeRowStorageKey])
 
   return (
     <div>
@@ -494,6 +518,8 @@ function WorkItemsTable({
               member={item.assignee_id ? memberMap.get(item.assignee_id) ?? null : null}
               projectKey={projectKey}
               milestoneId={milestoneId}
+              isActive={item.item_number === activeItemNumber}
+              onClick={handleItemClick}
               statuses={statuses}
             />
           ))}
@@ -529,26 +555,37 @@ function WorkItemRow({
   member,
   projectKey,
   milestoneId,
+  isActive,
+  onClick,
   statuses,
 }: {
   item: WorkItem
   member: ProjectMember | null
   projectKey: string
   milestoneId: string
+  isActive?: boolean
+  onClick?: (itemNumber: number) => void
   statuses?: import('@/api/workflows').WorkflowStatus[]
 }) {
   const { t } = useTranslation()
   const linkState = { state: { from: 'milestone', backUrl: `/projects/${projectKey}/milestones/${milestoneId}` } }
+  const rowRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (isActive) rowRef.current?.scrollIntoView({ block: 'nearest' })
+  }, [isActive])
 
   return (
     <ScrollableRow
-      className="hover:bg-gray-50 dark:hover:bg-gray-800/50"
+      ref={rowRef}
+      className={isActive ? 'bg-indigo-50 dark:bg-indigo-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'}
       gradientFrom="from-white dark:from-gray-900"
     >
       <div className="px-3 py-2 shrink-0">
         <Link
           to={`/projects/${projectKey}/items/${item.item_number}`}
           {...linkState}
+          onClick={() => onClick?.(item.item_number)}
           className="text-xs text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 font-mono"
         >
           {item.display_id}
@@ -558,6 +595,7 @@ function WorkItemRow({
         <Link
           to={`/projects/${projectKey}/items/${item.item_number}`}
           {...linkState}
+          onClick={() => onClick?.(item.item_number)}
           className="text-gray-900 dark:text-gray-100 hover:text-indigo-600 dark:hover:text-indigo-400 whitespace-nowrap sm:truncate sm:block"
         >
           {item.title}
