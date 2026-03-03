@@ -120,7 +120,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push images
-        run: IMAGE_TAG=latest docker compose build api web worker && IMAGE_TAG=latest docker compose push api web worker
+        run: touch .env && IMAGE_TAG=latest docker compose build api web worker && IMAGE_TAG=latest docker compose push api web worker
         env:
           POSTGRES_USER: build
           POSTGRES_PASSWORD: build
