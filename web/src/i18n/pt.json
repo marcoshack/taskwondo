@@ -823,6 +823,8 @@
   "workflows.workflowName": "Nome do fluxo",
   "workitems.attached": "Anexado \"{{filename}}\"",
   "workitems.backToInbox": "Voltar à caixa de entrada",
+  "workitems.backToWatchlist": "Voltar à lista de acompanhamento",
+  "workitems.backToMilestone": "Voltar ao marco",
   "workitems.backToItems": "Voltar aos itens",
   "workitems.bulk.assign": "Atribuir...",
   "workitems.bulk.changeStatus": "Alterar status...",

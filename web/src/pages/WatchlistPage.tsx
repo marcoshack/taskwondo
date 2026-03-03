@@ -189,7 +189,7 @@ export default function WatchlistPage() {
   useKeyboardShortcut([{ key: 'Enter' }, { key: 'o' }], () => {
     if (activeRow >= 0 && activeRow < allItems.length) {
       const item = allItems[activeRow]
-      navigate(`/projects/${item.project_key}/items/${item.item_number}`)
+      navigate(`/projects/${item.project_key}/items/${item.item_number}`, { state: { from: 'watchlist' } })
     }
   }, activeRow >= 0)
   useKeyboardShortcut({ key: 'Escape' }, () => setActiveRow(-1), activeRow >= 0)
@@ -455,7 +455,7 @@ export default function WatchlistPage() {
             <DataTable
               columns={columns}
               data={allItems}
-              onRowClick={(row) => navigate(`/projects/${row.project_key}/items/${row.item_number}`)}
+              onRowClick={(row) => navigate(`/projects/${row.project_key}/items/${row.item_number}`, { state: { from: 'watchlist' } })}
               emptyMessage={t('workitems.empty')}
               sortBy={sort}
               sortOrder={order}
@@ -483,7 +483,7 @@ export default function WatchlistPage() {
                   assigneeName={assigneeName}
                   inboxItemId={inboxByWorkItemId.get(item.id)}
                   isWatching={watchedItemIdSet.has(item.id)}
-                  onClick={() => navigate(`/projects/${item.project_key}/items/${item.item_number}`)}
+                  onClick={() => navigate(`/projects/${item.project_key}/items/${item.item_number}`, { state: { from: 'watchlist' } })}
                 />
               )
             })}
@@ -512,7 +512,7 @@ export default function WatchlistPage() {
           statuses={statuses}
           transitionsMap={transitionsMap}
           readOnly
-          onItemClick={(item) => navigate(`/projects/${item.project_key}/items/${item.item_number}`)}
+          onItemClick={(item) => navigate(`/projects/${item.project_key}/items/${item.item_number}`, { state: { from: 'watchlist' } })}
         />
       )}
     </div>

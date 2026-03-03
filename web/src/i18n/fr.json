@@ -823,6 +823,8 @@
   "workflows.workflowName": "Nom du workflow",
   "workitems.attached": "\"{{filename}}\" joint",
   "workitems.backToInbox": "Retour à la boîte de réception",
+  "workitems.backToWatchlist": "Retour à la liste de suivi",
+  "workitems.backToMilestone": "Retour au jalon",
   "workitems.backToItems": "Retour aux éléments",
   "workitems.bulk.assign": "Assigner...",
   "workitems.bulk.changeStatus": "Changer le statut...",

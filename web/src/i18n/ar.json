@@ -823,6 +823,8 @@
   "workflows.workflowName": "اسم سير العمل",
   "workitems.attached": "تم إرفاق \"{{filename}}\"",
   "workitems.backToInbox": "العودة إلى صندوق الوارد",
+  "workitems.backToWatchlist": "العودة إلى قائمة المراقبة",
+  "workitems.backToMilestone": "العودة إلى الحدث الرئيسي",
   "workitems.backToItems": "العودة للعناصر",
   "workitems.bulk.assign": "تعيين...",
   "workitems.bulk.changeStatus": "تغيير الحالة...",

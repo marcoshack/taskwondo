@@ -99,15 +99,22 @@ export function WorkItemDetailPage() {
   const { confirmed: titleConfirmed, showConfirm: showTitleConfirm } = useConfirmFeedback()
   const { confirmed: descConfirmed, showConfirm: showDescConfirm } = useConfirmFeedback()
 
-  // Build back URL — inbox or project items list
+  // Build back URL — inbox, watchlist, milestone, or project items list
   const location = useLocation()
-  const fromInbox = (location.state as { from?: string } | null)?.from === 'inbox'
+  const navState = location.state as { from?: string; backUrl?: string } | null
+  const fromPage = navState?.from
   const backToListUrl = useMemo(() => {
-    if (fromInbox) return '/user/inbox'
+    if (fromPage === 'inbox') return '/user/inbox'
+    if (fromPage === 'watchlist') return '/user/watchlist'
+    if (fromPage === 'milestone' && navState?.backUrl) return navState.backUrl
     const base = `/projects/${projectKey}/items`
     const stored = sessionStorage.getItem(`taskwondo_listParams_${projectKey}`)
     return stored ? `${base}?${stored}` : base
-  }, [projectKey, fromInbox])
+  }, [projectKey, fromPage, navState?.backUrl])
+  const backLabelKey = fromPage === 'inbox' ? 'workitems.backToInbox'
+    : fromPage === 'watchlist' ? 'workitems.backToWatchlist'
+    : fromPage === 'milestone' ? 'workitems.backToMilestone'
+    : 'workitems.backToItems'
   useKeyboardShortcut({ key: '#' }, () => setShowDelete(true), canEdit)
 
   // Navigation guard for unsaved comment draft
@@ -260,7 +267,7 @@ export function WorkItemDetailPage() {
           className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
           onClick={() => guardedNavigate(backToListUrl)}
         >
-          &larr; {t(fromInbox ? 'workitems.backToInbox' : 'workitems.backToItems')}
+          &larr; {t(backLabelKey)}
         </button>
         <span className="lg:hidden ml-auto flex items-center gap-1">
           {item && <InboxButton workItemId={item.id} inboxItemId={inboxItemId} className="p-1.5" />}

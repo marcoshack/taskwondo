@@ -823,6 +823,8 @@
   "workflows.workflowName": "ワークフロー名",
   "workitems.attached": "\"{{filename}}\"を添付しました",
   "workitems.backToInbox": "受信トレイに戻る",
+  "workitems.backToWatchlist": "ウォッチリストに戻る",
+  "workitems.backToMilestone": "マイルストーンに戻る",
   "workitems.backToItems": "一覧に戻る",
   "workitems.bulk.assign": "担当者変更...",
   "workitems.bulk.changeStatus": "ステータス変更...",

@@ -823,6 +823,8 @@
   "workflows.workflowName": "Nombre del flujo",
   "workitems.attached": "Adjuntado \"{{filename}}\"",
   "workitems.backToInbox": "Volver a la bandeja de entrada",
+  "workitems.backToWatchlist": "Volver a la lista de seguimiento",
+  "workitems.backToMilestone": "Volver al hito",
   "workitems.backToItems": "Volver a ítems",
   "workitems.bulk.assign": "Asignar...",
   "workitems.bulk.changeStatus": "Cambiar estado...",

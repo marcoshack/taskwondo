@@ -823,6 +823,8 @@
   "workflows.workflowName": "工作流名称",
   "workitems.attached": "已附加\"{{filename}}\"",
   "workitems.backToInbox": "返回收件箱",
+  "workitems.backToWatchlist": "返回关注列表",
+  "workitems.backToMilestone": "返回里程碑",
   "workitems.backToItems": "返回列表",
   "workitems.bulk.assign": "分配...",
   "workitems.bulk.changeStatus": "更改状态...",

@@ -229,6 +229,8 @@
   "workitems.empty": "No work items found",
   "workitems.backToItems": "Back to items",
   "workitems.backToInbox": "Back to inbox",
+  "workitems.backToWatchlist": "Back to watchlist",
+  "workitems.backToMilestone": "Back to milestone",
   "workitems.dropToAttach": "Drop files to attach",
   "workitems.selected": "{{count}} selected",
   "workitems.attached": "Attached \"{{filename}}\"",

@@ -823,6 +823,8 @@
   "workflows.workflowName": "워크플로 이름",
   "workitems.attached": "\"{{filename}}\" 첨부됨",
   "workitems.backToInbox": "받은편지함으로 돌아가기",
+  "workitems.backToWatchlist": "관심 목록으로 돌아가기",
+  "workitems.backToMilestone": "마일스톤으로 돌아가기",
   "workitems.backToItems": "목록으로 돌아가기",
   "workitems.bulk.assign": "담당자 지정...",
   "workitems.bulk.changeStatus": "상태 변경...",

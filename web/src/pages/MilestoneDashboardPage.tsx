@@ -493,6 +493,7 @@ function WorkItemsTable({
               item={item}
               member={item.assignee_id ? memberMap.get(item.assignee_id) ?? null : null}
               projectKey={projectKey}
+              milestoneId={milestoneId}
               statuses={statuses}
             />
           ))}
@@ -527,14 +528,17 @@ function WorkItemRow({
   item,
   member,
   projectKey,
+  milestoneId,
   statuses,
 }: {
   item: WorkItem
   member: ProjectMember | null
   projectKey: string
+  milestoneId: string
   statuses?: import('@/api/workflows').WorkflowStatus[]
 }) {
   const { t } = useTranslation()
+  const linkState = { state: { from: 'milestone', backUrl: `/projects/${projectKey}/milestones/${milestoneId}` } }
 
   return (
     <ScrollableRow
@@ -544,6 +548,7 @@ function WorkItemRow({
       <div className="px-3 py-2 shrink-0">
         <Link
           to={`/projects/${projectKey}/items/${item.item_number}`}
+          {...linkState}
           className="text-xs text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 font-mono"
         >
           {item.display_id}
@@ -552,6 +557,7 @@ function WorkItemRow({
       <div className="px-3 py-2 shrink-0 sm:flex-1 sm:min-w-0">
         <Link
           to={`/projects/${projectKey}/items/${item.item_number}`}
+          {...linkState}
           className="text-gray-900 dark:text-gray-100 hover:text-indigo-600 dark:hover:text-indigo-400 whitespace-nowrap sm:truncate sm:block"
         >
           {item.title}
