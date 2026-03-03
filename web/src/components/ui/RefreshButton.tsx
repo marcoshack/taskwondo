@@ -70,7 +70,7 @@ export function RefreshButton({ interval, onIntervalChange, onRefresh, isRefresh
           className="flex items-center gap-1.5 px-2.5 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           aria-label={t('inbox.refresh')}
         >
-          <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-5 w-5 ${isRefreshing ? 'animate-spin' : ''}`} />
           <span className="hidden sm:inline">{label}</span>
         </button>
         {/* Dropdown toggle */}
