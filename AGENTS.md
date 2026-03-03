@@ -91,7 +91,7 @@ Path alias: `@/` → `src/`. Vite proxies `/api` to `:8080` in dev.
 - **Errors**: Wrap with context: `fmt.Errorf("creating work item: %w", err)`
 - **No global state.** Dependency injection via constructors. No `init()` except in `main`.
 - **All times UTC** in the database. Convert to user timezone only in the frontend.
-- **Commit messages**: Prefix with `[TF-nnn]` when a task display_id is provided. No Co-Authored-By.
+- **Commit messages**: Prefix with `[DISPLAY_ID]` (e.g. `[TF-141]`, `[PROJ-23]`) when a work item display ID is provided. The display ID format is `<PROJECT_KEY>-<NUMBER>`. No Co-Authored-By.
 
 ### React/TypeScript
 - **i18n**: All UI strings in `web/src/i18n/en.json`. Use `const { t } = useTranslation()` in every component. `<Trans>` for JSX with embedded HTML. Module-level arrays with display strings must be inside component body. Interpolation: `{{var}}`. Pluralization: `_one`/`_other` suffixes. Any key added to `en.json` must also be added to all other language files.
