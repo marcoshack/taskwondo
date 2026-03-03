@@ -20,9 +20,10 @@ interface MultiSelectProps {
   className?: string
   searchable?: boolean
   groupActions?: GroupAction[]
+  dropdownWidthClass?: string
 }
 
-export function MultiSelect({ options, selected, onChange, placeholder = 'All', className = '', searchable = false, groupActions }: MultiSelectProps) {
+export function MultiSelect({ options, selected, onChange, placeholder = 'All', className = '', searchable = false, groupActions, dropdownWidthClass }: MultiSelectProps) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -91,7 +92,7 @@ export function MultiSelect({ options, selected, onChange, placeholder = 'All', 
     <div ref={ref} className={`relative ${className}`}>
       <button
         type="button"
-        className={`flex items-center justify-between w-full h-[39px] rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 text-sm shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
+        className={`flex items-center justify-between w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
           hasSelection ? 'text-gray-900 dark:text-gray-100' : 'text-gray-500 dark:text-gray-400'
         }`}
         onClick={() => setOpen(!open)}
@@ -108,7 +109,7 @@ export function MultiSelect({ options, selected, onChange, placeholder = 'All', 
       </button>
 
       {open && (
-        <div className="absolute z-20 mt-1 w-full min-w-[180px] rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg">
+        <div className={`absolute z-20 mt-1 ${dropdownWidthClass ?? 'w-full'} min-w-[180px] rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg`}>
           {searchable && (
             <div className="px-2 pt-2 pb-1">
               <input

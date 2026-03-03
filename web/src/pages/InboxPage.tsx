@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { Routes, Route, useNavigate } from 'react-router-dom'
 import { Trans, useTranslation } from 'react-i18next'
-import { ChevronUp, ChevronDown, X, Search, BrushCleaning, Inbox, Check, Rss, Settings, User, History, Pencil } from 'lucide-react'
+import { ChevronUp, ChevronDown, X, Search, BrushCleaning, Inbox, Check, Rss, Settings, User, History, Pencil, FolderKanban } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { CreateWorkItemModal } from '@/components/workitems/CreateWorkItemModal'
 import { Modal } from '@/components/ui/Modal'
@@ -11,11 +11,13 @@ import { Badge } from '@/components/ui/Badge'
 import { PriorityBadge } from '@/components/workitems/PriorityBadge'
 import { TypeBadge } from '@/components/workitems/TypeBadge'
 import { Tooltip } from '@/components/ui/Tooltip'
+import { MultiSelect, type MultiSelectOption } from '@/components/ui/MultiSelect'
 import { RefreshButton, type RefreshInterval } from '@/components/ui/RefreshButton'
 import { SLAIndicator } from '@/components/SLAIndicator'
 import { AppSidebar } from '@/components/AppSidebar'
 import { useSidebar } from '@/contexts/SidebarContext'
 import { useInboxItems, useRemoveFromInbox, useReorderInboxItem, useClearCompletedInbox, useAddToInbox } from '@/hooks/useInbox'
+import { useProjects } from '@/hooks/useProjects'
 import { usePreference, useSetPreference } from '@/hooks/usePreferences'
 import { useColumnWidths } from '@/hooks/useColumnWidths'
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
@@ -271,6 +273,17 @@ function InboxListPage() {
   const searchRef = useRef<HTMLInputElement>(null)
   const [searchFocused, setSearchFocused] = useState(false)
   const debouncedSearch = useDebounce(searchInput, 500)
+  const { data: projectFilterPref } = usePreference<string[]>('inbox_project_filter')
+  const [selectedProjects, setSelectedProjectsRaw] = useState<string[]>([])
+  const [projectFilterInit, setProjectFilterInit] = useState(false)
+  useEffect(() => {
+    if (projectFilterPref !== undefined && !projectFilterInit) {
+      setSelectedProjectsRaw(projectFilterPref)
+      setProjectFilterInit(true)
+    }
+  }, [projectFilterPref, projectFilterInit])
+  const [projectFilterOpen, setProjectFilterOpen] = useState(false)
+  const { data: projects } = useProjects()
 
   const { columnWidths, onColumnResize, resetColumnWidth } = useColumnWidths('inbox')
 
@@ -334,10 +347,24 @@ function InboxListPage() {
   }, [refreshIntervalPref])
   const setPreferenceMutation = useSetPreference()
 
+  const setSelectedProjects = useCallback((val: string[] | ((prev: string[]) => string[])) => {
+    setSelectedProjectsRaw((prev) => {
+      const next = typeof val === 'function' ? val(prev) : val
+      setPreferenceMutation.mutate({ key: 'inbox_project_filter', value: next })
+      return next
+    })
+  }, [setPreferenceMutation])
+
   const { data, isLoading, refetch, isFetching } = useInboxItems({
     search: debouncedSearch || undefined,
     include_completed: true,
+    project: selectedProjects.length > 0 ? selectedProjects : undefined,
   }, searchFocused ? 0 : refreshInterval)
+
+  const projectOptions: MultiSelectOption[] = useMemo(() =>
+    (projects ?? []).map((p) => ({ value: p.key, label: `${p.key} – ${p.name}` })),
+    [projects],
+  )
 
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -346,8 +373,10 @@ function InboxListPage() {
 
   const [loadedPages, setLoadedPages] = useState<InboxItem[][]>([])
   const [prevSearch, setPrevSearch] = useState(debouncedSearch)
-  if (debouncedSearch !== prevSearch) {
+  const [prevProjects, setPrevProjects] = useState(selectedProjects)
+  if (debouncedSearch !== prevSearch || selectedProjects !== prevProjects) {
     setPrevSearch(debouncedSearch)
+    setPrevProjects(selectedProjects)
     setLoadedPages([])
   }
 
@@ -571,8 +600,28 @@ function InboxListPage() {
               </button>
             </label>
           </Tooltip>
+          {/* Clear completed (left of New) */}
+          <Tooltip content={completedItems.length > 0 ? `${t('inbox.clearCompleted')} (${completedItems.length})` : t('inbox.noCompletedItems')}>
+            <button
+              onClick={() => clearCompletedMutation.mutate()}
+              disabled={clearCompletedMutation.isPending || completedItems.length === 0}
+              className={`relative p-2 rounded-lg border border-gray-300 dark:border-gray-600 transition-colors ${
+                completedItems.length === 0
+                  ? 'opacity-40 cursor-not-allowed text-gray-400 dark:text-gray-500'
+                  : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-300'
+              }`}
+              aria-label={t('inbox.clearCompleted')}
+            >
+              <BrushCleaning className="h-5 w-5" />
+              {completedItems.length > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                  {completedItems.length}
+                </span>
+              )}
+            </button>
+          </Tooltip>
           {/* New Item button */}
-          <Button onClick={() => setShowCreate(true)} className="h-[39px] border border-transparent">
+          <Button onClick={() => setShowCreate(true)} className="border border-transparent">
             <span className="lg:hidden">{t('workitems.newShort')}</span>
             <span className="hidden lg:inline">{t('workitems.new')}</span>
           </Button>
@@ -602,8 +651,8 @@ function InboxListPage() {
         </div>
       </Modal>
 
-      {/* Search + icons */}
-      <div className="flex items-center gap-2 mb-4">
+      {/* Desktop: Search + project filter + icons */}
+      <div className="hidden lg:flex items-center gap-2 mb-4">
         <div className="relative flex-1 min-w-0">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
@@ -626,6 +675,17 @@ function InboxListPage() {
             </button>
           )}
         </div>
+        {/* Desktop: Project filter */}
+        <div className="shrink-0 w-[200px]">
+          <MultiSelect
+            options={projectOptions}
+            selected={selectedProjects}
+            onChange={setSelectedProjects}
+            placeholder={t('inbox.allProjects')}
+            searchable
+            dropdownWidthClass="right-0 min-w-[280px]"
+          />
+        </div>
         {/* Refresh / auto-refresh */}
         <RefreshButton
           interval={refreshInterval}
@@ -636,30 +696,52 @@ function InboxListPage() {
           onRefresh={() => refetch()}
           isRefreshing={isFetching}
         />
-        {/* Clear completed */}
-        <Tooltip content={completedItems.length > 0 ? `${t('inbox.clearCompleted')} (${completedItems.length})` : t('inbox.noCompletedItems')}>
-          <button
-            onClick={() => clearCompletedMutation.mutate()}
-            disabled={clearCompletedMutation.isPending || completedItems.length === 0}
-            className={`relative p-2 rounded-lg border border-gray-300 dark:border-gray-600 transition-colors ${
-              completedItems.length === 0
-                ? 'opacity-40 cursor-not-allowed text-gray-400 dark:text-gray-500'
-                : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-300'
-            }`}
-            aria-label={t('inbox.clearCompleted')}
-          >
-            <BrushCleaning className="h-5 w-5" />
-            {completedItems.length > 0 && (
-              <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
-                {completedItems.length}
-              </span>
-            )}
-          </button>
-        </Tooltip>
+      </div>
+
+      {/* Mobile: Search + project filter + icons */}
+      <div className="flex lg:hidden items-center gap-2 mb-4">
+        <div className="relative flex-1 min-w-0">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder={t('inbox.searchPlaceholder')}
+            className="pl-10 pr-8"
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
+            onKeyDown={(e) => { if (e.key === 'Escape') (e.target as HTMLInputElement).blur() }}
+          />
+          {searchInput && (
+            <button
+              onClick={() => setSearchInput('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              aria-label={t('common.clear')}
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        {/* Mobile: Project filter button */}
+        <button
+          onClick={() => setProjectFilterOpen(true)}
+          className={`relative shrink-0 p-2 rounded-lg border transition-colors ${
+            selectedProjects.length > 0
+              ? 'border-indigo-400 bg-indigo-50 text-indigo-600 dark:border-indigo-500 dark:bg-indigo-900/30 dark:text-indigo-400'
+              : 'border-gray-300 dark:border-gray-600 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-300'
+          }`}
+          aria-label={t('inbox.filterByProject')}
+        >
+          <FolderKanban className="h-5 w-5" />
+          {selectedProjects.length > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-600 text-[10px] font-bold text-white">
+              {selectedProjects.length}
+            </span>
+          )}
+        </button>
         {/* Mobile: edit toggle */}
         <button
           onClick={() => setEditing((v) => !v)}
-          className={`lg:hidden p-2 rounded-lg border transition-colors ${
+          className={`p-2 rounded-lg border transition-colors ${
             editing
               ? 'border-indigo-400 bg-indigo-50 text-indigo-600 dark:border-indigo-500 dark:bg-indigo-900/30 dark:text-indigo-400'
               : 'border-gray-300 dark:border-gray-600 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-300'
@@ -671,12 +753,31 @@ function InboxListPage() {
         {/* Mobile: settings button */}
         <button
           onClick={() => setSettingsOpen(true)}
-          className="lg:hidden p-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-300 transition-colors"
+          className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-300 transition-colors"
           aria-label={t('inbox.settings')}
         >
           <Settings className="h-5 w-5" />
         </button>
+        {/* Mobile: Refresh (last) */}
+        <RefreshButton
+          interval={refreshInterval}
+          onIntervalChange={(val) => {
+            setRefreshInterval(val)
+            setPreferenceMutation.mutate({ key: 'inbox_refresh_interval', value: val })
+          }}
+          onRefresh={() => refetch()}
+          isRefreshing={isFetching}
+        />
       </div>
+
+      {/* Mobile: Project filter modal */}
+      <Modal open={projectFilterOpen} onClose={() => setProjectFilterOpen(false)} title={t('inbox.filterByProject')} position="top" containerClassName="!pt-[10.3rem]">
+        <MobileProjectFilterContent
+          projectOptions={projectOptions}
+          selectedProjects={selectedProjects}
+          setSelectedProjects={setSelectedProjects}
+        />
+      </Modal>
 
       {allItems.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-gray-500 dark:text-gray-400">
@@ -778,6 +879,7 @@ function InboxListPage() {
               const next = await listInboxItems({
                 search: debouncedSearch || undefined,
                 include_completed: true,
+                project: selectedProjects.length > 0 ? selectedProjects : undefined,
                 cursor: lastItem.id,
               })
               setLoadedPages((prev) => [...prev, next.items])
@@ -835,6 +937,69 @@ function FeedPage() {
     <div className="flex flex-col items-center justify-center h-64 text-gray-500 dark:text-gray-400">
       <Rss className="h-12 w-12 mb-4 opacity-30" />
       <p className="text-lg font-medium">{t('user.feedComingSoon')}</p>
+    </div>
+  )
+}
+
+// --- Mobile Project Filter (with search) ---
+
+function MobileProjectFilterContent({ projectOptions, selectedProjects, setSelectedProjects }: {
+  projectOptions: MultiSelectOption[]
+  selectedProjects: string[]
+  setSelectedProjects: (val: string[] | ((prev: string[]) => string[])) => void
+}) {
+  const { t } = useTranslation()
+  const [search, setSearch] = useState('')
+  const searchRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    setTimeout(() => searchRef.current?.focus(), 0)
+  }, [])
+
+  const filtered = useMemo(() => {
+    if (!search) return projectOptions
+    const lower = search.toLowerCase()
+    return projectOptions.filter((o) => o.label.toLowerCase().includes(lower))
+  }, [projectOptions, search])
+
+  return (
+    <div>
+      <div className="pb-2">
+        <Input
+          ref={searchRef}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={t('common.search')}
+          className="text-sm"
+        />
+      </div>
+      <div className="flex items-center gap-2 px-1 pb-2 border-b border-gray-100 dark:border-gray-700">
+        <button type="button" className="text-xs text-indigo-600 hover:text-indigo-800" onClick={() => setSelectedProjects(filtered.map((o) => o.value))}>
+          {t('common.all')}
+        </button>
+        <button type="button" className="ml-auto text-xs text-gray-400 hover:text-gray-600" onClick={() => setSelectedProjects([])}>
+          {t('common.none')}
+        </button>
+      </div>
+      <div className="max-h-60 overflow-y-auto space-y-1 pt-1">
+        {filtered.length === 0 ? (
+          <p className="text-sm text-gray-400 dark:text-gray-500 py-2">{t('common.noResults')}</p>
+        ) : (
+          filtered.map((opt) => (
+            <label key={opt.value} className="flex items-center gap-2 px-1 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer text-sm text-gray-700 dark:text-gray-300 rounded">
+              <input
+                type="checkbox"
+                checked={selectedProjects.includes(opt.value)}
+                onChange={() => setSelectedProjects((prev: string[]) =>
+                  prev.includes(opt.value) ? prev.filter((v) => v !== opt.value) : [...prev, opt.value]
+                )}
+                className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <span className="truncate">{opt.label}</span>
+            </label>
+          ))
+        )}
+      </div>
     </div>
   )
 }

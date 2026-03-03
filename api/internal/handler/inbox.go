@@ -6,6 +6,7 @@ import (
 	"maps"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -119,6 +120,16 @@ func (h *InboxHandler) List(w http.ResponseWriter, r *http.Request) {
 	search := r.URL.Query().Get("search")
 	includeCompleted := r.URL.Query().Get("include_completed") == "true"
 
+	var projectKeys []string
+	if p := r.URL.Query().Get("project"); p != "" {
+		for _, k := range strings.Split(p, ",") {
+			k = strings.TrimSpace(k)
+			if k != "" {
+				projectKeys = append(projectKeys, k)
+			}
+		}
+	}
+
 	var cursor *uuid.UUID
 	if c := r.URL.Query().Get("cursor"); c != "" {
 		parsed, err := uuid.Parse(c)
@@ -139,7 +150,7 @@ func (h *InboxHandler) List(w http.ResponseWriter, r *http.Request) {
 		limit = parsed
 	}
 
-	list, err := h.inbox.List(r.Context(), info, !includeCompleted, search, cursor, limit)
+	list, err := h.inbox.List(r.Context(), info, !includeCompleted, search, projectKeys, cursor, limit)
 	if err != nil {
 		handleInboxError(w, r, err, "listing inbox items")
 		return

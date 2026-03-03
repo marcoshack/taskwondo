@@ -273,6 +273,8 @@
   "inbox.autoRefresh30s": "30s",
   "inbox.autoRefresh1m": "1m",
   "inbox.autoRefresh5m": "5m",
+  "inbox.allProjects": "Projets",
+  "inbox.filterByProject": "Filtrer par projet",
   "inbox.empty": "Votre boîte de réception est vide",
   "inbox.emptyHint": "Utilisez l'icône de boîte de réception ou appuyez sur 'i' sur un élément de travail pour l'ajouter ici",
   "inbox.moveDown": "Descendre",

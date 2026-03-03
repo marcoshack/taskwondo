@@ -65,7 +65,7 @@ func (r *InboxRepository) RemoveByID(ctx context.Context, id, userID uuid.UUID) 
 
 // List returns the user's inbox items with joined work item data.
 // When excludeCompleted is true, items whose status category is 'done' or 'cancelled' are filtered out.
-func (r *InboxRepository) List(ctx context.Context, userID uuid.UUID, excludeCompleted bool, search string, cursor *uuid.UUID, limit int) (*model.InboxItemList, error) {
+func (r *InboxRepository) List(ctx context.Context, userID uuid.UUID, excludeCompleted bool, search string, projectKeys []string, cursor *uuid.UUID, limit int) (*model.InboxItemList, error) {
 	qb := &queryBuilder{argIndex: 0}
 	qb.add("i.user_id = ?", userID)
 	qb.addRaw("wi.deleted_at IS NULL")
@@ -76,6 +76,16 @@ func (r *InboxRepository) List(ctx context.Context, userID uuid.UUID, excludeCom
 
 	if search != "" {
 		qb.add("(wi.search_vector @@ plainto_tsquery('english', ?) OR wi.search_vector @@ plainto_tsquery('simple', ?))", search, search)
+	}
+
+	if len(projectKeys) > 0 {
+		placeholders := make([]string, len(projectKeys))
+		for i, key := range projectKeys {
+			qb.argIndex++
+			placeholders[i] = fmt.Sprintf("$%d", qb.argIndex)
+			qb.args = append(qb.args, key)
+		}
+		qb.conditions = append(qb.conditions, fmt.Sprintf("p.key IN (%s)", strings.Join(placeholders, ", ")))
 	}
 
 	whereClause := "WHERE " + strings.Join(qb.conditions, " AND ")

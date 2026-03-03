@@ -273,6 +273,8 @@
   "inbox.autoRefresh30s": "30s",
   "inbox.autoRefresh1m": "1m",
   "inbox.autoRefresh5m": "5m",
+  "inbox.allProjects": "Proyectos",
+  "inbox.filterByProject": "Filtrar por proyecto",
   "inbox.empty": "Tu bandeja de entrada está vacía",
   "inbox.emptyHint": "Usa el icono de bandeja de entrada o presiona 'i' en un elemento de trabajo para agregarlo aquí",
   "inbox.moveDown": "Mover abajo",

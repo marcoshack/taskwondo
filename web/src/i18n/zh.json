@@ -273,6 +273,8 @@
   "inbox.autoRefresh30s": "30秒",
   "inbox.autoRefresh1m": "1分钟",
   "inbox.autoRefresh5m": "5分钟",
+  "inbox.allProjects": "项目",
+  "inbox.filterByProject": "按项目筛选",
   "inbox.empty": "您的收件箱为空",
   "inbox.emptyHint": "使用收件箱图标或在工作项上按 'i' 将其添加到此处",
   "inbox.moveDown": "下移",

@@ -35,6 +35,7 @@ export interface InboxListResponse {
 export interface InboxFilter {
   search?: string
   include_completed?: boolean
+  project?: string[]
   cursor?: string
   limit?: number
 }
@@ -45,6 +46,7 @@ export async function listInboxItems(filter: InboxFilter = {}): Promise<InboxLis
   const params: Record<string, string> = {}
   if (filter.search) params.search = filter.search
   if (filter.include_completed) params.include_completed = 'true'
+  if (filter.project?.length) params.project = filter.project.join(',')
   if (filter.cursor) params.cursor = filter.cursor
   if (filter.limit) params.limit = String(filter.limit)
 

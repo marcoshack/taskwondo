@@ -15,7 +15,7 @@ type InboxRepository interface {
 	Add(ctx context.Context, item *model.InboxItem) error
 	Remove(ctx context.Context, userID, workItemID uuid.UUID) error
 	RemoveByID(ctx context.Context, id, userID uuid.UUID) error
-	List(ctx context.Context, userID uuid.UUID, excludeCompleted bool, search string, cursor *uuid.UUID, limit int) (*model.InboxItemList, error)
+	List(ctx context.Context, userID uuid.UUID, excludeCompleted bool, search string, projectKeys []string, cursor *uuid.UUID, limit int) (*model.InboxItemList, error)
 	CountByUser(ctx context.Context, userID uuid.UUID) (int, error)
 	CountAllByUser(ctx context.Context, userID uuid.UUID) (int, error)
 	UpdatePosition(ctx context.Context, id, userID uuid.UUID, position int) error
@@ -124,8 +124,8 @@ func (s *InboxService) RemoveByWorkItem(ctx context.Context, info *model.AuthInf
 }
 
 // List returns the user's inbox items.
-func (s *InboxService) List(ctx context.Context, info *model.AuthInfo, excludeCompleted bool, search string, cursor *uuid.UUID, limit int) (*model.InboxItemList, error) {
-	list, err := s.inbox.List(ctx, info.UserID, excludeCompleted, search, cursor, limit)
+func (s *InboxService) List(ctx context.Context, info *model.AuthInfo, excludeCompleted bool, search string, projectKeys []string, cursor *uuid.UUID, limit int) (*model.InboxItemList, error) {
+	list, err := s.inbox.List(ctx, info.UserID, excludeCompleted, search, projectKeys, cursor, limit)
 	if err != nil {
 		return nil, fmt.Errorf("listing inbox items: %w", err)
 	}

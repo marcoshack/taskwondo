@@ -273,6 +273,8 @@
   "inbox.autoRefresh30s": "30초",
   "inbox.autoRefresh1m": "1분",
   "inbox.autoRefresh5m": "5분",
+  "inbox.allProjects": "프로젝트",
+  "inbox.filterByProject": "프로젝트별 필터",
   "inbox.empty": "받은편지함이 비어 있습니다",
   "inbox.emptyHint": "받은편지함 아이콘을 사용하거나 작업 항목에서 'i'를 눌러 여기에 추가하세요",
   "inbox.moveDown": "아래로 이동",

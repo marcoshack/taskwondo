@@ -289,11 +289,12 @@ export async function addToInbox(
 export async function listInboxItems(
   request: APIRequestContext,
   token: string,
-  params?: { search?: string; include_completed?: boolean },
-): Promise<{ items: { id: string; work_item_id: string; position: number; display_id: string; title: string; status: string; status_category: string }[]; total: number }> {
+  params?: { search?: string; include_completed?: boolean; project?: string[] },
+): Promise<{ items: { id: string; work_item_id: string; position: number; display_id: string; title: string; status: string; status_category: string; project_key: string }[]; total: number }> {
   const query = new URLSearchParams();
   if (params?.search) query.set('search', params.search);
   if (params?.include_completed) query.set('include_completed', 'true');
+  if (params?.project?.length) query.set('project', params.project.join(','));
   const qs = query.toString();
   const url = `${BASE_URL}/api/v1/user/inbox${qs ? `?${qs}` : ''}`;
   const res = await request.get(url, {

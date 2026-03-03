@@ -938,8 +938,8 @@ test.describe('Inbox', () => {
     const table = page.getByRole('table');
     await expect(table.getByText('Alpha search focus test')).toBeVisible({ timeout: 10000 });
 
-    // Focus the search input and type slowly with pauses to simulate real typing
-    const searchInput = page.getByPlaceholder(/search/i);
+    // Focus the search input (desktop) and type slowly with pauses to simulate real typing
+    const searchInput = page.locator('.hidden.lg\\:flex').getByPlaceholder(/search/i);
     await searchInput.click();
     await expect(searchInput).toBeFocused();
 
@@ -957,5 +957,233 @@ test.describe('Inbox', () => {
 
     // Input must still be focused after search results update
     await expect(searchInput).toBeFocused();
+  });
+
+  test('filter inbox by project via API', async ({ request, testUser, testProject }) => {
+    // Create a second project
+    const suffix = require('crypto').randomUUID().slice(0, 4).toUpperCase();
+    const project2 = await api.createProject(request, testUser.token, `F${suffix}`, `Filter Proj ${suffix}`);
+
+    // Create items in both projects
+    const item1 = await api.createWorkItem(request, testUser.token, testProject.key, {
+      title: 'Item in project 1',
+      type: 'task',
+    });
+    const item2 = await api.createWorkItem(request, testUser.token, project2.key, {
+      title: 'Item in project 2',
+      type: 'task',
+    });
+    await api.addToInbox(request, testUser.token, item1.id);
+    await api.addToInbox(request, testUser.token, item2.id);
+
+    // Without filter — both items
+    const allItems = await api.listInboxItems(request, testUser.token);
+    expect(allItems.items).toHaveLength(2);
+
+    // Filter by project 1 only
+    const filtered1 = await api.listInboxItems(request, testUser.token, { project: [testProject.key] });
+    expect(filtered1.items).toHaveLength(1);
+    expect(filtered1.items[0].title).toBe('Item in project 1');
+
+    // Filter by project 2 only
+    const filtered2 = await api.listInboxItems(request, testUser.token, { project: [project2.key] });
+    expect(filtered2.items).toHaveLength(1);
+    expect(filtered2.items[0].title).toBe('Item in project 2');
+
+    // Filter by both projects — same as no filter
+    const filteredBoth = await api.listInboxItems(request, testUser.token, { project: [testProject.key, project2.key] });
+    expect(filteredBoth.items).toHaveLength(2);
+  });
+
+  test('desktop project filter UI filters inbox items', async ({ request, testUser, testProject, page }) => {
+    // Create a second project
+    const suffix = require('crypto').randomUUID().slice(0, 4).toUpperCase();
+    const project2 = await api.createProject(request, testUser.token, `G${suffix}`, `UI Filter Proj ${suffix}`);
+
+    // Create items in both projects and add to inbox
+    const item1 = await api.createWorkItem(request, testUser.token, testProject.key, {
+      title: 'Desktop filter proj1 item',
+      type: 'task',
+    });
+    const item2 = await api.createWorkItem(request, testUser.token, project2.key, {
+      title: 'Desktop filter proj2 item',
+      type: 'task',
+    });
+    await api.addToInbox(request, testUser.token, item1.id);
+    await api.addToInbox(request, testUser.token, item2.id);
+
+    await page.goto('/user/inbox');
+    await dismissWelcomeModal(page);
+
+    const table = page.getByRole('table');
+    await expect(table.getByText('Desktop filter proj1 item')).toBeVisible({ timeout: 10000 });
+    await expect(table.getByText('Desktop filter proj2 item')).toBeVisible();
+
+    // Open the project filter dropdown
+    const projectFilter = page.locator('.hidden.lg\\:flex').getByText('Projects');
+    await projectFilter.click();
+
+    // Click "None" to clear all, then select only project 1
+    await page.getByText('None').click();
+    await page.getByLabel(new RegExp(`${testProject.key}`)).check();
+
+    // Click elsewhere to close dropdown
+    await page.locator('h1').click();
+
+    // Only project 1 item should be visible
+    await expect(table.getByText('Desktop filter proj1 item')).toBeVisible({ timeout: 10000 });
+    await expect(table.getByText('Desktop filter proj2 item')).not.toBeVisible({ timeout: 5000 });
+  });
+
+  test('mobile project filter modal filters inbox items', async ({ request, testUser, testProject, page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+
+    // Create a second project
+    const suffix = require('crypto').randomUUID().slice(0, 4).toUpperCase();
+    const project2 = await api.createProject(request, testUser.token, `H${suffix}`, `Mobile Filter Proj ${suffix}`);
+
+    // Create items in both projects and add to inbox
+    const item1 = await api.createWorkItem(request, testUser.token, testProject.key, {
+      title: 'Mobile filter proj1 item',
+      type: 'task',
+    });
+    const item2 = await api.createWorkItem(request, testUser.token, project2.key, {
+      title: 'Mobile filter proj2 item',
+      type: 'task',
+    });
+    await api.addToInbox(request, testUser.token, item1.id);
+    await api.addToInbox(request, testUser.token, item2.id);
+
+    await page.goto('/user/inbox');
+    await dismissWelcomeModal(page);
+
+    const inboxCards = page.locator('.lg\\:hidden');
+    await expect(inboxCards.getByText('Mobile filter proj1 item')).toBeVisible({ timeout: 10000 });
+    await expect(inboxCards.getByText('Mobile filter proj2 item')).toBeVisible();
+
+    // Click the project filter icon button
+    await page.getByRole('button', { name: 'Filter by project' }).click();
+
+    // Modal should open with project checkboxes
+    await expect(page.getByRole('heading', { name: 'Filter by project' })).toBeVisible({ timeout: 5000 });
+
+    // Click "None" first, then check only project 2
+    await page.getByText('None').click();
+    await page.getByLabel(new RegExp(`${project2.key}`)).check();
+
+    // Close the modal
+    await page.keyboard.press('Escape');
+
+    // Only project 2 item should be visible
+    await expect(inboxCards.getByText('Mobile filter proj2 item')).toBeVisible({ timeout: 10000 });
+    await expect(inboxCards.getByText('Mobile filter proj1 item')).not.toBeVisible({ timeout: 5000 });
+
+    // Badge should show "1" on the filter button
+    const filterBtn = page.getByRole('button', { name: 'Filter by project' });
+    await expect(filterBtn.locator('span.rounded-full')).toHaveText('1');
+  });
+
+  test('mobile project filter modal has a search field', async ({ request, testUser, testProject, page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+
+    // Create two projects so there's something to filter
+    const suffix = require('crypto').randomUUID().slice(0, 4).toUpperCase();
+    const project2 = await api.createProject(request, testUser.token, `S${suffix}`, `Searchable Proj ${suffix}`);
+
+    // Add items to inbox from both projects
+    const item1 = await api.createWorkItem(request, testUser.token, testProject.key, { title: 'Search modal item', type: 'task' });
+    const item2 = await api.createWorkItem(request, testUser.token, project2.key, { title: 'Search modal item 2', type: 'task' });
+    await api.addToInbox(request, testUser.token, item1.id);
+    await api.addToInbox(request, testUser.token, item2.id);
+
+    await page.goto('/user/inbox');
+    await dismissWelcomeModal(page);
+    // Wait for inbox items to load (use button role which is unique to mobile cards)
+    await expect(page.getByRole('button', { name: /Search modal item/ }).first()).toBeVisible({ timeout: 10000 });
+
+    // Open the project filter modal
+    await page.getByRole('button', { name: 'Filter by project' }).click();
+    await expect(page.getByRole('heading', { name: 'Filter by project' })).toBeVisible({ timeout: 5000 });
+
+    // Both projects should be listed as checkboxes in the modal
+    await expect(page.getByLabel(new RegExp(testProject.key))).toBeVisible();
+    await expect(page.getByLabel(new RegExp(project2.key))).toBeVisible();
+
+    // Type in the search field inside the modal to filter projects
+    const modalHeading = page.getByRole('heading', { name: 'Filter by project' });
+    const modalContainer = modalHeading.locator('..').locator('..');
+    const searchInput = modalContainer.getByPlaceholder(/search/i);
+    await expect(searchInput).toBeVisible();
+    await searchInput.fill(project2.key);
+
+    // Only the matching project should remain visible
+    await expect(page.getByLabel(new RegExp(project2.key))).toBeVisible();
+    await expect(page.getByLabel(new RegExp(testProject.key))).not.toBeVisible({ timeout: 3000 });
+
+    await page.keyboard.press('Escape');
+  });
+
+  test('mobile layout has refresh button and clear completed in header', async ({ request, testUser, testProject, page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+
+    // Create an item so the inbox has content
+    const item = await api.createWorkItem(request, testUser.token, testProject.key, { title: 'Layout test item', type: 'task' });
+    await api.addToInbox(request, testUser.token, item.id);
+
+    await page.goto('/user/inbox');
+    await dismissWelcomeModal(page);
+    await expect(page.getByRole('button', { name: /Layout test item/ })).toBeVisible({ timeout: 10000 });
+
+    // RefreshButton should be in the mobile search row (last icon)
+    const mobileSearchRow = page.locator('.flex.lg\\:hidden').first();
+    await expect(mobileSearchRow.getByRole('button', { name: 'Refresh', exact: true })).toBeVisible();
+
+    // Clear completed button should be in the header area (near the New button)
+    const header = page.locator('.flex.items-center.justify-between').first();
+    const clearBtn = header.getByRole('button', { name: /clear completed/i });
+    await expect(clearBtn).toBeVisible();
+  });
+
+  test('project filter selection persists across navigation', async ({ request, testUser, testProject, page }) => {
+    // Create a second project
+    const suffix = require('crypto').randomUUID().slice(0, 4).toUpperCase();
+    const project2 = await api.createProject(request, testUser.token, `P${suffix}`, `Persist Proj ${suffix}`);
+
+    // Create items in both projects and add to inbox
+    const item1 = await api.createWorkItem(request, testUser.token, testProject.key, { title: 'Persist proj1 item', type: 'task' });
+    const item2 = await api.createWorkItem(request, testUser.token, project2.key, { title: 'Persist proj2 item', type: 'task' });
+    await api.addToInbox(request, testUser.token, item1.id);
+    await api.addToInbox(request, testUser.token, item2.id);
+
+    await page.goto('/user/inbox');
+    await dismissWelcomeModal(page);
+
+    const table = page.getByRole('table');
+    await expect(table.getByText('Persist proj1 item')).toBeVisible({ timeout: 10000 });
+    await expect(table.getByText('Persist proj2 item')).toBeVisible();
+
+    // Open the project filter and select only project 1
+    const projectFilter = page.locator('.hidden.lg\\:flex').getByText('Projects');
+    await projectFilter.click();
+    await page.getByText('None').click();
+    await page.getByLabel(new RegExp(`${testProject.key}`)).check();
+    await page.locator('h1').click();
+
+    // Verify filter is applied
+    await expect(table.getByText('Persist proj1 item')).toBeVisible({ timeout: 10000 });
+    await expect(table.getByText('Persist proj2 item')).not.toBeVisible({ timeout: 5000 });
+
+    // Navigate away and back
+    await page.goto('/user/watchlist');
+    await page.goto('/user/inbox');
+
+    // Filter should still be applied (persisted via preference)
+    await expect(table.getByText('Persist proj1 item')).toBeVisible({ timeout: 10000 });
+    await expect(table.getByText('Persist proj2 item')).not.toBeVisible({ timeout: 5000 });
+
+    // The project filter button should show the selection count badge
+    const filterButton = page.locator('.hidden.lg\\:flex').getByText('Projects');
+    const badge = filterButton.locator('..').locator('span.rounded-full');
+    await expect(badge).toHaveText('1');
   });
 });

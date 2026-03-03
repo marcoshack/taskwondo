@@ -273,6 +273,8 @@
   "inbox.autoRefresh30s": "30ث",
   "inbox.autoRefresh1m": "1د",
   "inbox.autoRefresh5m": "5د",
+  "inbox.allProjects": "المشاريع",
+  "inbox.filterByProject": "تصفية حسب المشروع",
   "inbox.empty": "صندوق الوارد فارغ",
   "inbox.emptyHint": "استخدم أيقونة صندوق الوارد أو اضغط 'i' على عنصر عمل لإضافته هنا",
   "inbox.moveDown": "تحريك لأسفل",
