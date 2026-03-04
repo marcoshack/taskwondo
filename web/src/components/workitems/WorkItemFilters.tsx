@@ -149,7 +149,7 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
           <Tooltip content={t('workitems.filters.save')}>
             <button
               onClick={onSave}
-              className="relative shrink-0 h-[39px] w-[39px] inline-flex items-center justify-center rounded-md border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+              className="relative shrink-0 py-2.5 px-2.5 inline-flex items-center justify-center rounded-md border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-800"
               aria-label={t('workitems.filters.save')}
             >
               <Save className="h-4 w-4" />
@@ -163,7 +163,7 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
           <Tooltip content={t('workitems.filters.clearAll')}>
             <button
               onClick={onClearFilters}
-              className="shrink-0 h-[39px] w-[39px] inline-flex items-center justify-center rounded-md border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+              className="shrink-0 py-2.5 px-2.5 inline-flex items-center justify-center rounded-md border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-800"
               aria-label={t('workitems.filters.clearAll')}
             >
               <Eraser className="h-4 w-4" />

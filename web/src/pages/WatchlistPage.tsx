@@ -49,7 +49,7 @@ function WatchlistSearchBar({ search, onSearchChange }: { search: string; onSear
         value={search}
         onChange={(e) => onSearchChange(e.target.value)}
         onKeyDown={(e) => { if (e.key === 'Escape') searchRef.current?.blur() }}
-        className="!h-[39px] pr-8"
+        className="pr-8"
       />
       {search && (
         <button
@@ -339,7 +339,7 @@ export default function WatchlistPage() {
           </div>
           <div className="inline-flex rounded-md shadow-sm">
             <button
-              className={`flex items-center gap-1.5 px-3 h-[39px] text-sm font-medium rounded-l-md border ${
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-l-md border ${
                 viewMode === 'list' ? 'bg-indigo-50 text-indigo-700 border-indigo-300 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-700' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700'
               }`}
               onClick={() => handleViewChange('list')}
@@ -348,7 +348,7 @@ export default function WatchlistPage() {
               {t('workitems.view.list')}
             </button>
             <button
-              className={`flex items-center gap-1.5 px-3 h-[39px] text-sm font-medium rounded-r-md border-t border-r border-b ${
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-r-md border-t border-r border-b ${
                 viewMode === 'board' ? 'bg-indigo-50 text-indigo-700 border-indigo-300 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-700' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700'
               }`}
               onClick={() => handleViewChange('board')}

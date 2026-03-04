@@ -253,7 +253,7 @@ export function SavedSearchSelector({
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setOpen(!open)}
-            className={`flex items-center gap-1.5 px-3 h-[39px] w-full text-sm font-medium rounded-md border transition-colors ${
+            className={`flex items-center gap-1.5 px-3 py-2 w-full text-sm font-medium rounded-md border transition-colors ${
               activeSearch
                 ? 'bg-indigo-50 text-indigo-700 border-indigo-300 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-700'
                 : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:bg-gray-700'
