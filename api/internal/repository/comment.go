@@ -20,6 +20,11 @@ func NewCommentRepository(db *sql.DB) *CommentRepository {
 	return &CommentRepository{db: db}
 }
 
+// ListAllIDs returns all non-deleted comment IDs with pagination (for backfill).
+func (r *CommentRepository) ListAllIDs(ctx context.Context, limit, offset int) ([]uuid.UUID, error) {
+	return listAllIDs(ctx, r.db, "comments", limit, offset)
+}
+
 // Create inserts a new comment.
 func (r *CommentRepository) Create(ctx context.Context, comment *model.Comment) error {
 	_, err := r.db.ExecContext(ctx,

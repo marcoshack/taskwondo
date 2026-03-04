@@ -90,6 +90,7 @@ func main() {
 	watcherRepo := repository.NewWatcherRepository(db)
 	emailVerificationRepo := repository.NewEmailVerificationRepository(db)
 	statsRepo := repository.NewStatsRepository(db)
+	embeddingRepo := repository.NewEmbeddingRepository(db)
 
 	// Initialize storage
 	store, err := storage.NewMinIOStorage(
@@ -141,6 +142,10 @@ func main() {
 	systemSettingService := service.NewSystemSettingService(systemSettingRepo)
 	adminService := service.NewAdminService(userRepo, projectRepo, projectMemberRepo)
 	statsService := service.NewStatsService(statsRepo, projectRepo, projectMemberRepo)
+
+	// Initialize embedding and search services
+	embeddingService := service.NewEmbeddingService(cfg.OllamaURL, cfg.OllamaModel)
+	searchService := service.NewSearchService(embeddingService, embeddingRepo, projectRepo, systemSettingRepo)
 
 	// Seed admin user if configured
 	if cfg.AdminEmail != "" && cfg.AdminPassword != "" {
@@ -202,6 +207,40 @@ func main() {
 	publisher, natsCleanup := initEventPublisher(cfg.NatsURL)
 	defer natsCleanup()
 	workItemService.SetPublisher(publisher)
+	projectService.SetPublisher(publisher)
+	milestoneService.SetPublisher(publisher)
+	queueService.SetPublisher(publisher)
+	systemSettingService.SetPublisher(publisher)
+
+	// Set up embed feature flag cache (shared across services, 60s TTL)
+	embedCache := service.NewFeatureFlagCache(model.SettingFeatureSemanticSearch, 60*time.Second, systemSettingRepo)
+	workItemService.SetEmbedCache(embedCache)
+	projectService.SetEmbedCache(embedCache)
+	milestoneService.SetEmbedCache(embedCache)
+	queueService.SetEmbedCache(embedCache)
+
+	// Start Ollama availability probe (background goroutine)
+	go func() {
+		probeAndWrite := func() {
+			available, _ := embeddingService.Probe(ctx)
+			val, _ := json.Marshal(available)
+			_ = systemSettingRepo.Upsert(ctx, &model.SystemSetting{
+				Key:   model.SettingOllamaAvailable,
+				Value: val,
+			})
+		}
+		probeAndWrite() // Run immediately on startup
+		ticker := time.NewTicker(60 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				probeAndWrite()
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
 
 	// Initialize handlers
 	health := handler.NewHealthHandler(db)
@@ -218,6 +257,7 @@ func main() {
 	sla := handler.NewSLAHandler(slaService)
 	inbox := handler.NewInboxHandler(inboxService, slaService)
 	stats := handler.NewStatsHandler(statsService)
+	search := handler.NewSearchHandler(searchService)
 
 	// Set up router
 	r := chi.NewRouter()
@@ -304,6 +344,9 @@ func main() {
 
 			// User watchlist
 			r.Get("/user/watchlist", items.ListWatchedItemIDs)
+
+			// Semantic search
+			r.Get("/search", search.Search)
 
 			// Workflows
 			r.Route("/workflows", func(r chi.Router) {

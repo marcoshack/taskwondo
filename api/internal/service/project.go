@@ -66,6 +66,18 @@ type ProjectService struct {
 	typeWorkflows  ProjectTypeWorkflowRepository
 	systemSettings SystemSettingRepositoryInterface
 	invites        ProjectInviteRepository
+	publisher      EventPublisher
+	embedCache     *FeatureFlagCache
+}
+
+// SetPublisher configures the event publisher for embed events.
+func (s *ProjectService) SetPublisher(p EventPublisher) {
+	s.publisher = p
+}
+
+// SetEmbedCache configures the feature flag cache for semantic search indexing.
+func (s *ProjectService) SetEmbedCache(cache *FeatureFlagCache) {
+	s.embedCache = cache
 }
 
 // NewProjectService creates a new ProjectService.
@@ -168,6 +180,9 @@ func (s *ProjectService) Create(ctx context.Context, info *model.AuthInfo, name,
 	if err != nil {
 		return nil, fmt.Errorf("fetching created project: %w", err)
 	}
+
+	// Publish embed.index event for semantic search
+	publishEmbedIndex(ctx, s.publisher, s.embedCache, model.EntityTypeProject, created.ID, nil)
 
 	return created, nil
 }
@@ -330,6 +345,9 @@ func (s *ProjectService) Update(ctx context.Context, info *model.AuthInfo, proje
 		return nil, fmt.Errorf("updating project: %w", err)
 	}
 
+	// Reindex project embedding
+	publishEmbedIndex(ctx, s.publisher, s.embedCache, model.EntityTypeProject, project.ID, nil)
+
 	return s.projects.GetByKey(ctx, project.Key)
 }
 
@@ -347,6 +365,9 @@ func (s *ProjectService) Delete(ctx context.Context, info *model.AuthInfo, proje
 	if err := s.projects.Delete(ctx, project.ID); err != nil {
 		return fmt.Errorf("deleting project: %w", err)
 	}
+
+	// Delete project embedding
+	publishEmbedDelete(ctx, s.publisher, s.embedCache, model.EntityTypeProject, project.ID)
 
 	log.Ctx(ctx).Info().
 		Str("project_id", project.ID.String()).

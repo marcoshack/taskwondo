@@ -16,6 +16,7 @@ import (
 	"github.com/marcoshack/taskwondo/internal/database"
 	"github.com/marcoshack/taskwondo/internal/email"
 	"github.com/marcoshack/taskwondo/internal/repository"
+	"github.com/marcoshack/taskwondo/internal/service"
 	"github.com/marcoshack/taskwondo/internal/workers"
 )
 
@@ -52,6 +53,20 @@ func main() {
 	projectRepo := repository.NewProjectRepository(db)
 	userSettingRepo := repository.NewUserSettingRepository(db)
 	systemSettingRepo := repository.NewSystemSettingRepository(db)
+
+	workItemRepo := repository.NewWorkItemRepository(db)
+	commentRepo := repository.NewCommentRepository(db)
+	milestoneRepo := repository.NewMilestoneRepository(db)
+	queueRepo := repository.NewQueueRepository(db)
+	attachmentRepo := repository.NewAttachmentRepository(db)
+	embeddingRepo := repository.NewEmbeddingRepository(db)
+
+	// Initialize embedding and indexer services
+	embeddingService := service.NewEmbeddingService(cfg.OllamaURL, cfg.OllamaModel)
+	indexerService := service.NewIndexerService(
+		embeddingService, embeddingRepo,
+		workItemRepo, commentRepo, projectRepo, milestoneRepo, queueRepo, attachmentRepo,
+	)
 
 	// Initialize encryption (same derivation as API server)
 	var encKey []byte
@@ -114,6 +129,16 @@ func main() {
 		watcherRepo, userRepo, userSettingRepo, emailSender, cfg.BaseURL, log.Logger,
 	)
 	dispatcher.Register(notifyWatcher)
+
+	// Register embedding tasks
+	embedIndex := workers.NewEmbedIndexTask(indexerService, systemSettingRepo, log.Logger)
+	dispatcher.Register(embedIndex)
+
+	embedDelete := workers.NewEmbedDeleteTask(indexerService, systemSettingRepo, log.Logger)
+	dispatcher.Register(embedDelete)
+
+	embedBackfill := workers.NewEmbedBackfillTask(indexerService, systemSettingRepo, log.Logger)
+	dispatcher.Register(embedBackfill)
 
 	// Start dispatcher
 	if err := dispatcher.Start(ctx); err != nil {

@@ -71,6 +71,23 @@ func (r *WorkItemRepository) Create(ctx context.Context, item *model.WorkItem) e
 	return nil
 }
 
+// ListAllIDs returns all non-deleted work item IDs with pagination (for backfill).
+func (r *WorkItemRepository) ListAllIDs(ctx context.Context, limit, offset int) ([]uuid.UUID, error) {
+	return listAllIDs(ctx, r.db, "work_items", limit, offset)
+}
+
+// GetByID returns a work item by its UUID.
+func (r *WorkItemRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.WorkItem, error) {
+	row := r.db.QueryRowContext(ctx,
+		`SELECT id, project_id, queue_id, milestone_id, parent_id, item_number, display_id, type, title, description,
+		        status, priority, assignee_id, reporter_id, portal_contact_id, visibility,
+		        labels, complexity, custom_fields, due_date, resolved_at, sla_target_at, estimated_seconds,
+		        created_at, updated_at
+		 FROM work_items
+		 WHERE id = $1 AND deleted_at IS NULL`, id)
+	return scanWorkItem(row)
+}
+
 // GetByProjectAndNumber returns a work item by project ID and item number.
 func (r *WorkItemRepository) GetByProjectAndNumber(ctx context.Context, projectID uuid.UUID, itemNumber int) (*model.WorkItem, error) {
 	row := r.db.QueryRowContext(ctx,

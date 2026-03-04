@@ -19,6 +19,11 @@ func NewMilestoneRepository(db *sql.DB) *MilestoneRepository {
 	return &MilestoneRepository{db: db}
 }
 
+// ListAllIDs returns all milestone IDs with pagination (for backfill).
+func (r *MilestoneRepository) ListAllIDs(ctx context.Context, limit, offset int) ([]uuid.UUID, error) {
+	return listAllIDsNoSoftDelete(ctx, r.db, "milestones", limit, offset)
+}
+
 // Create inserts a new milestone.
 func (r *MilestoneRepository) Create(ctx context.Context, m *model.Milestone) error {
 	_, err := r.db.ExecContext(ctx,

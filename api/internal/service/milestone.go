@@ -46,6 +46,18 @@ type MilestoneService struct {
 	milestones MilestoneRepository
 	projects   ProjectRepository
 	members    ProjectMemberRepository
+	publisher  EventPublisher
+	embedCache *FeatureFlagCache
+}
+
+// SetPublisher configures the event publisher for embed events.
+func (s *MilestoneService) SetPublisher(p EventPublisher) {
+	s.publisher = p
+}
+
+// SetEmbedCache configures the feature flag cache for semantic search indexing.
+func (s *MilestoneService) SetEmbedCache(cache *FeatureFlagCache) {
+	s.embedCache = cache
 }
 
 // NewMilestoneService creates a new MilestoneService.
@@ -90,6 +102,9 @@ func (s *MilestoneService) Create(ctx context.Context, info *model.AuthInfo, pro
 		Str("project_key", projectKey).
 		Str("name", m.Name).
 		Msg("milestone created")
+
+	// Publish embed.index event
+	publishEmbedIndex(ctx, s.publisher, s.embedCache, model.EntityTypeMilestone, m.ID, &project.ID)
 
 	return s.milestones.GetByIDWithProgress(ctx, m.ID)
 }
@@ -182,6 +197,9 @@ func (s *MilestoneService) Update(ctx context.Context, info *model.AuthInfo, pro
 		return nil, fmt.Errorf("updating milestone: %w", err)
 	}
 
+	// Reindex milestone embedding
+	publishEmbedIndex(ctx, s.publisher, s.embedCache, model.EntityTypeMilestone, m.ID, &project.ID)
+
 	return s.milestones.GetByIDWithProgress(ctx, m.ID)
 }
 
@@ -205,7 +223,14 @@ func (s *MilestoneService) Delete(ctx context.Context, info *model.AuthInfo, pro
 		return model.ErrNotFound
 	}
 
-	return s.milestones.Delete(ctx, milestoneID)
+	if err := s.milestones.Delete(ctx, milestoneID); err != nil {
+		return err
+	}
+
+	// Delete milestone embedding
+	publishEmbedDelete(ctx, s.publisher, s.embedCache, model.EntityTypeMilestone, milestoneID)
+
+	return nil
 }
 
 // Stats returns aggregate statistics for a milestone's work items.

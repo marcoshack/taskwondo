@@ -73,6 +73,10 @@ type Config struct {
 	WorkerPoolSize int    // Number of concurrent worker goroutines (default: 10)
 	WorkerDBPool   int    // DB max open conns for worker (default: 10)
 	BackfillStats  bool   // If true, backfill historical stats on startup then continue
+
+	// Ollama (optional — semantic search)
+	OllamaURL   string // Ollama API URL (e.g. "http://ollama:11434"); empty = disabled
+	OllamaModel string // Embedding model name (default: "nomic-embed-text")
 }
 
 // Load reads configuration from environment variables with defaults.
@@ -173,6 +177,8 @@ func Load() (*Config, error) {
 		WorkerPoolSize:      workerPoolSize,
 		WorkerDBPool:        workerDBPool,
 		BackfillStats:       envOrDefault("BACKFILL_STATS", "") == "true",
+		OllamaURL:           envOrDefault("OLLAMA_URL", ""),
+		OllamaModel:         envOrDefault("OLLAMA_MODEL", "nomic-embed-text"),
 	}
 
 	return cfg, nil

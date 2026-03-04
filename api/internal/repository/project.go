@@ -17,6 +17,11 @@ type ProjectRepository struct {
 }
 
 // NewProjectRepository creates a new ProjectRepository.
+// ListAllIDs returns all non-deleted project IDs with pagination (for backfill).
+func (r *ProjectRepository) ListAllIDs(ctx context.Context, limit, offset int) ([]uuid.UUID, error) {
+	return listAllIDs(ctx, r.db, "projects", limit, offset)
+}
+
 func NewProjectRepository(db *sql.DB) *ProjectRepository {
 	return &ProjectRepository{db: db}
 }

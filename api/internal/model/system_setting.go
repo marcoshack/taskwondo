@@ -30,7 +30,9 @@ const (
 	SettingOAuthMicrosoftConfig  = "oauth_microsoft_config"
 
 	// Feature flags
-	SettingFeatureStatsTimeline = "feature_stats_timeline"
+	SettingFeatureStatsTimeline  = "feature_stats_timeline"
+	SettingFeatureSemanticSearch = "feature_semantic_search"
+	SettingOllamaAvailable      = "ollama_available"
 )
 
 // SMTPEncryption constants for the Encryption field of SMTPConfig.

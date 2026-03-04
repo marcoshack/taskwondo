@@ -96,7 +96,7 @@ test.describe('Feature Toggle — Activity Graph', () => {
     await page.goto('/admin/features');
     await page.waitForLoadState('networkidle');
 
-    const toggle = page.getByRole('switch');
+    const toggle = page.getByRole('switch').first();
     await expect(toggle).toBeVisible();
 
     // Toggle should be ON by default

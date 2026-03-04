@@ -20,7 +20,8 @@ type SystemSettingRepositoryInterface interface {
 
 // SystemSettingService handles system setting business logic.
 type SystemSettingService struct {
-	settings SystemSettingRepositoryInterface
+	settings  SystemSettingRepositoryInterface
+	publisher EventPublisher
 }
 
 // NewSystemSettingService creates a new SystemSettingService.
@@ -28,10 +29,30 @@ func NewSystemSettingService(settings SystemSettingRepositoryInterface) *SystemS
 	return &SystemSettingService{settings: settings}
 }
 
+// SetPublisher configures the event publisher for backfill events.
+func (s *SystemSettingService) SetPublisher(p EventPublisher) {
+	s.publisher = p
+}
+
 // Set creates or updates a system setting. Requires admin role.
 func (s *SystemSettingService) Set(ctx context.Context, info *model.AuthInfo, key string, value json.RawMessage) (*model.SystemSetting, error) {
 	if err := requireAdmin(info); err != nil {
 		return nil, err
+	}
+
+	// Prevent enabling semantic search without Ollama available
+	if key == model.SettingFeatureSemanticSearch {
+		var enabled bool
+		if err := json.Unmarshal(value, &enabled); err == nil && enabled {
+			ollamaSetting, err := s.settings.Get(ctx, model.SettingOllamaAvailable)
+			if err != nil {
+				return nil, fmt.Errorf("%w: Ollama must be running and have the embedding model loaded before enabling semantic search", model.ErrValidation)
+			}
+			var available bool
+			if err := json.Unmarshal(ollamaSetting.Value, &available); err != nil || !available {
+				return nil, fmt.Errorf("%w: Ollama must be running and have the embedding model loaded before enabling semantic search", model.ErrValidation)
+			}
+		}
 	}
 
 	// Prevent enabling an OAuth provider that has no configuration
@@ -61,6 +82,16 @@ func (s *SystemSettingService) Set(ctx context.Context, info *model.AuthInfo, ke
 	log.Ctx(ctx).Info().
 		Str("key", key).
 		Msg("system setting saved")
+
+	// Trigger backfill when semantic search is enabled
+	if key == model.SettingFeatureSemanticSearch && s.publisher != nil {
+		var enabled bool
+		if err := json.Unmarshal(value, &enabled); err == nil && enabled {
+			if err := s.publisher.Publish("embed.backfill", model.EmbedBackfillEvent{Backfill: true}); err != nil {
+				log.Ctx(ctx).Warn().Err(err).Msg("failed to publish backfill event")
+			}
+		}
+	}
 
 	return s.settings.Get(ctx, key)
 }
@@ -102,6 +133,8 @@ func (s *SystemSettingService) GetPublic(ctx context.Context) (map[string]json.R
 		model.SettingAuthMicrosoftEnabled,
 		model.SettingOAuthProviderOrder,
 		model.SettingFeatureStatsTimeline,
+		model.SettingFeatureSemanticSearch,
+		model.SettingOllamaAvailable,
 	}
 	result := make(map[string]json.RawMessage)
 

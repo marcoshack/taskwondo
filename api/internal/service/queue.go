@@ -47,9 +47,21 @@ type UpdateQueueInput struct {
 
 // QueueService handles queue business logic and authorization.
 type QueueService struct {
-	queues   QueueRepository
-	projects ProjectRepository
-	members  ProjectMemberRepository
+	queues     QueueRepository
+	projects   ProjectRepository
+	members    ProjectMemberRepository
+	publisher  EventPublisher
+	embedCache *FeatureFlagCache
+}
+
+// SetPublisher configures the event publisher for embed events.
+func (s *QueueService) SetPublisher(p EventPublisher) {
+	s.publisher = p
+}
+
+// SetEmbedCache configures the feature flag cache for semantic search indexing.
+func (s *QueueService) SetEmbedCache(cache *FeatureFlagCache) {
+	s.embedCache = cache
 }
 
 // NewQueueService creates a new QueueService.
@@ -106,6 +118,9 @@ func (s *QueueService) Create(ctx context.Context, info *model.AuthInfo, project
 		Str("project_key", projectKey).
 		Str("name", q.Name).
 		Msg("queue created")
+
+	// Publish embed.index event
+	publishEmbedIndex(ctx, s.publisher, s.embedCache, model.EntityTypeQueue, q.ID, &project.ID)
 
 	return s.queues.GetByID(ctx, q.ID)
 }
@@ -215,6 +230,9 @@ func (s *QueueService) Update(ctx context.Context, info *model.AuthInfo, project
 		return nil, fmt.Errorf("updating queue: %w", err)
 	}
 
+	// Reindex queue embedding
+	publishEmbedIndex(ctx, s.publisher, s.embedCache, model.EntityTypeQueue, q.ID, &project.ID)
+
 	return s.queues.GetByID(ctx, q.ID)
 }
 
@@ -238,7 +256,14 @@ func (s *QueueService) Delete(ctx context.Context, info *model.AuthInfo, project
 		return model.ErrNotFound
 	}
 
-	return s.queues.Delete(ctx, queueID)
+	if err := s.queues.Delete(ctx, queueID); err != nil {
+		return err
+	}
+
+	// Delete queue embedding
+	publishEmbedDelete(ctx, s.publisher, s.embedCache, model.EntityTypeQueue, queueID)
+
+	return nil
 }
 
 func (s *QueueService) requireMembership(ctx context.Context, info *model.AuthInfo, projectID uuid.UUID) error {

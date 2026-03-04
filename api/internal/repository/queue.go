@@ -19,6 +19,11 @@ func NewQueueRepository(db *sql.DB) *QueueRepository {
 	return &QueueRepository{db: db}
 }
 
+// ListAllIDs returns all queue IDs with pagination (for backfill).
+func (r *QueueRepository) ListAllIDs(ctx context.Context, limit, offset int) ([]uuid.UUID, error) {
+	return listAllIDsNoSoftDelete(ctx, r.db, "queues", limit, offset)
+}
+
 // Create inserts a new queue.
 func (r *QueueRepository) Create(ctx context.Context, q *model.Queue) error {
 	_, err := r.db.ExecContext(ctx,

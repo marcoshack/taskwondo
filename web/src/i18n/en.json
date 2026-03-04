@@ -710,6 +710,10 @@
   "admin.features.description": "Enable or disable features globally across the platform.",
   "admin.features.statsTimeline.title": "Activity Graph",
   "admin.features.statsTimeline.description": "Show the activity timeline chart on project overview pages, displaying work item status trends over time.",
+  "admin.features.semanticSearch.title": "Semantic Search",
+  "admin.features.semanticSearch.description": "Enable AI-powered semantic search across work items, comments, projects, milestones, and queues using Ollama embeddings.",
+  "admin.features.semanticSearch.ollamaAvailable": "Ollama is connected and ready.",
+  "admin.features.semanticSearch.ollamaUnavailable": "Ollama is not available. Add Ollama to your deployment to enable this feature.",
 
   "admin.integrations.title": "Integrations",
   "admin.integrations.description": "Configure external service integrations.",

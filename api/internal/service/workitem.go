@@ -194,6 +194,7 @@ type WorkItemService struct {
 	fileStorage   storage.Storage
 	maxUploadSize int64
 	publisher     EventPublisher
+	embedCache    *FeatureFlagCache
 }
 
 // NewWorkItemService creates a new WorkItemService.
@@ -240,6 +241,11 @@ func NewWorkItemService(
 // SetPublisher configures the event publisher for async notifications.
 func (s *WorkItemService) SetPublisher(p EventPublisher) {
 	s.publisher = p
+}
+
+// SetEmbedCache configures the feature flag cache for semantic search indexing.
+func (s *WorkItemService) SetEmbedCache(cache *FeatureFlagCache) {
+	s.embedCache = cache
 }
 
 // Create creates a new work item in the given project.
@@ -409,6 +415,9 @@ func (s *WorkItemService) Create(ctx context.Context, info *model.AuthInfo, proj
 	if err != nil {
 		return nil, fmt.Errorf("fetching created work item: %w", err)
 	}
+
+	// Publish embed.index event for semantic search
+	publishEmbedIndex(ctx, s.publisher, s.embedCache, model.EntityTypeWorkItem, created.ID, &created.ProjectID)
 
 	return created, nil
 }
@@ -798,6 +807,9 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 		s.publishWatcherNotification(ctx, project.Key, project.ID, item, info.UserID, "field_change", ch.field, ch.oldVal, ch.newVal, "")
 	}
 
+	// Publish embed.index event for semantic search (reindex on update)
+	publishEmbedIndex(ctx, s.publisher, s.embedCache, model.EntityTypeWorkItem, item.ID, &project.ID)
+
 	// Re-fetch to get updated timestamp
 	return s.items.GetByProjectAndNumber(ctx, project.ID, item.ItemNumber)
 }
@@ -822,6 +834,9 @@ func (s *WorkItemService) Delete(ctx context.Context, info *model.AuthInfo, proj
 	if err := s.items.Delete(ctx, item.ID); err != nil {
 		return fmt.Errorf("deleting work item: %w", err)
 	}
+
+	// Publish embed.delete event for semantic search
+	publishEmbedDelete(ctx, s.publisher, s.embedCache, model.EntityTypeWorkItem, item.ID)
 
 	log.Ctx(ctx).Info().
 		Str("project_key", projectKey).
@@ -886,6 +901,9 @@ func (s *WorkItemService) CreateComment(ctx context.Context, info *model.AuthInf
 		preview = preview[:100] + "..."
 	}
 	s.publishWatcherNotification(ctx, projectKey, project.ID, item, info.UserID, "comment_added", "", "", "", preview)
+
+	// Publish embed.index event for the new comment
+	publishEmbedIndex(ctx, s.publisher, s.embedCache, model.EntityTypeComment, comment.ID, &project.ID)
 
 	// Re-fetch to get DB-assigned timestamps
 	return s.comments.GetByID(ctx, comment.ID)
@@ -953,6 +971,9 @@ func (s *WorkItemService) UpdateComment(ctx context.Context, info *model.AuthInf
 		"preview":     body,
 	})
 
+	// Reindex comment embedding
+	publishEmbedIndex(ctx, s.publisher, s.embedCache, model.EntityTypeComment, commentID, &project.ID)
+
 	return s.comments.GetByID(ctx, commentID)
 }
 
@@ -992,6 +1013,9 @@ func (s *WorkItemService) DeleteComment(ctx context.Context, info *model.AuthInf
 	s.recordEventWithMetadata(ctx, item.ID, &info.UserID, "comment_deleted", model.VisibilityInternal, map[string]interface{}{
 		"comment_id": commentID.String(),
 	})
+
+	// Delete comment embedding
+	publishEmbedDelete(ctx, s.publisher, s.embedCache, model.EntityTypeComment, commentID)
 
 	return nil
 }
@@ -1218,6 +1242,9 @@ func (s *WorkItemService) UploadAttachment(ctx context.Context, info *model.Auth
 		Int64("size_bytes", input.Size).
 		Msg("attachment uploaded")
 
+	// Publish embed.index event for the new attachment
+	publishEmbedIndex(ctx, s.publisher, s.embedCache, model.EntityTypeAttachment, attachmentID, &project.ID)
+
 	return s.attachments.GetByID(ctx, attachmentID)
 }
 
@@ -1314,6 +1341,9 @@ func (s *WorkItemService) DeleteAttachment(ctx context.Context, info *model.Auth
 		"attachment_id": attachmentID.String(),
 		"filename":      attachment.Filename,
 	})
+
+	// Delete attachment embedding
+	publishEmbedDelete(ctx, s.publisher, s.embedCache, model.EntityTypeAttachment, attachmentID)
 
 	return nil
 }

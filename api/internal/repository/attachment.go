@@ -20,6 +20,11 @@ func NewAttachmentRepository(db *sql.DB) *AttachmentRepository {
 	return &AttachmentRepository{db: db}
 }
 
+// ListAllIDs returns all non-deleted attachment IDs with pagination (for backfill).
+func (r *AttachmentRepository) ListAllIDs(ctx context.Context, limit, offset int) ([]uuid.UUID, error) {
+	return listAllIDs(ctx, r.db, "attachments", limit, offset)
+}
+
 // Create inserts a new attachment record.
 func (r *AttachmentRepository) Create(ctx context.Context, a *model.Attachment) error {
 	_, err := r.db.ExecContext(ctx,

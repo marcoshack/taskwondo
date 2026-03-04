@@ -22,6 +22,9 @@ export function SystemFeaturesPage() {
     ? settings.feature_stats_timeline === true
     : true // default: enabled
 
+  const semanticSearchEnabled = settings.feature_semantic_search === true
+  const ollamaAvailable = settings.ollama_available as boolean | undefined
+
   const handleToggle = (key: string, value: boolean) => {
     setSetting.mutate({ key, value })
   }
@@ -51,6 +54,32 @@ export function SystemFeaturesPage() {
           <Toggle
             enabled={statsTimelineEnabled}
             onChange={(val) => handleToggle('feature_stats_timeline', val)}
+          />
+        </div>
+      </div>
+
+      {/* Semantic Search */}
+      <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+              {t('admin.features.semanticSearch.title')}
+            </h3>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              {t('admin.features.semanticSearch.description')}
+            </p>
+            {ollamaAvailable !== undefined && (
+              <p className={`mt-2 text-xs ${ollamaAvailable ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                {ollamaAvailable
+                  ? t('admin.features.semanticSearch.ollamaAvailable')
+                  : t('admin.features.semanticSearch.ollamaUnavailable')}
+              </p>
+            )}
+          </div>
+          <Toggle
+            enabled={semanticSearchEnabled}
+            onChange={(val) => handleToggle('feature_semantic_search', val)}
+            disabled={!ollamaAvailable}
           />
         </div>
       </div>
