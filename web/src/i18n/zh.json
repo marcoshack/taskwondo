@@ -971,5 +971,22 @@
   "watchlist.allProjects": "所有项目",
   "watchlist.filterByProject": "按项目筛选",
   "watchlist.empty": "你还没有关注任何项目",
-  "watchlist.emptyHint": "使用工作项上的铃铛图标将其添加到你的关注列表"
+  "watchlist.emptyHint": "使用工作项上的铃铛图标将其添加到你的关注列表",
+
+  "search.placeholder": "在所有项目中搜索...",
+  "search.hint": "输入至少2个字符进行搜索",
+  "search.noResults": "未找到结果",
+  "search.showMore": "显示更多结果",
+  "search.navigate": "导航",
+  "search.open": "打开",
+  "search.dismiss": "关闭",
+  "search.ftsMode": "文本搜索",
+  "search.entityType.project": "项目",
+  "search.entityType.work_item": "工作项",
+  "search.entityType.milestone": "里程碑",
+  "search.entityType.queue": "队列",
+  "search.entityType.comment": "评论",
+  "search.entityType.attachment": "附件",
+
+  "shortcuts.actions.globalSearch": "全局搜索"
 }

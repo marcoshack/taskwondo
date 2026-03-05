@@ -971,5 +971,22 @@
   "watchlist.allProjects": "すべてのプロジェクト",
   "watchlist.filterByProject": "プロジェクトで絞り込み",
   "watchlist.empty": "まだアイテムをウォッチしていません",
-  "watchlist.emptyHint": "ベルアイコンを使ってアイテムをウォッチリストに追加できます"
+  "watchlist.emptyHint": "ベルアイコンを使ってアイテムをウォッチリストに追加できます",
+
+  "search.placeholder": "すべてのプロジェクトを検索...",
+  "search.hint": "2文字以上入力して検索",
+  "search.noResults": "結果が見つかりません",
+  "search.showMore": "さらに結果を表示",
+  "search.navigate": "移動",
+  "search.open": "開く",
+  "search.dismiss": "閉じる",
+  "search.ftsMode": "テキスト検索",
+  "search.entityType.project": "プロジェクト",
+  "search.entityType.work_item": "作業項目",
+  "search.entityType.milestone": "マイルストーン",
+  "search.entityType.queue": "キュー",
+  "search.entityType.comment": "コメント",
+  "search.entityType.attachment": "添付ファイル",
+
+  "shortcuts.actions.globalSearch": "グローバル検索"
 }

@@ -1049,5 +1049,22 @@
   "watchlist.allProjects": "All Projects",
   "watchlist.filterByProject": "Filter by Project",
   "watchlist.empty": "You're not watching any items yet",
-  "watchlist.emptyHint": "Use the bell icon on work items to add them to your watchlist"
+  "watchlist.emptyHint": "Use the bell icon on work items to add them to your watchlist",
+
+  "search.placeholder": "Search across all projects...",
+  "search.hint": "Type at least 2 characters to search",
+  "search.noResults": "No results found",
+  "search.showMore": "Show more results",
+  "search.navigate": "Navigate",
+  "search.open": "Open",
+  "search.dismiss": "Close",
+  "search.ftsMode": "Text search",
+  "search.entityType.project": "Projects",
+  "search.entityType.work_item": "Work Items",
+  "search.entityType.milestone": "Milestones",
+  "search.entityType.queue": "Queues",
+  "search.entityType.comment": "Comments",
+  "search.entityType.attachment": "Attachments",
+
+  "shortcuts.actions.globalSearch": "Global search"
 }

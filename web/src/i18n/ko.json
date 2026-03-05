@@ -971,5 +971,22 @@
   "watchlist.allProjects": "모든 프로젝트",
   "watchlist.filterByProject": "프로젝트별 필터",
   "watchlist.empty": "아직 구독 중인 항목이 없습니다",
-  "watchlist.emptyHint": "작업 항목의 벨 아이콘을 사용하여 구독 목록에 추가하세요"
+  "watchlist.emptyHint": "작업 항목의 벨 아이콘을 사용하여 구독 목록에 추가하세요",
+
+  "search.placeholder": "모든 프로젝트에서 검색...",
+  "search.hint": "검색하려면 2자 이상 입력하세요",
+  "search.noResults": "결과를 찾을 수 없습니다",
+  "search.showMore": "더 많은 결과 보기",
+  "search.navigate": "탐색",
+  "search.open": "열기",
+  "search.dismiss": "닫기",
+  "search.ftsMode": "텍스트 검색",
+  "search.entityType.project": "프로젝트",
+  "search.entityType.work_item": "작업 항목",
+  "search.entityType.milestone": "마일스톤",
+  "search.entityType.queue": "대기열",
+  "search.entityType.comment": "댓글",
+  "search.entityType.attachment": "첨부 파일",
+
+  "shortcuts.actions.globalSearch": "전체 검색"
 }

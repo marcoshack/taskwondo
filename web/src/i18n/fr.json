@@ -971,5 +971,22 @@
   "watchlist.allProjects": "Tous les projets",
   "watchlist.filterByProject": "Filtrer par projet",
   "watchlist.empty": "Vous ne suivez aucun élément",
-  "watchlist.emptyHint": "Utilisez l'icône cloche sur les éléments pour les ajouter à votre liste"
+  "watchlist.emptyHint": "Utilisez l'icône cloche sur les éléments pour les ajouter à votre liste",
+
+  "search.placeholder": "Rechercher dans tous les projets...",
+  "search.hint": "Saisissez au moins 2 caractères pour rechercher",
+  "search.noResults": "Aucun résultat trouvé",
+  "search.showMore": "Afficher plus de résultats",
+  "search.navigate": "Naviguer",
+  "search.open": "Ouvrir",
+  "search.dismiss": "Fermer",
+  "search.ftsMode": "Recherche textuelle",
+  "search.entityType.project": "Projets",
+  "search.entityType.work_item": "Éléments de travail",
+  "search.entityType.milestone": "Jalons",
+  "search.entityType.queue": "Files d'attente",
+  "search.entityType.comment": "Commentaires",
+  "search.entityType.attachment": "Pièces jointes",
+
+  "shortcuts.actions.globalSearch": "Recherche globale"
 }

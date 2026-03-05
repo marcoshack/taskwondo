@@ -14,6 +14,7 @@ import { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react
 import { useKeyboardShortcutContext } from '@/contexts/KeyboardShortcutContext'
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
 import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal'
+import { SearchModal } from '@/components/SearchModal'
 import { WelcomeModal } from '@/components/WelcomeModal'
 import { usePreference, useSetPreference } from '@/hooks/usePreferences'
 import { useBrand } from '@/contexts/BrandContext'
@@ -31,6 +32,7 @@ export function AppShell() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [switcherOpen, setSwitcherOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
   const [welcomeOpen, setWelcomeOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -94,6 +96,14 @@ export function AppShell() {
       callback: () => guardedNavigate(`/projects/${activeProjectKey}/items`),
     })
   }, [activeProjectKey, navigate, registerSequentialCombo])
+
+  useLayoutEffect(() => {
+    return registerSequentialCombo({
+      id: 'global-search',
+      keys: ['g', 'k'],
+      callback: () => setSearchOpen(true),
+    })
+  }, [registerSequentialCombo])
 
   useKeyboardShortcut({ key: '?' }, () => setShortcutsOpen(true))
   useKeyboardShortcut({ key: ',', ctrlKey: true }, () => guardedNavigate('/preferences'))
@@ -227,6 +237,7 @@ export function AppShell() {
           guardedNavigate(`/projects/${key}`)
         }}
       />
+      <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
       <KeyboardShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
       <WelcomeModal
         open={welcomeOpen}

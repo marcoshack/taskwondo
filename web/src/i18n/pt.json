@@ -971,5 +971,22 @@
   "watchlist.allProjects": "Todos os projetos",
   "watchlist.filterByProject": "Filtrar por projeto",
   "watchlist.empty": "Você não está acompanhando nenhum item",
-  "watchlist.emptyHint": "Use o ícone de sino nos itens de trabalho para adicioná-los à sua lista"
+  "watchlist.emptyHint": "Use o ícone de sino nos itens de trabalho para adicioná-los à sua lista",
+
+  "search.placeholder": "Pesquisar em todos os projetos...",
+  "search.hint": "Digite pelo menos 2 caracteres para pesquisar",
+  "search.noResults": "Nenhum resultado encontrado",
+  "search.showMore": "Mostrar mais resultados",
+  "search.navigate": "Navegar",
+  "search.open": "Abrir",
+  "search.dismiss": "Fechar",
+  "search.ftsMode": "Pesquisa de texto",
+  "search.entityType.project": "Projetos",
+  "search.entityType.work_item": "Itens de trabalho",
+  "search.entityType.milestone": "Marcos",
+  "search.entityType.queue": "Filas",
+  "search.entityType.comment": "Comentários",
+  "search.entityType.attachment": "Anexos",
+
+  "shortcuts.actions.globalSearch": "Pesquisa global"
 }

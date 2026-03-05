@@ -45,6 +45,7 @@ export function KeyboardShortcutsModal({ open, onClose }: { open: boolean; onClo
         { keys: ['g', 'p'], label: t('shortcuts.navigation.switchProject') },
         { keys: ['g', 'o'], label: t('shortcuts.navigation.goToItems') },
         { keys: ['g', 'i'], label: t('shortcuts.navigation.goToInbox') },
+        { keys: ['g', 'k'], label: t('shortcuts.actions.globalSearch') },
         { keys: ['Ctrl', ','], label: t('shortcuts.navigation.preferences') },
         { keys: ['['], label: t('shortcuts.navigation.toggleSidebar') },
       ],

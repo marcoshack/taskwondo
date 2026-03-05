@@ -971,5 +971,22 @@
   "watchlist.allProjects": "Alle Projekte",
   "watchlist.filterByProject": "Nach Projekt filtern",
   "watchlist.empty": "Sie beobachten noch keine Elemente",
-  "watchlist.emptyHint": "Verwenden Sie das Glockensymbol bei Arbeitselementen, um sie zu Ihrer Liste hinzuzufügen"
+  "watchlist.emptyHint": "Verwenden Sie das Glockensymbol bei Arbeitselementen, um sie zu Ihrer Liste hinzuzufügen",
+
+  "search.placeholder": "In allen Projekten suchen...",
+  "search.hint": "Mindestens 2 Zeichen eingeben, um zu suchen",
+  "search.noResults": "Keine Ergebnisse gefunden",
+  "search.showMore": "Mehr Ergebnisse anzeigen",
+  "search.navigate": "Navigieren",
+  "search.open": "Öffnen",
+  "search.dismiss": "Schließen",
+  "search.ftsMode": "Textsuche",
+  "search.entityType.project": "Projekte",
+  "search.entityType.work_item": "Arbeitselemente",
+  "search.entityType.milestone": "Meilensteine",
+  "search.entityType.queue": "Warteschlangen",
+  "search.entityType.comment": "Kommentare",
+  "search.entityType.attachment": "Anhänge",
+
+  "shortcuts.actions.globalSearch": "Globale Suche"
 }

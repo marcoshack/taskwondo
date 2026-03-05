@@ -971,5 +971,22 @@
   "watchlist.allProjects": "جميع المشاريع",
   "watchlist.filterByProject": "تصفية حسب المشروع",
   "watchlist.empty": "لا تتابع أي عناصر بعد",
-  "watchlist.emptyHint": "استخدم أيقونة الجرس على عناصر العمل لإضافتها إلى قائمتك"
+  "watchlist.emptyHint": "استخدم أيقونة الجرس على عناصر العمل لإضافتها إلى قائمتك",
+
+  "search.placeholder": "البحث في جميع المشاريع...",
+  "search.hint": "اكتب حرفين على الأقل للبحث",
+  "search.noResults": "لم يتم العثور على نتائج",
+  "search.showMore": "عرض المزيد من النتائج",
+  "search.navigate": "تنقل",
+  "search.open": "فتح",
+  "search.dismiss": "إغلاق",
+  "search.ftsMode": "بحث نصي",
+  "search.entityType.project": "المشاريع",
+  "search.entityType.work_item": "عناصر العمل",
+  "search.entityType.milestone": "المراحل",
+  "search.entityType.queue": "قوائم الانتظار",
+  "search.entityType.comment": "التعليقات",
+  "search.entityType.attachment": "المرفقات",
+
+  "shortcuts.actions.globalSearch": "البحث الشامل"
 }
