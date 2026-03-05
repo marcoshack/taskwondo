@@ -5,13 +5,15 @@ import path from 'path';
 // Load .env from repo root so tests can use ADMIN_EMAIL / ADMIN_PASSWORD
 dotenv.config({ path: path.resolve(__dirname, '../.env'), quiet: true });
 
+const isDocker = !!process.env.BASE_URL && !process.env.BASE_URL.includes('localhost');
+
 export default defineConfig({
   testDir: './tests',
   outputDir: './test-results',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  retries: process.env.CI ? 2 : isDocker ? 2 : 0,
+  workers: process.env.CI ? 1 : isDocker ? 4 : undefined,
   reporter: [
     ['html', { outputFolder: './playwright-report' }],
     ['list'],
@@ -20,6 +22,7 @@ export default defineConfig({
     baseURL: process.env.BASE_URL || 'http://localhost:5173',
     screenshot: 'on',
     trace: 'on-first-retry',
+    actionTimeout: isDocker ? 15000 : 10000,
   },
   projects: [
     {

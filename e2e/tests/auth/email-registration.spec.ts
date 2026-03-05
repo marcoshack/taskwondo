@@ -70,7 +70,7 @@ test.describe('Email Registration', () => {
     // Step 8: Should be redirected to projects (logged in)
     await page.waitForURL(/\/projects/, { timeout: 10000 });
     await dismissWelcomeModal(page);
-    await expect(page.getByRole('heading', { name: 'Projects' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Projects' }).first()).toBeVisible();
   });
 
   test('registration shows error for duplicate email', async ({ page, request }) => {

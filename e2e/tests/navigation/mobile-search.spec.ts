@@ -1,8 +1,9 @@
 import { test, expect } from '../../lib/fixtures';
 
-async function dismissWelcomeModal(page: import('@playwright/test').Page) {
+async function waitForPageReady(page: import('@playwright/test').Page) {
+  await page.waitForLoadState('networkidle');
   const welcomeHeading = page.getByRole('heading', { name: 'Welcome' });
-  if (await welcomeHeading.isVisible({ timeout: 2000 }).catch(() => false)) {
+  if (await welcomeHeading.isVisible({ timeout: 1000 }).catch(() => false)) {
     await page.keyboard.press('Escape');
     await expect(welcomeHeading).not.toBeVisible({ timeout: 3000 });
   }
@@ -12,7 +13,7 @@ test.describe('Mobile search icon and top bar layout', () => {
   test('search icon is visible on mobile and opens search modal', async ({ page, testProject }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto(`/projects/${testProject.key}/items`);
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     // Search icon button should be visible on mobile
     const searchButton = page.getByRole('button', { name: /^search$/i });
@@ -32,7 +33,7 @@ test.describe('Mobile search icon and top bar layout', () => {
   test('search icon is hidden on desktop', async ({ page, testProject }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto(`/projects/${testProject.key}/items`);
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     // Search icon button should be hidden on desktop (sm:hidden)
     const searchButton = page.getByRole('button', { name: /^search$/i });
@@ -45,7 +46,7 @@ test.describe('Mobile search icon and top bar layout', () => {
   }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto(`/projects/${testProject.key}/items`);
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     // Home button should be visible
     const homeButton = page.getByRole('button', { name: /^home$/i });
@@ -62,7 +63,7 @@ test.describe('Mobile search icon and top bar layout', () => {
   }) => {
     // First visit a project page to set lastProjectKey
     await page.goto(`/projects/${testProject.key}/items`);
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/preferences');
@@ -82,7 +83,7 @@ test.describe('Mobile search icon and top bar layout', () => {
   }) => {
     // First visit a project page to set lastProjectKey
     await page.goto(`/projects/${testProject.key}/items`);
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/admin');
@@ -95,7 +96,7 @@ test.describe('Mobile search icon and top bar layout', () => {
   test('home icon navigates to projects list', async ({ page, testProject }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto(`/projects/${testProject.key}/items`);
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     const homeButton = page.getByRole('button', { name: /^home$/i });
     await expect(homeButton).toBeVisible({ timeout: 5000 });
@@ -107,7 +108,7 @@ test.describe('Mobile search icon and top bar layout', () => {
   test('project key badge opens project switcher on mobile', async ({ page, testProject }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto(`/projects/${testProject.key}/items`);
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     // Click the project key badge in the top-left area
     const topBar = page.locator('nav');
@@ -121,7 +122,7 @@ test.describe('Mobile search icon and top bar layout', () => {
   test('search icon is visible on mobile preferences page', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/preferences');
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     // Search icon should be available on all pages
     const searchButton = page.getByRole('button', { name: /^search$/i });
@@ -131,7 +132,7 @@ test.describe('Mobile search icon and top bar layout', () => {
   test('mobile icon order: search before inbox before menu', async ({ page, testProject }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto(`/projects/${testProject.key}/items`);
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     // Get bounding boxes to verify left-to-right order
     const searchBox = await page.getByRole('button', { name: /^search$/i }).boundingBox();
@@ -151,7 +152,7 @@ test.describe('Mobile search icon and top bar layout', () => {
   test('desktop top bar is unchanged with project active', async ({ page, testProject }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto(`/projects/${testProject.key}/items`);
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     // Brand name should be visible on desktop
     const nav = page.locator('nav');

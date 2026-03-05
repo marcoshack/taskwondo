@@ -64,15 +64,22 @@ export const test = base.extend<{ testUser: TestUser; testProject: TestProject }
     await api.deactivateUser(request, adminToken, testUser.id).catch(() => {});
   },
 
-  // Creates a project owned by the test user
+  // Creates a project owned by the test user (retries on key collision)
   testProject: async ({ request, testUser }, use) => {
-    const suffix = randomUUID().slice(0, 4).toUpperCase();
-    const key = `E${suffix}`;
-    const name = `E2E Project ${suffix}`;
+    let project: { id: string; key: string; name: string };
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const suffix = randomUUID().slice(0, 4).toUpperCase();
+      const key = `E${suffix}`;
+      const name = `E2E Project ${suffix}`;
+      try {
+        project = await api.createProject(request, testUser.token, key, name);
+        break;
+      } catch (err: any) {
+        if (attempt === 2 || !err.message?.includes('already in use')) throw err;
+      }
+    }
 
-    const project = await api.createProject(request, testUser.token, key, name);
-
-    await use({ id: project.id, key: project.key, name: project.name });
+    await use({ id: project!.id, key: project!.key, name: project!.name });
   },
 
   // Override storageState so each test gets a fresh browser context

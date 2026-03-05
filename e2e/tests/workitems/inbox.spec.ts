@@ -1,9 +1,12 @@
 import { test, expect } from '../../lib/fixtures';
 import * as api from '../../lib/api';
 
-async function dismissWelcomeModal(page: import('@playwright/test').Page) {
+async function waitForPageReady(page: import('@playwright/test').Page) {
+  // Wait for the app to finish loading (API calls, etc.)
+  await page.waitForLoadState('networkidle');
+  // Dismiss welcome modal if it appears
   const welcomeHeading = page.getByRole('heading', { name: 'Welcome' });
-  if (await welcomeHeading.isVisible({ timeout: 2000 }).catch(() => false)) {
+  if (await welcomeHeading.isVisible({ timeout: 1000 }).catch(() => false)) {
     await page.keyboard.press('Escape');
     await expect(welcomeHeading).not.toBeVisible({ timeout: 3000 });
   }
@@ -38,7 +41,7 @@ test.describe('Inbox', () => {
 
     // Navigate to inbox page
     await page.goto('/user/inbox');
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     // Verify the item appears in the table
     await expect(page.getByRole('table').getByText('Inbox test item')).toBeVisible({ timeout: 10000 });
@@ -107,10 +110,10 @@ test.describe('Inbox', () => {
 
     // Navigate to any page
     await page.goto(`/projects/${testProject.key}/items`);
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
-    // Verify the inbox button has a count badge with "2"
-    const inboxBtn = page.getByRole('button', { name: 'Inbox' });
+    // Verify the inbox button in the top bar has a count badge with "2"
+    const inboxBtn = page.getByRole('button', { name: 'Inbox', exact: true });
     await expect(inboxBtn).toBeVisible({ timeout: 10000 });
     await expect(inboxBtn.locator('span.rounded-full')).toHaveText('2', { timeout: 10000 });
   });
@@ -123,7 +126,7 @@ test.describe('Inbox', () => {
     await api.addToInbox(request, testUser.token, item.id);
 
     await page.goto('/user/inbox');
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     // Wait for the item to appear in the table
     const table = page.getByRole('table');
@@ -254,7 +257,7 @@ test.describe('Inbox', () => {
 
   test('sidebar navigation between Inbox, Feed, and Watchlist', async ({ page }) => {
     await page.goto('/user/inbox');
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     // Should be on inbox page
     await expect(page).toHaveURL(/\/user\/inbox/);
@@ -278,7 +281,7 @@ test.describe('Inbox', () => {
 
   test('sidebar collapse and expand', async ({ page }) => {
     await page.goto('/user/inbox');
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     const sidebar = page.locator('nav.hidden.sm\\:block');
     await expect(sidebar).toBeVisible();
@@ -303,7 +306,7 @@ test.describe('Inbox', () => {
 
   test('keyboard shortcut [ toggles sidebar', async ({ page }) => {
     await page.goto('/user/inbox');
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     const sidebar = page.locator('nav.hidden.sm\\:block');
 
@@ -332,7 +335,7 @@ test.describe('Inbox', () => {
     }
 
     await page.goto('/user/inbox');
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     // Wait for all 3 items in the table
     const table = page.getByRole('table');
@@ -373,7 +376,7 @@ test.describe('Inbox', () => {
     await completeWorkItem(request, testUser.token, testProject.key, item2.item_number);
 
     await page.goto('/user/inbox');
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     const table = page.getByRole('table');
 
@@ -392,7 +395,7 @@ test.describe('Inbox', () => {
 
   test('auto-remove toggle persists across page reloads', async ({ page }) => {
     await page.goto('/user/inbox');
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     // Toggle should be ON by default
     const toggle = page.getByRole('switch');
@@ -404,7 +407,7 @@ test.describe('Inbox', () => {
 
     // Reload page
     await page.reload();
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     // Toggle should still be OFF
     const reloadedToggle = page.getByRole('switch');
@@ -427,7 +430,7 @@ test.describe('Inbox', () => {
 
     // Navigate to work item list (mobile card view)
     await page.goto(`/projects/${testProject.key}/items`);
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     // Scope to the mobile card container (sm:hidden div) to avoid matching hidden desktop table rows
     const mobileCards = page.locator('.lg\\:hidden');
@@ -459,7 +462,7 @@ test.describe('Inbox', () => {
 
     // Navigate to inbox page and verify items are displayed (scope to mobile card container)
     await page.goto('/user/inbox');
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
     const inboxCards = page.locator('.lg\\:hidden');
     await expect(inboxCards.getByText('Mobile inbox item 1')).toBeVisible({ timeout: 10000 });
     await expect(inboxCards.getByText('Mobile inbox item 2')).toBeVisible();
@@ -478,7 +481,7 @@ test.describe('Inbox', () => {
 
     // Navigate to work item list (mobile card view)
     await page.goto(`/projects/${testProject.key}/items`);
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     // Scope to mobile card container
     const mobileCards = page.locator('.lg\\:hidden');
@@ -513,7 +516,7 @@ test.describe('Inbox', () => {
     await api.addToInbox(request, testUser.token, item.id);
 
     await page.goto('/user/inbox');
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     // Click on the work item row (scope to table to avoid mobile card match)
     await page.getByRole('table').getByText('Navigate detail test').click();
@@ -540,7 +543,7 @@ test.describe('Inbox', () => {
     await api.addToInbox(request, testUser.token, item.id);
 
     await page.goto('/user/inbox');
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     const inboxCards = page.locator('.lg\\:hidden');
     await expect(inboxCards.getByText('Edit mode test')).toBeVisible({ timeout: 10000 });
@@ -576,7 +579,7 @@ test.describe('Inbox', () => {
     await api.addToInbox(request, testUser.token, item.id);
 
     await page.goto('/user/inbox');
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     const inboxCards = page.locator('.lg\\:hidden');
     await expect(inboxCards.getByText('Mobile edit remove')).toBeVisible({ timeout: 10000 });
@@ -602,7 +605,7 @@ test.describe('Inbox', () => {
 
   test('create new item from inbox via desktop New Item button', async ({ request, testUser, testProject, page }) => {
     await page.goto('/user/inbox');
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     // Click the "New Item" button in the header
     await page.getByRole('button', { name: 'New Item' }).click();
@@ -637,7 +640,7 @@ test.describe('Inbox', () => {
 
   test('create new item from inbox via c keyboard shortcut', async ({ request, testUser, testProject, page }) => {
     await page.goto('/user/inbox');
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     // Click on the page body to ensure no input has focus
     await page.locator('h1').click();
@@ -668,7 +671,7 @@ test.describe('Inbox', () => {
 
   test('inbox new item modal has searchable project picker', async ({ request, testUser, testProject, page }) => {
     await page.goto('/user/inbox');
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     // Open the create modal
     await page.getByRole('button', { name: 'New Item' }).click();
@@ -709,7 +712,7 @@ test.describe('Inbox', () => {
     await page.setViewportSize({ width: 375, height: 667 });
 
     await page.goto('/user/inbox');
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     // Click the "New" button (mobile shows short text)
     await page.getByRole('button', { name: 'New', exact: true }).click();
@@ -751,7 +754,7 @@ test.describe('Inbox', () => {
     await api.addToInbox(request, testUser.token, item.id);
 
     await page.goto('/user/inbox');
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     // Verify the item appears
     await expect(page.getByRole('table').getByText('Refresh test item')).toBeVisible({ timeout: 10000 });
@@ -775,7 +778,7 @@ test.describe('Inbox', () => {
     await api.addToInbox(request, testUser.token, item.id);
 
     await page.goto('/user/inbox');
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     await expect(page.getByRole('table').getByText('Auto-refresh dropdown test')).toBeVisible({ timeout: 10000 });
 
@@ -810,7 +813,7 @@ test.describe('Inbox', () => {
     await api.addToInbox(request, testUser.token, item.id);
 
     await page.goto('/user/inbox');
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     await expect(page.getByRole('table').getByText('Persist refresh test')).toBeVisible({ timeout: 10000 });
 
@@ -820,7 +823,7 @@ test.describe('Inbox', () => {
 
     // Reload the page
     await page.reload();
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     // Wait for the page to load
     await expect(page.getByRole('table').getByText('Persist refresh test')).toBeVisible({ timeout: 10000 });
@@ -837,7 +840,7 @@ test.describe('Inbox', () => {
     await api.addToInbox(request, testUser.token, item.id);
 
     await page.goto('/user/inbox');
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     await expect(page.getByRole('table').getByText('Escape close test')).toBeVisible({ timeout: 10000 });
 
@@ -860,7 +863,7 @@ test.describe('Inbox', () => {
     await api.addToInbox(request, testUser.token, item.id);
 
     await page.goto('/user/inbox');
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     await expect(page.getByRole('table').getByText('Disable auto-refresh test')).toBeVisible({ timeout: 10000 });
 
@@ -890,7 +893,7 @@ test.describe('Inbox', () => {
     }
 
     await page.goto('/user/inbox');
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     const inboxCards = page.locator('.lg\\:hidden');
     await expect(inboxCards.getByText('Mobile order 1')).toBeVisible({ timeout: 10000 });
@@ -933,7 +936,7 @@ test.describe('Inbox', () => {
     await api.addToInbox(request, testUser.token, item2.id);
 
     await page.goto('/user/inbox');
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     const table = page.getByRole('table');
     await expect(table.getByText('Alpha search focus test')).toBeVisible({ timeout: 10000 });
@@ -1013,7 +1016,7 @@ test.describe('Inbox', () => {
     await api.addToInbox(request, testUser.token, item2.id);
 
     await page.goto('/user/inbox');
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     const table = page.getByRole('table');
     await expect(table.getByText('Desktop filter proj1 item')).toBeVisible({ timeout: 10000 });
@@ -1055,7 +1058,7 @@ test.describe('Inbox', () => {
     await api.addToInbox(request, testUser.token, item2.id);
 
     await page.goto('/user/inbox');
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     const inboxCards = page.locator('.lg\\:hidden');
     await expect(inboxCards.getByText('Mobile filter proj1 item')).toBeVisible({ timeout: 10000 });
@@ -1097,7 +1100,7 @@ test.describe('Inbox', () => {
     await api.addToInbox(request, testUser.token, item2.id);
 
     await page.goto('/user/inbox');
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
     // Wait for inbox items to load (use button role which is unique to mobile cards)
     await expect(page.getByRole('button', { name: /Search modal item/ }).first()).toBeVisible({ timeout: 10000 });
 
@@ -1131,7 +1134,7 @@ test.describe('Inbox', () => {
     await api.addToInbox(request, testUser.token, item.id);
 
     await page.goto('/user/inbox');
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
     await expect(page.getByRole('button', { name: /Layout test item/ })).toBeVisible({ timeout: 10000 });
 
     // RefreshButton should be in the mobile search row (last icon)
@@ -1156,7 +1159,7 @@ test.describe('Inbox', () => {
     await api.addToInbox(request, testUser.token, item2.id);
 
     await page.goto('/user/inbox');
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     const table = page.getByRole('table');
     await expect(table.getByText('Persist proj1 item')).toBeVisible({ timeout: 10000 });

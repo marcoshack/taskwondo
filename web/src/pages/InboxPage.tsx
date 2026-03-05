@@ -278,7 +278,7 @@ function InboxListPage() {
   const [projectFilterInit, setProjectFilterInit] = useState(false)
   useEffect(() => {
     if (projectFilterPref !== undefined && !projectFilterInit) {
-      setSelectedProjectsRaw(projectFilterPref)
+      setSelectedProjectsRaw(projectFilterPref ?? [])
       setProjectFilterInit(true)
     }
   }, [projectFilterPref, projectFilterInit])
@@ -343,7 +343,7 @@ function InboxListPage() {
   const { data: refreshIntervalPref } = usePreference<number>('inbox_refresh_interval')
   const [refreshInterval, setRefreshInterval] = useState<RefreshInterval>(0)
   useEffect(() => {
-    if (refreshIntervalPref !== undefined) setRefreshInterval(refreshIntervalPref as RefreshInterval)
+    if (refreshIntervalPref != null) setRefreshInterval(refreshIntervalPref as RefreshInterval)
   }, [refreshIntervalPref])
   const setPreferenceMutation = useSetPreference()
 

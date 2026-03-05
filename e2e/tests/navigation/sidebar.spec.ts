@@ -2,9 +2,11 @@ import { test, expect } from '../../lib/fixtures';
 import * as api from '../../lib/api';
 import { randomUUID } from 'crypto';
 
-async function dismissWelcomeModal(page: import('@playwright/test').Page) {
+async function waitForPageReady(page: import('@playwright/test').Page) {
+  await page.waitForLoadState('domcontentloaded');
+  await expect(page.locator('nav.hidden.sm\\:block')).toBeVisible({ timeout: 15000 });
   const welcomeHeading = page.getByRole('heading', { name: 'Welcome' });
-  if (await welcomeHeading.isVisible({ timeout: 2000 }).catch(() => false)) {
+  if (await welcomeHeading.isVisible({ timeout: 1000 }).catch(() => false)) {
     await page.keyboard.press('Escape');
     await expect(welcomeHeading).not.toBeVisible({ timeout: 3000 });
   }
@@ -13,7 +15,7 @@ async function dismissWelcomeModal(page: import('@playwright/test').Page) {
 test.describe('Unified sidebar', () => {
   test('shows user items on project pages', async ({ page, testProject }) => {
     await page.goto(`/projects/${testProject.key}/items`);
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     const sidebar = page.locator('nav.hidden.sm\\:block');
     await expect(sidebar).toBeVisible();
@@ -30,7 +32,7 @@ test.describe('Unified sidebar', () => {
 
   test('shows project context with badge in sidebar and name in top bar', async ({ page, testProject }) => {
     await page.goto(`/projects/${testProject.key}/items`);
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     const sidebar = page.locator('nav.hidden.sm\\:block');
 
@@ -44,7 +46,7 @@ test.describe('Unified sidebar', () => {
 
   test('Projects link navigates to project list with sidebar', async ({ page, testProject }) => {
     await page.goto(`/projects/${testProject.key}/items`);
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     const sidebar = page.locator('nav.hidden.sm\\:block');
 
@@ -61,7 +63,7 @@ test.describe('Unified sidebar', () => {
   test('project list page remembers last project in sidebar', async ({ page, testProject }) => {
     // Visit a project first to set the "last project"
     await page.goto(`/projects/${testProject.key}/items`);
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     // Navigate to project list
     const sidebar = page.locator('nav.hidden.sm\\:block');
@@ -84,7 +86,7 @@ test.describe('Unified sidebar', () => {
 
     // Navigate to first project
     await page.goto(`/projects/${testProject.key}/items`);
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     const sidebar = page.locator('nav.hidden.sm\\:block');
     const topBar = page.locator('nav').first();
@@ -104,7 +106,7 @@ test.describe('Unified sidebar', () => {
   test('sidebar remembers last project on user pages', async ({ page, testProject }) => {
     // Visit a project first to set the "last project"
     await page.goto(`/projects/${testProject.key}/items`);
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     // Navigate to user inbox
     const sidebar = page.locator('nav.hidden.sm\\:block');
@@ -120,7 +122,7 @@ test.describe('Unified sidebar', () => {
   test('sidebar state shared between user and project pages', async ({ page, testProject }) => {
     // Start on user page, collapse sidebar
     await page.goto('/user/inbox');
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     const sidebar = page.locator('nav.hidden.sm\\:block');
     await expect(sidebar).toHaveClass(/w-48/);

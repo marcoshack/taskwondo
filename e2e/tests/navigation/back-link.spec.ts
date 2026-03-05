@@ -1,9 +1,10 @@
 import { test, expect } from '../../lib/fixtures';
 import * as api from '../../lib/api';
 
-async function dismissWelcomeModal(page: import('@playwright/test').Page) {
+async function waitForPageReady(page: import('@playwright/test').Page) {
+  await page.waitForLoadState('networkidle');
   const welcomeHeading = page.getByRole('heading', { name: 'Welcome' });
-  if (await welcomeHeading.isVisible({ timeout: 2000 }).catch(() => false)) {
+  if (await welcomeHeading.isVisible({ timeout: 1000 }).catch(() => false)) {
     await page.keyboard.press('Escape');
     await expect(welcomeHeading).not.toBeVisible({ timeout: 3000 });
   }
@@ -17,7 +18,7 @@ test.describe('Back link navigation', () => {
     });
 
     await page.goto(`/projects/${testProject.key}/items`);
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     await page.getByRole('table').getByText('Back link list test').click();
     await expect(page).toHaveURL(new RegExp(`/projects/${testProject.key}/items/${item.item_number}`), { timeout: 10000 });
@@ -37,7 +38,7 @@ test.describe('Back link navigation', () => {
     await api.addToInbox(request, testUser.token, item.id);
 
     await page.goto('/user/inbox');
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     // Store active row key should be set after click
     await page.getByRole('table').getByText('Back link inbox test').click();
@@ -59,7 +60,7 @@ test.describe('Back link navigation', () => {
     await api.toggleWatch(request, testUser.token, testProject.key, item.item_number);
 
     await page.goto('/user/watchlist');
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     await page.getByRole('table').getByText('Back link watchlist test').click();
     await expect(page).toHaveURL(new RegExp(`/projects/${testProject.key}/items/${item.item_number}`), { timeout: 10000 });
@@ -85,7 +86,7 @@ test.describe('Back link navigation', () => {
     });
 
     await page.goto(`/projects/${testProject.key}/milestones/${milestone.id}`);
-    await dismissWelcomeModal(page);
+    await waitForPageReady(page);
 
     await page.getByText('Back link milestone test').first().click();
     await expect(page).toHaveURL(new RegExp(`/projects/${testProject.key}/items/${item.item_number}`), { timeout: 10000 });
