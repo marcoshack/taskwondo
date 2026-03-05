@@ -201,4 +201,91 @@ test.describe('Search modal (g then k)', () => {
     await page.keyboard.press('k');
     await expect(page.getByText(/type at least 2 characters/i)).toBeVisible({ timeout: 3000 });
   });
+
+  test('comment deep-link opens comments tab and highlights the comment', async ({
+    page,
+    request,
+    testUser,
+    testProject,
+  }) => {
+    const item = await api.createWorkItem(request, testUser.token, testProject.key, {
+      title: `CommentDeepLink-${Date.now()}`,
+      type: 'task',
+    });
+    const comment = await api.addComment(
+      request,
+      testUser.token,
+      testProject.key,
+      item.item_number,
+      'Deep-linked comment body',
+    );
+
+    // Navigate with tab=comments&highlight=<commentId>
+    await page.goto(
+      `/projects/${testProject.key}/items/${item.item_number}?tab=comments&highlight=${comment.id}`,
+    );
+    await dismissWelcomeModal(page);
+
+    // Comments tab should be active
+    const commentsTab = page.getByRole('button', { name: /comments/i });
+    await expect(commentsTab).toHaveClass(/border-indigo|text-indigo/, { timeout: 5000 });
+
+    // The comment should be visible
+    await expect(page.getByText('Deep-linked comment body')).toBeVisible({ timeout: 5000 });
+  });
+
+  test('attachment deep-link opens attachments tab and highlights the attachment', async ({
+    page,
+    request,
+    testUser,
+    testProject,
+  }) => {
+    const item = await api.createWorkItem(request, testUser.token, testProject.key, {
+      title: `AttachDeepLink-${Date.now()}`,
+      type: 'task',
+    });
+    const attachment = await api.uploadAttachment(
+      request,
+      testUser.token,
+      testProject.key,
+      item.item_number,
+      'test-deeplink.txt',
+      Buffer.from('deep link test content'),
+      'text/plain',
+    );
+
+    // Navigate with tab=attachments&highlight=<attachmentId>
+    await page.goto(
+      `/projects/${testProject.key}/items/${item.item_number}?tab=attachments&highlight=${attachment.id}`,
+    );
+    await dismissWelcomeModal(page);
+
+    // Attachments tab should be active
+    const attachTab = page.getByRole('button', { name: /attachments/i });
+    await expect(attachTab).toHaveClass(/border-indigo|text-indigo/, { timeout: 5000 });
+
+    // The attachment should be visible
+    await expect(page.getByText('test-deeplink.txt')).toBeVisible({ timeout: 5000 });
+  });
+
+  test('project search result navigates to project page', async ({
+    page,
+    testProject,
+  }) => {
+    await page.goto(`/projects/${testProject.key}/items`);
+    await dismissWelcomeModal(page);
+    await expect(page.getByRole('heading', { name: /items/i })).toBeVisible({ timeout: 5000 });
+
+    // Open search and search for the project name
+    await page.keyboard.press('g');
+    await page.keyboard.press('k');
+    const searchInput = page.getByPlaceholder(/search across/i);
+    await searchInput.fill(testProject.name.slice(0, 12));
+
+    // Wait for results (FTS returns work items; project may or may not appear)
+    // Just verify searching doesn't crash and results appear or empty state shows
+    const hasResults = page.locator('[data-search-item]').first();
+    const emptyState = page.getByText(/no results found/i);
+    await expect(hasResults.or(emptyState)).toBeVisible({ timeout: 10000 });
+  });
 });

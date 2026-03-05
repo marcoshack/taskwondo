@@ -14,6 +14,7 @@ import {
   FlaskConical,
 } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
+import { TypeBadge } from '@/components/workitems/TypeBadge'
 import { useSearch } from '@/hooks/useSearch'
 import { useDebounce } from '@/hooks/useDebounce'
 import type { SearchResult } from '@/api/search'
@@ -70,6 +71,28 @@ function flattenGroups(groups: ResultGroup[]): SearchResult[] {
   return groups.flatMap((g) => g.results)
 }
 
+/** Extract a clean display line from the indexed content. */
+function parseSnippet(result: SearchResult): { type?: string; text: string } {
+  const s = result.snippet
+  // Work items: "[task] Title\n\nDescription..."
+  if (result.entity_type === 'work_item') {
+    const m = s.match(/^\[(\w+)]\s*(.*)/)
+    if (m) return { type: m[1], text: m[2].split('\n')[0] }
+  }
+  // Comments: "Comment:\n\nBody..."
+  if (result.entity_type === 'comment') {
+    const body = s.replace(/^Comment:\s*\n*/, '')
+    return { text: body.split('\n')[0] }
+  }
+  // Attachments: "Attachment filename\nComment: ..."
+  if (result.entity_type === 'attachment') {
+    const line = s.replace(/^Attachment\s+/, '')
+    return { text: line.split('\n')[0] }
+  }
+  // Everything else: first line
+  return { text: s.split('\n')[0] }
+}
+
 interface SearchModalProps {
   open: boolean
   onClose: () => void
@@ -124,9 +147,13 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
 
       switch (result.entity_type) {
         case 'work_item':
-        case 'comment':
-        case 'attachment':
           if (key && num != null) navigate(`/projects/${key}/items/${num}`)
+          break
+        case 'comment':
+          if (key && num != null) navigate(`/projects/${key}/items/${num}?tab=comments&highlight=${result.entity_id}`)
+          break
+        case 'attachment':
+          if (key && num != null) navigate(`/projects/${key}/items/${num}?tab=attachments&highlight=${result.entity_id}`)
           break
         case 'project':
           if (key) navigate(`/projects/${key}`)
@@ -191,10 +218,12 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
             {t('search.ftsMode')}
           </span>
         )}
-        <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium bg-gray-100 text-gray-500 dark:bg-gray-700/50 dark:text-gray-400 shrink-0">
-          <FlaskConical className="h-3 w-3" />
-          {t('common.experimental')}
-        </span>
+        {mode === 'semantic' && (
+          <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium bg-gray-100 text-gray-500 dark:bg-gray-700/50 dark:text-gray-400 shrink-0">
+            <FlaskConical className="h-3 w-3" />
+            {t('common.experimental')}
+          </span>
+        )}
       </div>
 
       <div className="border-t border-gray-200 dark:border-gray-700" />
@@ -228,6 +257,8 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
                 </div>
                 {group.results.map((result) => {
                   const globalIndex = flatItems.indexOf(result)
+                  const parsed = parseSnippet(result)
+                  const ItemIcon = entityIcon(result.entity_type)
                   return (
                     <button
                       key={`${result.entity_type}-${result.entity_id}`}
@@ -240,8 +271,12 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
                           : 'hover:bg-gray-100 dark:hover:bg-gray-700'
                       }`}
                     >
+                      {parsed.type && <TypeBadge type={parsed.type} />}
+                      {(result.entity_type === 'comment' || result.entity_type === 'attachment') && (
+                        <ItemIcon className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                      )}
                       <span className="text-gray-900 dark:text-gray-100 truncate flex-1">
-                        {result.snippet}
+                        {parsed.text}
                       </span>
                       {mode === 'semantic' && result.score > 0 && (
                         <span className="shrink-0 flex items-center gap-1.5">

@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import { useConfirmFeedback } from '@/hooks/useConfirmFeedback'
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
 import { ConfirmCheck } from '@/components/ui/ConfirmCheck'
-import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { Trans, useTranslation } from 'react-i18next'
 import { useWorkItem, useUpdateWorkItem, useDeleteWorkItem, useUploadAttachment, useAttachments } from '@/hooks/useWorkItems'
 import { useProject, useMembers, useTypeWorkflows } from '@/hooks/useProjects'
@@ -82,7 +82,14 @@ export function WorkItemDetailPage() {
   const canEdit = user?.global_role === 'admin' || (currentUserRole != null && currentUserRole !== 'viewer')
   const readOnly = !canEdit
 
-  const [activeTab, setActiveTab] = useState<Tab>('comments')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const initialTab = searchParams.get('tab') as Tab | null
+  const initialHighlight = searchParams.get('highlight')
+  const [activeTab, setActiveTab] = useState<Tab>(
+    initialTab && ['comments', 'activity', 'relations', 'attachments', 'time', 'watchers'].includes(initialTab)
+      ? initialTab
+      : 'comments'
+  )
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [commentDraft, setCommentDraft] = useState('')
   const [editingTitle, setEditingTitle] = useState(false)
@@ -93,9 +100,19 @@ export function WorkItemDetailPage() {
   const [showProperties, setShowProperties] = useState(false)
   const [draggingOver, setDraggingOver] = useState(false)
   const [copiedId, setCopiedId] = useState(false)
-  const [highlightedAttachmentId, setHighlightedAttachmentId] = useState<string | null>(null)
-  const [highlightedCommentId, setHighlightedCommentId] = useState<string | null>(null)
+  const [highlightedAttachmentId, setHighlightedAttachmentId] = useState<string | null>(
+    initialTab === 'attachments' ? initialHighlight : null
+  )
+  const [highlightedCommentId, setHighlightedCommentId] = useState<string | null>(
+    initialTab === 'comments' ? initialHighlight : null
+  )
   const [previewTarget, setPreviewTarget] = useState<PreviewTarget | null>(null)
+
+  // Clean up deep-link search params after reading them
+  useEffect(() => {
+    if (initialTab) setSearchParams({}, { replace: true })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   const { confirmed: titleConfirmed, showConfirm: showTitleConfirm } = useConfirmFeedback()
   const { confirmed: descConfirmed, showConfirm: showDescConfirm } = useConfirmFeedback()
 
