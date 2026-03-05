@@ -58,6 +58,7 @@
   "admin.features.semanticSearch.description": "KI-gestützte semantische Suche über Arbeitselemente, Kommentare, Projekte, Meilensteine und Warteschlangen mit Ollama-Embeddings aktivieren.",
   "admin.features.semanticSearch.ollamaAvailable": "Ollama ist verbunden und bereit.",
   "admin.features.semanticSearch.ollamaUnavailable": "Ollama ist nicht verfügbar. Fügen Sie Ollama zu Ihrer Bereitstellung hinzu, um diese Funktion zu aktivieren.",
+  "common.experimental": "Experimentell",
   "admin.features.title": "Funktionen",
   "admin.general.brand.name": "Markenname",
   "admin.general.brand.nameHelp": "Der Name, der in der Navigationsleiste und auf der Anmeldeseite angezeigt wird. Leer lassen für den Standardwert.",

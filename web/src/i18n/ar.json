@@ -58,6 +58,7 @@
   "admin.features.semanticSearch.description": "تمكين البحث الدلالي المدعوم بالذكاء الاصطناعي عبر عناصر العمل والتعليقات والمشاريع والمراحل وقوائم الانتظار باستخدام تضمينات Ollama.",
   "admin.features.semanticSearch.ollamaAvailable": "Ollama متصل وجاهز.",
   "admin.features.semanticSearch.ollamaUnavailable": "Ollama غير متاح. أضف Ollama إلى عملية النشر الخاصة بك لتمكين هذه الميزة.",
+  "common.experimental": "تجريبي",
   "admin.features.title": "الميزات",
   "admin.general.brand.name": "اسم العلامة التجارية",
   "admin.general.brand.nameHelp": "الاسم المعروض في شريط التنقل وصفحة تسجيل الدخول. اتركه فارغًا لاستخدام الافتراضي.",

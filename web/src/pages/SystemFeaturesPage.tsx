@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { FlaskConical } from 'lucide-react'
 import { usePublicSettings, useSetSystemSetting } from '@/hooks/useSystemSettings'
 import { Toggle } from '@/components/ui/Toggle'
 import { Spinner } from '@/components/ui/Spinner'
@@ -62,8 +63,12 @@ export function SystemFeaturesPage() {
       <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
               {t('admin.features.semanticSearch.title')}
+              <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium bg-gray-100 text-gray-500 dark:bg-gray-700/50 dark:text-gray-400">
+                <FlaskConical className="h-3 w-3" />
+                {t('common.experimental')}
+              </span>
             </h3>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
               {t('admin.features.semanticSearch.description')}

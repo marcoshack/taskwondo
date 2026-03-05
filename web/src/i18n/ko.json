@@ -58,6 +58,7 @@
   "admin.features.semanticSearch.description": "Ollama 임베딩을 사용하여 작업 항목, 댓글, 프로젝트, 마일스톤 및 대기열 전반에 걸쳐 AI 기반 시맨틱 검색을 활성화합니다.",
   "admin.features.semanticSearch.ollamaAvailable": "Ollama가 연결되어 준비되었습니다.",
   "admin.features.semanticSearch.ollamaUnavailable": "Ollama를 사용할 수 없습니다. 이 기능을 활성화하려면 배포에 Ollama를 추가하세요.",
+  "common.experimental": "실험적",
   "admin.features.title": "기능",
   "admin.general.brand.name": "브랜드 이름",
   "admin.general.brand.nameHelp": "탐색 바와 로그인 페이지에 표시되는 이름입니다. 기본값을 사용하려면 비워 두세요.",

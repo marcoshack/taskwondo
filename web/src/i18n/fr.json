@@ -58,6 +58,7 @@
   "admin.features.semanticSearch.description": "Activer la recherche sémantique alimentée par l'IA sur les éléments de travail, commentaires, projets, jalons et files d'attente en utilisant les embeddings Ollama.",
   "admin.features.semanticSearch.ollamaAvailable": "Ollama est connecté et prêt.",
   "admin.features.semanticSearch.ollamaUnavailable": "Ollama n'est pas disponible. Ajoutez Ollama à votre déploiement pour activer cette fonctionnalité.",
+  "common.experimental": "Expérimental",
   "admin.features.title": "Fonctionnalités",
   "admin.general.brand.name": "Nom de la marque",
   "admin.general.brand.nameHelp": "Le nom affiché dans la barre de navigation et la page de connexion. Laissez vide pour utiliser la valeur par défaut.",

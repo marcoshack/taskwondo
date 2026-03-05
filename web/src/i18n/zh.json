@@ -58,6 +58,7 @@
   "admin.features.semanticSearch.description": "使用Ollama嵌入在工作项、评论、项目、里程碑和队列中启用AI驱动的语义搜索。",
   "admin.features.semanticSearch.ollamaAvailable": "Ollama已连接并准备就绪。",
   "admin.features.semanticSearch.ollamaUnavailable": "Ollama不可用。请将Ollama添加到您的部署中以启用此功能。",
+  "common.experimental": "实验性",
   "admin.features.title": "功能",
   "admin.general.brand.name": "品牌名称",
   "admin.general.brand.nameHelp": "显示在导航栏和登录页面的名称。留空则使用默认值。",

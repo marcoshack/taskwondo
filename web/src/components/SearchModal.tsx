@@ -11,6 +11,7 @@ import {
   Paperclip,
   Loader2,
   SearchX,
+  FlaskConical,
 } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { useSearch } from '@/hooks/useSearch'
@@ -190,6 +191,10 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
             {t('search.ftsMode')}
           </span>
         )}
+        <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium bg-gray-100 text-gray-500 dark:bg-gray-700/50 dark:text-gray-400 shrink-0">
+          <FlaskConical className="h-3 w-3" />
+          {t('common.experimental')}
+        </span>
       </div>
 
       <div className="border-t border-gray-200 dark:border-gray-700" />

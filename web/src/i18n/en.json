@@ -714,6 +714,7 @@
   "admin.features.semanticSearch.description": "Enable AI-powered semantic search across work items, comments, projects, milestones, and queues using Ollama embeddings.",
   "admin.features.semanticSearch.ollamaAvailable": "Ollama is connected and ready.",
   "admin.features.semanticSearch.ollamaUnavailable": "Ollama is not available. Add Ollama to your deployment to enable this feature.",
+  "common.experimental": "Experimental",
 
   "admin.integrations.title": "Integrations",
   "admin.integrations.description": "Configure external service integrations.",
