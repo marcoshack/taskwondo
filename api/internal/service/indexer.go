@@ -161,7 +161,7 @@ func (s *IndexerService) BackfillAll(ctx context.Context) (int64, error) {
 		{
 			name:    model.EntityTypeProject,
 			listIDs: s.projects.ListAllIDs,
-			getProj: func(_ context.Context, id uuid.UUID) *uuid.UUID { return nil },
+			getProj: func(_ context.Context, id uuid.UUID) *uuid.UUID { return &id },
 		},
 		{
 			name:    model.EntityTypeMilestone,

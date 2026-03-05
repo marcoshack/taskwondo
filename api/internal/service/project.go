@@ -182,7 +182,7 @@ func (s *ProjectService) Create(ctx context.Context, info *model.AuthInfo, name,
 	}
 
 	// Publish embed.index event for semantic search
-	publishEmbedIndex(ctx, s.publisher, s.embedCache, model.EntityTypeProject, created.ID, nil)
+	publishEmbedIndex(ctx, s.publisher, s.embedCache, model.EntityTypeProject, created.ID, &created.ID)
 
 	return created, nil
 }
@@ -346,7 +346,7 @@ func (s *ProjectService) Update(ctx context.Context, info *model.AuthInfo, proje
 	}
 
 	// Reindex project embedding
-	publishEmbedIndex(ctx, s.publisher, s.embedCache, model.EntityTypeProject, project.ID, nil)
+	publishEmbedIndex(ctx, s.publisher, s.embedCache, model.EntityTypeProject, project.ID, &project.ID)
 
 	return s.projects.GetByKey(ctx, project.Key)
 }
