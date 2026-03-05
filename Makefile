@@ -44,10 +44,10 @@ dev: check-env dev-services ## Start all services for development (API + Web + W
 	(set -a && . ./.env && set +a && cd api && air -c .air-worker.toml) & \
 	wait
 
-dev-services: check-env ## Start PostgreSQL, MinIO, and NATS
+dev-services: check-env ## Start PostgreSQL, MinIO, NATS, and Ollama
 	@echo ""
-	@printf "$(CYAN)## Starting dev services (PostgreSQL + MinIO + NATS)...$(RESET)\n"
-	docker compose up postgres minio minio-init nats -d
+	@printf "$(CYAN)## Starting dev services (PostgreSQL + MinIO + NATS + Ollama)...$(RESET)\n"
+	docker compose --profile semantic-search up postgres minio minio-init nats ollama ollama-init -d
 	@printf "$(GREEN)## Dev services started$(RESET)\n"
 
 dev-db: dev-services ## Alias for dev-services (legacy)

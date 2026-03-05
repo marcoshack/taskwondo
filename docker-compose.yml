@@ -23,6 +23,7 @@ services:
       - STORAGE_SECRET_KEY=${MINIO_ROOT_PASSWORD:?required}
       - STORAGE_BUCKET=${MINIO_BUCKET:-taskwondo-attachments}
       - NATS_URL=nats://nats:4222
+      - OLLAMA_URL=http://ollama:11434
     restart: unless-stopped
     deploy:
       resources:
@@ -83,6 +84,7 @@ services:
       - STORAGE_SECRET_KEY=${MINIO_ROOT_PASSWORD:?required}
       - STORAGE_BUCKET=${MINIO_BUCKET:-taskwondo-attachments}
       - NATS_URL=nats://nats:4222
+      - OLLAMA_URL=http://ollama:11434
     restart: unless-stopped
     deploy:
       resources:
@@ -140,7 +142,30 @@ services:
         limits:
           memory: 512M
 
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["semantic-search"]
+    volumes:
+      - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    restart: unless-stopped
+
+  # Pull the embedding model on first startup
+  ollama-init:
+    image: ollama/ollama:latest
+    profiles: ["semantic-search"]
+    depends_on:
+      - ollama
+    restart: "no"
+    entrypoint: ["ollama", "pull", "nomic-embed-text"]
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+
 volumes:
   pgdata:
   miniodata:
   natsdata:
+  ollama_data:

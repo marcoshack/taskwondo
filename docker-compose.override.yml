@@ -15,3 +15,7 @@ services:
     ports:
       - "${NATS_PORT:-4222}:4222"
       - "${NATS_MONITOR_PORT:-8222}:8222"
+
+  ollama:
+    ports:
+      - "11434:11434"
