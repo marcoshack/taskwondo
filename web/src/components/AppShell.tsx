@@ -1,7 +1,7 @@
 import { Outlet, useNavigate, useMatch } from 'react-router-dom'
 
 import { useTranslation } from 'react-i18next'
-import { Settings, UserCog, Menu, HelpCircle, Inbox, LogOut } from 'lucide-react'
+import { Settings, UserCog, Menu, HelpCircle, Inbox, LogOut, Search, Home } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSidebar } from '@/contexts/SidebarContext'
 import { useNavigationGuard } from '@/contexts/NavigationGuardContext'
@@ -119,17 +119,39 @@ export function AppShell() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-14 relative">
             <div className="flex items-center gap-6 min-w-0">
-              <button onClick={() => guardedNavigate('/projects')} className="text-lg font-bold text-indigo-600 dark:text-indigo-400 shrink-0">
+              {/* Desktop: always show brand name */}
+              <button onClick={() => guardedNavigate('/projects')} className="hidden sm:block text-lg font-bold text-indigo-600 dark:text-indigo-400 shrink-0">
                 {brandName}
               </button>
+              {/* Mobile: home icon + project key when any project active, brand when none */}
+              {activeProject ? (
+                <div className="flex sm:hidden items-center gap-2 min-w-0">
+                  <button
+                    onClick={() => guardedNavigate('/projects')}
+                    className="p-1.5 rounded-md text-indigo-600 dark:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-800 shrink-0"
+                    aria-label={t('nav.home')}
+                  >
+                    <Home className="h-5 w-5" />
+                  </button>
+                  <button
+                    onClick={() => setSwitcherOpen(true)}
+                    className="hover:opacity-80 transition-opacity shrink-0"
+                  >
+                    <ProjectKeyBadge size="nav-mobile">{activeProject.key}</ProjectKeyBadge>
+                  </button>
+                </div>
+              ) : (
+                <button onClick={() => guardedNavigate('/projects')} className="sm:hidden text-lg font-bold text-indigo-600 dark:text-indigo-400 shrink-0">
+                  {brandName}
+                </button>
+              )}
               {adminMatch ? (
-                <div className="flex items-center gap-2.5 min-w-0">
+                <div className="hidden sm:flex items-center gap-2.5 min-w-0">
                   <Settings className="h-5 w-5 text-gray-500 dark:text-gray-400 shrink-0" />
-                  <span className="text-base font-semibold text-gray-900 dark:text-gray-100 sm:hidden">{t('admin.titleShort')}</span>
-                  <span className="text-base font-semibold text-gray-900 dark:text-gray-100 hidden sm:inline">{t('admin.title')}</span>
+                  <span className="text-base font-semibold text-gray-900 dark:text-gray-100">{t('admin.title')}</span>
                 </div>
               ) : preferencesMatch ? (
-                <div className="flex items-center gap-2.5 min-w-0">
+                <div className="hidden sm:flex items-center gap-2.5 min-w-0">
                   <UserCog className="h-5 w-5 text-gray-500 dark:text-gray-400 shrink-0" />
                   <span className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">{t('preferences.navTitle')}</span>
                 </div>
@@ -145,15 +167,14 @@ export function AppShell() {
                 </button>
               ) : null}
             </div>
-            {activeProject && !adminMatch && !preferencesMatch && (
-              <button
-                onClick={() => setSwitcherOpen(true)}
-                className="sm:hidden absolute left-1/2 -translate-x-1/2 top-0 h-full flex items-center hover:opacity-80 transition-opacity"
-              >
-                <ProjectKeyBadge size="nav-mobile">{activeProject.key}</ProjectKeyBadge>
-              </button>
-            )}
             <div className="relative flex items-center gap-2 shrink-0" ref={menuRef}>
+              <button
+                onClick={() => setSearchOpen(true)}
+                className="sm:hidden p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+                aria-label={t('nav.search')}
+              >
+                <Search className="h-5 w-5" />
+              </button>
               <button
                 onClick={() => guardedNavigate('/user/inbox')}
                 className="relative p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"

@@ -64,6 +64,7 @@ const SAME_VALUE_ALLOWED = new Set([
   'admin.users.status',
   'admin.workflows.title',
   'common.description',
+  'common.experimental',
   'common.system',
   'milestone.dashboard.totalItems',
   'milestones.name',

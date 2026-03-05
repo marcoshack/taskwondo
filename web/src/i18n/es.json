@@ -973,7 +973,6 @@
   "watchlist.filterByProject": "Filtrar por proyecto",
   "watchlist.empty": "No estás siguiendo ningún elemento",
   "watchlist.emptyHint": "Usa el ícono de campana en los elementos para añadirlos a tu lista",
-
   "search.placeholder": "Buscar en todos los proyectos...",
   "search.hint": "Escribe al menos 2 caracteres para buscar",
   "search.noResults": "No se encontraron resultados",
@@ -988,6 +987,7 @@
   "search.entityType.queue": "Colas",
   "search.entityType.comment": "Comentarios",
   "search.entityType.attachment": "Archivos adjuntos",
-
-  "shortcuts.actions.globalSearch": "Búsqueda global"
+  "shortcuts.actions.globalSearch": "Búsqueda global",
+  "nav.search": "Buscar",
+  "nav.home": "Inicio"
 }

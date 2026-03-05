@@ -28,7 +28,7 @@ export function SystemSettingsPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       {/* Mobile top bar with navigation icons */}
-      <nav className="flex sm:hidden mb-4 overflow-hidden">
+      <nav className="flex sm:hidden mb-4 overflow-x-auto scrollbar-none -mx-4 px-4">
         {navItems.map((item) => (
           <NavLink
             key={item.to}
@@ -40,7 +40,7 @@ export function SystemSettingsPage() {
               }
             }}
             className={({ isActive }) =>
-              `flex flex-1 flex-col items-center gap-1 py-3 text-xs font-medium transition-colors ${
+              `flex shrink-0 flex-col items-center gap-1 py-3 px-4 text-xs font-medium transition-colors ${
                 isActive
                   ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
                   : 'text-gray-500 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-800'
@@ -48,7 +48,7 @@ export function SystemSettingsPage() {
             }
           >
             <item.icon className="h-5 w-5" />
-            <span className="truncate max-w-full px-1">{item.label}</span>
+            <span className="whitespace-nowrap">{item.label}</span>
           </NavLink>
         ))}
       </nav>

@@ -973,7 +973,6 @@
   "watchlist.filterByProject": "تصفية حسب المشروع",
   "watchlist.empty": "لا تتابع أي عناصر بعد",
   "watchlist.emptyHint": "استخدم أيقونة الجرس على عناصر العمل لإضافتها إلى قائمتك",
-
   "search.placeholder": "البحث في جميع المشاريع...",
   "search.hint": "اكتب حرفين على الأقل للبحث",
   "search.noResults": "لم يتم العثور على نتائج",
@@ -988,6 +987,7 @@
   "search.entityType.queue": "قوائم الانتظار",
   "search.entityType.comment": "التعليقات",
   "search.entityType.attachment": "المرفقات",
-
-  "shortcuts.actions.globalSearch": "البحث الشامل"
+  "shortcuts.actions.globalSearch": "البحث الشامل",
+  "nav.search": "بحث",
+  "nav.home": "الرئيسية"
 }

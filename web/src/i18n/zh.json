@@ -973,7 +973,6 @@
   "watchlist.filterByProject": "按项目筛选",
   "watchlist.empty": "你还没有关注任何项目",
   "watchlist.emptyHint": "使用工作项上的铃铛图标将其添加到你的关注列表",
-
   "search.placeholder": "在所有项目中搜索...",
   "search.hint": "输入至少2个字符进行搜索",
   "search.noResults": "未找到结果",
@@ -988,6 +987,7 @@
   "search.entityType.queue": "队列",
   "search.entityType.comment": "评论",
   "search.entityType.attachment": "附件",
-
-  "shortcuts.actions.globalSearch": "全局搜索"
+  "shortcuts.actions.globalSearch": "全局搜索",
+  "nav.search": "搜索",
+  "nav.home": "首页"
 }

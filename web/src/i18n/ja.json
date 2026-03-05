@@ -973,7 +973,6 @@
   "watchlist.filterByProject": "プロジェクトで絞り込み",
   "watchlist.empty": "まだアイテムをウォッチしていません",
   "watchlist.emptyHint": "ベルアイコンを使ってアイテムをウォッチリストに追加できます",
-
   "search.placeholder": "すべてのプロジェクトを検索...",
   "search.hint": "2文字以上入力して検索",
   "search.noResults": "結果が見つかりません",
@@ -988,6 +987,7 @@
   "search.entityType.queue": "キュー",
   "search.entityType.comment": "コメント",
   "search.entityType.attachment": "添付ファイル",
-
-  "shortcuts.actions.globalSearch": "グローバル検索"
+  "shortcuts.actions.globalSearch": "グローバル検索",
+  "nav.search": "検索",
+  "nav.home": "ホーム"
 }

@@ -973,7 +973,6 @@
   "watchlist.filterByProject": "Nach Projekt filtern",
   "watchlist.empty": "Sie beobachten noch keine Elemente",
   "watchlist.emptyHint": "Verwenden Sie das Glockensymbol bei Arbeitselementen, um sie zu Ihrer Liste hinzuzufügen",
-
   "search.placeholder": "In allen Projekten suchen...",
   "search.hint": "Mindestens 2 Zeichen eingeben, um zu suchen",
   "search.noResults": "Keine Ergebnisse gefunden",
@@ -988,6 +987,7 @@
   "search.entityType.queue": "Warteschlangen",
   "search.entityType.comment": "Kommentare",
   "search.entityType.attachment": "Anhänge",
-
-  "shortcuts.actions.globalSearch": "Globale Suche"
+  "shortcuts.actions.globalSearch": "Globale Suche",
+  "nav.search": "Suchen",
+  "nav.home": "Startseite"
 }

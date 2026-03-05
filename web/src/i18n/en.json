@@ -44,6 +44,8 @@
   "nav.preferences": "Preferences",
   "nav.help": "Help",
   "nav.signOut": "Sign out",
+  "nav.search": "Search",
+  "nav.home": "Home",
 
   "login.title": "Sign in to {{brandName}}",
   "login.email": "Email",
