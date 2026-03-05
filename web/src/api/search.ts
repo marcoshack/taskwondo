@@ -8,7 +8,8 @@ export interface SearchResult {
   project_id: string | null
   score: number
   snippet: string
-  path: string
+  project_key?: string
+  item_number?: number
 }
 
 export interface SearchResponse {

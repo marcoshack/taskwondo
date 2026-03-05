@@ -118,8 +118,24 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
   const navigateToResult = useCallback(
     (result: SearchResult) => {
       onClose()
-      if (result.path) {
-        navigate(result.path)
+      const key = result.project_key
+      const num = result.item_number
+
+      switch (result.entity_type) {
+        case 'work_item':
+        case 'comment':
+        case 'attachment':
+          if (key && num != null) navigate(`/projects/${key}/items/${num}`)
+          break
+        case 'project':
+          if (key) navigate(`/projects/${key}`)
+          break
+        case 'milestone':
+          if (key) navigate(`/projects/${key}/milestones`)
+          break
+        case 'queue':
+          if (key) navigate(`/projects/${key}/queues`)
+          break
       }
     },
     [navigate, onClose],

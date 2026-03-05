@@ -22,7 +22,6 @@ type Embedding struct {
 	EntityType string     `json:"entity_type"`
 	EntityID   uuid.UUID  `json:"entity_id"`
 	ProjectID  *uuid.UUID `json:"project_id,omitempty"`
-	Path       string     `json:"path"`
 	Content    string     `json:"-"`
 	Embedding  []float32  `json:"-"`
 	IndexedAt  time.Time  `json:"indexed_at"`
@@ -53,7 +52,8 @@ type SearchResult struct {
 	ProjectID  *uuid.UUID `json:"project_id,omitempty"`
 	Score      float64    `json:"score"`
 	Content    string     `json:"snippet"`
-	Path       string     `json:"path"`
+	ProjectKey string     `json:"project_key,omitempty"`
+	ItemNumber *int       `json:"item_number,omitempty"`
 }
 
 // SearchFilter holds the parameters for a semantic search query.

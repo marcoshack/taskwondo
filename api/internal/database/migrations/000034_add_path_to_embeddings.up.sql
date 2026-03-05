@@ -1,1 +1,0 @@
-ALTER TABLE embeddings ADD COLUMN path TEXT NOT NULL DEFAULT '';

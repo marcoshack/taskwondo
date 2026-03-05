@@ -24,12 +24,12 @@ func NewEmbeddingRepository(db *sql.DB) *EmbeddingRepository {
 // Upsert inserts or updates an embedding for the given entity.
 func (r *EmbeddingRepository) Upsert(ctx context.Context, e *model.Embedding) error {
 	_, err := r.db.ExecContext(ctx,
-		`INSERT INTO embeddings (id, entity_type, entity_id, project_id, path, content, embedding, indexed_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7::vector, now())
+		`INSERT INTO embeddings (id, entity_type, entity_id, project_id, content, embedding, indexed_at)
+		 VALUES ($1, $2, $3, $4, $5, $6::vector, now())
 		 ON CONFLICT (entity_type, entity_id)
 		 DO UPDATE SET content = EXCLUDED.content, embedding = EXCLUDED.embedding,
-		               project_id = EXCLUDED.project_id, path = EXCLUDED.path, indexed_at = now()`,
-		e.ID, e.EntityType, e.EntityID, e.ProjectID, e.Path, e.Content, vectorToString(e.Embedding))
+		               project_id = EXCLUDED.project_id, indexed_at = now()`,
+		e.ID, e.EntityType, e.EntityID, e.ProjectID, e.Content, vectorToString(e.Embedding))
 	if err != nil {
 		return fmt.Errorf("upserting embedding: %w", err)
 	}
@@ -71,9 +71,9 @@ func (r *EmbeddingRepository) SearchByVector(ctx context.Context, vector []float
 			placeholders[i] = fmt.Sprintf("$%d", argIdx)
 			argIdx++
 		}
-		conditions = append(conditions, fmt.Sprintf("(project_id IN (%s) OR project_id IS NULL)", strings.Join(placeholders, ",")))
+		conditions = append(conditions, fmt.Sprintf("(e.project_id IN (%s) OR e.project_id IS NULL)", strings.Join(placeholders, ",")))
 	} else {
-		conditions = append(conditions, "project_id IS NULL")
+		conditions = append(conditions, "e.project_id IS NULL")
 	}
 
 	// Entity type filter
@@ -84,7 +84,7 @@ func (r *EmbeddingRepository) SearchByVector(ctx context.Context, vector []float
 			placeholders[i] = fmt.Sprintf("$%d", argIdx)
 			argIdx++
 		}
-		conditions = append(conditions, fmt.Sprintf("entity_type IN (%s)", strings.Join(placeholders, ",")))
+		conditions = append(conditions, fmt.Sprintf("e.entity_type IN (%s)", strings.Join(placeholders, ",")))
 	}
 
 	where := ""
@@ -96,10 +96,19 @@ func (r *EmbeddingRepository) SearchByVector(ctx context.Context, vector []float
 	limitArg := argIdx
 
 	query := fmt.Sprintf(
-		`SELECT entity_type, entity_id, project_id, 1 - (embedding <=> $%d::vector) AS score, content, path
-		 FROM embeddings
+		`SELECT e.entity_type, e.entity_id, e.project_id,
+		        1 - (e.embedding <=> $%d::vector) AS score, e.content,
+		        p.key AS project_key,
+		        COALESCE(w.item_number, cw.item_number, aw.item_number) AS item_number
+		 FROM embeddings e
+		 LEFT JOIN projects p ON p.id = e.project_id
+		 LEFT JOIN work_items w ON w.id = e.entity_id AND e.entity_type = 'work_item'
+		 LEFT JOIN comments c ON c.id = e.entity_id AND e.entity_type = 'comment'
+		 LEFT JOIN work_items cw ON cw.id = c.work_item_id
+		 LEFT JOIN attachments a ON a.id = e.entity_id AND e.entity_type = 'attachment'
+		 LEFT JOIN work_items aw ON aw.id = a.work_item_id
 		 %s
-		 ORDER BY embedding <=> $%d::vector
+		 ORDER BY e.embedding <=> $%d::vector
 		 LIMIT $%d`,
 		vectorArg, where, vectorArg, limitArg)
 
@@ -112,8 +121,17 @@ func (r *EmbeddingRepository) SearchByVector(ctx context.Context, vector []float
 	var results []model.SearchResult
 	for rows.Next() {
 		var sr model.SearchResult
-		if err := rows.Scan(&sr.EntityType, &sr.EntityID, &sr.ProjectID, &sr.Score, &sr.Content, &sr.Path); err != nil {
+		var projectKey sql.NullString
+		var itemNumber sql.NullInt64
+		if err := rows.Scan(&sr.EntityType, &sr.EntityID, &sr.ProjectID, &sr.Score, &sr.Content, &projectKey, &itemNumber); err != nil {
 			return nil, fmt.Errorf("scanning search result: %w", err)
+		}
+		if projectKey.Valid {
+			sr.ProjectKey = projectKey.String
+		}
+		if itemNumber.Valid {
+			n := int(itemNumber.Int64)
+			sr.ItemNumber = &n
 		}
 		results = append(results, sr)
 	}
