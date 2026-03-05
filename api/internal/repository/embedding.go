@@ -24,12 +24,12 @@ func NewEmbeddingRepository(db *sql.DB) *EmbeddingRepository {
 // Upsert inserts or updates an embedding for the given entity.
 func (r *EmbeddingRepository) Upsert(ctx context.Context, e *model.Embedding) error {
 	_, err := r.db.ExecContext(ctx,
-		`INSERT INTO embeddings (id, entity_type, entity_id, project_id, content, embedding, indexed_at)
-		 VALUES ($1, $2, $3, $4, $5, $6::vector, now())
+		`INSERT INTO embeddings (id, entity_type, entity_id, project_id, path, content, embedding, indexed_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7::vector, now())
 		 ON CONFLICT (entity_type, entity_id)
 		 DO UPDATE SET content = EXCLUDED.content, embedding = EXCLUDED.embedding,
-		               project_id = EXCLUDED.project_id, indexed_at = now()`,
-		e.ID, e.EntityType, e.EntityID, e.ProjectID, e.Content, vectorToString(e.Embedding))
+		               project_id = EXCLUDED.project_id, path = EXCLUDED.path, indexed_at = now()`,
+		e.ID, e.EntityType, e.EntityID, e.ProjectID, e.Path, e.Content, vectorToString(e.Embedding))
 	if err != nil {
 		return fmt.Errorf("upserting embedding: %w", err)
 	}
@@ -96,7 +96,7 @@ func (r *EmbeddingRepository) SearchByVector(ctx context.Context, vector []float
 	limitArg := argIdx
 
 	query := fmt.Sprintf(
-		`SELECT entity_type, entity_id, project_id, 1 - (embedding <=> $%d::vector) AS score, content
+		`SELECT entity_type, entity_id, project_id, 1 - (embedding <=> $%d::vector) AS score, content, path
 		 FROM embeddings
 		 %s
 		 ORDER BY embedding <=> $%d::vector
@@ -112,7 +112,7 @@ func (r *EmbeddingRepository) SearchByVector(ctx context.Context, vector []float
 	var results []model.SearchResult
 	for rows.Next() {
 		var sr model.SearchResult
-		if err := rows.Scan(&sr.EntityType, &sr.EntityID, &sr.ProjectID, &sr.Score, &sr.Content); err != nil {
+		if err := rows.Scan(&sr.EntityType, &sr.EntityID, &sr.ProjectID, &sr.Score, &sr.Content, &sr.Path); err != nil {
 			return nil, fmt.Errorf("scanning search result: %w", err)
 		}
 		results = append(results, sr)

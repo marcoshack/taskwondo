@@ -158,6 +158,40 @@ test.describe('Search modal (g then k)', () => {
     );
   });
 
+  test('clicking a result navigates to the work item', async ({
+    page,
+    request,
+    testUser,
+    testProject,
+  }) => {
+    const uniqueTitle = `ClickNav-${Date.now()}`;
+    const item = await api.createWorkItem(request, testUser.token, testProject.key, {
+      title: uniqueTitle,
+      type: 'task',
+    });
+
+    await page.goto(`/projects/${testProject.key}/items`);
+    await dismissWelcomeModal(page);
+    await expect(page.getByRole('heading', { name: /items/i })).toBeVisible({ timeout: 5000 });
+
+    // Open search and find the item
+    await page.keyboard.press('g');
+    await page.keyboard.press('k');
+    const searchInput = page.getByPlaceholder(/search across/i);
+    await searchInput.fill(uniqueTitle);
+
+    // Wait for result and click it
+    const result = page.locator('[data-search-item]').first();
+    await expect(result).toBeVisible({ timeout: 10000 });
+    await result.click();
+
+    // Should navigate to the work item detail page
+    await expect(page).toHaveURL(
+      new RegExp(`/projects/${testProject.key}/items/${item.item_number}`),
+      { timeout: 5000 },
+    );
+  });
+
   test('search hint shown before typing', async ({ page, testProject }) => {
     await page.goto(`/projects/${testProject.key}/items`);
     await dismissWelcomeModal(page);

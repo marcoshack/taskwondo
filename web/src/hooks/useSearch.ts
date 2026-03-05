@@ -51,6 +51,7 @@ export function useSearch({ query, limit = 20 }: UseSearchOptions): UseSearchRet
                 project_id: null,
                 score: 0,
                 snippet: `${item.display_id}: ${item.title}`,
+                path: `/projects/${p.key}/items/${item.item_number}`,
               }),
             ),
           ),

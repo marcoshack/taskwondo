@@ -118,42 +118,8 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
   const navigateToResult = useCallback(
     (result: SearchResult) => {
       onClose()
-      // Parse snippet for display_id pattern (e.g. "TF-123: Title")
-      const displayIdMatch = result.snippet.match(/^([A-Z][A-Z0-9]+-\d+):/)
-
-      switch (result.entity_type) {
-        case 'project':
-          // snippet is the project name/key — we don't have the key directly,
-          // but entity_id is the project UUID. Best effort: search projects.
-          // For now, navigate to projects list as fallback
-          navigate('/projects')
-          break
-        case 'work_item':
-          if (displayIdMatch) {
-            const [projectKey, itemNum] = displayIdMatch[1].split('-')
-            navigate(`/projects/${projectKey}/items/${itemNum}`)
-          }
-          break
-        case 'milestone':
-          // Milestone snippet may not have routing info — navigate to projects
-          navigate('/projects')
-          break
-        case 'queue':
-          navigate('/projects')
-          break
-        case 'comment':
-          // Comments reference work items — try to extract display_id
-          if (displayIdMatch) {
-            const [projectKey, itemNum] = displayIdMatch[1].split('-')
-            navigate(`/projects/${projectKey}/items/${itemNum}`)
-          }
-          break
-        case 'attachment':
-          if (displayIdMatch) {
-            const [projectKey, itemNum] = displayIdMatch[1].split('-')
-            navigate(`/projects/${projectKey}/items/${itemNum}`)
-          }
-          break
+      if (result.path) {
+        navigate(result.path)
       }
     },
     [navigate, onClose],

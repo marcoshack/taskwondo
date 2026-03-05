@@ -18,13 +18,14 @@ const (
 
 // Embedding represents a vector embedding stored in the database.
 type Embedding struct {
-	ID         uuid.UUID `json:"id"`
-	EntityType string    `json:"entity_type"`
-	EntityID   uuid.UUID `json:"entity_id"`
+	ID         uuid.UUID  `json:"id"`
+	EntityType string     `json:"entity_type"`
+	EntityID   uuid.UUID  `json:"entity_id"`
 	ProjectID  *uuid.UUID `json:"project_id,omitempty"`
-	Content    string    `json:"-"`
-	Embedding  []float32 `json:"-"`
-	IndexedAt  time.Time `json:"indexed_at"`
+	Path       string     `json:"path"`
+	Content    string     `json:"-"`
+	Embedding  []float32  `json:"-"`
+	IndexedAt  time.Time  `json:"indexed_at"`
 }
 
 // EmbedIndexEvent is the NATS payload for embed.index events.
@@ -47,11 +48,12 @@ type EmbedBackfillEvent struct {
 
 // SearchResult represents a single result from a semantic search.
 type SearchResult struct {
-	EntityType string    `json:"entity_type"`
-	EntityID   uuid.UUID `json:"entity_id"`
+	EntityType string     `json:"entity_type"`
+	EntityID   uuid.UUID  `json:"entity_id"`
 	ProjectID  *uuid.UUID `json:"project_id,omitempty"`
-	Score      float64   `json:"score"`
-	Content    string    `json:"snippet"`
+	Score      float64    `json:"score"`
+	Content    string     `json:"snippet"`
+	Path       string     `json:"path"`
 }
 
 // SearchFilter holds the parameters for a semantic search query.

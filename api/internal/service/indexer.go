@@ -96,6 +96,15 @@ func (s *IndexerService) IndexEntity(ctx context.Context, entityType string, ent
 		return fmt.Errorf("extracting text for %s/%s: %w", entityType, entityID, err)
 	}
 
+	path, err := s.resolvePath(ctx, entityType, entityID)
+	if err != nil {
+		log.Ctx(ctx).Warn().Err(err).
+			Str("entity_type", entityType).
+			Str("entity_id", entityID.String()).
+			Msg("failed to resolve path, using empty")
+		path = ""
+	}
+
 	vector, err := s.embedding.Embed(ctx, text)
 	if err != nil {
 		return fmt.Errorf("generating embedding for %s/%s: %w", entityType, entityID, err)
@@ -106,6 +115,7 @@ func (s *IndexerService) IndexEntity(ctx context.Context, entityType string, ent
 		EntityType: entityType,
 		EntityID:   entityID,
 		ProjectID:  projectID,
+		Path:       path,
 		Content:    text,
 		Embedding:  vector,
 	}
@@ -284,6 +294,84 @@ func (s *IndexerService) extractText(ctx context.Context, entityType string, ent
 			return "", err
 		}
 		return extractAttachmentText(a), nil
+
+	default:
+		return "", fmt.Errorf("unknown entity type: %s", entityType)
+	}
+}
+
+// resolvePath builds the frontend navigation path for the given entity.
+func (s *IndexerService) resolvePath(ctx context.Context, entityType string, entityID uuid.UUID) (string, error) {
+	switch entityType {
+	case model.EntityTypeWorkItem:
+		item, err := s.workItems.GetByID(ctx, entityID)
+		if err != nil {
+			return "", err
+		}
+		proj, err := s.projects.GetByID(ctx, item.ProjectID)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("/projects/%s/items/%d", proj.Key, item.ItemNumber), nil
+
+	case model.EntityTypeProject:
+		p, err := s.projects.GetByID(ctx, entityID)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("/projects/%s", p.Key), nil
+
+	case model.EntityTypeMilestone:
+		m, err := s.milestones.GetByID(ctx, entityID)
+		if err != nil {
+			return "", err
+		}
+		proj, err := s.projects.GetByID(ctx, m.ProjectID)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("/projects/%s/milestones", proj.Key), nil
+
+	case model.EntityTypeQueue:
+		q, err := s.queues.GetByID(ctx, entityID)
+		if err != nil {
+			return "", err
+		}
+		proj, err := s.projects.GetByID(ctx, q.ProjectID)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("/projects/%s/queues", proj.Key), nil
+
+	case model.EntityTypeComment:
+		c, err := s.comments.GetByID(ctx, entityID)
+		if err != nil {
+			return "", err
+		}
+		item, err := s.workItems.GetByID(ctx, c.WorkItemID)
+		if err != nil {
+			return "", err
+		}
+		proj, err := s.projects.GetByID(ctx, item.ProjectID)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("/projects/%s/items/%d", proj.Key, item.ItemNumber), nil
+
+	case model.EntityTypeAttachment:
+		a, err := s.attachments.GetByID(ctx, entityID)
+		if err != nil {
+			return "", err
+		}
+		item, err := s.workItems.GetByID(ctx, a.WorkItemID)
+		if err != nil {
+			return "", err
+		}
+		proj, err := s.projects.GetByID(ctx, item.ProjectID)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("/projects/%s/items/%d", proj.Key, item.ItemNumber), nil
 
 	default:
 		return "", fmt.Errorf("unknown entity type: %s", entityType)
