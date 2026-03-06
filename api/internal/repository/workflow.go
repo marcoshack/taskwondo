@@ -380,11 +380,13 @@ func (r *WorkflowRepository) ListStatuses(ctx context.Context, workflowID uuid.U
 // ListAllStatuses returns all distinct statuses across all system workflows.
 func (r *WorkflowRepository) ListAllStatuses(ctx context.Context) ([]model.WorkflowStatus, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT DISTINCT ON (ws.name) ws.id, ws.workflow_id, ws.name, ws.display_name, ws.category, ws.position, ws.color
-		 FROM workflow_statuses ws
-		 JOIN workflows w ON ws.workflow_id = w.id
-		 WHERE w.is_default = true
-		 ORDER BY ws.name, ws.position`)
+		`SELECT id, workflow_id, name, display_name, category, position, color FROM (
+			SELECT DISTINCT ON (ws.name) ws.id, ws.workflow_id, ws.name, ws.display_name, ws.category, ws.position, ws.color
+			FROM workflow_statuses ws
+			JOIN workflows w ON ws.workflow_id = w.id
+			WHERE w.is_default = true
+			ORDER BY ws.name, ws.position
+		 ) sub ORDER BY position, name`)
 	if err != nil {
 		return nil, fmt.Errorf("querying all statuses: %w", err)
 	}

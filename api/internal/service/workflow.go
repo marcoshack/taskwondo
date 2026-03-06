@@ -362,8 +362,8 @@ func (s *WorkflowService) seedTaskWorkflow(ctx context.Context) error {
 		Description: &desc,
 		IsDefault:   true,
 		Statuses: []model.WorkflowStatus{
-			{Name: "open", DisplayName: "Open", Category: model.CategoryTodo, Position: 0},
-			{Name: "backlog", DisplayName: "Backlog", Category: model.CategoryTodo, Position: 1},
+			{Name: "backlog", DisplayName: "Backlog", Category: model.CategoryTodo, Position: 0},
+			{Name: "open", DisplayName: "Open", Category: model.CategoryTodo, Position: 1},
 			{Name: "in_progress", DisplayName: "In Progress", Category: model.CategoryInProgress, Position: 2},
 			{Name: "in_review", DisplayName: "In Review", Category: model.CategoryInProgress, Position: 3},
 			{Name: "done", DisplayName: "Done", Category: model.CategoryDone, Position: 4},
