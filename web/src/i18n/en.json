@@ -494,6 +494,11 @@
   "preferences.fontSizes.normalDesc": "Default size",
   "preferences.fontSizes.larger": "Larger",
   "preferences.fontSizes.largerDesc": "Easier to read",
+  "preferences.layout": "Layout",
+  "preferences.layouts.centered": "Centered",
+  "preferences.layouts.centeredDesc": "Content constrained to a fixed width",
+  "preferences.layouts.expanded": "Expanded",
+  "preferences.layouts.expandedDesc": "Content uses the full viewport width",
 
   "preferences.apiKeys": "API Keys",
   "preferences.apiKeys.manage": "Manage API Keys",

@@ -2,6 +2,7 @@ import { NavLink, Routes, Route, Navigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Settings, Users, Route as RouteIcon, Plug, KeyRound, ToggleRight } from 'lucide-react'
 import { useSidebar } from '@/contexts/SidebarContext'
+import { useLayout } from '@/contexts/LayoutContext'
 import { useNavigationGuard } from '@/contexts/NavigationGuardContext'
 import { SystemSettingsSidebar } from '@/components/SystemSettingsSidebar'
 import { AdminUsersPage } from './AdminUsersPage'
@@ -14,6 +15,7 @@ import { SystemFeaturesPage } from './SystemFeaturesPage'
 export function SystemSettingsPage() {
   const { t } = useTranslation()
   const { collapsed } = useSidebar('settings')
+  const { containerClass } = useLayout()
   const { guardRef, guardedNavigate } = useNavigationGuard()
 
   const navItems = [
@@ -26,7 +28,7 @@ export function SystemSettingsPage() {
   ]
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className={`${containerClass(true)} py-6`}>
       {/* Mobile top bar with navigation icons */}
       <nav className="flex sm:hidden mb-4 overflow-x-auto scrollbar-none -mx-4 px-4">
         {navItems.map((item) => (

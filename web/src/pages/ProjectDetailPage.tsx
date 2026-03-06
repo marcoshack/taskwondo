@@ -4,6 +4,7 @@ import { SquareStack } from 'lucide-react'
 import { useProject } from '@/hooks/useProjects'
 import { AppSidebar } from '@/components/AppSidebar'
 import { useSidebar } from '@/contexts/SidebarContext'
+import { useLayout } from '@/contexts/LayoutContext'
 import { Spinner } from '@/components/ui/Spinner'
 import { WorkItemListPage } from './WorkItemListPage'
 import { WorkItemDetailPage } from './WorkItemDetailPage'
@@ -26,6 +27,7 @@ function QueuesPage() {
 export function ProjectDetailPage() {
   const { t } = useTranslation()
   const { collapsed } = useSidebar('app')
+  const { containerClass } = useLayout()
   const { projectKey } = useParams<{ projectKey: string }>()
   const { data: project, isLoading, error } = useProject(projectKey ?? '')
 
@@ -46,7 +48,7 @@ export function ProjectDetailPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className={`${containerClass(true)} py-6`}>
       <div className={`flex transition-all duration-200 ${collapsed ? 'gap-4' : 'gap-8'}`}>
         <AppSidebar projectKey={project.key} />
         <div className="flex-1 min-w-0">

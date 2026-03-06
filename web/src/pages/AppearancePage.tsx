@@ -1,9 +1,11 @@
 import { useTranslation } from 'react-i18next'
 import { useTheme, type Theme, type FontSize } from '@/contexts/ThemeContext'
+import { useLayout, type Layout } from '@/contexts/LayoutContext'
 import { useLanguage } from '@/contexts/LanguageContext'
 export function AppearancePage() {
   const { t } = useTranslation()
   const { theme, setTheme, fontSize, setFontSize } = useTheme()
+  const { layout, setLayout } = useLayout()
   const { language, setLanguage, availableLanguages } = useLanguage()
 
   const themes: { value: Theme; label: string; description: string }[] = [
@@ -77,6 +79,42 @@ export function AppearancePage() {
                 )}
                 <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{th.label}</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">{th.description}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
+            {t('preferences.layout')}
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            {([
+              { value: 'centered' as Layout, label: t('preferences.layouts.centered'), description: t('preferences.layouts.centeredDesc') },
+              { value: 'expanded' as Layout, label: t('preferences.layouts.expanded'), description: t('preferences.layouts.expandedDesc') },
+            ]).map((lo) => (
+              <button
+                key={lo.value}
+                onClick={() => setLayout(lo.value)}
+                className={`rounded-lg border-2 p-4 text-left transition-colors ${
+                  layout === lo.value
+                    ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
+                    : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600'
+                }`}
+              >
+                <div className="mb-3 rounded-md border border-gray-300 dark:border-gray-600 overflow-hidden">
+                  <div className="h-3 bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600" />
+                  <div className={`h-12 bg-white dark:bg-gray-800 flex items-start pt-1.5 ${
+                    lo.value === 'centered' ? 'px-4' : 'px-1.5'
+                  }`}>
+                    <div className="flex-1 space-y-1">
+                      <div className="h-1.5 rounded bg-gray-300 dark:bg-gray-600 w-3/4" />
+                      <div className="h-1.5 rounded bg-gray-200 dark:bg-gray-700 w-1/2" />
+                    </div>
+                  </div>
+                </div>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{lo.label}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{lo.description}</p>
               </button>
             ))}
           </div>

@@ -6,6 +6,7 @@ import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
 import { useProjects, useCreateProject, useOwnedProjectCount, useMaxProjects } from '@/hooks/useProjects'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSidebar } from '@/contexts/SidebarContext'
+import { useLayout } from '@/contexts/LayoutContext'
 import { AppSidebar } from '@/components/AppSidebar'
 import { DataTable } from '@/components/ui/DataTable'
 import { Spinner } from '@/components/ui/Spinner'
@@ -59,6 +60,7 @@ function IconMembers({ className }: { className?: string }) {
 export function ProjectListPage() {
   const { t } = useTranslation()
   const { collapsed } = useSidebar('app')
+  const { containerClass } = useLayout()
   const { data: projects, isLoading, error } = useProjects()
   const { data: ownedCount } = useOwnedProjectCount()
   const { data: maxProjectsValue } = useMaxProjects()
@@ -171,7 +173,7 @@ export function ProjectListPage() {
 
   if (isLoading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className={`${containerClass(true)} py-6`}>
         <div className={`flex transition-all duration-200 ${collapsed ? 'gap-4' : 'gap-8'}`}>
           <AppSidebar />
           <div className="flex-1 min-w-0 flex items-center justify-center py-24">
@@ -184,7 +186,7 @@ export function ProjectListPage() {
 
   if (error) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className={`${containerClass(true)} py-6`}>
         <div className={`flex transition-all duration-200 ${collapsed ? 'gap-4' : 'gap-8'}`}>
           <AppSidebar />
           <div className="flex-1 min-w-0">
@@ -196,7 +198,7 @@ export function ProjectListPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className={`${containerClass(true)} py-6`}>
       <div className={`flex transition-all duration-200 ${collapsed ? 'gap-4' : 'gap-8'}`}>
         <AppSidebar />
         <div className="flex-1 min-w-0">

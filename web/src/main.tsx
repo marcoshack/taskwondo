@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import { LanguageProvider } from '@/contexts/LanguageContext'
+import { LayoutProvider } from '@/contexts/LayoutContext'
 import { SidebarProvider } from '@/contexts/SidebarContext'
 import { KeyboardShortcutProvider } from '@/contexts/KeyboardShortcutContext'
 import { NavigationGuardProvider } from '@/contexts/NavigationGuardContext'
@@ -31,6 +32,7 @@ createRoot(document.getElementById('root')!).render(
           <AuthProvider>
             <ThemeProvider>
               <LanguageProvider>
+                <LayoutProvider>
                 <KeyboardShortcutProvider>
                   <NavigationGuardProvider>
                     <NotificationProvider>
@@ -40,6 +42,7 @@ createRoot(document.getElementById('root')!).render(
                     </NotificationProvider>
                   </NavigationGuardProvider>
                 </KeyboardShortcutProvider>
+                </LayoutProvider>
               </LanguageProvider>
             </ThemeProvider>
           </AuthProvider>

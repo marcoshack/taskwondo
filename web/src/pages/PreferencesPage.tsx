@@ -2,6 +2,7 @@ import { NavLink, Routes, Route, Navigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Palette, Key, Bell, User } from 'lucide-react'
 import { useSidebar } from '@/contexts/SidebarContext'
+import { useLayout } from '@/contexts/LayoutContext'
 import { PreferencesSidebar } from '@/components/PreferencesSidebar'
 import { ProfilePage } from './ProfilePage'
 import { AppearancePage } from './AppearancePage'
@@ -11,6 +12,7 @@ import { APIKeysPage } from './APIKeysPage'
 export function PreferencesPage() {
   const { t } = useTranslation()
   const { collapsed } = useSidebar('settings')
+  const { containerClass } = useLayout()
 
   const navItems = [
     { to: 'profile', label: t('preferences.sidebar.profile'), icon: User },
@@ -20,7 +22,7 @@ export function PreferencesPage() {
   ]
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 overflow-x-hidden">
+    <div className={`${containerClass(true)} py-6 overflow-x-hidden`}>
       {/* Mobile top bar with navigation icons */}
       <nav className="flex sm:hidden mb-4 overflow-x-auto scrollbar-none -mx-4 px-4">
         {navItems.map((item) => (

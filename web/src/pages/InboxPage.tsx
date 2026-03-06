@@ -16,6 +16,7 @@ import { RefreshButton, type RefreshInterval } from '@/components/ui/RefreshButt
 import { SLAIndicator } from '@/components/SLAIndicator'
 import { AppSidebar } from '@/components/AppSidebar'
 import { useSidebar } from '@/contexts/SidebarContext'
+import { useLayout } from '@/contexts/LayoutContext'
 import { useInboxItems, useRemoveFromInbox, useReorderInboxItem, useClearCompletedInbox, useAddToInbox } from '@/hooks/useInbox'
 import { useProjects } from '@/hooks/useProjects'
 import { usePreference, useSetPreference } from '@/hooks/usePreferences'
@@ -1008,9 +1009,10 @@ function MobileProjectFilterContent({ projectOptions, selectedProjects, setSelec
 
 export default function UserPage() {
   const { collapsed } = useSidebar('app')
+  const { containerClass } = useLayout()
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 h-full flex flex-col">
+    <div className={`${containerClass(true)} py-6 h-full flex flex-col`}>
       <div className={`flex flex-1 min-h-0 transition-all duration-200 ${collapsed ? 'gap-4' : 'gap-8'}`}>
         <AppSidebar />
         <div className="flex-1 min-w-0">

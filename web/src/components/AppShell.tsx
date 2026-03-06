@@ -18,6 +18,7 @@ import { SearchModal } from '@/components/SearchModal'
 import { WelcomeModal } from '@/components/WelcomeModal'
 import { usePreference, useSetPreference } from '@/hooks/usePreferences'
 import { useBrand } from '@/contexts/BrandContext'
+import { useLayout } from '@/contexts/LayoutContext'
 import { useInboxCount } from '@/hooks/useInbox'
 import { PoweredByFooter } from '@/components/PoweredByFooter'
 import { AppSidebar } from '@/components/AppSidebar'
@@ -25,6 +26,7 @@ import { AppSidebar } from '@/components/AppSidebar'
 export function AppShell() {
   const { t } = useTranslation()
   const { brandName } = useBrand()
+  const { containerClass } = useLayout()
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const { guardedNavigate } = useNavigationGuard()
@@ -116,7 +118,7 @@ export function AppShell() {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
       <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className={containerClass(true)}>
           <div className="flex justify-between h-14 relative">
             <div className="flex items-center gap-6 min-w-0">
               {/* Desktop: always show brand name */}
