@@ -531,7 +531,7 @@ func handleListComments(_ context.Context, request mcp.CallToolRequest) (*mcp.Ca
 		if c.Visibility == "internal" {
 			vis = " [internal]"
 		}
-		fmt.Fprintf(&sb, "---\n**%s**%s\n%s\n\n", c.CreatedAt, vis, c.Body)
+		fmt.Fprintf(&sb, "---\n**%s** (id: %s)%s\n%s\n\n", c.CreatedAt, c.ID, vis, c.Body)
 	}
 	return mcp.NewToolResultText(sb.String()), nil
 }
