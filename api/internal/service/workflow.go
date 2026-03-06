@@ -371,6 +371,7 @@ func (s *WorkflowService) seedTaskWorkflow(ctx context.Context) error {
 		},
 		Transitions: []model.WorkflowTransition{
 			{FromStatus: "backlog", ToStatus: "open", Name: strPtr("Prioritize")},
+			{FromStatus: "backlog", ToStatus: "in_progress", Name: strPtr("Start Work")},
 			{FromStatus: "backlog", ToStatus: "cancelled", Name: strPtr("Cancel")},
 			{FromStatus: "open", ToStatus: "in_progress", Name: strPtr("Start Work")},
 			{FromStatus: "open", ToStatus: "backlog", Name: strPtr("Deprioritize")},
