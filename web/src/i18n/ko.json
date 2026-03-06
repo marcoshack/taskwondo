@@ -955,6 +955,8 @@
   "workitems.view.board": "보드",
   "workitems.view.list": "목록",
   "workitems.view.moveTo": "이동...",
+  "workitems.board.scrollLeft": "이전 상태 열로 스크롤",
+  "workitems.board.scrollRight": "다음 상태 열로 스크롤",
   "workitems.visibilities.internal": "내부",
   "workitems.visibilities.internal.description": "프로젝트 멤버만 이 항목을 볼 수 있습니다",
   "workitems.visibilities.portal": "포털",

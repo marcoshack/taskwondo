@@ -955,6 +955,8 @@
   "workitems.view.board": "Quadro",
   "workitems.view.list": "Lista",
   "workitems.view.moveTo": "Mover para...",
+  "workitems.board.scrollLeft": "Rolar para a coluna de status anterior",
+  "workitems.board.scrollRight": "Rolar para a próxima coluna de status",
   "workitems.visibilities.internal": "interno",
   "workitems.visibilities.internal.description": "Apenas membros do projeto podem ver este item",
   "workitems.visibilities.portal": "portal",

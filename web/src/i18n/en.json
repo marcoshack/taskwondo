@@ -240,6 +240,8 @@
   "workitems.view.list": "List",
   "workitems.view.board": "Board",
   "workitems.view.moveTo": "Move to...",
+  "workitems.board.scrollLeft": "Scroll to previous status column",
+  "workitems.board.scrollRight": "Scroll to next status column",
 
   "workitems.table.id": "ID",
   "workitems.table.type": "Type",

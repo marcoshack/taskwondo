@@ -955,6 +955,8 @@
   "workitems.view.board": "Board",
   "workitems.view.list": "Liste",
   "workitems.view.moveTo": "Verschieben...",
+  "workitems.board.scrollLeft": "Zur vorherigen Statusspalte scrollen",
+  "workitems.board.scrollRight": "Zur nächsten Statusspalte scrollen",
   "workitems.visibilities.internal": "intern",
   "workitems.visibilities.internal.description": "Nur Projektmitglieder können dieses Element sehen",
   "workitems.visibilities.portal": "Portal",

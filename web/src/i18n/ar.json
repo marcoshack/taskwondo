@@ -955,6 +955,8 @@
   "workitems.view.board": "لوحة",
   "workitems.view.list": "قائمة",
   "workitems.view.moveTo": "نقل إلى...",
+  "workitems.board.scrollLeft": "التمرير إلى عمود الحالة السابق",
+  "workitems.board.scrollRight": "التمرير إلى عمود الحالة التالي",
   "workitems.visibilities.internal": "داخلي",
   "workitems.visibilities.internal.description": "أعضاء المشروع فقط يمكنهم رؤية هذا العنصر",
   "workitems.visibilities.portal": "بوابة",

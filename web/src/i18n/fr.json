@@ -955,6 +955,8 @@
   "workitems.view.board": "Tableau",
   "workitems.view.list": "Liste",
   "workitems.view.moveTo": "Déplacer vers...",
+  "workitems.board.scrollLeft": "Défiler vers la colonne de statut précédente",
+  "workitems.board.scrollRight": "Défiler vers la colonne de statut suivante",
   "workitems.visibilities.internal": "interne",
   "workitems.visibilities.internal.description": "Seuls les membres du projet peuvent voir cet élément",
   "workitems.visibilities.portal": "portail",

@@ -955,6 +955,8 @@
   "workitems.view.board": "看板",
   "workitems.view.list": "列表",
   "workitems.view.moveTo": "移至...",
+  "workitems.board.scrollLeft": "滚动到上一个状态列",
+  "workitems.board.scrollRight": "滚动到下一个状态列",
   "workitems.visibilities.internal": "内部",
   "workitems.visibilities.internal.description": "仅项目成员可以查看此项目",
   "workitems.visibilities.portal": "门户",

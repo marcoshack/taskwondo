@@ -1,5 +1,6 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useUpdateWorkItem } from '@/hooks/useWorkItems'
 import { PriorityBadge } from './PriorityBadge'
 import { TypeBadge } from './TypeBadge'
@@ -7,6 +8,8 @@ import { SLAIndicator } from '@/components/SLAIndicator'
 import { Tooltip } from '@/components/ui/Tooltip'
 import type { WorkItem } from '@/api/workitems'
 import type { WorkflowStatus, WorkflowTransition } from '@/api/workflows'
+
+const COLUMN_WIDTH = 304 // 288px (w-72) + 16px gap (gap-4 = 1rem)
 
 interface DraggedItem {
   itemNumber: number
@@ -89,58 +92,123 @@ export function BoardView({ projectKey, items, statuses, transitionsMap, onItemC
     setDraggedItem(null)
   }, [draggedItem, canDropOnStatus, updateMutation])
 
-  return (
-    <div className="flex gap-4 overflow-x-auto pb-4">
-      {sortedStatuses.map((status) => {
-        const isValidTarget = draggedItem !== null && canDropOnStatus(status.name)
-        const isHovered = hoveredColumn === status.name
-        const columnClasses = isHovered
-          ? 'border-2 border-dashed border-indigo-400 dark:border-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/20 rounded-lg'
-          : isValidTarget
-            ? 'border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg'
-            : draggedItem !== null
-              ? 'border-2 border-transparent rounded-lg opacity-60'
-              : ''
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const [canScrollLeft, setCanScrollLeft] = useState(false)
+  const [canScrollRight, setCanScrollRight] = useState(false)
 
-        return (
-          <div
-            key={status.name}
-            className={`min-w-[280px] w-72 shrink-0 p-2 transition-colors ${columnClasses}`}
-            onDragOver={(e) => handleColumnDragOver(e, status.name)}
-            onDragEnter={(e) => handleColumnDragEnter(e, status.name)}
-            onDragLeave={(e) => handleColumnDragLeave(e, status.name)}
-            onDrop={(e) => handleColumnDrop(e, status.name)}
+  const updateScrollIndicators = useCallback(() => {
+    const el = scrollContainerRef.current
+    if (!el) return
+    setCanScrollLeft(el.scrollLeft > 0)
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1)
+  }, [])
+
+  useEffect(() => {
+    const el = scrollContainerRef.current
+    if (!el) return
+    updateScrollIndicators()
+    el.addEventListener('scroll', updateScrollIndicators, { passive: true })
+    const ro = new ResizeObserver(updateScrollIndicators)
+    ro.observe(el)
+    return () => {
+      el.removeEventListener('scroll', updateScrollIndicators)
+      ro.disconnect()
+    }
+  }, [updateScrollIndicators, sortedStatuses.length])
+
+  const scrollBy = useCallback((direction: 'left' | 'right') => {
+    const el = scrollContainerRef.current
+    if (!el) return
+    const currentScroll = el.scrollLeft
+    if (direction === 'right') {
+      // Snap to the start of the next hidden column
+      const nextColumnStart = (Math.floor(currentScroll / COLUMN_WIDTH) + 1) * COLUMN_WIDTH
+      el.scrollTo({ left: nextColumnStart, behavior: 'smooth' })
+    } else {
+      // Snap to the start of the previous column
+      const prevColumnStart = (Math.ceil(currentScroll / COLUMN_WIDTH) - 1) * COLUMN_WIDTH
+      el.scrollTo({ left: Math.max(0, prevColumnStart), behavior: 'smooth' })
+    }
+  }, [])
+
+  return (
+    <div className="relative">
+      {canScrollLeft && (
+        <div className="absolute left-0 top-0 bottom-0 z-20 pointer-events-none" style={{ width: 0 }}>
+          <button
+            type="button"
+            aria-label={t('workitems.board.scrollLeft')}
+            className="pointer-events-auto sticky top-1/2 -translate-y-1/2 ml-1 flex items-center justify-center w-8 h-8 rounded-full bg-white/90 dark:bg-gray-800/90 border border-gray-200 dark:border-gray-600 shadow-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors"
+            onClick={() => scrollBy('left')}
           >
-            <div className="flex items-center gap-2 mb-3 px-1">
-              <span className={`w-2.5 h-2.5 rounded-full ${categoryDot[status.category] ?? 'bg-gray-400'}`} />
-              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">{t(`workitems.statuses.${status.name}`, { defaultValue: status.display_name })}</h3>
-              <span className="text-xs text-gray-400 dark:text-gray-500">{itemsByStatus.get(status.name)?.length ?? 0}</span>
+            <ChevronLeft size={20} />
+          </button>
+        </div>
+      )}
+      {canScrollRight && (
+        <div className="absolute right-0 top-0 bottom-0 z-20 pointer-events-none" style={{ width: 0 }}>
+          <button
+            type="button"
+            aria-label={t('workitems.board.scrollRight')}
+            className="pointer-events-auto sticky top-1/2 -translate-y-1/2 -ml-9 flex items-center justify-center w-8 h-8 rounded-full bg-white/90 dark:bg-gray-800/90 border border-gray-200 dark:border-gray-600 shadow-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors"
+            onClick={() => scrollBy('right')}
+          >
+            <ChevronRight size={20} />
+          </button>
+        </div>
+      )}
+      <div ref={scrollContainerRef} className="flex gap-4 overflow-x-auto pb-4">
+        {sortedStatuses.map((status) => {
+          const isValidTarget = draggedItem !== null && canDropOnStatus(status.name)
+          const isHovered = hoveredColumn === status.name
+          const columnClasses = isHovered
+            ? 'border-2 border-dashed border-indigo-400 dark:border-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/20 rounded-lg'
+            : isValidTarget
+              ? 'border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg'
+              : draggedItem !== null
+                ? 'border-2 border-transparent rounded-lg opacity-60'
+                : ''
+
+          return (
+            <div
+              key={status.name}
+              className={`min-w-[280px] w-72 shrink-0 p-2 transition-colors ${columnClasses}`}
+              onDragOver={(e) => handleColumnDragOver(e, status.name)}
+              onDragEnter={(e) => handleColumnDragEnter(e, status.name)}
+              onDragLeave={(e) => handleColumnDragLeave(e, status.name)}
+              onDrop={(e) => handleColumnDrop(e, status.name)}
+            >
+              <div className="flex items-center gap-2 mb-3 px-1">
+                <span className={`w-2.5 h-2.5 rounded-full ${categoryDot[status.category] ?? 'bg-gray-400'}`} />
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">{t(`workitems.statuses.${status.name}`, { defaultValue: status.display_name })}</h3>
+                <span className="text-xs text-gray-400 dark:text-gray-500">{itemsByStatus.get(status.name)?.length ?? 0}</span>
+              </div>
+              <div className="space-y-2">
+                {(itemsByStatus.get(status.name) ?? []).map((item) => (
+                  <BoardCard
+                    key={item.id}
+                    item={item}
+                    transitionsMap={transitionsMap}
+                    statuses={statuses}
+                    isDragging={draggedItem?.itemNumber === item.item_number}
+                    readOnly={readOnly}
+                    onClick={() => onItemClick(item)}
+                    onStatusChange={(newStatus) => {
+                      updateMutation.mutate({ itemNumber: item.item_number, input: { status: newStatus } })
+                    }}
+                    onDragStart={() => setDraggedItem({ itemNumber: item.item_number, fromStatus: item.status })}
+                    onDragEnd={() => {
+                      setDraggedItem(null)
+                      setHoveredColumn(null)
+                      dragCounterRef.current.clear()
+                    }}
+                  />
+                ))}
+              </div>
             </div>
-            <div className="space-y-2">
-              {(itemsByStatus.get(status.name) ?? []).map((item) => (
-                <BoardCard
-                  key={item.id}
-                  item={item}
-                  transitionsMap={transitionsMap}
-                  statuses={statuses}
-                  isDragging={draggedItem?.itemNumber === item.item_number}
-                  readOnly={readOnly}
-                  onClick={() => onItemClick(item)}
-                  onStatusChange={(newStatus) => {
-                    updateMutation.mutate({ itemNumber: item.item_number, input: { status: newStatus } })
-                  }}
-                  onDragStart={() => setDraggedItem({ itemNumber: item.item_number, fromStatus: item.status })}
-                  onDragEnd={() => {
-                    setDraggedItem(null)
-                    setHoveredColumn(null)
-                    dragCounterRef.current.clear()
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-        )
-      })}
+          )
+        })}
+      </div>
     </div>
   )
 }
