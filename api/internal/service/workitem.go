@@ -404,6 +404,9 @@ func (s *WorkItemService) Create(ctx context.Context, info *model.AuthInfo, proj
 	// Publish assignment notification if item was created with an assignee
 	s.publishAssignment(ctx, projectKey, item, info.UserID)
 
+	// Publish new item notification for project members
+	s.publishNewItem(ctx, projectKey, project.ID, item, info.UserID)
+
 	log.Ctx(ctx).Info().
 		Str("project_key", projectKey).
 		Int("item_number", item.ItemNumber).
@@ -497,6 +500,7 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 		field, oldVal, newVal string
 	}
 	var watcherChanges []fieldChange
+	var statusOld, statusNew, statusCategory string // for status change notification
 
 	// Apply changes and record events
 	if input.Title != nil && *input.Title != item.Title {
@@ -617,6 +621,11 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 
 		s.recordFieldChange(ctx, item.ID, &info.UserID, "status", item.Status, *input.Status)
 		watcherChanges = append(watcherChanges, fieldChange{"status", item.Status, *input.Status})
+		statusOld = item.Status
+		statusNew = *input.Status
+		if wfID, err := s.resolveWorkflowID(ctx, project.ID, item.Type, project.DefaultWorkflowID); err == nil {
+			statusCategory, _ = s.workflows.GetStatusCategory(ctx, wfID, statusNew)
+		}
 		item.Status = *input.Status
 
 		// Recompute SLA deadline for the new status
@@ -807,6 +816,11 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 		s.publishWatcherNotification(ctx, project.Key, project.ID, item, info.UserID, "field_change", ch.field, ch.oldVal, ch.newVal, "")
 	}
 
+	// Publish status change notification for assignee (best-effort)
+	if statusNew != "" && statusCategory != "" {
+		s.publishStatusChange(ctx, project.Key, project.ID, item, info.UserID, statusOld, statusNew, statusCategory)
+	}
+
 	// Publish embed.index event for semantic search (reindex on update)
 	publishEmbedIndex(ctx, s.publisher, s.embedCache, model.EntityTypeWorkItem, item.ID, &project.ID)
 
@@ -901,6 +915,9 @@ func (s *WorkItemService) CreateComment(ctx context.Context, info *model.AuthInf
 		preview = preview[:100] + "..."
 	}
 	s.publishWatcherNotification(ctx, projectKey, project.ID, item, info.UserID, "comment_added", "", "", "", preview)
+
+	// Publish comment-on-assigned notification for assignee
+	s.publishCommentOnAssigned(ctx, projectKey, project.ID, item, info.UserID, preview)
 
 	// Publish embed.index event for the new comment
 	publishEmbedIndex(ctx, s.publisher, s.embedCache, model.EntityTypeComment, comment.ID, &project.ID)
@@ -1731,6 +1748,79 @@ func (s *WorkItemService) publishAssignment(_ context.Context, projectKey string
 	}
 	if err := s.publisher.Publish("notification.assignment", evt); err != nil {
 		log.Ctx(context.Background()).Warn().Err(err).Msg("failed to publish assignment notification")
+	}
+}
+
+// publishNewItem publishes a new-item notification event (best-effort).
+func (s *WorkItemService) publishNewItem(_ context.Context, projectKey string, projectID uuid.UUID, item *model.WorkItem, creatorID uuid.UUID) {
+	if s.publisher == nil {
+		return
+	}
+	evt := model.NewItemEvent{
+		WorkItemID: item.ID,
+		ProjectKey: projectKey,
+		ProjectID:  projectID,
+		ItemNumber: item.ItemNumber,
+		Title:      item.Title,
+		CreatorID:  creatorID,
+		Type:       item.Type,
+	}
+	if err := s.publisher.Publish("notification.new_item", evt); err != nil {
+		log.Ctx(context.Background()).Warn().Err(err).Msg("failed to publish new item notification")
+	}
+}
+
+// publishCommentOnAssigned publishes a comment-on-assigned notification event (best-effort).
+func (s *WorkItemService) publishCommentOnAssigned(_ context.Context, projectKey string, projectID uuid.UUID, item *model.WorkItem, commenterID uuid.UUID, preview string) {
+	if s.publisher == nil || item.AssigneeID == nil {
+		return
+	}
+	// Don't notify when assignees comment on their own items
+	if *item.AssigneeID == commenterID {
+		return
+	}
+	evt := model.CommentOnAssignedEvent{
+		WorkItemID:  item.ID,
+		ProjectKey:  projectKey,
+		ProjectID:   projectID,
+		ItemNumber:  item.ItemNumber,
+		Title:       item.Title,
+		AssigneeID:  *item.AssigneeID,
+		CommenterID: commenterID,
+		Preview:     preview,
+	}
+	if err := s.publisher.Publish("notification.comment_assigned", evt); err != nil {
+		log.Ctx(context.Background()).Warn().Err(err).Msg("failed to publish comment on assigned notification")
+	}
+}
+
+// publishStatusChange publishes a status-change notification event (best-effort).
+func (s *WorkItemService) publishStatusChange(_ context.Context, projectKey string, projectID uuid.UUID, item *model.WorkItem, actorID uuid.UUID, oldStatus, newStatus, category string) {
+	if s.publisher == nil || item.AssigneeID == nil {
+		return
+	}
+	// Don't notify when assignees change their own item's status
+	if *item.AssigneeID == actorID {
+		return
+	}
+	// Only notify for in_progress, done, or cancelled categories
+	if category != model.CategoryInProgress && category != model.CategoryDone && category != model.CategoryCancelled {
+		return
+	}
+	evt := model.StatusChangeEvent{
+		WorkItemID: item.ID,
+		ProjectKey: projectKey,
+		ProjectID:  projectID,
+		ItemNumber: item.ItemNumber,
+		Title:      item.Title,
+		AssigneeID: *item.AssigneeID,
+		ActorID:    actorID,
+		OldStatus:  oldStatus,
+		NewStatus:  newStatus,
+		Category:   category,
+	}
+	if err := s.publisher.Publish("notification.status_change", evt); err != nil {
+		log.Ctx(context.Background()).Warn().Err(err).Msg("failed to publish status change notification")
 	}
 }
 

@@ -120,6 +120,18 @@ export async function addMember(
   if (!res.ok()) throw new Error(`Add member failed (${res.status()}): ${await res.text()}`);
 }
 
+export async function removeMember(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  userId: string,
+): Promise<void> {
+  const res = await request.delete(`${BASE_URL}/api/v1/projects/${projectKey}/members/${userId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`Remove member failed (${res.status()}): ${await res.text()}`);
+}
+
 export async function setProjectUserSetting(
   request: APIRequestContext,
   token: string,

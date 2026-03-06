@@ -37,12 +37,12 @@ interface NotificationOption {
 const notificationOptions: NotificationOption[] = [
   { key: 'assigned_to_me', labelKey: 'preferences.notifications.assignedToMe', descKey: 'preferences.notifications.assignedToMeDesc', enabled: true },
   { key: 'any_update_on_watched', labelKey: 'preferences.notifications.anyUpdateOnWatched', descKey: 'preferences.notifications.anyUpdateOnWatchedDesc', enabled: true },
-  { key: 'new_item_created', labelKey: 'preferences.notifications.newItemCreated', descKey: 'preferences.notifications.newItemCreatedDesc', enabled: false },
-  { key: 'comments_on_assigned', labelKey: 'preferences.notifications.commentsOnAssigned', descKey: 'preferences.notifications.commentsOnAssignedDesc', enabled: false },
+  { key: 'new_item_created', labelKey: 'preferences.notifications.newItemCreated', descKey: 'preferences.notifications.newItemCreatedDesc', enabled: true },
+  { key: 'comments_on_assigned', labelKey: 'preferences.notifications.commentsOnAssigned', descKey: 'preferences.notifications.commentsOnAssignedDesc', enabled: true },
   { key: 'comments_on_watched', labelKey: 'preferences.notifications.commentsOnWatched', descKey: 'preferences.notifications.commentsOnWatchedDesc', enabled: true },
-  { key: 'status_changes_intermediate', labelKey: 'preferences.notifications.statusChangesIntermediate', descKey: 'preferences.notifications.statusChangesIntermediateDesc', enabled: false },
-  { key: 'status_changes_final', labelKey: 'preferences.notifications.statusChangesFinal', descKey: 'preferences.notifications.statusChangesFinalDesc', enabled: false },
-  { key: 'added_to_project', labelKey: 'preferences.notifications.addedToProject', descKey: 'preferences.notifications.addedToProjectDesc', enabled: false },
+  { key: 'status_changes_intermediate', labelKey: 'preferences.notifications.statusChangesIntermediate', descKey: 'preferences.notifications.statusChangesIntermediateDesc', enabled: true },
+  { key: 'status_changes_final', labelKey: 'preferences.notifications.statusChangesFinal', descKey: 'preferences.notifications.statusChangesFinalDesc', enabled: true },
+  { key: 'added_to_project', labelKey: 'preferences.notifications.addedToProject', descKey: 'preferences.notifications.addedToProjectDesc', enabled: true },
 ]
 
 export function NotificationsPage() {

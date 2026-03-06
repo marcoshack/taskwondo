@@ -431,6 +431,9 @@ func (s *ProjectService) AddMember(ctx context.Context, info *model.AuthInfo, pr
 		Str("role", role).
 		Msg("member added to project")
 
+	// Publish member-added notification (best-effort)
+	s.publishMemberAdded(ctx, project, userID, info.UserID, role)
+
 	return member, nil
 }
 
@@ -1171,4 +1174,26 @@ func validateBusinessHours(bh *model.BusinessHoursConfig) error {
 		}
 	}
 	return nil
+}
+
+// publishMemberAdded publishes a member-added notification event (best-effort).
+func (s *ProjectService) publishMemberAdded(_ context.Context, project *model.Project, userID, addedByID uuid.UUID, role string) {
+	if s.publisher == nil {
+		return
+	}
+	// Don't notify when users add themselves (shouldn't happen, but be safe)
+	if userID == addedByID {
+		return
+	}
+	evt := model.MemberAddedEvent{
+		ProjectID:   project.ID,
+		ProjectKey:  project.Key,
+		ProjectName: project.Name,
+		UserID:      userID,
+		AddedByID:   addedByID,
+		Role:        role,
+	}
+	if err := s.publisher.Publish("notification.member_added", evt); err != nil {
+		log.Ctx(context.Background()).Warn().Err(err).Msg("failed to publish member added notification")
+	}
 }

@@ -32,6 +32,53 @@ func DefaultNotificationPreferences() NotificationPreferences {
 	}
 }
 
+// NewItemEvent is published when a work item is created in a project.
+type NewItemEvent struct {
+	WorkItemID uuid.UUID `json:"work_item_id"`
+	ProjectKey string    `json:"project_key"`
+	ProjectID  uuid.UUID `json:"project_id"`
+	ItemNumber int       `json:"item_number"`
+	Title      string    `json:"title"`
+	CreatorID  uuid.UUID `json:"creator_id"`
+	Type       string    `json:"type"`
+}
+
+// CommentOnAssignedEvent is published when a comment is added to an assigned work item.
+type CommentOnAssignedEvent struct {
+	WorkItemID  uuid.UUID `json:"work_item_id"`
+	ProjectKey  string    `json:"project_key"`
+	ProjectID   uuid.UUID `json:"project_id"`
+	ItemNumber  int       `json:"item_number"`
+	Title       string    `json:"title"`
+	AssigneeID  uuid.UUID `json:"assignee_id"`
+	CommenterID uuid.UUID `json:"commenter_id"`
+	Preview     string    `json:"preview"`
+}
+
+// StatusChangeEvent is published when a work item's status changes.
+type StatusChangeEvent struct {
+	WorkItemID uuid.UUID `json:"work_item_id"`
+	ProjectKey string    `json:"project_key"`
+	ProjectID  uuid.UUID `json:"project_id"`
+	ItemNumber int       `json:"item_number"`
+	Title      string    `json:"title"`
+	AssigneeID uuid.UUID `json:"assignee_id"`
+	ActorID    uuid.UUID `json:"actor_id"`
+	OldStatus  string    `json:"old_status"`
+	NewStatus  string    `json:"new_status"`
+	Category   string    `json:"category"` // "in_progress", "done", "cancelled"
+}
+
+// MemberAddedEvent is published when a user is added to a project.
+type MemberAddedEvent struct {
+	ProjectID   uuid.UUID `json:"project_id"`
+	ProjectKey  string    `json:"project_key"`
+	ProjectName string    `json:"project_name"`
+	UserID      uuid.UUID `json:"user_id"`
+	AddedByID   uuid.UUID `json:"added_by_id"`
+	Role        string    `json:"role"`
+}
+
 // WatcherEvent is published when a watched work item is modified.
 type WatcherEvent struct {
 	WorkItemID uuid.UUID `json:"work_item_id"`

@@ -130,6 +130,28 @@ func main() {
 	)
 	dispatcher.Register(notifyWatcher)
 
+	memberRepo := repository.NewProjectMemberRepository(db)
+
+	notifyNewItem := workers.NewNotificationNewItemTask(
+		memberRepo, userSettingRepo, emailSender, cfg.BaseURL, log.Logger,
+	)
+	dispatcher.Register(notifyNewItem)
+
+	notifyCommentAssigned := workers.NewNotificationCommentOnAssignedTask(
+		userRepo, userSettingRepo, emailSender, cfg.BaseURL, log.Logger,
+	)
+	dispatcher.Register(notifyCommentAssigned)
+
+	notifyStatusChange := workers.NewNotificationStatusChangeTask(
+		userRepo, userSettingRepo, emailSender, cfg.BaseURL, log.Logger,
+	)
+	dispatcher.Register(notifyStatusChange)
+
+	notifyMemberAdded := workers.NewNotificationMemberAddedTask(
+		userRepo, userSettingRepo, emailSender, cfg.BaseURL, log.Logger,
+	)
+	dispatcher.Register(notifyMemberAdded)
+
 	// Register embedding tasks
 	embedIndex := workers.NewEmbedIndexTask(indexerService, systemSettingRepo, log.Logger)
 	dispatcher.Register(embedIndex)
