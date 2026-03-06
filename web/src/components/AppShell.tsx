@@ -172,7 +172,7 @@ export function AppShell() {
             <div className="relative flex items-center gap-2 shrink-0" ref={menuRef}>
               <button
                 onClick={() => setSearchOpen(true)}
-                className="sm:hidden p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+                className="p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
                 aria-label={t('nav.search')}
               >
                 <Search className="h-5 w-5" />

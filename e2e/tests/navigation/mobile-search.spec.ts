@@ -30,14 +30,23 @@ test.describe('Mobile search icon and top bar layout', () => {
     await expect(searchInput).not.toBeVisible({ timeout: 3000 });
   });
 
-  test('search icon is hidden on desktop', async ({ page, testProject }) => {
+  test('search icon is visible on desktop', async ({ page, testProject }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto(`/projects/${testProject.key}/items`);
     await waitForPageReady(page);
 
-    // Search icon button should be hidden on desktop (sm:hidden)
+    // Search icon button should be visible on all screen sizes
     const searchButton = page.getByRole('button', { name: /^search$/i });
-    await expect(searchButton).not.toBeVisible({ timeout: 3000 });
+    await expect(searchButton).toBeVisible({ timeout: 5000 });
+  });
+
+  test('search icon is visible on tablet', async ({ page, testProject }) => {
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await page.goto(`/projects/${testProject.key}/items`);
+    await waitForPageReady(page);
+
+    const searchButton = page.getByRole('button', { name: /^search$/i });
+    await expect(searchButton).toBeVisible({ timeout: 5000 });
   });
 
   test('mobile top bar shows home icon and project key when project is active', async ({
