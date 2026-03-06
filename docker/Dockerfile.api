@@ -9,7 +9,8 @@ RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=0 go build -o /bin/taskwondo ./cmd/server
+ARG COMMIT_SHA=dev
+RUN CGO_ENABLED=0 go build -ldflags "-X main.commitSHA=${COMMIT_SHA}" -o /bin/taskwondo ./cmd/server
 
 FROM alpine:3.20
 

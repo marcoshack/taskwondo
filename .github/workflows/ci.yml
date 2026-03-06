@@ -11,39 +11,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  changes:
-    name: Detect changes
-    runs-on: ubuntu-latest
-    outputs:
-      api: ${{ steps.filter.outputs.api }}
-      web: ${{ steps.filter.outputs.web }}
-      docker: ${{ steps.filter.outputs.docker }}
-      e2e: ${{ steps.filter.outputs.e2e }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            api:
-              - 'api/**'
-            web:
-              - 'web/**'
-            docker:
-              - 'docker/**'
-              - 'docker-compose*.yml'
-            e2e:
-              - 'e2e/**'
-              - 'scripts/**'
-              - 'docker/**'
-              - 'docker-compose*.yml'
-              - 'Makefile'
-
   test-api:
     name: Go tests
-    needs: changes
-    if: needs.changes.outputs.api == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -58,8 +27,6 @@ jobs:
 
   test-web:
     name: Frontend tests
-    needs: changes
-    if: needs.changes.outputs.api == 'true' || needs.changes.outputs.web == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -81,8 +48,6 @@ jobs:
 
   test-e2e:
     name: E2E tests
-    needs: changes
-    if: needs.changes.outputs.api == 'true' || needs.changes.outputs.web == 'true' || needs.changes.outputs.e2e == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -100,12 +65,8 @@ jobs:
 
   publish:
     name: Publish Docker images
-    needs: [changes, test-api, test-web, test-e2e]
-    if: >-
-      always()
-      && github.ref == 'refs/heads/main' && github.event_name == 'push'
-      && !contains(needs.*.result, 'failure')
-      && (needs.changes.outputs.api == 'true' || needs.changes.outputs.web == 'true' || needs.changes.outputs.docker == 'true')
+    needs: [test-api, test-web, test-e2e]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -120,7 +81,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push images
-        run: touch .env && IMAGE_TAG=latest docker compose build api web worker && IMAGE_TAG=latest docker compose push api web worker
+        run: touch .env && IMAGE_TAG=latest docker compose build --build-arg COMMIT_SHA=${{ github.sha }} api web worker && IMAGE_TAG=latest docker compose push api web worker
         env:
           POSTGRES_USER: build
           POSTGRES_PASSWORD: build
@@ -133,15 +94,19 @@ jobs:
     needs: publish
     runs-on: ubuntu-latest
     steps:
-      - name: Wait for deployment and check health
+      - name: Wait for new version deployment
         run: |
-          for i in $(seq 1 20); do
-            if curl -sf ${{ secrets.STAGING_URL }}/healthz && curl -sf ${{ secrets.STAGING_URL }}/readyz; then
-              echo "Health checks passed"
+          for i in $(seq 1 30); do
+            COMMIT=$(curl -sf ${{ secrets.STAGING_URL }}/healthz | jq -r '.commit // empty')
+            if [ "$COMMIT" = "${{ github.sha }}" ]; then
+              echo "New version deployed: $COMMIT"
+              # Verify readiness too
+              curl -sf ${{ secrets.STAGING_URL }}/readyz > /dev/null
+              echo "Readiness check passed"
               exit 0
             fi
-            echo "Attempt $i/20 - waiting 10s..."
+            echo "Attempt $i/30 - got '$COMMIT', waiting for ${{ github.sha }}..."
             sleep 10
           done
-          echo "Health checks failed after 200s"
+          echo "New version not deployed after 300s"
           exit 1

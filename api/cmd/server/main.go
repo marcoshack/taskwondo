@@ -29,6 +29,9 @@ import (
 	"github.com/marcoshack/taskwondo/internal/workers"
 )
 
+// commitSHA is set at build time via -ldflags.
+var commitSHA = "dev"
+
 func main() {
 	migrateOnly := flag.Bool("migrate-only", false, "Run migrations and exit")
 	flag.Parse()
@@ -243,7 +246,7 @@ func main() {
 	}()
 
 	// Initialize handlers
-	health := handler.NewHealthHandler(db)
+	health := handler.NewHealthHandler(db, commitSHA)
 	auth := handler.NewAuthHandler(authService, projectService)
 	projects := handler.NewProjectHandler(projectService, cfg.BaseURL)
 	workflows := handler.NewWorkflowHandler(workflowService, projectService)
