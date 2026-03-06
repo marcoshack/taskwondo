@@ -856,6 +856,7 @@
   "workitems.detail.noDescription": "Aucune description. Cliquez pour ajouter.",
   "workitems.detail.properties": "Propriétés",
   "workitems.detail.reporter": "Rapporteur",
+  "workitems.detail.reporterNotMember": "Cet utilisateur est désactivé ou n'est plus membre de ce projet",
   "workitems.detail.resolved": "Résolu",
   "workitems.detail.selectStatus": "Sélectionner un statut...",
   "workitems.detail.statusIncompatible": "Le statut doit être mis à jour pour le workflow du nouveau type.",

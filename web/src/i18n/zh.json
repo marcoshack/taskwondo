@@ -856,6 +856,7 @@
   "workitems.detail.noDescription": "暂无描述。点击添加。",
   "workitems.detail.properties": "属性",
   "workitems.detail.reporter": "报告人",
+  "workitems.detail.reporterNotMember": "此用户已停用或不再是此项目的成员",
   "workitems.detail.resolved": "解决时间",
   "workitems.detail.selectStatus": "选择状态...",
   "workitems.detail.statusIncompatible": "状态必须更新以适配新类型的工作流。",

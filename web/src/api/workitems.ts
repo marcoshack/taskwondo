@@ -23,6 +23,7 @@ export interface WorkItem {
   priority: string
   assignee_id: string | null
   reporter_id: string
+  reporter_name: string
   queue_id: string | null
   milestone_id: string | null
   visibility: string

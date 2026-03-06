@@ -856,6 +856,7 @@
   "workitems.detail.noDescription": "설명 없음. 클릭하여 추가.",
   "workitems.detail.properties": "속성",
   "workitems.detail.reporter": "보고자",
+  "workitems.detail.reporterNotMember": "이 사용자는 비활성화되었거나 이 프로젝트의 멤버가 아닙니다",
   "workitems.detail.resolved": "해결일",
   "workitems.detail.selectStatus": "상태 선택...",
   "workitems.detail.statusIncompatible": "새 유형의 워크플로에 맞게 상태를 업데이트해야 합니다.",

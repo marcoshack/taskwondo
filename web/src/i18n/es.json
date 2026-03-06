@@ -856,6 +856,7 @@
   "workitems.detail.noDescription": "Sin descripción. Clic para agregar.",
   "workitems.detail.properties": "Propiedades",
   "workitems.detail.reporter": "Reportador",
+  "workitems.detail.reporterNotMember": "Este usuario está desactivado o ya no es miembro de este proyecto",
   "workitems.detail.resolved": "Resuelto",
   "workitems.detail.selectStatus": "Seleccionar un estado...",
   "workitems.detail.statusIncompatible": "El estado debe actualizarse para el flujo de trabajo del nuevo tipo.",

@@ -856,6 +856,7 @@
   "workitems.detail.noDescription": "لا يوجد وصف. انقر للإضافة.",
   "workitems.detail.properties": "الخصائص",
   "workitems.detail.reporter": "المُبلّغ",
+  "workitems.detail.reporterNotMember": "هذا المستخدم معطّل أو لم يعد عضوًا في هذا المشروع",
   "workitems.detail.resolved": "تاريخ الحل",
   "workitems.detail.selectStatus": "اختر حالة...",
   "workitems.detail.statusIncompatible": "يجب تحديث الحالة لسير عمل النوع الجديد.",

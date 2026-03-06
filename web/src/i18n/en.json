@@ -292,6 +292,7 @@
   "workitems.deleteSelectedBody_other": "Are you sure you want to delete {{count}} work items? This action cannot be undone.",
 
   "workitems.detail.reporter": "Reporter",
+  "workitems.detail.reporterNotMember": "This user is deactivated or no longer a member of this project",
   "workitems.detail.created": "Created",
   "workitems.detail.updated": "Updated",
   "workitems.detail.resolved": "Resolved",

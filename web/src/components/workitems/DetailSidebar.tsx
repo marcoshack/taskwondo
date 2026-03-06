@@ -11,7 +11,7 @@ import { useTimeEntries } from '@/hooks/useWorkItems'
 import type { WorkflowStatus, Workflow } from '@/api/workflows'
 import type { ProjectMember, ProjectTypeWorkflow } from '@/api/projects'
 import type { Milestone } from '@/api/milestones'
-import { Megaphone, CalendarPlus, History, CheckCircle, Info, Lock, Unlock, Globe } from 'lucide-react'
+import { Megaphone, CalendarPlus, History, CheckCircle, Info, Lock, Unlock, Globe, AlertCircle } from 'lucide-react'
 import { formatRelativeTime } from '@/utils/duration'
 
 interface DetailSidebarProps {
@@ -136,7 +136,12 @@ export function DetailSidebar({ item, projectKey, itemNumber, statuses, allowedT
           <Tooltip content={t('workitems.detail.reporter')}>
             <Megaphone className="h-4 w-4 shrink-0" />
           </Tooltip>
-          <span className="truncate">{members.find((m) => m.user_id === item.reporter_id)?.display_name ?? item.reporter_id}</span>
+          <span className="truncate">{item.reporter_name}</span>
+          {!members.some((m) => m.user_id === item.reporter_id) && (
+            <Tooltip content={t('workitems.detail.reporterNotMember')}>
+              <AlertCircle className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+            </Tooltip>
+          )}
         </div>
         <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
           <Tooltip content={t('workitems.detail.created')}>

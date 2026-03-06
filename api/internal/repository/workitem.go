@@ -82,7 +82,8 @@ func (r *WorkItemRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.
 		`SELECT id, project_id, queue_id, milestone_id, parent_id, item_number, display_id, type, title, description,
 		        status, priority, assignee_id, reporter_id, portal_contact_id, visibility,
 		        labels, complexity, custom_fields, due_date, resolved_at, sla_target_at, estimated_seconds,
-		        created_at, updated_at
+		        created_at, updated_at,
+		        (SELECT display_name FROM users WHERE users.id = work_items.reporter_id) AS reporter_name
 		 FROM work_items
 		 WHERE id = $1 AND deleted_at IS NULL`, id)
 	return scanWorkItem(row)
@@ -94,7 +95,8 @@ func (r *WorkItemRepository) GetByProjectAndNumber(ctx context.Context, projectI
 		`SELECT id, project_id, queue_id, milestone_id, parent_id, item_number, display_id, type, title, description,
 		        status, priority, assignee_id, reporter_id, portal_contact_id, visibility,
 		        labels, complexity, custom_fields, due_date, resolved_at, sla_target_at, estimated_seconds,
-		        created_at, updated_at
+		        created_at, updated_at,
+		        (SELECT display_name FROM users WHERE users.id = work_items.reporter_id) AS reporter_name
 		 FROM work_items
 		 WHERE project_id = $1 AND item_number = $2 AND deleted_at IS NULL`,
 		projectID, itemNumber)
@@ -250,7 +252,8 @@ func (r *WorkItemRepository) List(ctx context.Context, projectID uuid.UUID, filt
 		`SELECT id, project_id, queue_id, milestone_id, parent_id, item_number, display_id, type, title, description,
 		        status, priority, assignee_id, reporter_id, portal_contact_id, visibility,
 		        labels, complexity, custom_fields, due_date, resolved_at, sla_target_at, estimated_seconds,
-		        created_at, updated_at
+		        created_at, updated_at,
+		        (SELECT display_name FROM users WHERE users.id = work_items.reporter_id) AS reporter_name
 		 FROM work_items %s
 		 ORDER BY %s %s, id %s
 		 LIMIT %d`,
@@ -383,18 +386,24 @@ func scanWorkItem(row *sql.Row) (*model.WorkItem, error) {
 		customFieldsRaw  []byte
 	)
 
+	var reporterName sql.NullString
 	err := row.Scan(
 		&item.ID, &item.ProjectID, &queueID, &milestoneID, &parentID, &item.ItemNumber, &item.DisplayID,
 		&item.Type, &item.Title, &description, &item.Status, &item.Priority,
 		&assigneeID, &item.ReporterID, &portalContactID, &item.Visibility,
 		&labels, &complexity, &customFieldsRaw, &dueDate, &resolvedAt, &slaTargetAt, &estimatedSeconds,
 		&item.CreatedAt, &item.UpdatedAt,
+		&reporterName,
 	)
 	if err == sql.ErrNoRows {
 		return nil, model.ErrNotFound
 	}
 	if err != nil {
 		return nil, fmt.Errorf("scanning work item: %w", err)
+	}
+
+	if reporterName.Valid {
+		item.ReporterName = reporterName.String
 	}
 
 	populateWorkItem(&item, description, queueID, milestoneID, parentID, assigneeID,
@@ -423,14 +432,20 @@ func scanWorkItems(rows *sql.Rows) ([]model.WorkItem, error) {
 			customFieldsRaw  []byte
 		)
 
+		var reporterName sql.NullString
 		if err := rows.Scan(
 			&item.ID, &item.ProjectID, &queueID, &milestoneID, &parentID, &item.ItemNumber, &item.DisplayID,
 			&item.Type, &item.Title, &description, &item.Status, &item.Priority,
 			&assigneeID, &item.ReporterID, &portalContactID, &item.Visibility,
 			&labels, &complexity, &customFieldsRaw, &dueDate, &resolvedAt, &slaTargetAt, &estimatedSeconds,
 			&item.CreatedAt, &item.UpdatedAt,
+			&reporterName,
 		); err != nil {
 			return nil, fmt.Errorf("scanning work item row: %w", err)
+		}
+
+		if reporterName.Valid {
+			item.ReporterName = reporterName.String
 		}
 
 		populateWorkItem(&item, description, queueID, milestoneID, parentID, assigneeID,

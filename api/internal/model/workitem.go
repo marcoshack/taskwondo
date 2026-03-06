@@ -46,6 +46,7 @@ type WorkItem struct {
 	Priority        string                 `json:"priority"`
 	AssigneeID      *uuid.UUID             `json:"assignee_id,omitempty"`
 	ReporterID      uuid.UUID              `json:"reporter_id"`
+	ReporterName    string                 `json:"reporter_name"`
 	PortalContactID *uuid.UUID             `json:"portal_contact_id,omitempty"`
 	Visibility      string                 `json:"visibility"`
 	Labels          []string               `json:"labels"`

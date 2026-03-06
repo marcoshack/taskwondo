@@ -65,6 +65,7 @@ type workItemResponse struct {
 	Priority     string                 `json:"priority"`
 	AssigneeID   *uuid.UUID             `json:"assignee_id,omitempty"`
 	ReporterID   uuid.UUID              `json:"reporter_id"`
+	ReporterName string                 `json:"reporter_name"`
 	QueueID      *uuid.UUID             `json:"queue_id,omitempty"`
 	MilestoneID  *uuid.UUID             `json:"milestone_id,omitempty"`
 	Visibility   string                 `json:"visibility"`
@@ -93,6 +94,7 @@ func toWorkItemResponse(item *model.WorkItem, projectKey string) workItemRespons
 		Priority:     item.Priority,
 		AssigneeID:   item.AssigneeID,
 		ReporterID:   item.ReporterID,
+		ReporterName: item.ReporterName,
 		QueueID:      item.QueueID,
 		MilestoneID:  item.MilestoneID,
 		Visibility:   item.Visibility,

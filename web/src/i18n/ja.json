@@ -856,6 +856,7 @@
   "workitems.detail.noDescription": "説明なし。クリックして追加。",
   "workitems.detail.properties": "プロパティ",
   "workitems.detail.reporter": "報告者",
+  "workitems.detail.reporterNotMember": "このユーザーは無効化されているか、このプロジェクトのメンバーではありません",
   "workitems.detail.resolved": "解決日",
   "workitems.detail.selectStatus": "ステータスを選択...",
   "workitems.detail.statusIncompatible": "新しい種別のワークフローに合わせてステータスを更新する必要があります。",
