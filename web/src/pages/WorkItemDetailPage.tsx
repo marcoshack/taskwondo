@@ -428,7 +428,7 @@ export function WorkItemDetailPage() {
             ) : (
               <div className="flex items-center gap-2">
                 <h1
-                  className={`text-xl font-semibold text-gray-900 dark:text-gray-100 rounded px-1 -mx-1 ${readOnly ? '' : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+                  className={`text-xl font-semibold text-gray-900 dark:text-gray-100 rounded px-1 -mx-1 ${readOnly ? '' : 'cursor-pointer border border-transparent hover:border-gray-300 dark:hover:border-gray-600'}`}
                   onClick={readOnly ? undefined : () => { setTitleDraft(item.title); setEditingTitle(true) }}
                 >
                   {item.title}
@@ -495,7 +495,7 @@ export function WorkItemDetailPage() {
               </div>
             ) : (
               <div
-                className="hover:bg-gray-50 dark:hover:bg-gray-800 rounded p-2 -m-2 min-h-[2rem]"
+                className="border border-transparent hover:border-gray-300 dark:hover:border-gray-600 rounded p-2 min-h-[2rem]"
                 onDoubleClick={readOnly ? undefined : () => { setDescDraft(item.description ?? ''); setEditingDesc(true) }}
               >
                 {item.description ? (
