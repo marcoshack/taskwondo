@@ -33,6 +33,7 @@ async function createSecondUser(
 
 /**
  * Helper: poll Mailpit for a message matching the recipient, with timeout.
+ * Uses Mailpit search API to avoid race conditions with parallel tests.
  */
 async function waitForMailTo(
   request: any,
@@ -41,11 +42,8 @@ async function waitForMailTo(
 ): Promise<{ ID: string; Subject: string; To: { Address: string }[] }> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
-    const messages = await api.getMailpitMessages(request);
-    const match = messages.find((m: any) =>
-      m.To.some((t: any) => t.Address === recipientEmail),
-    );
-    if (match) return match;
+    const messages = await api.searchMailpitMessages(request, `to:${recipientEmail}`);
+    if (messages.length > 0) return messages[0];
     await new Promise((r) => setTimeout(r, 500));
   }
   throw new Error(`No email received by ${recipientEmail} within ${timeoutMs}ms`);
@@ -77,9 +75,6 @@ test.describe('Watcher email notifications', () => {
     testUser,
     testProject,
   }) => {
-    // Clear mailpit
-    await api.deleteMailpitMessages(request);
-
     // Create user B and add to project
     const userB = await createSecondUser(request, testProject.key, testUser.token);
 
@@ -125,9 +120,6 @@ test.describe('Watcher email notifications', () => {
     testUser,
     testProject,
   }) => {
-    // Clear mailpit
-    await api.deleteMailpitMessages(request);
-
     // User A (testUser) creates a work item
     const item = await api.createWorkItem(request, testUser.token, testProject.key, {
       title: 'Watcher self-notification test',
@@ -147,12 +139,8 @@ test.describe('Watcher email notifications', () => {
 
     // Wait briefly and verify no email was sent to user A
     await new Promise((r) => setTimeout(r, 3000));
-    const messages = await api.getMailpitMessages(request);
-    const selfNotification = messages.find((m: any) =>
-      m.To.some((t: any) => t.Address === testUser.email) &&
-      m.Subject.includes(`#${item.item_number}`),
-    );
-    expect(selfNotification).toBeUndefined();
+    const messages = await api.searchMailpitMessages(request, `to:${testUser.email} subject:#${item.item_number}`);
+    expect(messages).toHaveLength(0);
   });
 
   test('watcher with disabled preference does not receive email', async ({
@@ -160,9 +148,6 @@ test.describe('Watcher email notifications', () => {
     testUser,
     testProject,
   }) => {
-    // Clear mailpit
-    await api.deleteMailpitMessages(request);
-
     // Create user B and add to project
     const userB = await createSecondUser(request, testProject.key, testUser.token);
 
@@ -180,14 +165,10 @@ test.describe('Watcher email notifications', () => {
       priority: 'critical',
     });
 
-    // Wait briefly and verify no email was sent
+    // Wait briefly and verify no email was sent to user B
     await new Promise((r) => setTimeout(r, 3000));
-    const messages = await api.getMailpitMessages(request);
-    const watcherEmail = messages.find((m: any) =>
-      m.To.some((t: any) => t.Address === userB.email) &&
-      m.Subject.includes(`#${item.item_number}`),
-    );
-    expect(watcherEmail).toBeUndefined();
+    const messages = await api.searchMailpitMessages(request, `to:${userB.email}`);
+    expect(messages).toHaveLength(0);
 
     // Cleanup
     const adminToken = getAdminToken();
@@ -199,9 +180,6 @@ test.describe('Watcher email notifications', () => {
     testUser,
     testProject,
   }) => {
-    // Clear mailpit
-    await api.deleteMailpitMessages(request);
-
     // Create user B and add to project
     const userB = await createSecondUser(request, testProject.key, testUser.token);
 
@@ -237,8 +215,6 @@ test.describe('Watcher email notifications', () => {
     testUser,
     testProject,
   }) => {
-    // Clear mailpit
-    await api.deleteMailpitMessages(request);
 
     // Create user B and user C
     const userB = await createSecondUser(request, testProject.key, testUser.token);
@@ -279,9 +255,6 @@ test.describe('Watcher email notifications', () => {
     testUser,
     testProject,
   }) => {
-    // Clear mailpit
-    await api.deleteMailpitMessages(request);
-
     // Create user B and add to project
     const userB = await createSecondUser(request, testProject.key, testUser.token);
 
@@ -329,8 +302,6 @@ test.describe('Watcher email notifications', () => {
     testUser,
     testProject,
   }) => {
-    // Clear mailpit
-    await api.deleteMailpitMessages(request);
 
     // Create user B (will be assigned) and user C (watcher)
     const userB = await createSecondUser(request, testProject.key, testUser.token);
@@ -370,9 +341,6 @@ test.describe('Watcher email notifications', () => {
     testUser,
     testProject,
   }) => {
-    // Clear mailpit
-    await api.deleteMailpitMessages(request);
-
     // Create user B and add to project
     const userB = await createSecondUser(request, testProject.key, testUser.token);
 
@@ -398,14 +366,10 @@ test.describe('Watcher email notifications', () => {
     // User A adds a comment
     await api.addComment(request, testUser.token, testProject.key, item.item_number, 'This comment should not trigger an email');
 
-    // Wait briefly and verify no email was sent
+    // Wait briefly and verify no email was sent to user B
     await new Promise((r) => setTimeout(r, 3000));
-    const messages = await api.getMailpitMessages(request);
-    const commentEmail = messages.find((m: any) =>
-      m.To.some((t: any) => t.Address === userB.email) &&
-      m.Subject.includes(`#${item.item_number}`),
-    );
-    expect(commentEmail).toBeUndefined();
+    const messages = await api.searchMailpitMessages(request, `to:${userB.email}`);
+    expect(messages).toHaveLength(0);
 
     // Cleanup
     const adminToken = getAdminToken();

@@ -58,17 +58,18 @@ async function waitForMailTo(
   request: any,
   recipientEmail: string,
   timeoutMs = 15000,
+  subjectContains?: string,
 ): Promise<{ ID: string; Subject: string; To: { Address: string }[] }> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
-    const messages = await api.getMailpitMessages(request);
-    const match = messages.find((m: any) =>
-      m.To.some((t: any) => t.Address === recipientEmail),
-    );
+    const messages = await api.searchMailpitMessages(request, `to:${recipientEmail}`);
+    const match = subjectContains
+      ? messages.find((m: any) => m.Subject.includes(subjectContains))
+      : messages[0];
     if (match) return match;
     await new Promise((r) => setTimeout(r, 500));
   }
-  throw new Error(`No email received by ${recipientEmail} within ${timeoutMs}ms`);
+  throw new Error(`No email received by ${recipientEmail}${subjectContains ? ` with subject containing "${subjectContains}"` : ''} within ${timeoutMs}ms`);
 }
 
 /**
@@ -104,8 +105,6 @@ test.describe('New item created notifications', () => {
     testUser,
     testProject,
   }) => {
-    await api.deleteMailpitMessages(request);
-
     const userB = await createSecondUser(request, testProject.key, testUser.token);
 
     // Enable new_item_created for user B
@@ -136,21 +135,18 @@ test.describe('New item created notifications', () => {
     testUser,
     testProject,
   }) => {
-    await api.deleteMailpitMessages(request);
-
     // Enable new_item_created for the creator
     await setNotificationPrefs(request, testUser.token, testProject.key, { new_item_created: true });
 
-    await api.createWorkItem(request, testUser.token, testProject.key, {
+    const item = await api.createWorkItem(request, testUser.token, testProject.key, {
       title: 'Self-create notification test',
       type: 'task',
     });
 
     await new Promise((r) => setTimeout(r, 3000));
-    const messages = await api.getMailpitMessages(request);
+    const messages = await api.searchMailpitMessages(request, `to:${testUser.email}`);
     const selfNotification = messages.find((m: any) =>
-      m.To.some((t: any) => t.Address === testUser.email) &&
-      m.Subject.includes('New task created'),
+      m.Subject.includes(`#${item.item_number}`) && m.Subject.includes('New task created'),
     );
     expect(selfNotification).toBeUndefined();
   });
@@ -160,8 +156,6 @@ test.describe('New item created notifications', () => {
     testUser,
     testProject,
   }) => {
-    await api.deleteMailpitMessages(request);
-
     const userB = await createSecondUser(request, testProject.key, testUser.token);
 
     // Do NOT enable new_item_created (default is false)
@@ -172,12 +166,8 @@ test.describe('New item created notifications', () => {
     });
 
     await new Promise((r) => setTimeout(r, 3000));
-    const messages = await api.getMailpitMessages(request);
-    const email = messages.find((m: any) =>
-      m.To.some((t: any) => t.Address === userB.email) &&
-      m.Subject.includes('New task created'),
-    );
-    expect(email).toBeUndefined();
+    const messages = await api.searchMailpitMessages(request, `to:${userB.email}`);
+    expect(messages).toHaveLength(0);
 
     const adminToken = getAdminToken();
     await api.deactivateUser(request, adminToken, userB.id).catch(() => {});
@@ -192,8 +182,6 @@ test.describe('Comments on assigned notifications', () => {
     testUser,
     testProject,
   }) => {
-    await api.deleteMailpitMessages(request);
-
     const userB = await createSecondUser(request, testProject.key, testUser.token);
 
     // Enable comments_on_assigned for user B
@@ -206,14 +194,11 @@ test.describe('Comments on assigned notifications', () => {
       assignee_id: userB.id,
     });
 
-    // Clear assignment email first
-    await new Promise((r) => setTimeout(r, 2000));
-    await api.deleteMailpitMessages(request);
-
     // User A comments on the item
     await api.addComment(request, testUser.token, testProject.key, item.item_number, 'Please review this');
 
-    const msg = await waitForMailTo(request, userB.email);
+    // Wait for comment notification (search by subject to skip assignment email)
+    const msg = await waitForMailTo(request, userB.email, 15000, 'New comment');
 
     expect(msg.Subject).toContain(testProject.key);
     expect(msg.Subject).toContain(`#${item.item_number}`);
@@ -232,8 +217,6 @@ test.describe('Comments on assigned notifications', () => {
     testUser,
     testProject,
   }) => {
-    await api.deleteMailpitMessages(request);
-
     // Create work item assigned to testUser (self)
     const item = await api.createWorkItem(request, testUser.token, testProject.key, {
       title: 'Self-comment test',
@@ -244,17 +227,13 @@ test.describe('Comments on assigned notifications', () => {
     // Enable comments_on_assigned for testUser
     await setNotificationPrefs(request, testUser.token, testProject.key, { comments_on_assigned: true });
 
-    await new Promise((r) => setTimeout(r, 2000));
-    await api.deleteMailpitMessages(request);
-
     // testUser comments on their own item
     await api.addComment(request, testUser.token, testProject.key, item.item_number, 'My own comment');
 
     await new Promise((r) => setTimeout(r, 3000));
-    const messages = await api.getMailpitMessages(request);
+    const messages = await api.searchMailpitMessages(request, `to:${testUser.email}`);
     const selfEmail = messages.find((m: any) =>
-      m.To.some((t: any) => t.Address === testUser.email) &&
-      m.Subject.includes('New comment'),
+      m.Subject.includes(`#${item.item_number}`) && m.Subject.includes('New comment'),
     );
     expect(selfEmail).toBeUndefined();
   });
@@ -264,8 +243,6 @@ test.describe('Comments on assigned notifications', () => {
     testUser,
     testProject,
   }) => {
-    await api.deleteMailpitMessages(request);
-
     const userB = await createSecondUser(request, testProject.key, testUser.token);
 
     // Do NOT enable comments_on_assigned (default is false)
@@ -276,18 +253,12 @@ test.describe('Comments on assigned notifications', () => {
       assignee_id: userB.id,
     });
 
-    await new Promise((r) => setTimeout(r, 2000));
-    await api.deleteMailpitMessages(request);
-
     await api.addComment(request, testUser.token, testProject.key, item.item_number, 'Should not notify');
 
     await new Promise((r) => setTimeout(r, 3000));
-    const messages = await api.getMailpitMessages(request);
-    const email = messages.find((m: any) =>
-      m.To.some((t: any) => t.Address === userB.email) &&
-      m.Subject.includes('New comment'),
-    );
-    expect(email).toBeUndefined();
+    const messages = await api.searchMailpitMessages(request, `to:${userB.email}`);
+    const commentEmail = messages.find((m: any) => m.Subject.includes('New comment'));
+    expect(commentEmail).toBeUndefined();
 
     const adminToken = getAdminToken();
     await api.deactivateUser(request, adminToken, userB.id).catch(() => {});
@@ -302,8 +273,6 @@ test.describe('Status change (intermediate) notifications', () => {
     testUser,
     testProject,
   }) => {
-    await api.deleteMailpitMessages(request);
-
     const userB = await createSecondUser(request, testProject.key, testUser.token);
 
     // Enable status_changes_intermediate for user B
@@ -316,15 +285,13 @@ test.describe('Status change (intermediate) notifications', () => {
       assignee_id: userB.id,
     });
 
-    await new Promise((r) => setTimeout(r, 2000));
-    await api.deleteMailpitMessages(request);
-
     // User A changes status to in_progress
     await api.updateWorkItem(request, testUser.token, testProject.key, item.item_number, {
       status: 'in_progress',
     });
 
-    const msg = await waitForMailTo(request, userB.email);
+    // Wait for status change email specifically
+    const msg = await waitForMailTo(request, userB.email, 15000, 'status changed');
 
     expect(msg.Subject).toContain(testProject.key);
     expect(msg.Subject).toContain(`#${item.item_number}`);
@@ -343,8 +310,6 @@ test.describe('Status change (intermediate) notifications', () => {
     testUser,
     testProject,
   }) => {
-    await api.deleteMailpitMessages(request);
-
     // Create work item assigned to testUser
     const item = await api.createWorkItem(request, testUser.token, testProject.key, {
       title: 'Self-status change test',
@@ -354,19 +319,15 @@ test.describe('Status change (intermediate) notifications', () => {
 
     await setNotificationPrefs(request, testUser.token, testProject.key, { status_changes_intermediate: true });
 
-    await new Promise((r) => setTimeout(r, 2000));
-    await api.deleteMailpitMessages(request);
-
     // testUser changes their own item's status
     await api.updateWorkItem(request, testUser.token, testProject.key, item.item_number, {
       status: 'in_progress',
     });
 
     await new Promise((r) => setTimeout(r, 3000));
-    const messages = await api.getMailpitMessages(request);
+    const messages = await api.searchMailpitMessages(request, `to:${testUser.email}`);
     const selfEmail = messages.find((m: any) =>
-      m.To.some((t: any) => t.Address === testUser.email) &&
-      m.Subject.includes('status changed'),
+      m.Subject.includes(`#${item.item_number}`) && m.Subject.includes('status changed'),
     );
     expect(selfEmail).toBeUndefined();
   });
@@ -380,8 +341,6 @@ test.describe('Status change (final) notifications', () => {
     testUser,
     testProject,
   }) => {
-    await api.deleteMailpitMessages(request);
-
     const userB = await createSecondUser(request, testProject.key, testUser.token);
 
     // Enable status_changes_final for user B
@@ -394,27 +353,19 @@ test.describe('Status change (final) notifications', () => {
       assignee_id: userB.id,
     });
 
-    await new Promise((r) => setTimeout(r, 2000));
-    await api.deleteMailpitMessages(request);
-
     // Move through workflow: open → in_progress → in_review → done
     await api.updateWorkItem(request, testUser.token, testProject.key, item.item_number, {
       status: 'in_progress',
     });
-    await new Promise((r) => setTimeout(r, 2000));
-    await api.deleteMailpitMessages(request);
-
     await api.updateWorkItem(request, testUser.token, testProject.key, item.item_number, {
       status: 'in_review',
     });
-    await new Promise((r) => setTimeout(r, 2000));
-    await api.deleteMailpitMessages(request);
-
     await api.updateWorkItem(request, testUser.token, testProject.key, item.item_number, {
       status: 'done',
     });
 
-    const msg = await waitForMailTo(request, userB.email);
+    // Wait for "done" status change email specifically
+    const msg = await waitForMailTo(request, userB.email, 15000, 'done');
 
     expect(msg.Subject).toContain(testProject.key);
     expect(msg.Subject).toContain(`#${item.item_number}`);
@@ -433,8 +384,6 @@ test.describe('Status change (final) notifications', () => {
     testUser,
     testProject,
   }) => {
-    await api.deleteMailpitMessages(request);
-
     const userB = await createSecondUser(request, testProject.key, testUser.token);
 
     // Only enable intermediate, NOT final
@@ -446,34 +395,24 @@ test.describe('Status change (final) notifications', () => {
       assignee_id: userB.id,
     });
 
-    await new Promise((r) => setTimeout(r, 2000));
-    await api.deleteMailpitMessages(request);
-
     // Move to in_progress (should send) then in_review → done (should NOT send final)
     await api.updateWorkItem(request, testUser.token, testProject.key, item.item_number, {
       status: 'in_progress',
     });
 
     // Wait for intermediate email
-    await waitForMailTo(request, userB.email);
-    await api.deleteMailpitMessages(request);
+    await waitForMailTo(request, userB.email, 15000, 'status changed');
 
     await api.updateWorkItem(request, testUser.token, testProject.key, item.item_number, {
       status: 'in_review',
     });
-    await new Promise((r) => setTimeout(r, 2000));
-    await api.deleteMailpitMessages(request);
-
     await api.updateWorkItem(request, testUser.token, testProject.key, item.item_number, {
       status: 'done',
     });
 
     await new Promise((r) => setTimeout(r, 3000));
-    const messages = await api.getMailpitMessages(request);
-    const doneEmail = messages.find((m: any) =>
-      m.To.some((t: any) => t.Address === userB.email) &&
-      m.Subject.includes('done'),
-    );
+    const messages = await api.searchMailpitMessages(request, `to:${userB.email}`);
+    const doneEmail = messages.find((m: any) => m.Subject.includes('done'));
     expect(doneEmail).toBeUndefined();
 
     const adminToken = getAdminToken();
@@ -502,12 +441,10 @@ test.describe('Added to project notifications', () => {
     // Remove user B
     await api.removeMember(request, testUser.token, testProject.key, userB.id);
 
-    await api.deleteMailpitMessages(request);
-
     // Re-add user B — should get email
     await api.addMember(request, testUser.token, testProject.key, userB.id, 'member');
 
-    const msg = await waitForMailTo(request, userB.email);
+    const msg = await waitForMailTo(request, userB.email, 15000, 'added');
 
     expect(msg.Subject).toContain(testProject.name);
     expect(msg.Subject).toContain('added to project');
@@ -525,8 +462,6 @@ test.describe('Added to project notifications', () => {
     testUser,
     testProject,
   }) => {
-    await api.deleteMailpitMessages(request);
-
     // Create standalone user — default is false (opt-in), so no email expected
     const userB = await createStandaloneUser(request);
 
@@ -534,12 +469,8 @@ test.describe('Added to project notifications', () => {
     await api.addMember(request, testUser.token, testProject.key, userB.id, 'member');
 
     await new Promise((r) => setTimeout(r, 3000));
-    const messages = await api.getMailpitMessages(request);
-    const email = messages.find((m: any) =>
-      m.To.some((t: any) => t.Address === userB.email) &&
-      m.Subject.includes('added to project'),
-    );
-    expect(email).toBeUndefined();
+    const messages = await api.searchMailpitMessages(request, `to:${userB.email}`);
+    expect(messages).toHaveLength(0);
 
     const adminToken = getAdminToken();
     await api.deactivateUser(request, adminToken, userB.id).catch(() => {});

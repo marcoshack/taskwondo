@@ -37,15 +37,12 @@ async function createSecondUser(
 async function waitForMailTo(
   request: any,
   recipientEmail: string,
-  timeoutMs = 10000,
+  timeoutMs = 15000,
 ): Promise<{ ID: string; Subject: string; To: { Address: string }[] }> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
-    const messages = await api.getMailpitMessages(request);
-    const match = messages.find((m: any) =>
-      m.To.some((t: any) => t.Address === recipientEmail),
-    );
-    if (match) return match;
+    const messages = await api.searchMailpitMessages(request, `to:${recipientEmail}`);
+    if (messages.length > 0) return messages[0];
     await new Promise((r) => setTimeout(r, 500));
   }
   throw new Error(`No email received by ${recipientEmail} within ${timeoutMs}ms`);
@@ -57,8 +54,6 @@ test.describe('Localized notification emails', () => {
     testUser,
     testProject,
   }) => {
-    await api.deleteMailpitMessages(request);
-
     // Create user B and add to project
     const userB = await createSecondUser(request, testProject.key, testUser.token);
 
@@ -95,8 +90,6 @@ test.describe('Localized notification emails', () => {
     testUser,
     testProject,
   }) => {
-    await api.deleteMailpitMessages(request);
-
     // Create user B without setting language preference
     const userB = await createSecondUser(request, testProject.key, testUser.token);
 

@@ -37,15 +37,12 @@ async function createSecondUser(
 async function waitForMailTo(
   request: any,
   recipientEmail: string,
-  timeoutMs = 10000,
+  timeoutMs = 15000,
 ): Promise<{ ID: string; Subject: string; To: { Address: string }[] }> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
-    const messages = await api.getMailpitMessages(request);
-    const match = messages.find((m: any) =>
-      m.To.some((t: any) => t.Address === recipientEmail),
-    );
-    if (match) return match;
+    const messages = await api.searchMailpitMessages(request, `to:${recipientEmail}`);
+    if (messages.length > 0) return messages[0];
     await new Promise((r) => setTimeout(r, 500));
   }
   throw new Error(`No email received by ${recipientEmail} within ${timeoutMs}ms`);
@@ -57,9 +54,6 @@ test.describe('Assignment email notifications', () => {
     testUser,
     testProject,
   }) => {
-    // Clear mailpit
-    await api.deleteMailpitMessages(request);
-
     // Create user B and add to project
     const userB = await createSecondUser(request, testProject.key, testUser.token);
 
@@ -94,9 +88,6 @@ test.describe('Assignment email notifications', () => {
     testUser,
     testProject,
   }) => {
-    // Clear mailpit
-    await api.deleteMailpitMessages(request);
-
     // Create user B and add to project
     const userB = await createSecondUser(request, testProject.key, testUser.token);
 
@@ -107,11 +98,8 @@ test.describe('Assignment email notifications', () => {
     });
 
     // Verify no email was sent yet
-    const earlyMessages = await api.getMailpitMessages(request);
-    const earlyMatch = earlyMessages.find((m: any) =>
-      m.To.some((t: any) => t.Address === userB.email),
-    );
-    expect(earlyMatch).toBeUndefined();
+    const earlyMessages = await api.searchMailpitMessages(request, `to:${userB.email}`);
+    expect(earlyMessages).toHaveLength(0);
 
     // Now assign user B via update
     await api.updateWorkItem(request, testUser.token, testProject.key, item.item_number, {
