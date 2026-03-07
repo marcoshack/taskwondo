@@ -1,0 +1,34 @@
+{
+  "email.assignment.subject": "[{{projectKey}}] Elemento de trabajo #{{itemNumber}} asignado a ti: {{title}}",
+  "email.assignment.intro": "<strong>{{assignerName}}</strong> te asignó un elemento de trabajo en <strong>{{projectName}}</strong>:",
+  "email.assignment.cta": "Ver Elemento de Trabajo",
+  "email.assignment.footer": "Recibiste este correo porque tienes las notificaciones de asignación activadas para este proyecto. Puedes cambiar tus preferencias de notificación en la configuración de Taskwondo.",
+
+  "email.watcher.subject": "[{{projectKey}}] #{{itemNumber}} actualizado: {{title}}",
+  "email.watcher.intro": "<strong>{{actorName}}</strong> actualizó un elemento de trabajo que estás siguiendo:",
+  "email.watcher.field_changed": "{{fieldName}} cambió de <strong>{{oldValue}}</strong> a <strong>{{newValue}}</strong>",
+  "email.watcher.field_set": "{{fieldName}} establecido como <strong>{{newValue}}</strong>",
+  "email.watcher.cta": "Ver Elemento de Trabajo",
+  "email.watcher.footer": "Recibiste este correo porque estás siguiendo este elemento de trabajo y tienes las notificaciones de seguimiento activadas. Puedes cambiar tus preferencias de notificación en la configuración de Taskwondo.",
+
+  "email.new_item.subject": "[{{projectKey}}] Nuevo(a) {{type}} creado(a): {{displayId}} {{title}}",
+  "email.new_item.intro": "Se creó un(a) nuevo(a) <strong>{{type}}</strong> en tu proyecto:",
+  "email.new_item.cta": "Ver Elemento de Trabajo",
+  "email.new_item.footer": "Recibiste este correo porque tienes las notificaciones de nuevos elementos activadas para este proyecto. Puedes cambiar tus preferencias de notificación en la configuración de Taskwondo.",
+
+  "email.status_change.subject": "[{{projectKey}}] #{{itemNumber}} estado cambiado a {{newStatus}}: {{title}}",
+  "email.status_change.intro": "<strong>{{actorName}}</strong> cambió el estado de un elemento de trabajo asignado a ti:",
+  "email.status_change.status": "Estado: <strong>{{oldStatus}}</strong> \u2192 <strong>{{newStatus}}</strong>",
+  "email.status_change.cta": "Ver Elemento de Trabajo",
+  "email.status_change.footer": "Recibiste este correo porque tienes las notificaciones de cambio de estado activadas para elementos asignados. Puedes cambiar tus preferencias de notificación en la configuración de Taskwondo.",
+
+  "email.comment_assigned.subject": "[{{projectKey}}] Nuevo comentario en #{{itemNumber}}: {{title}}",
+  "email.comment_assigned.intro": "<strong>{{commenterName}}</strong> comentó en un elemento de trabajo asignado a ti:",
+  "email.comment_assigned.cta": "Ver Elemento de Trabajo",
+  "email.comment_assigned.footer": "Recibiste este correo porque tienes las notificaciones de comentarios activadas para elementos asignados. Puedes cambiar tus preferencias de notificación en la configuración de Taskwondo.",
+
+  "email.member_added.subject": "Has sido añadido(a) al proyecto {{projectName}}",
+  "email.member_added.intro": "<strong>{{addedByName}}</strong> te añadió al proyecto <strong>{{projectName}}</strong> como <strong>{{role}}</strong>.",
+  "email.member_added.cta": "Ver Proyecto",
+  "email.member_added.footer": "Recibiste este correo porque tienes las notificaciones de membresía de proyecto activadas. Puedes cambiar tus preferencias de notificación en la configuración de Taskwondo."
+}

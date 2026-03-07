@@ -1,0 +1,34 @@
+{
+  "email.assignment.subject": "[{{projectKey}}] Work item #{{itemNumber}} assigned to you: {{title}}",
+  "email.assignment.intro": "<strong>{{assignerName}}</strong> assigned a work item to you in <strong>{{projectName}}</strong>:",
+  "email.assignment.cta": "View Work Item",
+  "email.assignment.footer": "You received this email because you have assignment notifications enabled for this project. You can change your notification preferences in your Taskwondo settings.",
+
+  "email.watcher.subject": "[{{projectKey}}] #{{itemNumber}} updated: {{title}}",
+  "email.watcher.intro": "<strong>{{actorName}}</strong> updated a work item you are watching:",
+  "email.watcher.field_changed": "{{fieldName}} changed from <strong>{{oldValue}}</strong> to <strong>{{newValue}}</strong>",
+  "email.watcher.field_set": "{{fieldName}} set to <strong>{{newValue}}</strong>",
+  "email.watcher.cta": "View Work Item",
+  "email.watcher.footer": "You received this email because you are watching this work item and have watcher notifications enabled. You can change your notification preferences in your Taskwondo settings.",
+
+  "email.new_item.subject": "[{{projectKey}}] New {{type}} created: {{displayId}} {{title}}",
+  "email.new_item.intro": "A new <strong>{{type}}</strong> was created in your project:",
+  "email.new_item.cta": "View Work Item",
+  "email.new_item.footer": "You received this email because you have new item notifications enabled for this project. You can change your notification preferences in your Taskwondo settings.",
+
+  "email.status_change.subject": "[{{projectKey}}] #{{itemNumber}} status changed to {{newStatus}}: {{title}}",
+  "email.status_change.intro": "<strong>{{actorName}}</strong> changed the status of a work item assigned to you:",
+  "email.status_change.status": "Status: <strong>{{oldStatus}}</strong> \u2192 <strong>{{newStatus}}</strong>",
+  "email.status_change.cta": "View Work Item",
+  "email.status_change.footer": "You received this email because you have status change notifications enabled for assigned items. You can change your notification preferences in your Taskwondo settings.",
+
+  "email.comment_assigned.subject": "[{{projectKey}}] New comment on #{{itemNumber}}: {{title}}",
+  "email.comment_assigned.intro": "<strong>{{commenterName}}</strong> commented on a work item assigned to you:",
+  "email.comment_assigned.cta": "View Work Item",
+  "email.comment_assigned.footer": "You received this email because you have comment notifications enabled for assigned items. You can change your notification preferences in your Taskwondo settings.",
+
+  "email.member_added.subject": "You've been added to project {{projectName}}",
+  "email.member_added.intro": "<strong>{{addedByName}}</strong> added you to the project <strong>{{projectName}}</strong> as a <strong>{{role}}</strong>.",
+  "email.member_added.cta": "View Project",
+  "email.member_added.footer": "You received this email because you have project membership notifications enabled. You can change your notification preferences in your Taskwondo settings."
+}

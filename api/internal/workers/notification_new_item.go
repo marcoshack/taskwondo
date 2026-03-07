@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 
+	"github.com/marcoshack/taskwondo/internal/i18n"
 	"github.com/marcoshack/taskwondo/internal/model"
 )
 
@@ -77,10 +78,15 @@ func (t *NotificationNewItemTask) Execute(ctx context.Context, payload []byte) e
 			continue
 		}
 
-		subject := fmt.Sprintf("[%s] New %s created: %s-%d %s",
-			evt.ProjectKey, evt.Type, evt.ProjectKey, evt.ItemNumber, evt.Title)
+		lang := getUserLanguage(ctx, t.settings, m.UserID)
 
-		body := newItemEmailHTML(evt.ProjectKey, evt.ItemNumber, evt.Title, evt.Type, itemURL)
+		subject := i18n.T(lang, "email.new_item.subject",
+			"projectKey", evt.ProjectKey,
+			"type", evt.Type,
+			"displayId", fmt.Sprintf("%s-%d", evt.ProjectKey, evt.ItemNumber),
+			"title", evt.Title)
+
+		body := newItemEmailHTML(lang, evt.ProjectKey, evt.ItemNumber, evt.Title, evt.Type, itemURL)
 
 		if err := t.sender.Send(ctx, m.Email, subject, body); err != nil {
 			l.Error().Err(err).Str("to", m.Email).Msg("failed to send new item notification")
@@ -107,24 +113,8 @@ func (t *NotificationNewItemTask) isEnabled(ctx context.Context, userID, project
 	return prefs.NewItemCreated
 }
 
-func newItemEmailHTML(projectKey string, itemNumber int, title, itemType, itemURL string) string {
-	return fmt.Sprintf(`<!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"></head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="border-bottom: 3px solid #2563eb; padding-bottom: 16px; margin-bottom: 24px;">
-    <h2 style="margin: 0; color: #2563eb;">Taskwondo</h2>
-  </div>
-  <p>A new <strong>%s</strong> was created in your project:</p>
-  <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 16px 0;">
-    <p style="margin: 0 0 8px 0; font-size: 14px; color: #64748b;">%s-%d</p>
-    <p style="margin: 0; font-size: 18px; font-weight: 600;">%s</p>
-  </div>
-  <p>
-    <a href="%s" style="display: inline-block; background: #2563eb; color: #ffffff; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 500;">View Work Item</a>
-  </p>
-  <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;">
-  <p style="font-size: 12px; color: #94a3b8;">You received this email because you have new item notifications enabled for this project. You can change your notification preferences in your Taskwondo settings.</p>
-</body>
-</html>`, itemType, projectKey, itemNumber, title, itemURL)
+func newItemEmailHTML(lang, projectKey string, itemNumber int, title, itemType, itemURL string) string {
+	intro := i18n.T(lang, "email.new_item.intro", "type", itemType)
+	content := fmt.Sprintf("<p>%s</p>\n  %s", intro, itemCard(projectKey, itemNumber, title, ""))
+	return emailHTML(lang, "email.new_item.cta", itemURL, "email.new_item.footer", content)
 }

@@ -3,6 +3,7 @@ package workers
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -10,6 +11,11 @@ import (
 
 	"github.com/marcoshack/taskwondo/internal/model"
 )
+
+// languageKey returns a settings map key for a user's language preference (nil projectID).
+func languageKey(userID uuid.UUID) string {
+	return userID.String() + "language"
+}
 
 // mockUserRepo is a test double for userRepository.
 type mockUserRepo struct {
@@ -167,6 +173,60 @@ func TestNotificationAssignment_DisabledPreference(t *testing.T) {
 
 	if len(sender.sent) != 0 {
 		t.Fatalf("expected 0 emails when disabled, got %d", len(sender.sent))
+	}
+}
+
+func TestNotificationAssignment_LanguagePreference(t *testing.T) {
+	assigneeID := uuid.New()
+	assignerID := uuid.New()
+	projectID := uuid.New()
+
+	users := &mockUserRepo{users: map[uuid.UUID]*model.User{
+		assigneeID: {ID: assigneeID, Email: "assignee@example.com", DisplayName: "Alice"},
+		assignerID: {ID: assignerID, Email: "assigner@example.com", DisplayName: "Bob"},
+	}}
+	projects := &mockProjectRepo{projects: map[uuid.UUID]*model.Project{
+		projectID: {ID: projectID, Name: "Test Project", Key: "TP"},
+	}}
+
+	// Set language to Portuguese
+	langJSON, _ := json.Marshal("pt")
+	settings := &mockUserSettingRepo{settings: map[string]*model.UserSetting{
+		languageKey(assigneeID): {
+			UserID: assigneeID,
+			Key:    "language",
+			Value:  langJSON,
+		},
+	}}
+	sender := &mockEmailSender{}
+
+	task := newTestAssignmentTask(users, projects, settings, sender)
+
+	evt := model.AssignmentEvent{
+		WorkItemID: uuid.New(),
+		ProjectKey: "TP",
+		ItemNumber: 42,
+		Title:      "Fix the bug",
+		AssigneeID: assigneeID,
+		AssignerID: assignerID,
+		ProjectID:  projectID,
+	}
+	payload, _ := json.Marshal(evt)
+
+	if err := task.Execute(context.Background(), payload); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(sender.sent) != 1 {
+		t.Fatalf("expected 1 email, got %d", len(sender.sent))
+	}
+	// Subject should be in Portuguese
+	if !strings.Contains(sender.sent[0].subject, "atribuído a você") {
+		t.Errorf("expected Portuguese subject, got %s", sender.sent[0].subject)
+	}
+	// Body should contain Portuguese CTA
+	if !strings.Contains(sender.sent[0].body, "Ver Item de Trabalho") {
+		t.Errorf("expected Portuguese CTA in body, got %s", sender.sent[0].body)
 	}
 }
 

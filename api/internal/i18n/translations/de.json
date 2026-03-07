@@ -1,0 +1,34 @@
+{
+  "email.assignment.subject": "[{{projectKey}}] Arbeitselement #{{itemNumber}} wurde Ihnen zugewiesen: {{title}}",
+  "email.assignment.intro": "<strong>{{assignerName}}</strong> hat Ihnen ein Arbeitselement in <strong>{{projectName}}</strong> zugewiesen:",
+  "email.assignment.cta": "Arbeitselement ansehen",
+  "email.assignment.footer": "Sie haben diese E-Mail erhalten, weil Sie Zuweisungsbenachrichtigungen für dieses Projekt aktiviert haben. Sie können Ihre Benachrichtigungseinstellungen in den Taskwondo-Einstellungen ändern.",
+
+  "email.watcher.subject": "[{{projectKey}}] #{{itemNumber}} aktualisiert: {{title}}",
+  "email.watcher.intro": "<strong>{{actorName}}</strong> hat ein Arbeitselement aktualisiert, das Sie beobachten:",
+  "email.watcher.field_changed": "{{fieldName}} geändert von <strong>{{oldValue}}</strong> zu <strong>{{newValue}}</strong>",
+  "email.watcher.field_set": "{{fieldName}} gesetzt auf <strong>{{newValue}}</strong>",
+  "email.watcher.cta": "Arbeitselement ansehen",
+  "email.watcher.footer": "Sie haben diese E-Mail erhalten, weil Sie dieses Arbeitselement beobachten und Beobachter-Benachrichtigungen aktiviert haben. Sie können Ihre Benachrichtigungseinstellungen in den Taskwondo-Einstellungen ändern.",
+
+  "email.new_item.subject": "[{{projectKey}}] Neues {{type}} erstellt: {{displayId}} {{title}}",
+  "email.new_item.intro": "Ein neues <strong>{{type}}</strong> wurde in Ihrem Projekt erstellt:",
+  "email.new_item.cta": "Arbeitselement ansehen",
+  "email.new_item.footer": "Sie haben diese E-Mail erhalten, weil Sie Benachrichtigungen für neue Elemente für dieses Projekt aktiviert haben. Sie können Ihre Benachrichtigungseinstellungen in den Taskwondo-Einstellungen ändern.",
+
+  "email.status_change.subject": "[{{projectKey}}] #{{itemNumber}} Status geändert zu {{newStatus}}: {{title}}",
+  "email.status_change.intro": "<strong>{{actorName}}</strong> hat den Status eines Ihnen zugewiesenen Arbeitselements geändert:",
+  "email.status_change.status": "Status: <strong>{{oldStatus}}</strong> \u2192 <strong>{{newStatus}}</strong>",
+  "email.status_change.cta": "Arbeitselement ansehen",
+  "email.status_change.footer": "Sie haben diese E-Mail erhalten, weil Sie Statusänderungsbenachrichtigungen für zugewiesene Elemente aktiviert haben. Sie können Ihre Benachrichtigungseinstellungen in den Taskwondo-Einstellungen ändern.",
+
+  "email.comment_assigned.subject": "[{{projectKey}}] Neuer Kommentar zu #{{itemNumber}}: {{title}}",
+  "email.comment_assigned.intro": "<strong>{{commenterName}}</strong> hat ein Ihnen zugewiesenes Arbeitselement kommentiert:",
+  "email.comment_assigned.cta": "Arbeitselement ansehen",
+  "email.comment_assigned.footer": "Sie haben diese E-Mail erhalten, weil Sie Kommentarbenachrichtigungen für zugewiesene Elemente aktiviert haben. Sie können Ihre Benachrichtigungseinstellungen in den Taskwondo-Einstellungen ändern.",
+
+  "email.member_added.subject": "Sie wurden zum Projekt {{projectName}} hinzugefügt",
+  "email.member_added.intro": "<strong>{{addedByName}}</strong> hat Sie zum Projekt <strong>{{projectName}}</strong> als <strong>{{role}}</strong> hinzugefügt.",
+  "email.member_added.cta": "Projekt ansehen",
+  "email.member_added.footer": "Sie haben diese E-Mail erhalten, weil Sie Projektmitgliedschaftsbenachrichtigungen aktiviert haben. Sie können Ihre Benachrichtigungseinstellungen in den Taskwondo-Einstellungen ändern."
+}

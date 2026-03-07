@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 
+	"github.com/marcoshack/taskwondo/internal/i18n"
 	"github.com/marcoshack/taskwondo/internal/model"
 )
 
@@ -71,13 +72,17 @@ func (t *NotificationCommentOnAssignedTask) Execute(ctx context.Context, payload
 		return fmt.Errorf("loading commenter: %w", err)
 	}
 
-	subject := fmt.Sprintf("[%s] New comment on #%d: %s",
-		evt.ProjectKey, evt.ItemNumber, evt.Title)
+	lang := getUserLanguage(ctx, t.settings, evt.AssigneeID)
+
+	subject := i18n.T(lang, "email.comment_assigned.subject",
+		"projectKey", evt.ProjectKey,
+		"itemNumber", fmt.Sprintf("%d", evt.ItemNumber),
+		"title", evt.Title)
 
 	itemURL := fmt.Sprintf("%s/projects/%s/items/%d",
 		t.baseURL, evt.ProjectKey, evt.ItemNumber)
 
-	body := commentOnAssignedEmailHTML(commenter.DisplayName, evt.ProjectKey, evt.ItemNumber, evt.Title, evt.Preview, itemURL)
+	body := commentOnAssignedEmailHTML(lang, commenter.DisplayName, evt.ProjectKey, evt.ItemNumber, evt.Title, evt.Preview, itemURL)
 
 	if err := t.sender.Send(ctx, assignee.Email, subject, body); err != nil {
 		return fmt.Errorf("sending comment on assigned email: %w", err)
@@ -101,25 +106,9 @@ func (t *NotificationCommentOnAssignedTask) isEnabled(ctx context.Context, userI
 	return prefs.CommentsOnAssigned
 }
 
-func commentOnAssignedEmailHTML(commenterName, projectKey string, itemNumber int, title, preview, itemURL string) string {
-	return fmt.Sprintf(`<!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"></head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="border-bottom: 3px solid #2563eb; padding-bottom: 16px; margin-bottom: 24px;">
-    <h2 style="margin: 0; color: #2563eb;">Taskwondo</h2>
-  </div>
-  <p><strong>%s</strong> commented on a work item assigned to you:</p>
-  <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 16px 0;">
-    <p style="margin: 0 0 8px 0; font-size: 14px; color: #64748b;">%s-%d</p>
-    <p style="margin: 0 0 12px 0; font-size: 18px; font-weight: 600;">%s</p>
-    <p style="margin: 0; font-size: 14px; color: #475569; font-style: italic;">"%s"</p>
-  </div>
-  <p>
-    <a href="%s" style="display: inline-block; background: #2563eb; color: #ffffff; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 500;">View Work Item</a>
-  </p>
-  <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;">
-  <p style="font-size: 12px; color: #94a3b8;">You received this email because you have comment notifications enabled for assigned items. You can change your notification preferences in your Taskwondo settings.</p>
-</body>
-</html>`, commenterName, projectKey, itemNumber, title, preview, itemURL)
+func commentOnAssignedEmailHTML(lang, commenterName, projectKey string, itemNumber int, title, preview, itemURL string) string {
+	intro := i18n.T(lang, "email.comment_assigned.intro", "commenterName", commenterName)
+	previewHTML := fmt.Sprintf(`<span style="font-style: italic;">"%s"</span>`, preview)
+	content := fmt.Sprintf("<p>%s</p>\n  %s", intro, itemCard(projectKey, itemNumber, title, previewHTML))
+	return emailHTML(lang, "email.comment_assigned.cta", itemURL, "email.comment_assigned.footer", content)
 }

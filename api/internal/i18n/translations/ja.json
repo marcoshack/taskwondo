@@ -1,0 +1,34 @@
+{
+  "email.assignment.subject": "[{{projectKey}}] 作業項目 #{{itemNumber}} があなたに割り当てられました: {{title}}",
+  "email.assignment.intro": "<strong>{{assignerName}}</strong> が <strong>{{projectName}}</strong> の作業項目をあなたに割り当てました:",
+  "email.assignment.cta": "作業項目を表示",
+  "email.assignment.footer": "このメールは、このプロジェクトの割り当て通知が有効になっているために送信されました。通知設定はTaskwondoの設定で変更できます。",
+
+  "email.watcher.subject": "[{{projectKey}}] #{{itemNumber}} が更新されました: {{title}}",
+  "email.watcher.intro": "<strong>{{actorName}}</strong> があなたがウォッチしている作業項目を更新しました:",
+  "email.watcher.field_changed": "{{fieldName}} が <strong>{{oldValue}}</strong> から <strong>{{newValue}}</strong> に変更されました",
+  "email.watcher.field_set": "{{fieldName}} が <strong>{{newValue}}</strong> に設定されました",
+  "email.watcher.cta": "作業項目を表示",
+  "email.watcher.footer": "このメールは、この作業項目をウォッチしており、ウォッチャー通知が有効になっているために送信されました。通知設定はTaskwondoの設定で変更できます。",
+
+  "email.new_item.subject": "[{{projectKey}}] 新しい{{type}}が作成されました: {{displayId}} {{title}}",
+  "email.new_item.intro": "プロジェクトに新しい<strong>{{type}}</strong>が作成されました:",
+  "email.new_item.cta": "作業項目を表示",
+  "email.new_item.footer": "このメールは、このプロジェクトの新規項目通知が有効になっているために送信されました。通知設定はTaskwondoの設定で変更できます。",
+
+  "email.status_change.subject": "[{{projectKey}}] #{{itemNumber}} のステータスが {{newStatus}} に変更されました: {{title}}",
+  "email.status_change.intro": "<strong>{{actorName}}</strong> があなたに割り当てられた作業項目のステータスを変更しました:",
+  "email.status_change.status": "ステータス: <strong>{{oldStatus}}</strong> \u2192 <strong>{{newStatus}}</strong>",
+  "email.status_change.cta": "作業項目を表示",
+  "email.status_change.footer": "このメールは、割り当てられた項目のステータス変更通知が有効になっているために送信されました。通知設定はTaskwondoの設定で変更できます。",
+
+  "email.comment_assigned.subject": "[{{projectKey}}] #{{itemNumber}} に新しいコメント: {{title}}",
+  "email.comment_assigned.intro": "<strong>{{commenterName}}</strong> があなたに割り当てられた作業項目にコメントしました:",
+  "email.comment_assigned.cta": "作業項目を表示",
+  "email.comment_assigned.footer": "このメールは、割り当てられた項目のコメント通知が有効になっているために送信されました。通知設定はTaskwondoの設定で変更できます。",
+
+  "email.member_added.subject": "プロジェクト {{projectName}} に追加されました",
+  "email.member_added.intro": "<strong>{{addedByName}}</strong> があなたをプロジェクト <strong>{{projectName}}</strong> に <strong>{{role}}</strong> として追加しました。",
+  "email.member_added.cta": "プロジェクトを表示",
+  "email.member_added.footer": "このメールは、プロジェクトメンバーシップ通知が有効になっているために送信されました。通知設定はTaskwondoの設定で変更できます。"
+}

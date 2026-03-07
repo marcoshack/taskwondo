@@ -1,0 +1,34 @@
+{
+  "email.assignment.subject": "[{{projectKey}}] 工作项 #{{itemNumber}} 已分配给您: {{title}}",
+  "email.assignment.intro": "<strong>{{assignerName}}</strong> 在 <strong>{{projectName}}</strong> 中将一个工作项分配给了您:",
+  "email.assignment.cta": "查看工作项",
+  "email.assignment.footer": "您收到此邮件是因为您已为此项目启用了分配通知。您可以在 Taskwondo 设置中更改通知偏好。",
+
+  "email.watcher.subject": "[{{projectKey}}] #{{itemNumber}} 已更新: {{title}}",
+  "email.watcher.intro": "<strong>{{actorName}}</strong> 更新了您关注的工作项:",
+  "email.watcher.field_changed": "{{fieldName}} 从 <strong>{{oldValue}}</strong> 更改为 <strong>{{newValue}}</strong>",
+  "email.watcher.field_set": "{{fieldName}} 设置为 <strong>{{newValue}}</strong>",
+  "email.watcher.cta": "查看工作项",
+  "email.watcher.footer": "您收到此邮件是因为您正在关注此工作项并已启用关注者通知。您可以在 Taskwondo 设置中更改通知偏好。",
+
+  "email.new_item.subject": "[{{projectKey}}] 新{{type}}已创建: {{displayId}} {{title}}",
+  "email.new_item.intro": "您的项目中创建了一个新的<strong>{{type}}</strong>:",
+  "email.new_item.cta": "查看工作项",
+  "email.new_item.footer": "您收到此邮件是因为您已为此项目启用了新项目通知。您可以在 Taskwondo 设置中更改通知偏好。",
+
+  "email.status_change.subject": "[{{projectKey}}] #{{itemNumber}} 状态已更改为 {{newStatus}}: {{title}}",
+  "email.status_change.intro": "<strong>{{actorName}}</strong> 更改了分配给您的工作项的状态:",
+  "email.status_change.status": "状态: <strong>{{oldStatus}}</strong> \u2192 <strong>{{newStatus}}</strong>",
+  "email.status_change.cta": "查看工作项",
+  "email.status_change.footer": "您收到此邮件是因为您已为分配的项目启用了状态更改通知。您可以在 Taskwondo 设置中更改通知偏好。",
+
+  "email.comment_assigned.subject": "[{{projectKey}}] #{{itemNumber}} 有新评论: {{title}}",
+  "email.comment_assigned.intro": "<strong>{{commenterName}}</strong> 对分配给您的工作项发表了评论:",
+  "email.comment_assigned.cta": "查看工作项",
+  "email.comment_assigned.footer": "您收到此邮件是因为您已为分配的项目启用了评论通知。您可以在 Taskwondo 设置中更改通知偏好。",
+
+  "email.member_added.subject": "您已被添加到项目 {{projectName}}",
+  "email.member_added.intro": "<strong>{{addedByName}}</strong> 将您添加到了项目 <strong>{{projectName}}</strong>,角色为 <strong>{{role}}</strong>。",
+  "email.member_added.cta": "查看项目",
+  "email.member_added.footer": "您收到此邮件是因为您已启用了项目成员通知。您可以在 Taskwondo 设置中更改通知偏好。"
+}

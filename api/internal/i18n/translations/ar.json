@@ -1,0 +1,34 @@
+{
+  "email.assignment.subject": "[{{projectKey}}] عنصر العمل #{{itemNumber}} تم تعيينه لك: {{title}}",
+  "email.assignment.intro": "قام <strong>{{assignerName}}</strong> بتعيين عنصر عمل لك في <strong>{{projectName}}</strong>:",
+  "email.assignment.cta": "عرض عنصر العمل",
+  "email.assignment.footer": "لقد تلقيت هذا البريد الإلكتروني لأن إشعارات التعيين مفعّلة لهذا المشروع. يمكنك تغيير تفضيلات الإشعارات في إعدادات Taskwondo.",
+
+  "email.watcher.subject": "[{{projectKey}}] #{{itemNumber}} تم تحديثه: {{title}}",
+  "email.watcher.intro": "قام <strong>{{actorName}}</strong> بتحديث عنصر عمل تتابعه:",
+  "email.watcher.field_changed": "{{fieldName}} تم تغييره من <strong>{{oldValue}}</strong> إلى <strong>{{newValue}}</strong>",
+  "email.watcher.field_set": "{{fieldName}} تم تعيينه إلى <strong>{{newValue}}</strong>",
+  "email.watcher.cta": "عرض عنصر العمل",
+  "email.watcher.footer": "لقد تلقيت هذا البريد الإلكتروني لأنك تتابع عنصر العمل هذا وإشعارات المتابعة مفعّلة. يمكنك تغيير تفضيلات الإشعارات في إعدادات Taskwondo.",
+
+  "email.new_item.subject": "[{{projectKey}}] {{type}} جديد تم إنشاؤه: {{displayId}} {{title}}",
+  "email.new_item.intro": "تم إنشاء <strong>{{type}}</strong> جديد في مشروعك:",
+  "email.new_item.cta": "عرض عنصر العمل",
+  "email.new_item.footer": "لقد تلقيت هذا البريد الإلكتروني لأن إشعارات العناصر الجديدة مفعّلة لهذا المشروع. يمكنك تغيير تفضيلات الإشعارات في إعدادات Taskwondo.",
+
+  "email.status_change.subject": "[{{projectKey}}] #{{itemNumber}} تم تغيير الحالة إلى {{newStatus}}: {{title}}",
+  "email.status_change.intro": "قام <strong>{{actorName}}</strong> بتغيير حالة عنصر عمل معيّن لك:",
+  "email.status_change.status": "الحالة: <strong>{{oldStatus}}</strong> \u2192 <strong>{{newStatus}}</strong>",
+  "email.status_change.cta": "عرض عنصر العمل",
+  "email.status_change.footer": "لقد تلقيت هذا البريد الإلكتروني لأن إشعارات تغيير الحالة مفعّلة للعناصر المعيّنة. يمكنك تغيير تفضيلات الإشعارات في إعدادات Taskwondo.",
+
+  "email.comment_assigned.subject": "[{{projectKey}}] تعليق جديد على #{{itemNumber}}: {{title}}",
+  "email.comment_assigned.intro": "قام <strong>{{commenterName}}</strong> بالتعليق على عنصر عمل معيّن لك:",
+  "email.comment_assigned.cta": "عرض عنصر العمل",
+  "email.comment_assigned.footer": "لقد تلقيت هذا البريد الإلكتروني لأن إشعارات التعليقات مفعّلة للعناصر المعيّنة. يمكنك تغيير تفضيلات الإشعارات في إعدادات Taskwondo.",
+
+  "email.member_added.subject": "تمت إضافتك إلى مشروع {{projectName}}",
+  "email.member_added.intro": "قام <strong>{{addedByName}}</strong> بإضافتك إلى مشروع <strong>{{projectName}}</strong> بصفة <strong>{{role}}</strong>.",
+  "email.member_added.cta": "عرض المشروع",
+  "email.member_added.footer": "لقد تلقيت هذا البريد الإلكتروني لأن إشعارات عضوية المشروع مفعّلة. يمكنك تغيير تفضيلات الإشعارات في إعدادات Taskwondo."
+}
