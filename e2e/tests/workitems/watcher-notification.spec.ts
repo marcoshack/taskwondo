@@ -324,6 +324,47 @@ test.describe('Watcher email notifications', () => {
     await api.deactivateUser(request, adminToken, userB.id).catch(() => {});
   });
 
+  test('watcher notification shows assignee display name instead of UUID', async ({
+    request,
+    testUser,
+    testProject,
+  }) => {
+    // Clear mailpit
+    await api.deleteMailpitMessages(request);
+
+    // Create user B (will be assigned) and user C (watcher)
+    const userB = await createSecondUser(request, testProject.key, testUser.token);
+    const userC = await createSecondUser(request, testProject.key, testUser.token);
+
+    // Create work item
+    const item = await api.createWorkItem(request, testUser.token, testProject.key, {
+      title: 'Assignee display name test',
+      type: 'task',
+    });
+
+    // User C watches the item and enables watcher notifications
+    await api.toggleWatch(request, userC.token, testProject.key, item.item_number);
+    await enableWatcherNotifications(request, userC.token, testProject.key);
+
+    // User A assigns the item to user B
+    await api.updateWorkItem(request, testUser.token, testProject.key, item.item_number, {
+      assignee_id: userB.id,
+    });
+
+    // Wait for watcher notification email to user C
+    const msg = await waitForMailTo(request, userC.email);
+
+    // Verify email body contains the display name, NOT the UUID
+    const detail = await api.getMailpitMessage(request, msg.ID);
+    expect(detail.HTML).toContain(userB.displayName);
+    expect(detail.HTML).not.toContain(userB.id);
+
+    // Cleanup
+    const adminToken = getAdminToken();
+    await api.deactivateUser(request, adminToken, userB.id).catch(() => {});
+    await api.deactivateUser(request, adminToken, userC.id).catch(() => {});
+  });
+
   test('comment notification not sent when CommentsOnWatched is disabled', async ({
     request,
     testUser,

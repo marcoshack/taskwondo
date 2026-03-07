@@ -3,6 +3,7 @@ package workers
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -432,6 +433,139 @@ func TestNotificationWatcher_Execute_InvalidPayload(t *testing.T) {
 
 	if err := task.Execute(context.Background(), []byte("not json")); err != nil {
 		t.Fatalf("expected nil error for bad payload, got %v", err)
+	}
+}
+
+func TestNotificationWatcher_Execute_ResolvesAssigneeUUID(t *testing.T) {
+	actorID := uuid.New()
+	assigneeID := uuid.New()
+	watcherID := uuid.New()
+	projectID := uuid.New()
+	workItemID := uuid.New()
+
+	watcherRepo := &mockWatcherRepo{watchers: map[uuid.UUID][]model.WorkItemWatcherWithUser{
+		workItemID: {
+			{
+				WorkItemWatcher: model.WorkItemWatcher{UserID: watcherID},
+				DisplayName:     "Watcher",
+				Email:           "watcher@example.com",
+			},
+		},
+	}}
+	users := &mockUserRepo{users: map[uuid.UUID]*model.User{
+		actorID:    {ID: actorID, Email: "actor@example.com", DisplayName: "Actor"},
+		assigneeID: {ID: assigneeID, Email: "assignee@example.com", DisplayName: "Jane Doe"},
+	}}
+
+	prefs := model.NotificationPreferences{AnyUpdateOnWatched: true}
+	prefsJSON, _ := json.Marshal(prefs)
+	settings := &mockUserSettingRepo{settings: map[string]*model.UserSetting{
+		settingKey(watcherID, projectID, "notifications"): {
+			UserID:    watcherID,
+			ProjectID: &projectID,
+			Key:       "notifications",
+			Value:     prefsJSON,
+		},
+	}}
+	sender := &mockEmailSender{}
+
+	task := newTestWatcherTask(watcherRepo, users, settings, sender)
+
+	evt := model.WatcherEvent{
+		WorkItemID: workItemID,
+		ProjectKey: "TP",
+		ProjectID:  projectID,
+		ItemNumber: 42,
+		Title:      "Test task",
+		ActorID:    actorID,
+		EventType:  "field_change",
+		FieldName:  "assignee",
+		OldValue:   "",
+		NewValue:   assigneeID.String(),
+	}
+	payload, _ := json.Marshal(evt)
+
+	if err := task.Execute(context.Background(), payload); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(sender.sent) != 1 {
+		t.Fatalf("expected 1 email, got %d", len(sender.sent))
+	}
+	// The email body should contain the display name, not the UUID
+	body := sender.sent[0].body
+	if strings.Contains(body, assigneeID.String()) {
+		t.Errorf("email body should not contain assignee UUID %s", assigneeID.String())
+	}
+	if !strings.Contains(body, "Jane Doe") {
+		t.Errorf("email body should contain assignee display name 'Jane Doe', got: %s", body)
+	}
+}
+
+func TestNotificationWatcher_Execute_ResolvesAssigneeReassignment(t *testing.T) {
+	actorID := uuid.New()
+	oldAssigneeID := uuid.New()
+	newAssigneeID := uuid.New()
+	watcherID := uuid.New()
+	projectID := uuid.New()
+	workItemID := uuid.New()
+
+	watcherRepo := &mockWatcherRepo{watchers: map[uuid.UUID][]model.WorkItemWatcherWithUser{
+		workItemID: {
+			{
+				WorkItemWatcher: model.WorkItemWatcher{UserID: watcherID},
+				DisplayName:     "Watcher",
+				Email:           "watcher@example.com",
+			},
+		},
+	}}
+	users := &mockUserRepo{users: map[uuid.UUID]*model.User{
+		actorID:       {ID: actorID, Email: "actor@example.com", DisplayName: "Actor"},
+		oldAssigneeID: {ID: oldAssigneeID, Email: "old@example.com", DisplayName: "Old Person"},
+		newAssigneeID: {ID: newAssigneeID, Email: "new@example.com", DisplayName: "New Person"},
+	}}
+
+	prefs := model.NotificationPreferences{AnyUpdateOnWatched: true}
+	prefsJSON, _ := json.Marshal(prefs)
+	settings := &mockUserSettingRepo{settings: map[string]*model.UserSetting{
+		settingKey(watcherID, projectID, "notifications"): {
+			UserID:    watcherID,
+			ProjectID: &projectID,
+			Key:       "notifications",
+			Value:     prefsJSON,
+		},
+	}}
+	sender := &mockEmailSender{}
+
+	task := newTestWatcherTask(watcherRepo, users, settings, sender)
+
+	evt := model.WatcherEvent{
+		WorkItemID: workItemID,
+		ProjectKey: "TP",
+		ProjectID:  projectID,
+		ItemNumber: 42,
+		Title:      "Test task",
+		ActorID:    actorID,
+		EventType:  "field_change",
+		FieldName:  "assignee",
+		OldValue:   oldAssigneeID.String(),
+		NewValue:   newAssigneeID.String(),
+	}
+	payload, _ := json.Marshal(evt)
+
+	if err := task.Execute(context.Background(), payload); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(sender.sent) != 1 {
+		t.Fatalf("expected 1 email, got %d", len(sender.sent))
+	}
+	body := sender.sent[0].body
+	if !strings.Contains(body, "Old Person") {
+		t.Errorf("email body should contain old assignee name 'Old Person'")
+	}
+	if !strings.Contains(body, "New Person") {
+		t.Errorf("email body should contain new assignee name 'New Person'")
 	}
 }
 

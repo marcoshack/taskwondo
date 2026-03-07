@@ -81,6 +81,9 @@ func (t *NotificationWatcherTask) Execute(ctx context.Context, payload []byte) e
 		return fmt.Errorf("loading actor: %w", err)
 	}
 
+	// Resolve user UUIDs to display names for user-reference fields (e.g. assignee)
+	t.resolveUserFields(ctx, &evt)
+
 	for _, w := range watchers {
 		// Skip the actor — don't notify users about their own changes
 		if w.UserID == evt.ActorID {
@@ -130,6 +133,27 @@ func (t *NotificationWatcherTask) isWatcherEnabled(ctx context.Context, userID, 
 		return prefs.CommentsOnWatched
 	}
 	return prefs.AnyUpdateOnWatched
+}
+
+// resolveUserFields replaces user UUIDs with display names in event field values.
+func (t *NotificationWatcherTask) resolveUserFields(ctx context.Context, evt *model.WatcherEvent) {
+	if evt.FieldName != "assignee" {
+		return
+	}
+	if evt.OldValue != "" {
+		if uid, err := uuid.Parse(evt.OldValue); err == nil {
+			if u, err := t.users.GetByID(ctx, uid); err == nil {
+				evt.OldValue = u.DisplayName
+			}
+		}
+	}
+	if evt.NewValue != "" {
+		if uid, err := uuid.Parse(evt.NewValue); err == nil {
+			if u, err := t.users.GetByID(ctx, uid); err == nil {
+				evt.NewValue = u.DisplayName
+			}
+		}
+	}
 }
 
 func watcherEmailHTML(actorName string, evt model.WatcherEvent, itemURL string) string {
