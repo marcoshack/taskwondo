@@ -12,10 +12,22 @@ export interface SearchResult {
   item_number?: number
 }
 
-export interface SearchResponse {
+export interface FTSSection {
   results: SearchResult[]
-  query: string
   total: number
+}
+
+export interface SemanticSection {
+  results?: SearchResult[]
+  total: number
+  available: boolean
+  status: string
+}
+
+export interface UnifiedSearchResponse {
+  query: string
+  fts: FTSSection
+  semantic: SemanticSection
 }
 
 interface DataResponse<T> {
@@ -24,15 +36,20 @@ interface DataResponse<T> {
 
 // --- API Functions ---
 
-export async function semanticSearch(
+/**
+ * Unified search: calls GET /api/v1/search which runs FTS and semantic
+ * searches concurrently on the backend and returns both result sets.
+ */
+export async function unifiedSearch(
   query: string,
-  entityTypes?: string[],
-  limit?: number,
-): Promise<SearchResponse> {
+  options?: { entityTypes?: string[]; limit?: number; signal?: AbortSignal },
+): Promise<UnifiedSearchResponse> {
   const params = new URLSearchParams()
   params.set('q', query)
-  if (entityTypes?.length) params.set('entity_type', entityTypes.join(','))
-  if (limit) params.set('limit', String(limit))
-  const res = await api.get<DataResponse<SearchResponse>>(`/search?${params}`)
+  if (options?.entityTypes?.length) params.set('entity_type', options.entityTypes.join(','))
+  if (options?.limit) params.set('limit', String(options.limit))
+  const res = await api.get<DataResponse<UnifiedSearchResponse>>(`/search?${params}`, {
+    signal: options?.signal,
+  })
   return res.data.data
 }

@@ -514,6 +514,81 @@ func populateWorkItem(
 	}
 }
 
+// SearchFTS performs a cross-project full-text search across all accessible projects.
+// It uses the existing search_vector tsvector column with ts_rank for ordering.
+// Display ID queries (e.g. "TF-42") are boosted to rank highest.
+func (r *WorkItemRepository) SearchFTS(ctx context.Context, query string, projectIDs []uuid.UUID, limit int) ([]model.SearchResult, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 20
+	}
+
+	qb := &queryBuilder{argIndex: 0}
+	qb.add("w.deleted_at IS NULL")
+	qb.add("(w.search_vector @@ plainto_tsquery('english', ?) OR w.search_vector @@ plainto_tsquery('simple', ?))", query, query)
+
+	if len(projectIDs) > 0 {
+		qb.add("w.project_id = ANY(?)", pq.Array(projectIDs))
+	}
+
+	whereClause := "WHERE " + strings.Join(qb.conditions, " AND ")
+
+	// Boost display ID exact matches: if the query looks like a display ID (e.g. "TF-42"),
+	// add a large bonus so it sorts first.
+	qb.argIndex++
+	queryArgIdx := qb.argIndex
+	qb.args = append(qb.args, query)
+
+	qb.argIndex++
+	limitArgIdx := qb.argIndex
+	qb.args = append(qb.args, limit)
+
+	sqlQuery := fmt.Sprintf(
+		`SELECT w.id, w.project_id, w.item_number, w.display_id, w.type, w.title,
+		        p.key AS project_key,
+		        ts_rank(w.search_vector, plainto_tsquery('english', $%d)) +
+		        ts_rank(w.search_vector, plainto_tsquery('simple', $%d)) +
+		        CASE WHEN UPPER(w.display_id) = UPPER($%d) THEN 1000 ELSE 0 END AS rank
+		 FROM work_items w
+		 JOIN projects p ON p.id = w.project_id
+		 %s
+		 ORDER BY rank DESC, w.updated_at DESC
+		 LIMIT $%d`,
+		queryArgIdx, queryArgIdx, queryArgIdx, whereClause, limitArgIdx)
+
+	rows, err := r.db.QueryContext(ctx, sqlQuery, qb.args...)
+	if err != nil {
+		return nil, fmt.Errorf("fts search: %w", err)
+	}
+	defer rows.Close()
+
+	var results []model.SearchResult
+	for rows.Next() {
+		var (
+			id         uuid.UUID
+			projectID  uuid.UUID
+			itemNumber int
+			displayID  string
+			itemType   string
+			title      string
+			projectKey string
+			rank       float64
+		)
+		if err := rows.Scan(&id, &projectID, &itemNumber, &displayID, &itemType, &title, &projectKey, &rank); err != nil {
+			return nil, fmt.Errorf("scanning fts result: %w", err)
+		}
+		results = append(results, model.SearchResult{
+			EntityType: model.EntityTypeWorkItem,
+			EntityID:   id,
+			ProjectID:  &projectID,
+			Score:      0, // FTS results don't have similarity scores
+			Content:    fmt.Sprintf("[%s] %s", itemType, title),
+			ProjectKey: projectKey,
+			ItemNumber: &itemNumber,
+		})
+	}
+	return results, rows.Err()
+}
+
 // UpdateSLATargetAt updates only the sla_target_at column for a work item.
 func (r *WorkItemRepository) UpdateSLATargetAt(ctx context.Context, id uuid.UUID, slaTargetAt *time.Time) error {
 	_, err := r.db.ExecContext(ctx,

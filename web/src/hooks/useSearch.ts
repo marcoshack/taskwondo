@@ -1,11 +1,6 @@
-import { useQuery } from '@tanstack/react-query'
-import { semanticSearch } from '@/api/search'
-import { listWorkItems } from '@/api/workitems'
-import { usePublicSettings } from '@/hooks/useSystemSettings'
-import { useProjects } from '@/hooks/useProjects'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { unifiedSearch } from '@/api/search'
 import type { SearchResult } from '@/api/search'
-
-export type SearchMode = 'semantic' | 'fts'
 
 interface UseSearchOptions {
   query: string
@@ -13,73 +8,79 @@ interface UseSearchOptions {
 }
 
 interface UseSearchReturn {
-  results: SearchResult[]
-  total: number
+  ftsResults: SearchResult[]
+  semanticResults: SearchResult[]
+  semanticAvailable: boolean
+  semanticStatus: 'pending' | 'complete' | 'error'
+  semanticError: string | null
   isLoading: boolean
-  isError: boolean
-  mode: SearchMode
 }
 
 export function useSearch({ query, limit = 20 }: UseSearchOptions): UseSearchReturn {
-  const { data: publicSettings } = usePublicSettings()
-  const { data: projectsData } = useProjects()
-  const semanticEnabled = publicSettings?.feature_semantic_search === true
+  const [ftsResults, setFtsResults] = useState<SearchResult[]>([])
+  const [semanticResults, setSemanticResults] = useState<SearchResult[]>([])
+  const [semanticAvailable, setSemanticAvailable] = useState(false)
+  const [semanticStatus, setSemanticStatus] = useState<'pending' | 'complete' | 'error'>('complete')
+  const [semanticError, setSemanticError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const abortRef = useRef<AbortController | null>(null)
 
-  // Semantic search query
-  const semantic = useQuery({
-    queryKey: ['search', 'semantic', query, limit],
-    queryFn: () => semanticSearch(query, undefined, limit),
-    enabled: semanticEnabled && query.length >= 2,
-    retry: false,
-  })
+  const resetState = useCallback(() => {
+    setFtsResults([])
+    setSemanticResults([])
+    setSemanticAvailable(false)
+    setSemanticStatus('complete')
+    setSemanticError(null)
+    setIsLoading(false)
+  }, [])
 
-  // FTS fallback: search work items across all projects the user has access to
-  const fts = useQuery({
-    queryKey: ['search', 'fts', query, limit],
-    queryFn: async () => {
-      const projects = projectsData ?? []
-      if (projects.length === 0) return []
+  useEffect(() => {
+    abortRef.current?.abort()
 
-      // Search across all accessible projects in parallel
-      const results = await Promise.all(
-        projects.map((p) =>
-          listWorkItems(p.key, { q: query, limit }).then((res) =>
-            res.data.map(
-              (item): SearchResult => ({
-                entity_type: 'work_item',
-                entity_id: item.id,
-                project_id: null,
-                score: 0,
-                snippet: `${item.display_id}: ${item.title}`,
-                project_key: p.key,
-                item_number: item.item_number,
-              }),
-            ),
-          ),
-        ),
-      )
-      return results.flat().slice(0, limit)
-    },
-    enabled:
-      (!semanticEnabled || (semantic.isError && semanticEnabled)) &&
-      query.length >= 2,
-    retry: false,
-  })
+    if (query.length < 2) {
+      resetState()
+      return
+    }
 
-  // Determine active mode and results
-  const useFts = !semanticEnabled || semantic.isError
-  const activeQuery = useFts ? fts : semantic
-  const mode: SearchMode = useFts ? 'fts' : 'semantic'
+    const controller = new AbortController()
+    abortRef.current = controller
 
-  const results: SearchResult[] = useFts
-    ? (fts.data as SearchResult[] | undefined) ?? []
-    : semantic.data?.results ?? []
+    setFtsResults([])
+    setSemanticResults([])
+    setSemanticError(null)
+    setIsLoading(true)
+
+    unifiedSearch(query, { limit, signal: controller.signal })
+      .then((data) => {
+        setFtsResults(data.fts.results ?? [])
+        setSemanticAvailable(data.semantic.available)
+
+        if (data.semantic.status === 'error') {
+          setSemanticError('Semantic search is temporarily unavailable')
+          setSemanticStatus('error')
+        } else {
+          setSemanticResults(data.semantic.results ?? [])
+          setSemanticStatus('complete')
+        }
+        setIsLoading(false)
+      })
+      .catch((err) => {
+        if (err.name !== 'AbortError' && err.name !== 'CanceledError') {
+          setIsLoading(false)
+        }
+      })
+
+    return () => {
+      controller.abort()
+    }
+  }, [query, limit, resetState])
 
   return {
-    results,
-    total: useFts ? results.length : (semantic.data?.total ?? 0),
-    isLoading: activeQuery.isLoading,
-    isError: activeQuery.isError,
-    mode,
+    ftsResults,
+    semanticResults,
+    semanticAvailable,
+    semanticStatus,
+    semanticError,
+    isLoading,
   }
 }

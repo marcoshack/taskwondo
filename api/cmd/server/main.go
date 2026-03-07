@@ -148,7 +148,7 @@ func main() {
 
 	// Initialize embedding and search services
 	embeddingService := service.NewEmbeddingService(cfg.OllamaURL, cfg.OllamaModel)
-	searchService := service.NewSearchService(embeddingService, embeddingRepo, projectRepo, systemSettingRepo)
+	searchService := service.NewSearchService(embeddingService, embeddingRepo, workItemRepo, projectRepo, systemSettingRepo)
 
 	// Seed admin user if configured
 	if cfg.AdminEmail != "" && cfg.AdminPassword != "" {

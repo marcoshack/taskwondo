@@ -57,7 +57,7 @@ test.describe('Feature Toggle — Semantic Search', () => {
     await attach(page, testInfo, '02-toggle-disabled');
   });
 
-  test('search API returns 404 when feature is disabled', async ({ request }) => {
+  test('search API returns 200 with FTS results when semantic is disabled', async ({ request }) => {
     const adminToken = getAdminToken();
     const BASE_URL = process.env.BASE_URL || 'http://localhost:5173';
 
@@ -65,8 +65,11 @@ test.describe('Feature Toggle — Semantic Search', () => {
       headers: { Authorization: `Bearer ${adminToken}` },
     });
 
-    // Feature disabled → 404
-    expect(res.status()).toBe(404);
+    // FTS always works regardless of semantic search feature flag
+    expect(res.status()).toBe(200);
+    const body = await res.json();
+    expect(body.data.fts).toBeDefined();
+    expect(body.data.semantic.available).toBe(false);
   });
 
   test('search API returns 400 for missing query', async ({ request }) => {

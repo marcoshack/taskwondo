@@ -158,6 +158,36 @@ test.describe('Mobile search icon and top bar layout', () => {
     expect(inboxBox!.x).toBeLessThan(menuBox!.x);
   });
 
+  test('keyboard hints footer uses pointer-fine media query for conditional display', async ({ page, testProject }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto(`/projects/${testProject.key}/items`);
+    await waitForPageReady(page);
+
+    // Open search modal
+    await page.keyboard.press('g');
+    await page.keyboard.press('k');
+    const searchInput = page.getByPlaceholder(/search across/i);
+    await expect(searchInput).toBeVisible({ timeout: 3000 });
+
+    // The keyboard hints footer should have the hidden + pointer-fine:flex classes
+    // so it's hidden by default (touch devices) and shown on pointer-fine (desktop)
+    const footer = page.locator('kbd').first().locator('..');
+    await expect(footer).toBeVisible({ timeout: 3000 });
+
+    // Verify all three keyboard hint keys are present (↑↓, ↵, esc)
+    const kbdElements = page.locator('kbd');
+    const count = await kbdElements.count();
+    expect(count).toBe(3);
+
+    // On desktop (Playwright Chromium = pointer:fine), the footer should be visible
+    const footerContainer = footer.locator('..');
+    await expect(footerContainer).toBeVisible();
+    // Verify the container has the responsive hiding class
+    const cls = await footerContainer.getAttribute('class');
+    expect(cls).toContain('hidden');
+    expect(cls).toMatch(/\[@media.*pointer.*fine.*\]:flex/);
+  });
+
   test('desktop top bar is unchanged with project active', async ({ page, testProject }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto(`/projects/${testProject.key}/items`);
