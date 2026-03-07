@@ -6,7 +6,7 @@ import { Select } from '@/components/ui/Select'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { UserPicker } from '@/components/ui/UserPicker'
 import { ProjectPicker } from '@/components/ui/ProjectPicker'
-import { MentionModal } from '@/components/ui/MentionModal'
+import { MentionSearchModal } from '@/components/ui/MentionSearchModal'
 import { useMentionAutocomplete } from '@/hooks/useMentionAutocomplete'
 import type { WorkflowStatus } from '@/api/workflows'
 import type { ProjectMember, Project } from '@/api/projects'
@@ -183,12 +183,11 @@ export function WorkItemForm({
             }}
             disabled={disabledUntilType}
           />
-          <MentionModal
+          <MentionSearchModal
             open={descMention.mentionModalOpen}
             position={descMention.dropdownPosition}
             onClose={descMention.onMentionClose}
             onSelect={descMention.onMentionSelect}
-            projectKey={projectKey}
           />
         </div>
       </Tooltip>

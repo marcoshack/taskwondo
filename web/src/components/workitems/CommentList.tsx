@@ -7,7 +7,7 @@ import { usePasteUpload } from '@/hooks/usePasteUpload'
 import { useMentionAutocomplete } from '@/hooks/useMentionAutocomplete'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
-import { MentionModal } from '@/components/ui/MentionModal'
+import { MentionSearchModal } from '@/components/ui/MentionSearchModal'
 import { Avatar } from '@/components/ui/Avatar'
 import { Spinner } from '@/components/ui/Spinner'
 import { ScrollableDate } from '@/components/ui/ScrollableDate'
@@ -293,19 +293,17 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
         </div>
       ))}
 
-      <MentionModal
+      <MentionSearchModal
         open={newMention.mentionModalOpen}
         position={newMention.dropdownPosition}
         onClose={newMention.onMentionClose}
         onSelect={newMention.onMentionSelect}
-        projectKey={projectKey}
       />
-      <MentionModal
+      <MentionSearchModal
         open={editMention.mentionModalOpen}
         position={editMention.dropdownPosition}
         onClose={editMention.onMentionClose}
         onSelect={editMention.onMentionSelect}
-        projectKey={projectKey}
       />
 
       <Modal open={!!deletingId} onClose={() => setDeletingId(null)} title={t('comments.deleteConfirm')}>

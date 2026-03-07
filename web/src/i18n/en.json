@@ -456,9 +456,7 @@
   "workItemPicker.noItems": "No items found",
 
   "mention.title": "Insert link",
-  "mention.searchPlaceholder": "Search projects and work items...",
-  "mention.projects": "Projects",
-  "mention.workItems": "Work Items",
+  "mention.searchPlaceholder": "Search to insert link...",
   "mention.noResults": "No results found",
 
   "preferences.title": "Preferences",

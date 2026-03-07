@@ -21,7 +21,7 @@ import { FilePreviewModal } from '@/components/workitems/FilePreviewModal'
 import type { PreviewTarget } from '@/components/workitems/FilePreviewModal'
 import { usePasteUpload } from '@/hooks/usePasteUpload'
 import { useMentionAutocomplete } from '@/hooks/useMentionAutocomplete'
-import { MentionModal } from '@/components/ui/MentionModal'
+import { MentionSearchModal } from '@/components/ui/MentionSearchModal'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { TypeBadge } from '@/components/workitems/TypeBadge'
 import { StatusBadge } from '@/components/workitems/StatusBadge'
@@ -570,12 +570,11 @@ export function WorkItemDetailPage() {
         </div>
       </div>
 
-      <MentionModal
+      <MentionSearchModal
         open={descMention.mentionModalOpen}
         position={descMention.dropdownPosition}
         onClose={descMention.onMentionClose}
         onSelect={descMention.onMentionSelect}
-        projectKey={projectKey ?? ''}
       />
 
       {/* Mobile properties modal */}

@@ -12,6 +12,8 @@ import { Badge } from '@/components/ui/Badge'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { Check, Trash2, Copy, Link, AlertTriangle } from 'lucide-react'
 import { UserSearchInput } from '@/components/UserSearchInput'
+import { MentionSearchModal } from '@/components/ui/MentionSearchModal'
+import { useMentionAutocomplete } from '@/hooks/useMentionAutocomplete'
 import type { AxiosError } from 'axios'
 import type { UserSearchResult } from '@/api/auth'
 
@@ -96,6 +98,13 @@ export function ProjectSettingsPage() {
   const [inviteMaxUses, setInviteMaxUses] = useState('')
   const [inviteError, setInviteError] = useState('')
   const [revokeTarget, setRevokeTarget] = useState<{ id: string; code: string } | null>(null)
+
+  const descRef = useRef<HTMLTextAreaElement>(null)
+  const descMention = useMentionAutocomplete({
+    value: description ?? project?.description ?? '',
+    onValueChange: setDescription,
+    textareaRef: descRef,
+  })
 
   // Inline checkmark indicators (keyed by section/item identifier)
   const [saved, setSaved] = useState<Record<string, boolean>>({})
@@ -250,12 +259,20 @@ export function ProjectSettingsPage() {
             {t('common.description')}
           </label>
           <textarea
+            ref={descRef}
             id="description"
             rows={12}
             className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed"
             value={currentDescription}
             onChange={(e) => setDescription(e.target.value)}
+            onKeyDown={descMention.onMentionKeyDown}
             disabled={!canManageMembers}
+          />
+          <MentionSearchModal
+            open={descMention.mentionModalOpen}
+            position={descMention.dropdownPosition}
+            onClose={descMention.onMentionClose}
+            onSelect={descMention.onMentionSelect}
           />
         </div>
 
