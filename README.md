@@ -1,6 +1,6 @@
-# Taskwondo [![CI](https://github.com/marcoshack/taskwondo/actions/workflows/ci.yml/badge.svg)](https://github.com/marcoshack/taskwondo/actions/workflows/ci.yml)
+# Taskwondo — Self-Hosted Task & Project Management [![CI](https://github.com/marcoshack/taskwondo/actions/workflows/ci.yml/badge.svg)](https://github.com/marcoshack/taskwondo/actions/workflows/ci.yml)
 
-A self-hosted project management and issue tracking tool. Simple, practical, and easy on the eyes. Deploy with a single Docker Compose command — every feature included, no paid tiers, no strings attached. Your backlog doesn't stand a chance! 🥋
+A self-hosted, open-source project management and issue tracking platform. Kanban boards, customizable workflows, milestones, file attachments, SLA tracking, and 9 languages — all included out of the box. Deploy with a single Docker Compose command. No paid tiers, no strings attached. Your backlog doesn't stand a chance! 🥋
 
 ## Screenshots
 
