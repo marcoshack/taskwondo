@@ -268,8 +268,8 @@ export function MentionSearchModal({ open, position, onClose, onSelect }: Mentio
   // Viewport-aware positioning
   const dropdownWidth = 384
   const dropdownMaxHeight = 320
-  const viewportW = window.innerWidth
-  const viewportH = window.innerHeight
+  const viewportW = document.documentElement.clientWidth
+  const viewportH = document.documentElement.clientHeight
   let top = position.top
   let left = position.left
 
@@ -278,7 +278,7 @@ export function MentionSearchModal({ open, position, onClose, onSelect }: Mentio
   }
   if (left < 8) left = 8
 
-  if (top + dropdownMaxHeight > viewportH + window.scrollY) {
+  if (top + dropdownMaxHeight > viewportH) {
     top = position.top - dropdownMaxHeight - 20
   }
 

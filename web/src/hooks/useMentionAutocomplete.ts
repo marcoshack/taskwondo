@@ -63,8 +63,8 @@ export function useMentionAutocomplete({ value, onValueChange, textareaRef }: Us
           const rect = textarea.getBoundingClientRect()
           const caret = getCaretCoordinates(textarea, pos)
           setDropdownPosition({
-            top: rect.top + caret.top + caret.height + window.scrollY,
-            left: rect.left + caret.left + window.scrollX,
+            top: rect.top + caret.top + caret.height,
+            left: rect.left + caret.left,
           })
           setMentionModalOpen(true)
         })
