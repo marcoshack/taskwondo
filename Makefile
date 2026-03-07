@@ -1,4 +1,4 @@
-.PHONY: build push help dev dev-db dev-api dev-web dev-worker up down logs logs-api migrate migrate-new test test-api test-web test-e2e test-e2e-dev test-e2e-report check-env release build-mcp build-mcp-windows build-mcpb build-worker
+.PHONY: build push help setup dev dev-db dev-api dev-web dev-worker up down logs logs-api migrate migrate-new test test-api test-web test-e2e test-e2e-dev test-e2e-report check-env release build-mcp build-mcp-windows build-mcpb build-worker
 
 # Required environment variables (checked by sourcing .env)
 REQUIRED_VARS := POSTGRES_USER POSTGRES_PASSWORD MINIO_ROOT_USER MINIO_ROOT_PASSWORD JWT_SECRET DATABASE_URL STORAGE_ACCESS_KEY STORAGE_SECRET_KEY
@@ -16,6 +16,10 @@ build: test build-worker build-mcp ## Build all Docker images, worker, and MCP s
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+
+setup: ## Set up local dev environment (git hooks, etc.)
+	@git config core.hooksPath .githooks
+	@printf "$(GREEN)## Git hooks configured (.githooks/)$(RESET)\n"
 
 check-env: ## Verify .env exists and has all required variables
 	@if [ ! -f .env ]; then \

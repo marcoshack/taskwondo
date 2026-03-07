@@ -67,7 +67,8 @@ For manual installation without Docker, see [MANUAL_INSTALL.md](MANUAL_INSTALL.m
 Requires Go 1.25+, Node.js 22+, Docker.
 
 ```bash
-cp .env.template .env          # configure local settings
+./install.sh --manual-setup -y # generate .env with secrets and defaults
+make setup                     # configure git hooks
 make dev                       # starts Postgres + MinIO + API (hot-reload) + Vite dev server
 ```
 
