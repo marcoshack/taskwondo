@@ -48,6 +48,55 @@ func getClient() (*Client, error) {
 	return NewClient(baseURL, apiKey, ns), nil
 }
 
+// getClientForDisplayID returns a client with the namespace resolved from the display ID.
+// It uses the search endpoint to find which namespace the work item belongs to,
+// then sets the client's namespace accordingly.
+//
+// When the same display ID exists in multiple namespaces, the function returns a
+// non-empty prompt string asking the user to select a namespace via set_namespace.
+// Callers should check the prompt first and return it as a tool result text if set.
+func getClientForDisplayID(displayID string) (client *Client, projectKey string, itemNumber int, prompt string, err error) {
+	client, err = getClient()
+	if err != nil {
+		return nil, "", 0, "", err
+	}
+	projectKey, itemNumber, err = parseDisplayID(displayID)
+	if err != nil {
+		return nil, "", 0, "", err
+	}
+	// If the user explicitly set a namespace, use it without searching
+	if activeNamespace != "" {
+		return client, projectKey, itemNumber, "", nil
+	}
+	results, err := client.Search(displayID, "work_item", 5)
+	if err == nil {
+		// Collect all matching namespaces
+		var matches []SearchResult
+		for _, r := range results {
+			if r.ProjectKey == projectKey && r.ItemNumber != nil && *r.ItemNumber == itemNumber {
+				matches = append(matches, r)
+			}
+		}
+		if len(matches) == 1 {
+			client.namespace = matches[0].NamespaceSlug
+		} else if len(matches) > 1 {
+			// Multiple namespaces contain this display ID — ask the user to choose
+			var namespaces []string
+			for _, m := range matches {
+				namespaces = append(namespaces, m.NamespaceSlug)
+			}
+			prompt = fmt.Sprintf(
+				"Found %s in multiple namespaces: %s. "+
+					"Please use the set_namespace tool to select which namespace you want to work with, "+
+					"then retry your request.",
+				displayID, strings.Join(namespaces, ", "),
+			)
+			return nil, "", 0, prompt, nil
+		}
+	}
+	return client, projectKey, itemNumber, "", nil
+}
+
 // --- Tool definitions ---
 
 func whoamiTool() mcp.Tool {
@@ -283,19 +332,17 @@ func handleLogout(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult
 }
 
 func handleGetWorkItem(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	client, err := getClient()
-	if err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
-	}
-
 	displayID, err := request.RequireString("display_id")
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
 
-	projectKey, itemNumber, err := parseDisplayID(displayID)
+	client, projectKey, itemNumber, prompt, err := getClientForDisplayID(displayID)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
+	}
+	if prompt != "" {
+		return mcp.NewToolResultText(prompt), nil
 	}
 
 	item, err := client.GetWorkItem(projectKey, itemNumber)
@@ -394,19 +441,17 @@ func handleCreateWorkItem(_ context.Context, request mcp.CallToolRequest) (*mcp.
 }
 
 func handleUpdateWorkItem(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	client, err := getClient()
-	if err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
-	}
-
 	displayID, err := request.RequireString("display_id")
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
 
-	projectKey, itemNumber, err := parseDisplayID(displayID)
+	client, projectKey, itemNumber, prompt, err := getClientForDisplayID(displayID)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
+	}
+	if prompt != "" {
+		return mcp.NewToolResultText(prompt), nil
 	}
 
 	updates := make(map[string]interface{})
@@ -478,11 +523,6 @@ func handleUpdateWorkItem(_ context.Context, request mcp.CallToolRequest) (*mcp.
 }
 
 func handleAddComment(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	client, err := getClient()
-	if err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
-	}
-
 	displayID, err := request.RequireString("display_id")
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
@@ -492,9 +532,12 @@ func handleAddComment(_ context.Context, request mcp.CallToolRequest) (*mcp.Call
 		return mcp.NewToolResultError(err.Error()), nil
 	}
 
-	projectKey, itemNumber, err := parseDisplayID(displayID)
+	client, projectKey, itemNumber, prompt, err := getClientForDisplayID(displayID)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
+	}
+	if prompt != "" {
+		return mcp.NewToolResultText(prompt), nil
 	}
 
 	params := CreateCommentParams{
@@ -513,19 +556,17 @@ func handleAddComment(_ context.Context, request mcp.CallToolRequest) (*mcp.Call
 }
 
 func handleListComments(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	client, err := getClient()
-	if err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
-	}
-
 	displayID, err := request.RequireString("display_id")
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
 
-	projectKey, itemNumber, err := parseDisplayID(displayID)
+	client, projectKey, itemNumber, prompt, err := getClientForDisplayID(displayID)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
+	}
+	if prompt != "" {
+		return mcp.NewToolResultText(prompt), nil
 	}
 
 	comments, err := client.ListComments(projectKey, itemNumber)
@@ -632,11 +673,6 @@ func handleListStatuses(_ context.Context, request mcp.CallToolRequest) (*mcp.Ca
 }
 
 func handleUploadAttachment(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	client, err := getClient()
-	if err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
-	}
-
 	displayID, err := request.RequireString("display_id")
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
@@ -646,9 +682,12 @@ func handleUploadAttachment(_ context.Context, request mcp.CallToolRequest) (*mc
 		return mcp.NewToolResultError(err.Error()), nil
 	}
 
-	projectKey, itemNumber, err := parseDisplayID(displayID)
+	client, projectKey, itemNumber, prompt, err := getClientForDisplayID(displayID)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
+	}
+	if prompt != "" {
+		return mcp.NewToolResultText(prompt), nil
 	}
 
 	if _, err := os.Stat(filePath); err != nil {
@@ -668,19 +707,17 @@ func handleUploadAttachment(_ context.Context, request mcp.CallToolRequest) (*mc
 }
 
 func handleListEvents(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	client, err := getClient()
-	if err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
-	}
-
 	displayID, err := request.RequireString("display_id")
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
 
-	projectKey, itemNumber, err := parseDisplayID(displayID)
+	client, projectKey, itemNumber, prompt, err := getClientForDisplayID(displayID)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
+	}
+	if prompt != "" {
+		return mcp.NewToolResultText(prompt), nil
 	}
 
 	events, err := client.ListEvents(projectKey, itemNumber)
@@ -717,11 +754,6 @@ func handleListEvents(_ context.Context, request mcp.CallToolRequest) (*mcp.Call
 }
 
 func handleCreateRelation(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	client, err := getClient()
-	if err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
-	}
-
 	displayID, err := request.RequireString("display_id")
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
@@ -737,9 +769,12 @@ func handleCreateRelation(_ context.Context, request mcp.CallToolRequest) (*mcp.
 		return mcp.NewToolResultError(err.Error()), nil
 	}
 
-	projectKey, itemNumber, err := parseDisplayID(displayID)
+	client, projectKey, itemNumber, prompt, err := getClientForDisplayID(displayID)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
+	}
+	if prompt != "" {
+		return mcp.NewToolResultText(prompt), nil
 	}
 
 	relation, err := client.CreateRelation(projectKey, itemNumber, targetDisplayID, relationType)
@@ -752,19 +787,17 @@ func handleCreateRelation(_ context.Context, request mcp.CallToolRequest) (*mcp.
 }
 
 func handleListRelations(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	client, err := getClient()
-	if err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
-	}
-
 	displayID, err := request.RequireString("display_id")
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
 
-	projectKey, itemNumber, err := parseDisplayID(displayID)
+	client, projectKey, itemNumber, prompt, err := getClientForDisplayID(displayID)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
+	}
+	if prompt != "" {
+		return mcp.NewToolResultText(prompt), nil
 	}
 
 	relations, err := client.ListRelations(projectKey, itemNumber)
@@ -787,19 +820,17 @@ func handleListRelations(_ context.Context, request mcp.CallToolRequest) (*mcp.C
 }
 
 func handleListAttachments(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	client, err := getClient()
-	if err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
-	}
-
 	displayID, err := request.RequireString("display_id")
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
 
-	projectKey, itemNumber, err := parseDisplayID(displayID)
+	client, projectKey, itemNumber, prompt, err := getClientForDisplayID(displayID)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
+	}
+	if prompt != "" {
+		return mcp.NewToolResultText(prompt), nil
 	}
 
 	attachments, err := client.ListAttachments(projectKey, itemNumber)
@@ -825,19 +856,17 @@ func handleListAttachments(_ context.Context, request mcp.CallToolRequest) (*mcp
 }
 
 func handleLogTime(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	client, err := getClient()
-	if err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
-	}
-
 	displayID, err := request.RequireString("display_id")
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
 
-	projectKey, itemNumber, err := parseDisplayID(displayID)
+	client, projectKey, itemNumber, prompt, err := getClientForDisplayID(displayID)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
+	}
+	if prompt != "" {
+		return mcp.NewToolResultText(prompt), nil
 	}
 
 	durationSeconds := request.GetInt("duration_seconds", 0)
@@ -866,19 +895,17 @@ func handleLogTime(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToo
 }
 
 func handleListTimeEntries(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	client, err := getClient()
-	if err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
-	}
-
 	displayID, err := request.RequireString("display_id")
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
 
-	projectKey, itemNumber, err := parseDisplayID(displayID)
+	client, projectKey, itemNumber, prompt, err := getClientForDisplayID(displayID)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
+	}
+	if prompt != "" {
+		return mcp.NewToolResultText(prompt), nil
 	}
 
 	result, err := client.ListTimeEntries(projectKey, itemNumber)
@@ -905,11 +932,6 @@ func handleListTimeEntries(_ context.Context, request mcp.CallToolRequest) (*mcp
 }
 
 func handleUpdateTimeEntry(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	client, err := getClient()
-	if err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
-	}
-
 	displayID, err := request.RequireString("display_id")
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
@@ -919,9 +941,12 @@ func handleUpdateTimeEntry(_ context.Context, request mcp.CallToolRequest) (*mcp
 		return mcp.NewToolResultError(err.Error()), nil
 	}
 
-	projectKey, itemNumber, err := parseDisplayID(displayID)
+	client, projectKey, itemNumber, prompt, err := getClientForDisplayID(displayID)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
+	}
+	if prompt != "" {
+		return mcp.NewToolResultText(prompt), nil
 	}
 
 	updates := make(map[string]interface{})
@@ -950,11 +975,6 @@ func handleUpdateTimeEntry(_ context.Context, request mcp.CallToolRequest) (*mcp
 }
 
 func handleDeleteTimeEntry(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	client, err := getClient()
-	if err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
-	}
-
 	displayID, err := request.RequireString("display_id")
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
@@ -964,9 +984,12 @@ func handleDeleteTimeEntry(_ context.Context, request mcp.CallToolRequest) (*mcp
 		return mcp.NewToolResultError(err.Error()), nil
 	}
 
-	projectKey, itemNumber, err := parseDisplayID(displayID)
+	client, projectKey, itemNumber, prompt, err := getClientForDisplayID(displayID)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
+	}
+	if prompt != "" {
+		return mcp.NewToolResultText(prompt), nil
 	}
 
 	if err := client.DeleteTimeEntry(projectKey, itemNumber, entryID); err != nil {
@@ -1187,19 +1210,17 @@ func deleteQueueTool() mcp.Tool {
 // --- New tool handlers ---
 
 func handleDeleteWorkItem(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	client, err := getClient()
-	if err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
-	}
-
 	displayID, err := request.RequireString("display_id")
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
 
-	projectKey, itemNumber, err := parseDisplayID(displayID)
+	client, projectKey, itemNumber, prompt, err := getClientForDisplayID(displayID)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
+	}
+	if prompt != "" {
+		return mcp.NewToolResultText(prompt), nil
 	}
 
 	if err := client.DeleteWorkItem(projectKey, itemNumber); err != nil {
@@ -1210,11 +1231,6 @@ func handleDeleteWorkItem(_ context.Context, request mcp.CallToolRequest) (*mcp.
 }
 
 func handleUpdateComment(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	client, err := getClient()
-	if err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
-	}
-
 	displayID, err := request.RequireString("display_id")
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
@@ -1228,9 +1244,12 @@ func handleUpdateComment(_ context.Context, request mcp.CallToolRequest) (*mcp.C
 		return mcp.NewToolResultError(err.Error()), nil
 	}
 
-	projectKey, itemNumber, err := parseDisplayID(displayID)
+	client, projectKey, itemNumber, prompt, err := getClientForDisplayID(displayID)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
+	}
+	if prompt != "" {
+		return mcp.NewToolResultText(prompt), nil
 	}
 
 	comment, err := client.UpdateComment(projectKey, itemNumber, commentID, body)
@@ -1242,11 +1261,6 @@ func handleUpdateComment(_ context.Context, request mcp.CallToolRequest) (*mcp.C
 }
 
 func handleDeleteComment(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	client, err := getClient()
-	if err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
-	}
-
 	displayID, err := request.RequireString("display_id")
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
@@ -1256,9 +1270,12 @@ func handleDeleteComment(_ context.Context, request mcp.CallToolRequest) (*mcp.C
 		return mcp.NewToolResultError(err.Error()), nil
 	}
 
-	projectKey, itemNumber, err := parseDisplayID(displayID)
+	client, projectKey, itemNumber, prompt, err := getClientForDisplayID(displayID)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
+	}
+	if prompt != "" {
+		return mcp.NewToolResultText(prompt), nil
 	}
 
 	if err := client.DeleteComment(projectKey, itemNumber, commentID); err != nil {
@@ -1269,11 +1286,6 @@ func handleDeleteComment(_ context.Context, request mcp.CallToolRequest) (*mcp.C
 }
 
 func handleDeleteRelation(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	client, err := getClient()
-	if err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
-	}
-
 	displayID, err := request.RequireString("display_id")
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
@@ -1283,9 +1295,12 @@ func handleDeleteRelation(_ context.Context, request mcp.CallToolRequest) (*mcp.
 		return mcp.NewToolResultError(err.Error()), nil
 	}
 
-	projectKey, itemNumber, err := parseDisplayID(displayID)
+	client, projectKey, itemNumber, prompt, err := getClientForDisplayID(displayID)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
+	}
+	if prompt != "" {
+		return mcp.NewToolResultText(prompt), nil
 	}
 
 	if err := client.DeleteRelation(projectKey, itemNumber, relationID); err != nil {
@@ -1296,11 +1311,6 @@ func handleDeleteRelation(_ context.Context, request mcp.CallToolRequest) (*mcp.
 }
 
 func handleDownloadAttachment(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	client, err := getClient()
-	if err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
-	}
-
 	displayID, err := request.RequireString("display_id")
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
@@ -1314,9 +1324,12 @@ func handleDownloadAttachment(_ context.Context, request mcp.CallToolRequest) (*
 		return mcp.NewToolResultError(err.Error()), nil
 	}
 
-	projectKey, itemNumber, err := parseDisplayID(displayID)
+	client, projectKey, itemNumber, prompt, err := getClientForDisplayID(displayID)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
+	}
+	if prompt != "" {
+		return mcp.NewToolResultText(prompt), nil
 	}
 
 	n, err := client.DownloadAttachment(projectKey, itemNumber, attachmentID, filePath)
@@ -1328,11 +1341,6 @@ func handleDownloadAttachment(_ context.Context, request mcp.CallToolRequest) (*
 }
 
 func handleDeleteAttachment(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	client, err := getClient()
-	if err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
-	}
-
 	displayID, err := request.RequireString("display_id")
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
@@ -1342,9 +1350,12 @@ func handleDeleteAttachment(_ context.Context, request mcp.CallToolRequest) (*mc
 		return mcp.NewToolResultError(err.Error()), nil
 	}
 
-	projectKey, itemNumber, err := parseDisplayID(displayID)
+	client, projectKey, itemNumber, prompt, err := getClientForDisplayID(displayID)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
+	}
+	if prompt != "" {
+		return mcp.NewToolResultText(prompt), nil
 	}
 
 	if err := client.DeleteAttachment(projectKey, itemNumber, attachmentID); err != nil {
@@ -1974,20 +1985,18 @@ func handleListInbox(_ context.Context, request mcp.CallToolRequest) (*mcp.CallT
 }
 
 func handleAddToInbox(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	client, err := getClient()
-	if err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
-	}
-
 	displayID, err := request.RequireString("display_id")
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
 
 	// Look up the work item to get its UUID
-	projectKey, itemNumber, err := parseDisplayID(displayID)
+	client, projectKey, itemNumber, prompt, err := getClientForDisplayID(displayID)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
+	}
+	if prompt != "" {
+		return mcp.NewToolResultText(prompt), nil
 	}
 
 	item, err := client.GetWorkItem(projectKey, itemNumber)

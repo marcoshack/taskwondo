@@ -145,6 +145,18 @@ type WorkflowStatus struct {
 	Color       *string `json:"color,omitempty"`
 }
 
+// SearchResult represents a single result from the /api/v1/search endpoint.
+type SearchResult struct {
+	EntityType    string  `json:"entity_type"`
+	EntityID      string  `json:"entity_id"`
+	ProjectKey    string  `json:"project_key,omitempty"`
+	ItemNumber    *int    `json:"item_number,omitempty"`
+	NamespaceSlug string  `json:"namespace_slug,omitempty"`
+	ResourcePath  string  `json:"resource_path,omitempty"`
+	Score         float64 `json:"score"`
+	Content       string  `json:"snippet"`
+}
+
 // nsPrefix returns the namespace path prefix for project-scoped API routes.
 func (c *Client) nsPrefix() string {
 	if c.namespace != "" && c.namespace != "default" {
@@ -227,6 +239,33 @@ func (c *Client) ListNamespaces() ([]Namespace, error) {
 		return nil, fmt.Errorf("decode namespaces: %w", err)
 	}
 	return namespaces, nil
+}
+
+// Search performs a cross-project search via /api/v1/search (namespace-agnostic).
+func (c *Client) Search(query, entityType string, limit int) ([]SearchResult, error) {
+	q := url.Values{}
+	q.Set("q", query)
+	if entityType != "" {
+		q.Set("entity_type", entityType)
+	}
+	if limit > 0 {
+		q.Set("limit", fmt.Sprintf("%d", limit))
+	}
+	data, err := c.doRequest("GET", "/api/v1/search?"+q.Encode(), nil)
+	if err != nil {
+		return nil, err
+	}
+	var resp struct {
+		Data struct {
+			FTS struct {
+				Results []SearchResult `json:"results"`
+			} `json:"fts"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return nil, fmt.Errorf("decode search response: %w", err)
+	}
+	return resp.Data.FTS.Results, nil
 }
 
 func (c *Client) ListProjects() ([]Project, error) {
