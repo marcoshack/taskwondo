@@ -33,6 +33,7 @@ const (
 	SettingFeatureStatsTimeline  = "feature_stats_timeline"
 	SettingFeatureSemanticSearch = "feature_semantic_search"
 	SettingOllamaAvailable      = "ollama_available"
+	SettingNamespacesEnabled     = "namespaces_enabled"
 )
 
 // SMTPEncryption constants for the Encryption field of SMTPConfig.

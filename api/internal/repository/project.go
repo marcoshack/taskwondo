@@ -34,9 +34,9 @@ func (r *ProjectRepository) Create(ctx context.Context, project *model.Project) 
 	}
 
 	_, err = r.db.ExecContext(ctx,
-		`INSERT INTO projects (id, name, key, description, default_workflow_id, allowed_complexity_values, business_hours)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-		project.ID, project.Name, project.Key, project.Description, project.DefaultWorkflowID, pq.Array(project.AllowedComplexityValues), businessHoursJSON)
+		`INSERT INTO projects (id, name, key, description, default_workflow_id, allowed_complexity_values, business_hours, namespace_id)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+		project.ID, project.Name, project.Key, project.Description, project.DefaultWorkflowID, pq.Array(project.AllowedComplexityValues), businessHoursJSON, project.NamespaceID)
 	if err != nil {
 		return fmt.Errorf("inserting project: %w", err)
 	}
@@ -44,25 +44,53 @@ func (r *ProjectRepository) Create(ctx context.Context, project *model.Project) 
 }
 
 // GetByKey returns a project by its unique key (e.g., "INFRA").
+// For backward compatibility, this searches across all namespaces.
 func (r *ProjectRepository) GetByKey(ctx context.Context, key string) (*model.Project, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, name, key, description, default_workflow_id, allowed_complexity_values, business_hours, item_counter, created_at, updated_at
+		`SELECT id, name, key, description, namespace_id, default_workflow_id, allowed_complexity_values, business_hours, item_counter, created_at, updated_at
 		 FROM projects WHERE key = $1 AND deleted_at IS NULL`, key)
+	return scanProject(row)
+}
+
+// GetByKeyAndNamespace returns a project by its key scoped to a specific namespace.
+func (r *ProjectRepository) GetByKeyAndNamespace(ctx context.Context, namespaceID uuid.UUID, key string) (*model.Project, error) {
+	row := r.db.QueryRowContext(ctx,
+		`SELECT id, name, key, description, namespace_id, default_workflow_id, allowed_complexity_values, business_hours, item_counter, created_at, updated_at
+		 FROM projects WHERE namespace_id = $1 AND key = $2 AND deleted_at IS NULL`, namespaceID, key)
 	return scanProject(row)
 }
 
 // GetByID returns a project by ID.
 func (r *ProjectRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.Project, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, name, key, description, default_workflow_id, allowed_complexity_values, business_hours, item_counter, created_at, updated_at
+		`SELECT id, name, key, description, namespace_id, default_workflow_id, allowed_complexity_values, business_hours, item_counter, created_at, updated_at
 		 FROM projects WHERE id = $1 AND deleted_at IS NULL`, id)
 	return scanProject(row)
+}
+
+// SetNamespaceID updates a project's namespace_id. Used for backfill and migration.
+func (r *ProjectRepository) SetNamespaceID(ctx context.Context, projectID, namespaceID uuid.UUID) error {
+	result, err := r.db.ExecContext(ctx,
+		`UPDATE projects SET namespace_id = $1, updated_at = now()
+		 WHERE id = $2 AND deleted_at IS NULL`,
+		namespaceID, projectID)
+	if err != nil {
+		return fmt.Errorf("setting project namespace: %w", err)
+	}
+	n, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("checking rows affected: %w", err)
+	}
+	if n == 0 {
+		return model.ErrNotFound
+	}
+	return nil
 }
 
 // ListByUser returns all non-deleted projects the given user is a member of.
 func (r *ProjectRepository) ListByUser(ctx context.Context, userID uuid.UUID) ([]model.Project, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT p.id, p.name, p.key, p.description, p.default_workflow_id, p.allowed_complexity_values, p.business_hours, p.item_counter, p.created_at, p.updated_at
+		`SELECT p.id, p.name, p.key, p.description, p.namespace_id, p.default_workflow_id, p.allowed_complexity_values, p.business_hours, p.item_counter, p.created_at, p.updated_at
 		 FROM projects p
 		 INNER JOIN project_members pm ON pm.project_id = p.id
 		 WHERE pm.user_id = $1 AND p.deleted_at IS NULL
@@ -78,7 +106,7 @@ func (r *ProjectRepository) ListByUser(ctx context.Context, userID uuid.UUID) ([
 // ListAll returns all non-deleted projects (for global admins).
 func (r *ProjectRepository) ListAll(ctx context.Context) ([]model.Project, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, name, key, description, default_workflow_id, allowed_complexity_values, business_hours, item_counter, created_at, updated_at
+		`SELECT id, name, key, description, namespace_id, default_workflow_id, allowed_complexity_values, business_hours, item_counter, created_at, updated_at
 		 FROM projects WHERE deleted_at IS NULL
 		 ORDER BY name`)
 	if err != nil {
@@ -207,12 +235,13 @@ func uuidArray(ids []uuid.UUID) string {
 func scanProject(row *sql.Row) (*model.Project, error) {
 	var p model.Project
 	var description sql.NullString
+	var namespaceID *uuid.UUID
 	var workflowID *uuid.UUID
 	var allowedComplexity pq.Int64Array
 	var businessHoursRaw []byte
 
 	err := row.Scan(&p.ID, &p.Name, &p.Key, &description,
-		&workflowID, &allowedComplexity, &businessHoursRaw, &p.ItemCounter, &p.CreatedAt, &p.UpdatedAt)
+		&namespaceID, &workflowID, &allowedComplexity, &businessHoursRaw, &p.ItemCounter, &p.CreatedAt, &p.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, model.ErrNotFound
 	}
@@ -223,6 +252,7 @@ func scanProject(row *sql.Row) (*model.Project, error) {
 	if description.Valid {
 		p.Description = &description.String
 	}
+	p.NamespaceID = namespaceID
 	p.DefaultWorkflowID = workflowID
 	p.AllowedComplexityValues = int64ArrayToIntSlice(allowedComplexity)
 	if len(businessHoursRaw) > 0 && string(businessHoursRaw) != "null" {
@@ -240,18 +270,20 @@ func scanProjects(rows *sql.Rows) ([]model.Project, error) {
 	for rows.Next() {
 		var p model.Project
 		var description sql.NullString
+		var namespaceID *uuid.UUID
 		var workflowID *uuid.UUID
 		var allowedComplexity pq.Int64Array
 		var businessHoursRaw []byte
 
 		if err := rows.Scan(&p.ID, &p.Name, &p.Key, &description,
-			&workflowID, &allowedComplexity, &businessHoursRaw, &p.ItemCounter, &p.CreatedAt, &p.UpdatedAt); err != nil {
+			&namespaceID, &workflowID, &allowedComplexity, &businessHoursRaw, &p.ItemCounter, &p.CreatedAt, &p.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("scanning project row: %w", err)
 		}
 
 		if description.Valid {
 			p.Description = &description.String
 		}
+		p.NamespaceID = namespaceID
 		p.DefaultWorkflowID = workflowID
 		p.AllowedComplexityValues = int64ArrayToIntSlice(allowedComplexity)
 		if len(businessHoursRaw) > 0 && string(businessHoursRaw) != "null" {

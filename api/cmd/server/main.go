@@ -94,6 +94,8 @@ func main() {
 	emailVerificationRepo := repository.NewEmailVerificationRepository(db)
 	statsRepo := repository.NewStatsRepository(db)
 	embeddingRepo := repository.NewEmbeddingRepository(db)
+	namespaceRepo := repository.NewNamespaceRepository(db)
+	namespaceMemberRepo := repository.NewNamespaceMemberRepository(db)
 
 	// Initialize storage
 	store, err := storage.NewMinIOStorage(
@@ -143,6 +145,7 @@ func main() {
 	inboxService := service.NewInboxService(inboxRepo, projectMemberRepo)
 	userSettingService := service.NewUserSettingService(userSettingRepo, projectRepo, projectMemberRepo)
 	systemSettingService := service.NewSystemSettingService(systemSettingRepo)
+	namespaceService := service.NewNamespaceService(namespaceRepo, namespaceMemberRepo, projectRepo, userRepo)
 	adminService := service.NewAdminService(userRepo, projectRepo, projectMemberRepo)
 	statsService := service.NewStatsService(statsRepo, projectRepo, projectMemberRepo)
 
@@ -170,6 +173,11 @@ func main() {
 	// Backfill type-workflow mappings for existing projects
 	if err := projectService.SeedExistingProjectTypeWorkflows(ctx); err != nil {
 		log.Fatal().Err(err).Msg("failed to seed existing project type workflows")
+	}
+
+	// Seed default namespace and backfill existing projects
+	if err := namespaceService.SeedDefaultNamespace(ctx); err != nil {
+		log.Fatal().Err(err).Msg("failed to seed default namespace")
 	}
 
 	// Initialize encryption

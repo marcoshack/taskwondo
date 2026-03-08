@@ -16,4 +16,6 @@ var (
 	ErrStatusIncompatible      = errors.New("status incompatible with target workflow")
 	ErrEmbeddingUnavailable    = errors.New("embedding service unavailable")
 	ErrFeatureDisabled         = errors.New("feature is disabled")
+	ErrNamespacesDisabled      = errors.New("namespaces are disabled")
+	ErrNamespaceNotEmpty       = errors.New("namespace is not empty")
 )

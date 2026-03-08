@@ -20,6 +20,7 @@ type Project struct {
 	Name                    string     `json:"name"`
 	Key                     string     `json:"key"`
 	Description             *string    `json:"description,omitempty"`
+	NamespaceID             *uuid.UUID `json:"namespace_id,omitempty"`
 	DefaultWorkflowID       *uuid.UUID `json:"default_workflow_id,omitempty"`
 	AllowedComplexityValues []int                `json:"allowed_complexity_values"`
 	BusinessHours           *BusinessHoursConfig `json:"business_hours,omitempty"`
