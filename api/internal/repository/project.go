@@ -44,8 +44,13 @@ func (r *ProjectRepository) Create(ctx context.Context, project *model.Project) 
 }
 
 // GetByKey returns a project by its unique key (e.g., "INFRA").
-// For backward compatibility, this searches across all namespaces.
+// When namespace context is present, scopes the lookup to that namespace.
+// Otherwise falls back to a global search for backward compatibility.
 func (r *ProjectRepository) GetByKey(ctx context.Context, key string) (*model.Project, error) {
+	namespaceID := model.NamespaceIDFromContext(ctx)
+	if namespaceID != uuid.Nil {
+		return r.GetByKeyAndNamespace(ctx, namespaceID, key)
+	}
 	row := r.db.QueryRowContext(ctx,
 		`SELECT id, name, key, description, namespace_id, default_workflow_id, allowed_complexity_values, business_hours, item_counter, created_at, updated_at
 		 FROM projects WHERE key = $1 AND deleted_at IS NULL`, key)
