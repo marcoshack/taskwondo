@@ -46,7 +46,7 @@ func TestMilestoneHandler_Create(t *testing.T) {
 	h, info, projectKey := milestoneTestSetup(t)
 
 	body := `{"name":"v1.0","due_date":"2026-06-01"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/"+projectKey+"/milestones", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/"+projectKey+"/milestones", bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
@@ -78,7 +78,7 @@ func TestMilestoneHandler_Create_InvalidDate(t *testing.T) {
 	h, info, projectKey := milestoneTestSetup(t)
 
 	body := `{"name":"v1.0","due_date":"not-a-date"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/"+projectKey+"/milestones", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/"+projectKey+"/milestones", bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
@@ -98,7 +98,7 @@ func TestMilestoneHandler_List(t *testing.T) {
 	// Create two milestones
 	for _, name := range []string{"v1.0", "v2.0"} {
 		body := `{"name":"` + name + `"}`
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/"+projectKey+"/milestones", bytes.NewBufferString(body))
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/"+projectKey+"/milestones", bytes.NewBufferString(body))
 		rctx := chi.NewRouteContext()
 		rctx.URLParams.Add("projectKey", projectKey)
 		req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
@@ -108,7 +108,7 @@ func TestMilestoneHandler_List(t *testing.T) {
 	}
 
 	// List
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/projects/"+projectKey+"/milestones", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/default/projects/"+projectKey+"/milestones", nil)
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
@@ -135,7 +135,7 @@ func TestMilestoneHandler_Get(t *testing.T) {
 
 	// Create
 	body := `{"name":"v1.0"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/"+projectKey+"/milestones", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/"+projectKey+"/milestones", bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
@@ -150,7 +150,7 @@ func TestMilestoneHandler_Get(t *testing.T) {
 	milestoneID := createdData["id"].(string)
 
 	// Get
-	req = httptest.NewRequest(http.MethodGet, "/api/v1/projects/"+projectKey+"/milestones/"+milestoneID, nil)
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/default/projects/"+projectKey+"/milestones/"+milestoneID, nil)
 	rctx = chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	rctx.URLParams.Add("milestoneId", milestoneID)
@@ -170,7 +170,7 @@ func TestMilestoneHandler_Update(t *testing.T) {
 
 	// Create
 	body := `{"name":"v1.0"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/"+projectKey+"/milestones", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/"+projectKey+"/milestones", bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
@@ -186,7 +186,7 @@ func TestMilestoneHandler_Update(t *testing.T) {
 
 	// Update
 	updateBody := `{"name":"v1.1","status":"closed"}`
-	req = httptest.NewRequest(http.MethodPatch, "/api/v1/projects/"+projectKey+"/milestones/"+milestoneID, bytes.NewBufferString(updateBody))
+	req = httptest.NewRequest(http.MethodPatch, "/api/v1/default/projects/"+projectKey+"/milestones/"+milestoneID, bytes.NewBufferString(updateBody))
 	rctx = chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	rctx.URLParams.Add("milestoneId", milestoneID)
@@ -217,7 +217,7 @@ func TestMilestoneHandler_Delete(t *testing.T) {
 
 	// Create
 	body := `{"name":"v1.0"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/"+projectKey+"/milestones", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/"+projectKey+"/milestones", bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
@@ -232,7 +232,7 @@ func TestMilestoneHandler_Delete(t *testing.T) {
 	milestoneID := createdData["id"].(string)
 
 	// Delete
-	req = httptest.NewRequest(http.MethodDelete, "/api/v1/projects/"+projectKey+"/milestones/"+milestoneID, nil)
+	req = httptest.NewRequest(http.MethodDelete, "/api/v1/default/projects/"+projectKey+"/milestones/"+milestoneID, nil)
 	rctx = chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	rctx.URLParams.Add("milestoneId", milestoneID)
@@ -252,7 +252,7 @@ func TestMilestoneHandler_Stats(t *testing.T) {
 
 	// Create a milestone first
 	body := `{"name":"Stats Test"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/"+projectKey+"/milestones", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/"+projectKey+"/milestones", bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
@@ -272,7 +272,7 @@ func TestMilestoneHandler_Stats(t *testing.T) {
 	json.NewDecoder(w.Body).Decode(&createResp)
 
 	// Now call Stats
-	req = httptest.NewRequest(http.MethodGet, "/api/v1/projects/"+projectKey+"/milestones/"+createResp.Data.ID+"/stats", nil)
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/default/projects/"+projectKey+"/milestones/"+createResp.Data.ID+"/stats", nil)
 	rctx = chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	rctx.URLParams.Add("milestoneId", createResp.Data.ID)
@@ -304,7 +304,7 @@ func TestMilestoneHandler_Stats(t *testing.T) {
 func TestMilestoneHandler_Stats_Unauthenticated(t *testing.T) {
 	h, _, projectKey := milestoneTestSetup(t)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/projects/"+projectKey+"/milestones/"+uuid.New().String()+"/stats", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/default/projects/"+projectKey+"/milestones/"+uuid.New().String()+"/stats", nil)
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	rctx.URLParams.Add("milestoneId", uuid.New().String())
@@ -321,7 +321,7 @@ func TestMilestoneHandler_Stats_Unauthenticated(t *testing.T) {
 func TestMilestoneHandler_Stats_InvalidID(t *testing.T) {
 	h, info, projectKey := milestoneTestSetup(t)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/projects/"+projectKey+"/milestones/invalid/stats", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/default/projects/"+projectKey+"/milestones/invalid/stats", nil)
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	rctx.URLParams.Add("milestoneId", "invalid")
@@ -339,7 +339,7 @@ func TestMilestoneHandler_Stats_InvalidID(t *testing.T) {
 func TestMilestoneHandler_Unauthenticated(t *testing.T) {
 	h, _, projectKey := milestoneTestSetup(t)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/projects/"+projectKey+"/milestones", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/default/projects/"+projectKey+"/milestones", nil)
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))

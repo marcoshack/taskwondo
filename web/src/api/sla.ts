@@ -1,4 +1,4 @@
-import { api } from './client'
+import { api, nsPrefix } from './client'
 
 // --- Types ---
 
@@ -32,15 +32,15 @@ interface DataResponse<T> {
 }
 
 export async function listSLATargets(projectKey: string) {
-  const res = await api.get<DataResponse<SLATarget[]>>(`/projects/${projectKey}/sla-targets`)
+  const res = await api.get<DataResponse<SLATarget[]>>(`${nsPrefix()}/projects/${projectKey}/sla-targets`)
   return res.data.data
 }
 
 export async function bulkUpsertSLATargets(projectKey: string, input: BulkUpsertSLAInput) {
-  const res = await api.put<DataResponse<SLATarget[]>>(`/projects/${projectKey}/sla-targets`, input)
+  const res = await api.put<DataResponse<SLATarget[]>>(`${nsPrefix()}/projects/${projectKey}/sla-targets`, input)
   return res.data.data
 }
 
 export async function deleteSLATarget(projectKey: string, targetId: string) {
-  await api.delete(`/projects/${projectKey}/sla-targets/${targetId}`)
+  await api.delete(`${nsPrefix()}/projects/${projectKey}/sla-targets/${targetId}`)
 }

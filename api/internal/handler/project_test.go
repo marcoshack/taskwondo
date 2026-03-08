@@ -316,7 +316,7 @@ func projectTestSetup(t *testing.T) (*ProjectHandler, *model.AuthInfo) {
 func createTestProject(t *testing.T, h *ProjectHandler, info *model.AuthInfo) {
 	t.Helper()
 	body := `{"name":"Test Project","key":"TEST","description":"A test project"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects", bytes.NewBufferString(body))
 	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), info))
 	w := httptest.NewRecorder()
 	h.Create(w, req)
@@ -331,7 +331,7 @@ func TestCreateProject_Handler_Success(t *testing.T) {
 	h, info := projectTestSetup(t)
 
 	body := `{"name":"Infrastructure","key":"INFRA","description":"Infra management"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects", bytes.NewBufferString(body))
 	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), info))
 	w := httptest.NewRecorder()
 
@@ -356,7 +356,7 @@ func TestCreateProject_Handler_MissingName(t *testing.T) {
 	h, info := projectTestSetup(t)
 
 	body := `{"key":"INFRA"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects", bytes.NewBufferString(body))
 	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), info))
 	w := httptest.NewRecorder()
 
@@ -371,7 +371,7 @@ func TestCreateProject_Handler_MissingKey(t *testing.T) {
 	h, info := projectTestSetup(t)
 
 	body := `{"name":"Test"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects", bytes.NewBufferString(body))
 	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), info))
 	w := httptest.NewRecorder()
 
@@ -386,7 +386,7 @@ func TestCreateProject_Handler_InvalidKey(t *testing.T) {
 	h, info := projectTestSetup(t)
 
 	body := `{"name":"Test","key":"invalid"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects", bytes.NewBufferString(body))
 	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), info))
 	w := httptest.NewRecorder()
 
@@ -401,7 +401,7 @@ func TestListProjects_Handler(t *testing.T) {
 	h, info := projectTestSetup(t)
 	createTestProject(t, h, info)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/projects", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/default/projects", nil)
 	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), info))
 	w := httptest.NewRecorder()
 
@@ -423,7 +423,7 @@ func TestGetProject_Handler(t *testing.T) {
 	h, info := projectTestSetup(t)
 	createTestProject(t, h, info)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/projects/TEST", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/default/projects/TEST", nil)
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", "TEST")
 	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
@@ -448,7 +448,7 @@ func TestGetProject_Handler(t *testing.T) {
 func TestGetProject_Handler_NotFound(t *testing.T) {
 	h, info := projectTestSetup(t)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/projects/NOPE", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/default/projects/NOPE", nil)
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", "NOPE")
 	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
@@ -467,7 +467,7 @@ func TestDeleteProject_Handler(t *testing.T) {
 	h, info := projectTestSetup(t)
 	createTestProject(t, h, info)
 
-	req := httptest.NewRequest(http.MethodDelete, "/api/v1/projects/TEST", nil)
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/default/projects/TEST", nil)
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", "TEST")
 	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
@@ -486,7 +486,7 @@ func TestListMembers_Handler(t *testing.T) {
 	h, info := projectTestSetup(t)
 	createTestProject(t, h, info)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/projects/TEST/members", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/default/projects/TEST/members", nil)
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", "TEST")
 	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
@@ -517,7 +517,7 @@ func TestUpdateProject_Handler(t *testing.T) {
 	createTestProject(t, h, info)
 
 	body := `{"name":"Updated Project"}`
-	req := httptest.NewRequest(http.MethodPatch, "/api/v1/projects/TEST", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/default/projects/TEST", bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", "TEST")
 	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
@@ -543,7 +543,7 @@ func TestCreateProject_Handler_Unauthenticated(t *testing.T) {
 	h, _ := projectTestSetup(t)
 
 	body := `{"name":"Test","key":"TEST"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects", bytes.NewBufferString(body))
 	w := httptest.NewRecorder()
 
 	h.Create(w, req)
@@ -558,7 +558,7 @@ func TestAddMember_Handler_InvalidRole(t *testing.T) {
 	createTestProject(t, h, info)
 
 	body := `{"user_id":"` + uuid.New().String() + `","role":"superadmin"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/members", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/TEST/members", bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", "TEST")
 	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
@@ -579,7 +579,7 @@ func TestAddMember_Handler_MissingUserID(t *testing.T) {
 	createTestProject(t, h, info)
 
 	body := `{"role":"member"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/members", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/TEST/members", bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", "TEST")
 	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
@@ -600,7 +600,7 @@ func TestListTypeWorkflows_Handler(t *testing.T) {
 	h, info := projectTestSetup(t)
 	createTestProject(t, h, info)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/projects/TEST/type-workflows", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/default/projects/TEST/type-workflows", nil)
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", "TEST")
 	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
@@ -626,7 +626,7 @@ func TestListTypeWorkflows_Handler_Unauthenticated(t *testing.T) {
 	h, info := projectTestSetup(t)
 	createTestProject(t, h, info)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/projects/TEST/type-workflows", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/default/projects/TEST/type-workflows", nil)
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", "TEST")
 	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
@@ -646,7 +646,7 @@ func TestUpdateTypeWorkflow_Handler(t *testing.T) {
 
 	wfID := uuid.New()
 	body := `{"workflow_id":"` + wfID.String() + `"}`
-	req := httptest.NewRequest(http.MethodPut, "/api/v1/projects/TEST/type-workflows/task", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/default/projects/TEST/type-workflows/task", bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", "TEST")
 	rctx.URLParams.Add("type", "task")
@@ -669,7 +669,7 @@ func TestUpdateTypeWorkflow_Handler_MissingWorkflowID(t *testing.T) {
 	createTestProject(t, h, info)
 
 	body := `{}`
-	req := httptest.NewRequest(http.MethodPut, "/api/v1/projects/TEST/type-workflows/task", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/default/projects/TEST/type-workflows/task", bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", "TEST")
 	rctx.URLParams.Add("type", "task")
@@ -690,7 +690,7 @@ func TestUpdateTypeWorkflow_Handler_InvalidWorkflowID(t *testing.T) {
 	createTestProject(t, h, info)
 
 	body := `{"workflow_id":"not-a-uuid"}`
-	req := httptest.NewRequest(http.MethodPut, "/api/v1/projects/TEST/type-workflows/task", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/default/projects/TEST/type-workflows/task", bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", "TEST")
 	rctx.URLParams.Add("type", "task")
@@ -712,7 +712,7 @@ func TestUpdateTypeWorkflow_Handler_Unauthenticated(t *testing.T) {
 
 	wfID := uuid.New()
 	body := `{"workflow_id":"` + wfID.String() + `"}`
-	req := httptest.NewRequest(http.MethodPut, "/api/v1/projects/TEST/type-workflows/task", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/default/projects/TEST/type-workflows/task", bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", "TEST")
 	rctx.URLParams.Add("type", "task")

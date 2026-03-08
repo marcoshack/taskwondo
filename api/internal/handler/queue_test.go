@@ -46,7 +46,7 @@ func TestQueueHandler_Create(t *testing.T) {
 	h, info, projectKey := queueTestSetup(t)
 
 	body := `{"name":"Support","queue_type":"support","default_priority":"medium"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/"+projectKey+"/queues", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/"+projectKey+"/queues", bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
@@ -72,7 +72,7 @@ func TestQueueHandler_Create_InvalidBody(t *testing.T) {
 	h, info, projectKey := queueTestSetup(t)
 
 	body := `{invalid}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/"+projectKey+"/queues", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/"+projectKey+"/queues", bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
@@ -91,7 +91,7 @@ func TestQueueHandler_List(t *testing.T) {
 
 	// Create a queue first
 	body := `{"name":"Alerts","queue_type":"alerts","default_priority":"high"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/"+projectKey+"/queues", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/"+projectKey+"/queues", bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
@@ -100,7 +100,7 @@ func TestQueueHandler_List(t *testing.T) {
 	h.Create(w, req)
 
 	// List queues
-	req = httptest.NewRequest(http.MethodGet, "/api/v1/projects/"+projectKey+"/queues", nil)
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/default/projects/"+projectKey+"/queues", nil)
 	rctx = chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
@@ -127,7 +127,7 @@ func TestQueueHandler_Get(t *testing.T) {
 
 	// Create a queue
 	body := `{"name":"Feedback","queue_type":"feedback"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/"+projectKey+"/queues", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/"+projectKey+"/queues", bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
@@ -142,7 +142,7 @@ func TestQueueHandler_Get(t *testing.T) {
 	queueID := createdData["id"].(string)
 
 	// Get queue
-	req = httptest.NewRequest(http.MethodGet, "/api/v1/projects/"+projectKey+"/queues/"+queueID, nil)
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/default/projects/"+projectKey+"/queues/"+queueID, nil)
 	rctx = chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	rctx.URLParams.Add("queueId", queueID)
@@ -162,7 +162,7 @@ func TestQueueHandler_Delete(t *testing.T) {
 
 	// Create a queue
 	body := `{"name":"ToDelete","queue_type":"general"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/"+projectKey+"/queues", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/"+projectKey+"/queues", bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
@@ -177,7 +177,7 @@ func TestQueueHandler_Delete(t *testing.T) {
 	queueID := createdData["id"].(string)
 
 	// Delete
-	req = httptest.NewRequest(http.MethodDelete, "/api/v1/projects/"+projectKey+"/queues/"+queueID, nil)
+	req = httptest.NewRequest(http.MethodDelete, "/api/v1/default/projects/"+projectKey+"/queues/"+queueID, nil)
 	rctx = chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	rctx.URLParams.Add("queueId", queueID)
@@ -195,7 +195,7 @@ func TestQueueHandler_Delete(t *testing.T) {
 func TestQueueHandler_Unauthenticated(t *testing.T) {
 	h, _, projectKey := queueTestSetup(t)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/projects/"+projectKey+"/queues", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/default/projects/"+projectKey+"/queues", nil)
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))

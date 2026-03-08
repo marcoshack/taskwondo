@@ -1,4 +1,4 @@
-import { api } from './client'
+import { api, nsPrefix } from './client'
 
 // --- Types ---
 
@@ -92,30 +92,30 @@ export async function listSystemStatuses() {
 // --- Project Workflow API Functions ---
 
 export async function listProjectWorkflows(projectKey: string) {
-  const res = await api.get<DataResponse<Workflow[]>>(`/projects/${projectKey}/workflows`)
+  const res = await api.get<DataResponse<Workflow[]>>(`${nsPrefix()}/projects/${projectKey}/workflows`)
   return res.data.data
 }
 
 export async function getProjectWorkflow(projectKey: string, workflowId: string) {
-  const res = await api.get<DataResponse<WorkflowDetail>>(`/projects/${projectKey}/workflows/${workflowId}`)
+  const res = await api.get<DataResponse<WorkflowDetail>>(`${nsPrefix()}/projects/${projectKey}/workflows/${workflowId}`)
   return res.data.data
 }
 
 export async function createProjectWorkflow(projectKey: string, input: CreateWorkflowInput) {
-  const res = await api.post<DataResponse<WorkflowDetail>>(`/projects/${projectKey}/workflows`, input)
+  const res = await api.post<DataResponse<WorkflowDetail>>(`${nsPrefix()}/projects/${projectKey}/workflows`, input)
   return res.data.data
 }
 
 export async function updateProjectWorkflow(projectKey: string, workflowId: string, input: UpdateWorkflowInput) {
-  const res = await api.patch<DataResponse<WorkflowDetail>>(`/projects/${projectKey}/workflows/${workflowId}`, input)
+  const res = await api.patch<DataResponse<WorkflowDetail>>(`${nsPrefix()}/projects/${projectKey}/workflows/${workflowId}`, input)
   return res.data.data
 }
 
 export async function deleteProjectWorkflow(projectKey: string, workflowId: string) {
-  await api.delete(`/projects/${projectKey}/workflows/${workflowId}`)
+  await api.delete(`${nsPrefix()}/projects/${projectKey}/workflows/${workflowId}`)
 }
 
 export async function listAvailableStatuses(projectKey: string) {
-  const res = await api.get<DataResponse<WorkflowStatus[]>>(`/projects/${projectKey}/workflows/statuses`)
+  const res = await api.get<DataResponse<WorkflowStatus[]>>(`${nsPrefix()}/projects/${projectKey}/workflows/statuses`)
   return res.data.data
 }

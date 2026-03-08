@@ -1,4 +1,4 @@
-import { api } from './client'
+import { api, nsPrefix } from './client'
 
 // --- Types ---
 
@@ -38,27 +38,27 @@ interface DataResponse<T> {
 }
 
 export async function listMilestones(projectKey: string) {
-  const res = await api.get<DataResponse<Milestone[]>>(`/projects/${projectKey}/milestones`)
+  const res = await api.get<DataResponse<Milestone[]>>(`${nsPrefix()}/projects/${projectKey}/milestones`)
   return res.data.data
 }
 
 export async function getMilestone(projectKey: string, milestoneId: string) {
-  const res = await api.get<DataResponse<Milestone>>(`/projects/${projectKey}/milestones/${milestoneId}`)
+  const res = await api.get<DataResponse<Milestone>>(`${nsPrefix()}/projects/${projectKey}/milestones/${milestoneId}`)
   return res.data.data
 }
 
 export async function createMilestone(projectKey: string, input: CreateMilestoneInput) {
-  const res = await api.post<DataResponse<Milestone>>(`/projects/${projectKey}/milestones`, input)
+  const res = await api.post<DataResponse<Milestone>>(`${nsPrefix()}/projects/${projectKey}/milestones`, input)
   return res.data.data
 }
 
 export async function updateMilestone(projectKey: string, milestoneId: string, input: UpdateMilestoneInput) {
-  const res = await api.patch<DataResponse<Milestone>>(`/projects/${projectKey}/milestones/${milestoneId}`, input)
+  const res = await api.patch<DataResponse<Milestone>>(`${nsPrefix()}/projects/${projectKey}/milestones/${milestoneId}`, input)
   return res.data.data
 }
 
 export async function deleteMilestone(projectKey: string, milestoneId: string) {
-  await api.delete(`/projects/${projectKey}/milestones/${milestoneId}`)
+  await api.delete(`${nsPrefix()}/projects/${projectKey}/milestones/${milestoneId}`)
 }
 
 // --- Stats Types ---
@@ -75,6 +75,6 @@ export interface MilestoneStats {
 }
 
 export async function getMilestoneStats(projectKey: string, milestoneId: string) {
-  const res = await api.get<DataResponse<MilestoneStats>>(`/projects/${projectKey}/milestones/${milestoneId}/stats`)
+  const res = await api.get<DataResponse<MilestoneStats>>(`${nsPrefix()}/projects/${projectKey}/milestones/${milestoneId}/stats`)
   return res.data.data
 }

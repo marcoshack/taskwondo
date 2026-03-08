@@ -164,7 +164,7 @@ func TestSLAHandler_BulkUpsert(t *testing.T) {
 		},
 	})
 
-	req := httptest.NewRequest(http.MethodPut, "/api/v1/projects/"+projectKey+"/sla-targets", bytes.NewBuffer(body))
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/default/projects/"+projectKey+"/sla-targets", bytes.NewBuffer(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
@@ -199,7 +199,7 @@ func TestSLAHandler_List(t *testing.T) {
 		},
 	})
 
-	putReq := httptest.NewRequest(http.MethodPut, "/api/v1/projects/"+projectKey+"/sla-targets", bytes.NewBuffer(body))
+	putReq := httptest.NewRequest(http.MethodPut, "/api/v1/default/projects/"+projectKey+"/sla-targets", bytes.NewBuffer(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	ctx := context.WithValue(putReq.Context(), chi.RouteCtxKey, rctx)
@@ -212,7 +212,7 @@ func TestSLAHandler_List(t *testing.T) {
 	}
 
 	// Now list
-	getReq := httptest.NewRequest(http.MethodGet, "/api/v1/projects/"+projectKey+"/sla-targets", nil)
+	getReq := httptest.NewRequest(http.MethodGet, "/api/v1/default/projects/"+projectKey+"/sla-targets", nil)
 	rctx2 := chi.NewRouteContext()
 	rctx2.URLParams.Add("projectKey", projectKey)
 	ctx2 := context.WithValue(getReq.Context(), chi.RouteCtxKey, rctx2)
@@ -246,7 +246,7 @@ func TestSLAHandler_Delete(t *testing.T) {
 		},
 	})
 
-	putReq := httptest.NewRequest(http.MethodPut, "/api/v1/projects/"+projectKey+"/sla-targets", bytes.NewBuffer(body))
+	putReq := httptest.NewRequest(http.MethodPut, "/api/v1/default/projects/"+projectKey+"/sla-targets", bytes.NewBuffer(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	ctx := context.WithValue(putReq.Context(), chi.RouteCtxKey, rctx)
@@ -262,7 +262,7 @@ func TestSLAHandler_Delete(t *testing.T) {
 	targetID := data[0]["id"].(string)
 
 	// Delete it
-	delReq := httptest.NewRequest(http.MethodDelete, "/api/v1/projects/"+projectKey+"/sla-targets/"+targetID, nil)
+	delReq := httptest.NewRequest(http.MethodDelete, "/api/v1/default/projects/"+projectKey+"/sla-targets/"+targetID, nil)
 	rctx2 := chi.NewRouteContext()
 	rctx2.URLParams.Add("projectKey", projectKey)
 	rctx2.URLParams.Add("targetId", targetID)
@@ -288,7 +288,7 @@ func TestSLAHandler_BulkUpsert_TerminalStatus(t *testing.T) {
 		},
 	})
 
-	req := httptest.NewRequest(http.MethodPut, "/api/v1/projects/"+projectKey+"/sla-targets", bytes.NewBuffer(body))
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/default/projects/"+projectKey+"/sla-targets", bytes.NewBuffer(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
@@ -314,7 +314,7 @@ func TestSLAHandler_BulkUpsert_Unauthorized(t *testing.T) {
 		},
 	})
 
-	req := httptest.NewRequest(http.MethodPut, "/api/v1/projects/"+projectKey+"/sla-targets", bytes.NewBuffer(body))
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/default/projects/"+projectKey+"/sla-targets", bytes.NewBuffer(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
@@ -375,7 +375,7 @@ func TestSLAHandler_BulkUpsert_BusinessHoursWithoutProjectConfig(t *testing.T) {
 		},
 	})
 
-	req := httptest.NewRequest(http.MethodPut, "/api/v1/projects/NOBH/sla-targets", bytes.NewBuffer(body))
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/default/projects/NOBH/sla-targets", bytes.NewBuffer(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", "NOBH")
 	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
@@ -401,7 +401,7 @@ func TestSLAHandler_BulkUpsert_InvalidWorkflowID(t *testing.T) {
 		},
 	})
 
-	req := httptest.NewRequest(http.MethodPut, "/api/v1/projects/"+projectKey+"/sla-targets", bytes.NewBuffer(body))
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/default/projects/"+projectKey+"/sla-targets", bytes.NewBuffer(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)

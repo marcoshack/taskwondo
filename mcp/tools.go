@@ -25,7 +25,7 @@ func parseDisplayID(displayID string) (string, int, error) {
 }
 
 // activeNamespace holds the currently active namespace slug for the session.
-// Empty string or "default" means the default namespace (no X-Namespace header).
+// Empty string or "default" means the default namespace (path prefix /default).
 var activeNamespace string
 
 // getClient returns a configured API client, or an error tool result if not authenticated.

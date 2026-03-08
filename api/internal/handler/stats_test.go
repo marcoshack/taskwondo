@@ -76,7 +76,7 @@ func TestStatsHandler_Timeline(t *testing.T) {
 	// Since we don't have direct access to the project ID here, let's test
 	// with empty results (no snapshots match) and verify the response format.
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/projects/"+projectKey+"/stats/timeline?range=24h", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/default/projects/"+projectKey+"/stats/timeline?range=24h", nil)
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
@@ -108,7 +108,7 @@ func TestStatsHandler_Timeline_DefaultRange(t *testing.T) {
 	h, _, info, projectKey := statsTestSetup(t)
 
 	// No range param → defaults to 7d
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/projects/"+projectKey+"/stats/timeline", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/default/projects/"+projectKey+"/stats/timeline", nil)
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
@@ -125,7 +125,7 @@ func TestStatsHandler_Timeline_DefaultRange(t *testing.T) {
 func TestStatsHandler_Timeline_InvalidRange(t *testing.T) {
 	h, _, info, projectKey := statsTestSetup(t)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/projects/"+projectKey+"/stats/timeline?range=30d", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/default/projects/"+projectKey+"/stats/timeline?range=30d", nil)
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
@@ -142,7 +142,7 @@ func TestStatsHandler_Timeline_InvalidRange(t *testing.T) {
 func TestStatsHandler_Timeline_ProjectNotFound(t *testing.T) {
 	h, _, info, _ := statsTestSetup(t)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/projects/NOPE/stats/timeline?range=7d", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/default/projects/NOPE/stats/timeline?range=7d", nil)
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", "NOPE")
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))

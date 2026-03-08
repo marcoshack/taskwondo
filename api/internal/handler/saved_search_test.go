@@ -116,7 +116,7 @@ func TestSavedSearchHandler_Create(t *testing.T) {
 	h, info, pk := savedSearchTestSetup(t)
 
 	body := `{"name":"My bugs","filters":{"type":["bug"]},"view_mode":"list","shared":false}`
-	req, w := ssRequest(http.MethodPost, "/api/v1/projects/"+pk+"/saved-searches", body, pk, info)
+	req, w := ssRequest(http.MethodPost, "/api/v1/default/projects/"+pk+"/saved-searches", body, pk, info)
 	h.Create(w, req)
 
 	if w.Code != http.StatusCreated {
@@ -139,7 +139,7 @@ func TestSavedSearchHandler_Create_MissingName(t *testing.T) {
 	h, info, pk := savedSearchTestSetup(t)
 
 	body := `{"name":"","filters":{},"view_mode":"list"}`
-	req, w := ssRequest(http.MethodPost, "/api/v1/projects/"+pk+"/saved-searches", body, pk, info)
+	req, w := ssRequest(http.MethodPost, "/api/v1/default/projects/"+pk+"/saved-searches", body, pk, info)
 	h.Create(w, req)
 
 	if w.Code != http.StatusBadRequest {
@@ -150,7 +150,7 @@ func TestSavedSearchHandler_Create_MissingName(t *testing.T) {
 func TestSavedSearchHandler_Create_InvalidBody(t *testing.T) {
 	h, info, pk := savedSearchTestSetup(t)
 
-	req, w := ssRequest(http.MethodPost, "/api/v1/projects/"+pk+"/saved-searches", "{invalid}", pk, info)
+	req, w := ssRequest(http.MethodPost, "/api/v1/default/projects/"+pk+"/saved-searches", "{invalid}", pk, info)
 	h.Create(w, req)
 
 	if w.Code != http.StatusBadRequest {
@@ -163,11 +163,11 @@ func TestSavedSearchHandler_List(t *testing.T) {
 
 	// Create a search first
 	body := `{"name":"All bugs","filters":{"type":["bug"]},"view_mode":"list"}`
-	req, w := ssRequest(http.MethodPost, "/api/v1/projects/"+pk+"/saved-searches", body, pk, info)
+	req, w := ssRequest(http.MethodPost, "/api/v1/default/projects/"+pk+"/saved-searches", body, pk, info)
 	h.Create(w, req)
 
 	// List
-	req, w = ssRequest(http.MethodGet, "/api/v1/projects/"+pk+"/saved-searches", "", pk, info)
+	req, w = ssRequest(http.MethodGet, "/api/v1/default/projects/"+pk+"/saved-searches", "", pk, info)
 	h.List(w, req)
 
 	if w.Code != http.StatusOK {
@@ -188,7 +188,7 @@ func TestSavedSearchHandler_Update(t *testing.T) {
 
 	// Create
 	body := `{"name":"Old name","filters":{},"view_mode":"list"}`
-	req, w := ssRequest(http.MethodPost, "/api/v1/projects/"+pk+"/saved-searches", body, pk, info)
+	req, w := ssRequest(http.MethodPost, "/api/v1/default/projects/"+pk+"/saved-searches", body, pk, info)
 	h.Create(w, req)
 
 	var createResp map[string]json.RawMessage
@@ -199,7 +199,7 @@ func TestSavedSearchHandler_Update(t *testing.T) {
 
 	// Update
 	body = `{"name":"New name"}`
-	req, w = ssRequest(http.MethodPatch, "/api/v1/projects/"+pk+"/saved-searches/"+searchID, body, pk, info, "searchId", searchID)
+	req, w = ssRequest(http.MethodPatch, "/api/v1/default/projects/"+pk+"/saved-searches/"+searchID, body, pk, info, "searchId", searchID)
 	h.Update(w, req)
 
 	if w.Code != http.StatusOK {
@@ -219,7 +219,7 @@ func TestSavedSearchHandler_Update_InvalidID(t *testing.T) {
 	h, info, pk := savedSearchTestSetup(t)
 
 	body := `{"name":"New name"}`
-	req, w := ssRequest(http.MethodPatch, "/api/v1/projects/"+pk+"/saved-searches/not-a-uuid", body, pk, info, "searchId", "not-a-uuid")
+	req, w := ssRequest(http.MethodPatch, "/api/v1/default/projects/"+pk+"/saved-searches/not-a-uuid", body, pk, info, "searchId", "not-a-uuid")
 	h.Update(w, req)
 
 	if w.Code != http.StatusBadRequest {
@@ -232,7 +232,7 @@ func TestSavedSearchHandler_Delete(t *testing.T) {
 
 	// Create
 	body := `{"name":"To delete","filters":{},"view_mode":"list"}`
-	req, w := ssRequest(http.MethodPost, "/api/v1/projects/"+pk+"/saved-searches", body, pk, info)
+	req, w := ssRequest(http.MethodPost, "/api/v1/default/projects/"+pk+"/saved-searches", body, pk, info)
 	h.Create(w, req)
 
 	var createResp map[string]json.RawMessage
@@ -242,7 +242,7 @@ func TestSavedSearchHandler_Delete(t *testing.T) {
 	searchID := createdData["id"].(string)
 
 	// Delete
-	req, w = ssRequest(http.MethodDelete, "/api/v1/projects/"+pk+"/saved-searches/"+searchID, "", pk, info, "searchId", searchID)
+	req, w = ssRequest(http.MethodDelete, "/api/v1/default/projects/"+pk+"/saved-searches/"+searchID, "", pk, info, "searchId", searchID)
 	h.Delete(w, req)
 
 	if w.Code != http.StatusNoContent {
@@ -254,7 +254,7 @@ func TestSavedSearchHandler_Delete_NotFound(t *testing.T) {
 	h, info, pk := savedSearchTestSetup(t)
 
 	fakeID := uuid.New().String()
-	req, w := ssRequest(http.MethodDelete, "/api/v1/projects/"+pk+"/saved-searches/"+fakeID, "", pk, info, "searchId", fakeID)
+	req, w := ssRequest(http.MethodDelete, "/api/v1/default/projects/"+pk+"/saved-searches/"+fakeID, "", pk, info, "searchId", fakeID)
 	h.Delete(w, req)
 
 	if w.Code != http.StatusNotFound {
@@ -265,7 +265,7 @@ func TestSavedSearchHandler_Delete_NotFound(t *testing.T) {
 func TestSavedSearchHandler_Unauthorized(t *testing.T) {
 	h, _, pk := savedSearchTestSetup(t)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/projects/"+pk+"/saved-searches", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/default/projects/"+pk+"/saved-searches", nil)
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", pk)
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))

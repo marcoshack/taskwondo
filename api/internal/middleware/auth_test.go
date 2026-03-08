@@ -42,7 +42,7 @@ func TestAuth_APIKeyPermission_ReadOnlyAllowsGET(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/projects", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/default/projects", nil)
 	req.Header.Set("Authorization", "Bearer twk_testkey123")
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
@@ -65,7 +65,7 @@ func TestAuth_APIKeyPermission_ReadOnlyDeniesPOST(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects", nil)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects", nil)
 	req.Header.Set("Authorization", "Bearer twk_testkey123")
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
@@ -95,7 +95,7 @@ func TestAuth_APIKeyPermission_WriteAllowsPOST(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects", nil)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects", nil)
 	req.Header.Set("Authorization", "Bearer twk_testkey123")
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
@@ -119,7 +119,7 @@ func TestAuth_APIKeyPermission_EmptyAllowsAll(t *testing.T) {
 	}))
 
 	for _, method := range []string{http.MethodGet, http.MethodPost, http.MethodDelete} {
-		req := httptest.NewRequest(method, "/api/v1/projects", nil)
+		req := httptest.NewRequest(method, "/api/v1/default/projects", nil)
 		req.Header.Set("Authorization", "Bearer twk_testkey123")
 		w := httptest.NewRecorder()
 		handler.ServeHTTP(w, req)
@@ -142,7 +142,7 @@ func TestAuth_JWTNoPermissionCheck(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects", nil)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects", nil)
 	req.Header.Set("Authorization", "Bearer jwt-token-here")
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)

@@ -1,4 +1,4 @@
-import { api } from './client'
+import { api, nsPrefix } from './client'
 
 export interface UserSetting {
   key: string
@@ -10,20 +10,20 @@ interface DataResponse<T> {
 }
 
 export async function getUserSettings(projectKey: string): Promise<UserSetting[]> {
-  const res = await api.get<DataResponse<UserSetting[]>>(`/projects/${projectKey}/user-settings`)
+  const res = await api.get<DataResponse<UserSetting[]>>(`${nsPrefix()}/projects/${projectKey}/user-settings`)
   return res.data.data ?? []
 }
 
 export async function getUserSetting(projectKey: string, key: string): Promise<UserSetting> {
-  const res = await api.get<DataResponse<UserSetting>>(`/projects/${projectKey}/user-settings/${key}`)
+  const res = await api.get<DataResponse<UserSetting>>(`${nsPrefix()}/projects/${projectKey}/user-settings/${key}`)
   return res.data.data
 }
 
 export async function setUserSetting(projectKey: string, key: string, value: unknown): Promise<UserSetting> {
-  const res = await api.put<DataResponse<UserSetting>>(`/projects/${projectKey}/user-settings/${key}`, { value })
+  const res = await api.put<DataResponse<UserSetting>>(`${nsPrefix()}/projects/${projectKey}/user-settings/${key}`, { value })
   return res.data.data
 }
 
 export async function deleteUserSetting(projectKey: string, key: string): Promise<void> {
-  await api.delete(`/projects/${projectKey}/user-settings/${key}`)
+  await api.delete(`${nsPrefix()}/projects/${projectKey}/user-settings/${key}`)
 }

@@ -1,4 +1,4 @@
-import { api } from './client'
+import { api, nsPrefix } from './client'
 
 // --- Types ---
 
@@ -41,20 +41,20 @@ export interface UpdateSavedSearchInput {
 // --- API Functions ---
 
 export async function listSavedSearches(projectKey: string): Promise<SavedSearch[]> {
-  const res = await api.get<{ data: SavedSearch[] }>(`/projects/${projectKey}/saved-searches`)
+  const res = await api.get<{ data: SavedSearch[] }>(`${nsPrefix()}/projects/${projectKey}/saved-searches`)
   return res.data.data
 }
 
 export async function createSavedSearch(projectKey: string, input: CreateSavedSearchInput): Promise<SavedSearch> {
-  const res = await api.post<{ data: SavedSearch }>(`/projects/${projectKey}/saved-searches`, input)
+  const res = await api.post<{ data: SavedSearch }>(`${nsPrefix()}/projects/${projectKey}/saved-searches`, input)
   return res.data.data
 }
 
 export async function updateSavedSearch(projectKey: string, searchId: string, input: UpdateSavedSearchInput): Promise<SavedSearch> {
-  const res = await api.patch<{ data: SavedSearch }>(`/projects/${projectKey}/saved-searches/${searchId}`, input)
+  const res = await api.patch<{ data: SavedSearch }>(`${nsPrefix()}/projects/${projectKey}/saved-searches/${searchId}`, input)
   return res.data.data
 }
 
 export async function deleteSavedSearch(projectKey: string, searchId: string): Promise<void> {
-  await api.delete(`/projects/${projectKey}/saved-searches/${searchId}`)
+  await api.delete(`${nsPrefix()}/projects/${projectKey}/saved-searches/${searchId}`)
 }

@@ -1085,7 +1085,7 @@ func workItemTestSetupWithSLA(t *testing.T) *workItemSLASetup {
 func createTestWorkItem(t *testing.T, h *WorkItemHandler, info *model.AuthInfo, projectKey string) map[string]interface{} {
 	t.Helper()
 	body := `{"type":"task","title":"Test item","priority":"medium"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/"+projectKey+"/items", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/"+projectKey+"/items", bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
@@ -1109,7 +1109,7 @@ func TestCreateWorkItem_Handler_Success(t *testing.T) {
 	h, info, projectKey := workItemTestSetup(t)
 
 	body := `{"type":"task","title":"Upgrade PostgreSQL","priority":"high","labels":["database"]}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/items", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/TEST/items", bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
@@ -1145,7 +1145,7 @@ func TestCreateWorkItem_Handler_MissingTitle(t *testing.T) {
 	h, info, projectKey := workItemTestSetup(t)
 
 	body := `{"type":"task"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/items", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/TEST/items", bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
@@ -1164,7 +1164,7 @@ func TestCreateWorkItem_Handler_MissingType(t *testing.T) {
 	h, info, projectKey := workItemTestSetup(t)
 
 	body := `{"title":"Test"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/items", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/TEST/items", bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
@@ -1183,7 +1183,7 @@ func TestCreateWorkItem_Handler_InvalidBody(t *testing.T) {
 	h, info, projectKey := workItemTestSetup(t)
 
 	body := `not json`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/items", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/TEST/items", bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
@@ -1202,7 +1202,7 @@ func TestCreateWorkItem_Handler_Unauthenticated(t *testing.T) {
 	h, _, _ := workItemTestSetup(t)
 
 	body := `{"type":"task","title":"Test"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/items", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/TEST/items", bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", "TEST")
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
@@ -1220,7 +1220,7 @@ func TestListWorkItems_Handler_Success(t *testing.T) {
 	createTestWorkItem(t, h, info, projectKey)
 	createTestWorkItem(t, h, info, projectKey)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/projects/TEST/items", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/default/projects/TEST/items", nil)
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
@@ -1255,7 +1255,7 @@ func TestListWorkItems_Handler_WithFilters(t *testing.T) {
 
 	// Create a bug
 	body := `{"type":"bug","title":"A bug"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/items", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/TEST/items", bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
@@ -1265,7 +1265,7 @@ func TestListWorkItems_Handler_WithFilters(t *testing.T) {
 	h.Create(w, req)
 
 	// List filtering by type=bug
-	req = httptest.NewRequest(http.MethodGet, "/api/v1/projects/TEST/items?type=bug", nil)
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/default/projects/TEST/items?type=bug", nil)
 	rctx = chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	ctx = context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
@@ -1291,7 +1291,7 @@ func TestGetWorkItem_Handler_Success(t *testing.T) {
 	h, info, projectKey := workItemTestSetup(t)
 	createTestWorkItem(t, h, info, projectKey)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/projects/TEST/items/1", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/default/projects/TEST/items/1", nil)
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	rctx.URLParams.Add("itemNumber", "1")
@@ -1317,7 +1317,7 @@ func TestGetWorkItem_Handler_Success(t *testing.T) {
 func TestGetWorkItem_Handler_NotFound(t *testing.T) {
 	h, info, projectKey := workItemTestSetup(t)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/projects/TEST/items/999", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/default/projects/TEST/items/999", nil)
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	rctx.URLParams.Add("itemNumber", "999")
@@ -1336,7 +1336,7 @@ func TestGetWorkItem_Handler_NotFound(t *testing.T) {
 func TestGetWorkItem_Handler_InvalidItemNumber(t *testing.T) {
 	h, info, projectKey := workItemTestSetup(t)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/projects/TEST/items/abc", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/default/projects/TEST/items/abc", nil)
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	rctx.URLParams.Add("itemNumber", "abc")
@@ -1357,7 +1357,7 @@ func TestUpdateWorkItem_Handler_Success(t *testing.T) {
 	createTestWorkItem(t, h, info, projectKey)
 
 	body := `{"title":"Updated title","status":"in_progress"}`
-	req := httptest.NewRequest(http.MethodPatch, "/api/v1/projects/TEST/items/1", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/default/projects/TEST/items/1", bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	rctx.URLParams.Add("itemNumber", "1")
@@ -1387,7 +1387,7 @@ func TestDeleteWorkItem_Handler_Success(t *testing.T) {
 	h, info, projectKey := workItemTestSetup(t)
 	createTestWorkItem(t, h, info, projectKey)
 
-	req := httptest.NewRequest(http.MethodDelete, "/api/v1/projects/TEST/items/1", nil)
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/default/projects/TEST/items/1", nil)
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	rctx.URLParams.Add("itemNumber", "1")
@@ -1406,7 +1406,7 @@ func TestDeleteWorkItem_Handler_Success(t *testing.T) {
 func TestDeleteWorkItem_Handler_NotFound(t *testing.T) {
 	h, info, projectKey := workItemTestSetup(t)
 
-	req := httptest.NewRequest(http.MethodDelete, "/api/v1/projects/TEST/items/999", nil)
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/default/projects/TEST/items/999", nil)
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	rctx.URLParams.Add("itemNumber", "999")
@@ -1429,7 +1429,7 @@ func TestCreateComment_Handler_Success(t *testing.T) {
 	createTestWorkItem(t, h, info, projectKey)
 
 	body := `{"body":"This is a comment","visibility":"internal"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/items/1/comments", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/TEST/items/1/comments", bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	rctx.URLParams.Add("itemNumber", "1")
@@ -1457,7 +1457,7 @@ func TestCreateComment_Handler_EmptyBody(t *testing.T) {
 	createTestWorkItem(t, h, info, projectKey)
 
 	body := `{"body":""}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/items/1/comments", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/TEST/items/1/comments", bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	rctx.URLParams.Add("itemNumber", "1")
@@ -1480,7 +1480,7 @@ func TestListComments_Handler_Success(t *testing.T) {
 	// Create 2 comments
 	for i := 0; i < 2; i++ {
 		body := fmt.Sprintf(`{"body":"Comment %d"}`, i)
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/items/1/comments", bytes.NewBufferString(body))
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/TEST/items/1/comments", bytes.NewBufferString(body))
 		rctx := chi.NewRouteContext()
 		rctx.URLParams.Add("projectKey", projectKey)
 		rctx.URLParams.Add("itemNumber", "1")
@@ -1491,7 +1491,7 @@ func TestListComments_Handler_Success(t *testing.T) {
 		h.CreateComment(w, req)
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/projects/TEST/items/1/comments", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/default/projects/TEST/items/1/comments", nil)
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	rctx.URLParams.Add("itemNumber", "1")
@@ -1520,7 +1520,7 @@ func TestUpdateComment_Handler_Success(t *testing.T) {
 
 	// Create a comment
 	createBody := `{"body":"Original"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/items/1/comments", bytes.NewBufferString(createBody))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/TEST/items/1/comments", bytes.NewBufferString(createBody))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	rctx.URLParams.Add("itemNumber", "1")
@@ -1536,7 +1536,7 @@ func TestUpdateComment_Handler_Success(t *testing.T) {
 
 	// Update the comment
 	updateBody := `{"body":"Updated"}`
-	req = httptest.NewRequest(http.MethodPatch, "/api/v1/projects/TEST/items/1/comments/"+commentID, bytes.NewBufferString(updateBody))
+	req = httptest.NewRequest(http.MethodPatch, "/api/v1/default/projects/TEST/items/1/comments/"+commentID, bytes.NewBufferString(updateBody))
 	rctx = chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	rctx.URLParams.Add("itemNumber", "1")
@@ -1566,7 +1566,7 @@ func TestDeleteComment_Handler_Success(t *testing.T) {
 
 	// Create a comment
 	createBody := `{"body":"To delete"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/items/1/comments", bytes.NewBufferString(createBody))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/TEST/items/1/comments", bytes.NewBufferString(createBody))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	rctx.URLParams.Add("itemNumber", "1")
@@ -1581,7 +1581,7 @@ func TestDeleteComment_Handler_Success(t *testing.T) {
 	commentID := createResp["data"].(map[string]interface{})["id"].(string)
 
 	// Delete it
-	req = httptest.NewRequest(http.MethodDelete, "/api/v1/projects/TEST/items/1/comments/"+commentID, nil)
+	req = httptest.NewRequest(http.MethodDelete, "/api/v1/default/projects/TEST/items/1/comments/"+commentID, nil)
 	rctx = chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	rctx.URLParams.Add("itemNumber", "1")
@@ -1606,7 +1606,7 @@ func TestCreateRelation_Handler_Success(t *testing.T) {
 	createTestWorkItem(t, h, info, projectKey) // item 2
 
 	body := `{"target_display_id":"TEST-2","relation_type":"blocks"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/items/1/relations", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/TEST/items/1/relations", bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	rctx.URLParams.Add("itemNumber", "1")
@@ -1640,7 +1640,7 @@ func TestCreateRelation_Handler_MissingFields(t *testing.T) {
 	createTestWorkItem(t, h, info, projectKey)
 
 	body := `{"relation_type":"blocks"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/items/1/relations", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/TEST/items/1/relations", bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	rctx.URLParams.Add("itemNumber", "1")
@@ -1663,7 +1663,7 @@ func TestListRelations_Handler_Success(t *testing.T) {
 
 	// Create a relation
 	body := `{"target_display_id":"TEST-2","relation_type":"blocks"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/items/1/relations", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/TEST/items/1/relations", bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	rctx.URLParams.Add("itemNumber", "1")
@@ -1674,7 +1674,7 @@ func TestListRelations_Handler_Success(t *testing.T) {
 	h.CreateRelation(w, req)
 
 	// List relations
-	req = httptest.NewRequest(http.MethodGet, "/api/v1/projects/TEST/items/1/relations", nil)
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/default/projects/TEST/items/1/relations", nil)
 	rctx = chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	rctx.URLParams.Add("itemNumber", "1")
@@ -1704,7 +1704,7 @@ func TestDeleteRelation_Handler_Success(t *testing.T) {
 
 	// Create a relation
 	body := `{"target_display_id":"TEST-2","relation_type":"blocks"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/items/1/relations", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/TEST/items/1/relations", bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	rctx.URLParams.Add("itemNumber", "1")
@@ -1719,7 +1719,7 @@ func TestDeleteRelation_Handler_Success(t *testing.T) {
 	relationID := createResp["data"].(map[string]interface{})["id"].(string)
 
 	// Delete
-	req = httptest.NewRequest(http.MethodDelete, "/api/v1/projects/TEST/items/1/relations/"+relationID, nil)
+	req = httptest.NewRequest(http.MethodDelete, "/api/v1/default/projects/TEST/items/1/relations/"+relationID, nil)
 	rctx = chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	rctx.URLParams.Add("itemNumber", "1")
@@ -1742,7 +1742,7 @@ func TestListEvents_Handler_Success(t *testing.T) {
 	h, info, projectKey := workItemTestSetup(t)
 	createTestWorkItem(t, h, info, projectKey) // creates a "created" event
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/projects/TEST/items/1/events", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/default/projects/TEST/items/1/events", nil)
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	rctx.URLParams.Add("itemNumber", "1")
@@ -1768,7 +1768,7 @@ func TestListEvents_Handler_Success(t *testing.T) {
 func TestListEvents_Handler_Unauthenticated(t *testing.T) {
 	h, _, _ := workItemTestSetup(t)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/projects/TEST/items/1/events", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/default/projects/TEST/items/1/events", nil)
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", "TEST")
 	rctx.URLParams.Add("itemNumber", "1")
@@ -1803,7 +1803,7 @@ func TestCreateWorkItem_SLAEnriched(t *testing.T) {
 	addSLATarget(s, "task", "open", 3600)
 
 	body := `{"type":"task","title":"SLA Test","priority":"medium"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/items", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/TEST/items", bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", s.projectKey)
 	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
@@ -1841,7 +1841,7 @@ func TestCreateWorkItem_NoSLATarget(t *testing.T) {
 	// No SLA targets configured
 
 	body := `{"type":"task","title":"No SLA","priority":"medium"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/items", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/TEST/items", bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", s.projectKey)
 	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
@@ -1875,7 +1875,7 @@ func TestListWorkItems_SLAEnriched(t *testing.T) {
 	createTestWorkItem(t, s.handler, s.info, s.projectKey)
 	createTestWorkItem(t, s.handler, s.info, s.projectKey)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/projects/TEST/items", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/default/projects/TEST/items", nil)
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", s.projectKey)
 	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
@@ -1920,7 +1920,7 @@ func TestGetWorkItem_SLAEnriched(t *testing.T) {
 	created := createTestWorkItem(t, s.handler, s.info, s.projectKey)
 	itemNum := int(created["item_number"].(float64))
 
-	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/projects/TEST/items/%d", itemNum), nil)
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/default/projects/TEST/items/%d", itemNum), nil)
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", s.projectKey)
 	rctx.URLParams.Add("itemNumber", strconv.Itoa(itemNum))
@@ -1961,7 +1961,7 @@ func TestUpdateWorkItem_SLAEnriched(t *testing.T) {
 	itemNum := int(created["item_number"].(float64))
 
 	body := `{"title":"Updated Title"}`
-	req := httptest.NewRequest(http.MethodPatch, fmt.Sprintf("/api/v1/projects/TEST/items/%d", itemNum), bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPatch, fmt.Sprintf("/api/v1/default/projects/TEST/items/%d", itemNum), bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", s.projectKey)
 	rctx.URLParams.Add("itemNumber", strconv.Itoa(itemNum))
@@ -2005,7 +2005,7 @@ func TestListWorkItems_MixedSLA(t *testing.T) {
 
 	// Create a bug (has SLA)
 	body := `{"type":"bug","title":"Bug with SLA","priority":"high"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/items", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/TEST/items", bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", s.projectKey)
 	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
@@ -2018,7 +2018,7 @@ func TestListWorkItems_MixedSLA(t *testing.T) {
 	}
 
 	// List all items
-	req = httptest.NewRequest(http.MethodGet, "/api/v1/projects/TEST/items", nil)
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/default/projects/TEST/items", nil)
 	rctx = chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", s.projectKey)
 	ctx = context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
@@ -2066,7 +2066,7 @@ func TestCreateTimeEntry_Handler_Success(t *testing.T) {
 	createTestWorkItem(t, h, info, projectKey)
 
 	body := `{"started_at":"2025-01-15T10:00:00Z","duration_seconds":3600,"description":"worked on stuff"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/items/1/time-entries", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/TEST/items/1/time-entries", bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	rctx.URLParams.Add("itemNumber", "1")
@@ -2097,7 +2097,7 @@ func TestCreateTimeEntry_Handler_InvalidDuration(t *testing.T) {
 	createTestWorkItem(t, h, info, projectKey)
 
 	body := `{"started_at":"2025-01-15T10:00:00Z","duration_seconds":0}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/items/1/time-entries", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/TEST/items/1/time-entries", bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	rctx.URLParams.Add("itemNumber", "1")
@@ -2119,7 +2119,7 @@ func TestListTimeEntries_Handler_Success(t *testing.T) {
 
 	// Create a time entry first
 	body := `{"started_at":"2025-01-15T10:00:00Z","duration_seconds":1800}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/items/1/time-entries", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/TEST/items/1/time-entries", bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	rctx.URLParams.Add("itemNumber", "1")
@@ -2130,7 +2130,7 @@ func TestListTimeEntries_Handler_Success(t *testing.T) {
 	h.CreateTimeEntry(w, req)
 
 	// List
-	req = httptest.NewRequest(http.MethodGet, "/api/v1/projects/TEST/items/1/time-entries", nil)
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/default/projects/TEST/items/1/time-entries", nil)
 	rctx = chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	rctx.URLParams.Add("itemNumber", "1")
@@ -2163,7 +2163,7 @@ func TestDeleteTimeEntry_Handler_Success(t *testing.T) {
 
 	// Create a time entry
 	body := `{"started_at":"2025-01-15T10:00:00Z","duration_seconds":3600}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/TEST/items/1/time-entries", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/TEST/items/1/time-entries", bytes.NewBufferString(body))
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	rctx.URLParams.Add("itemNumber", "1")
@@ -2178,7 +2178,7 @@ func TestDeleteTimeEntry_Handler_Success(t *testing.T) {
 	entryID := createResp["data"].(map[string]interface{})["id"].(string)
 
 	// Delete
-	req = httptest.NewRequest(http.MethodDelete, "/api/v1/projects/TEST/items/1/time-entries/"+entryID, nil)
+	req = httptest.NewRequest(http.MethodDelete, "/api/v1/default/projects/TEST/items/1/time-entries/"+entryID, nil)
 	rctx = chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	rctx.URLParams.Add("itemNumber", "1")

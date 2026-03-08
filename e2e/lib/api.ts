@@ -60,7 +60,7 @@ export async function createProject(
   key: string,
   name: string,
 ): Promise<{ id: string; key: string; name: string }> {
-  const res = await request.post(`${BASE_URL}/api/v1/projects`, {
+  const res = await request.post(`${BASE_URL}/api/v1/default/projects`, {
     headers: { Authorization: `Bearer ${token}` },
     data: { key, name },
   });
@@ -113,7 +113,7 @@ export async function addMember(
   userId: string,
   role: string,
 ): Promise<void> {
-  const res = await request.post(`${BASE_URL}/api/v1/projects/${projectKey}/members`, {
+  const res = await request.post(`${BASE_URL}/api/v1/default/projects/${projectKey}/members`, {
     headers: { Authorization: `Bearer ${token}` },
     data: { user_id: userId, role },
   });
@@ -126,7 +126,7 @@ export async function removeMember(
   projectKey: string,
   userId: string,
 ): Promise<void> {
-  const res = await request.delete(`${BASE_URL}/api/v1/projects/${projectKey}/members/${userId}`, {
+  const res = await request.delete(`${BASE_URL}/api/v1/default/projects/${projectKey}/members/${userId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok()) throw new Error(`Remove member failed (${res.status()}): ${await res.text()}`);
@@ -139,7 +139,7 @@ export async function setProjectUserSetting(
   key: string,
   value: unknown,
 ): Promise<void> {
-  const res = await request.put(`${BASE_URL}/api/v1/projects/${projectKey}/user-settings/${key}`, {
+  const res = await request.put(`${BASE_URL}/api/v1/default/projects/${projectKey}/user-settings/${key}`, {
     headers: { Authorization: `Bearer ${token}` },
     data: { value },
   });
@@ -152,7 +152,7 @@ export async function createWorkItem(
   projectKey: string,
   data: { title: string; type: string; description?: string; assignee_id?: string; watcher_ids?: string[] },
 ): Promise<{ id: string; item_number: number; display_id: string }> {
-  const res = await request.post(`${BASE_URL}/api/v1/projects/${projectKey}/items`, {
+  const res = await request.post(`${BASE_URL}/api/v1/default/projects/${projectKey}/items`, {
     headers: { Authorization: `Bearer ${token}` },
     data,
   });
@@ -168,7 +168,7 @@ export async function updateWorkItem(
   itemNumber: number,
   data: Record<string, unknown>,
 ): Promise<void> {
-  const res = await request.patch(`${BASE_URL}/api/v1/projects/${projectKey}/items/${itemNumber}`, {
+  const res = await request.patch(`${BASE_URL}/api/v1/default/projects/${projectKey}/items/${itemNumber}`, {
     headers: { Authorization: `Bearer ${token}` },
     data,
   });
@@ -182,7 +182,7 @@ export async function addComment(
   itemNumber: number,
   body: string,
 ): Promise<{ id: string }> {
-  const res = await request.post(`${BASE_URL}/api/v1/projects/${projectKey}/items/${itemNumber}/comments`, {
+  const res = await request.post(`${BASE_URL}/api/v1/default/projects/${projectKey}/items/${itemNumber}/comments`, {
     headers: { Authorization: `Bearer ${token}` },
     data: { body },
   });
@@ -199,7 +199,7 @@ export async function updateComment(
   commentId: string,
   body: string,
 ): Promise<void> {
-  const res = await request.patch(`${BASE_URL}/api/v1/projects/${projectKey}/items/${itemNumber}/comments/${commentId}`, {
+  const res = await request.patch(`${BASE_URL}/api/v1/default/projects/${projectKey}/items/${itemNumber}/comments/${commentId}`, {
     headers: { Authorization: `Bearer ${token}` },
     data: { body },
   });
@@ -213,7 +213,7 @@ export async function createTimeEntry(
   itemNumber: number,
   data: { started_at: string; duration_seconds: number; description?: string },
 ): Promise<{ id: string; duration_seconds: number }> {
-  const res = await request.post(`${BASE_URL}/api/v1/projects/${projectKey}/items/${itemNumber}/time-entries`, {
+  const res = await request.post(`${BASE_URL}/api/v1/default/projects/${projectKey}/items/${itemNumber}/time-entries`, {
     headers: { Authorization: `Bearer ${token}` },
     data,
   });
@@ -228,7 +228,7 @@ export async function listTimeEntries(
   projectKey: string,
   itemNumber: number,
 ): Promise<{ entries: { id: string; duration_seconds: number; description?: string }[]; total_logged_seconds: number }> {
-  const res = await request.get(`${BASE_URL}/api/v1/projects/${projectKey}/items/${itemNumber}/time-entries`, {
+  const res = await request.get(`${BASE_URL}/api/v1/default/projects/${projectKey}/items/${itemNumber}/time-entries`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok()) throw new Error(`List time entries failed (${res.status()}): ${await res.text()}`);
@@ -243,7 +243,7 @@ export async function deleteTimeEntry(
   itemNumber: number,
   entryId: string,
 ): Promise<void> {
-  const res = await request.delete(`${BASE_URL}/api/v1/projects/${projectKey}/items/${itemNumber}/time-entries/${entryId}`, {
+  const res = await request.delete(`${BASE_URL}/api/v1/default/projects/${projectKey}/items/${itemNumber}/time-entries/${entryId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok()) throw new Error(`Delete time entry failed (${res.status()}): ${await res.text()}`);
@@ -257,7 +257,7 @@ export async function createMilestone(
   projectKey: string,
   data: { name: string; due_date?: string },
 ): Promise<{ id: string; name: string }> {
-  const res = await request.post(`${BASE_URL}/api/v1/projects/${projectKey}/milestones`, {
+  const res = await request.post(`${BASE_URL}/api/v1/default/projects/${projectKey}/milestones`, {
     headers: { Authorization: `Bearer ${token}` },
     data,
   });
@@ -275,7 +275,7 @@ export async function createRelation(
   itemNumber: number,
   data: { target_display_id: string; relation_type: string },
 ): Promise<{ id: string }> {
-  const res = await request.post(`${BASE_URL}/api/v1/projects/${projectKey}/items/${itemNumber}/relations`, {
+  const res = await request.post(`${BASE_URL}/api/v1/default/projects/${projectKey}/items/${itemNumber}/relations`, {
     headers: { Authorization: `Bearer ${token}` },
     data,
   });
@@ -373,7 +373,7 @@ export async function createSavedSearch(
   projectKey: string,
   data: { name: string; filters: Record<string, unknown>; view_mode: string; shared: boolean },
 ): Promise<{ id: string; name: string; scope: string }> {
-  const res = await request.post(`${BASE_URL}/api/v1/projects/${projectKey}/saved-searches`, {
+  const res = await request.post(`${BASE_URL}/api/v1/default/projects/${projectKey}/saved-searches`, {
     headers: { Authorization: `Bearer ${token}` },
     data,
   });
@@ -387,7 +387,7 @@ export async function listSavedSearches(
   token: string,
   projectKey: string,
 ): Promise<{ id: string; name: string; scope: string; filters: Record<string, unknown>; view_mode: string }[]> {
-  const res = await request.get(`${BASE_URL}/api/v1/projects/${projectKey}/saved-searches`, {
+  const res = await request.get(`${BASE_URL}/api/v1/default/projects/${projectKey}/saved-searches`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok()) throw new Error(`List saved searches failed (${res.status()}): ${await res.text()}`);
@@ -401,7 +401,7 @@ export async function deleteSavedSearch(
   projectKey: string,
   searchId: string,
 ): Promise<void> {
-  const res = await request.delete(`${BASE_URL}/api/v1/projects/${projectKey}/saved-searches/${searchId}`, {
+  const res = await request.delete(`${BASE_URL}/api/v1/default/projects/${projectKey}/saved-searches/${searchId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok()) throw new Error(`Delete saved search failed (${res.status()}): ${await res.text()}`);
@@ -414,7 +414,7 @@ export async function updateSavedSearch(
   searchId: string,
   data: { name?: string; filters?: Record<string, unknown>; view_mode?: string; position?: number },
 ): Promise<{ id: string; name: string; scope: string; position: number }> {
-  const res = await request.patch(`${BASE_URL}/api/v1/projects/${projectKey}/saved-searches/${searchId}`, {
+  const res = await request.patch(`${BASE_URL}/api/v1/default/projects/${projectKey}/saved-searches/${searchId}`, {
     headers: { Authorization: `Bearer ${token}` },
     data,
   });
@@ -655,7 +655,7 @@ export async function createInvite(
   projectKey: string,
   role: string,
 ): Promise<{ code: string; url: string }> {
-  const res = await request.post(`${BASE_URL}/api/v1/projects/${projectKey}/invites`, {
+  const res = await request.post(`${BASE_URL}/api/v1/default/projects/${projectKey}/invites`, {
     headers: { Authorization: `Bearer ${token}` },
     data: { role },
   });
@@ -672,7 +672,7 @@ export async function toggleWatch(
   projectKey: string,
   itemNumber: number,
 ): Promise<{ is_watching: boolean }> {
-  const res = await request.post(`${BASE_URL}/api/v1/projects/${projectKey}/items/${itemNumber}/watch`, {
+  const res = await request.post(`${BASE_URL}/api/v1/default/projects/${projectKey}/items/${itemNumber}/watch`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok()) throw new Error(`Toggle watch failed (${res.status()}): ${await res.text()}`);
@@ -687,7 +687,7 @@ export async function addWatcher(
   itemNumber: number,
   userId: string,
 ): Promise<void> {
-  const res = await request.post(`${BASE_URL}/api/v1/projects/${projectKey}/items/${itemNumber}/watchers`, {
+  const res = await request.post(`${BASE_URL}/api/v1/default/projects/${projectKey}/items/${itemNumber}/watchers`, {
     headers: { Authorization: `Bearer ${token}` },
     data: { user_id: userId },
   });
@@ -701,7 +701,7 @@ export async function removeWatcher(
   itemNumber: number,
   userId: string,
 ): Promise<void> {
-  const res = await request.delete(`${BASE_URL}/api/v1/projects/${projectKey}/items/${itemNumber}/watchers/${userId}`, {
+  const res = await request.delete(`${BASE_URL}/api/v1/default/projects/${projectKey}/items/${itemNumber}/watchers/${userId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok()) throw new Error(`Remove watcher failed (${res.status()}): ${await res.text()}`);
@@ -713,7 +713,7 @@ export async function listWatchers(
   projectKey: string,
   itemNumber: number,
 ): Promise<unknown> {
-  const res = await request.get(`${BASE_URL}/api/v1/projects/${projectKey}/items/${itemNumber}/watchers`, {
+  const res = await request.get(`${BASE_URL}/api/v1/default/projects/${projectKey}/items/${itemNumber}/watchers`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok()) throw new Error(`List watchers failed (${res.status()}): ${await res.text()}`);
@@ -910,7 +910,7 @@ export async function uploadAttachment(
   contentType: string,
   comment?: string,
 ): Promise<{ id: string; filename: string }> {
-  const res = await request.post(`${BASE_URL}/api/v1/projects/${projectKey}/items/${itemNumber}/attachments`, {
+  const res = await request.post(`${BASE_URL}/api/v1/default/projects/${projectKey}/items/${itemNumber}/attachments`, {
     headers: { Authorization: `Bearer ${token}` },
     multipart: {
       file: { name: filename, mimeType: contentType, buffer: content },

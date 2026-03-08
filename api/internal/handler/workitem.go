@@ -1037,7 +1037,10 @@ type attachmentResponse struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
-func toAttachmentResponse(a *model.Attachment, projectKey string, itemNumber int) attachmentResponse {
+func toAttachmentResponse(a *model.Attachment, namespace, projectKey string, itemNumber int) attachmentResponse {
+	if namespace == "" {
+		namespace = "default"
+	}
 	return attachmentResponse{
 		ID:          a.ID,
 		UploaderID:  a.UploaderID,
@@ -1045,7 +1048,7 @@ func toAttachmentResponse(a *model.Attachment, projectKey string, itemNumber int
 		ContentType: a.ContentType,
 		SizeBytes:   a.SizeBytes,
 		Comment:     a.Comment,
-		DownloadURL: fmt.Sprintf("/api/v1/projects/%s/items/%d/attachments/%s", projectKey, itemNumber, a.ID),
+		DownloadURL: fmt.Sprintf("/api/v1/%s/projects/%s/items/%d/attachments/%s", namespace, projectKey, itemNumber, a.ID),
 		CreatedAt:   a.CreatedAt,
 	}
 }
@@ -1102,7 +1105,7 @@ func (h *WorkItemHandler) UploadAttachment(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	writeData(w, http.StatusCreated, toAttachmentResponse(attachment, projectKey, itemNumber))
+	writeData(w, http.StatusCreated, toAttachmentResponse(attachment, chi.URLParam(r, "namespace"), projectKey, itemNumber))
 }
 
 // ListAttachments handles GET /api/v1/projects/{projectKey}/items/{itemNumber}/attachments
@@ -1126,9 +1129,10 @@ func (h *WorkItemHandler) ListAttachments(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	ns := chi.URLParam(r, "namespace")
 	resp := make([]attachmentResponse, len(attachments))
 	for i := range attachments {
-		resp[i] = toAttachmentResponse(&attachments[i], projectKey, itemNumber)
+		resp[i] = toAttachmentResponse(&attachments[i], ns, projectKey, itemNumber)
 	}
 
 	writeData(w, http.StatusOK, resp)
@@ -1234,7 +1238,7 @@ func (h *WorkItemHandler) UpdateAttachmentComment(w http.ResponseWriter, r *http
 		return
 	}
 
-	writeData(w, http.StatusOK, toAttachmentResponse(attachment, projectKey, itemNumber))
+	writeData(w, http.StatusOK, toAttachmentResponse(attachment, chi.URLParam(r, "namespace"), projectKey, itemNumber))
 }
 
 // handleWorkItemError maps service errors to HTTP responses.

@@ -1,4 +1,4 @@
-import { api } from './client'
+import { api, nsPrefix } from './client'
 
 export interface StatsTimelinePoint {
   captured_at: string
@@ -15,7 +15,7 @@ export async function getStatsTimeline(
   range_: StatsRange,
 ): Promise<StatsTimelinePoint[]> {
   const res = await api.get<{ data: StatsTimelinePoint[] }>(
-    `/projects/${projectKey}/stats/timeline`,
+    `${nsPrefix()}/projects/${projectKey}/stats/timeline`,
     { params: { range: range_ } },
   )
   return res.data.data

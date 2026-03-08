@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
@@ -18,16 +19,12 @@ type NamespaceResolver interface {
 	IsNamespacesEnabled(ctx context.Context) (bool, error)
 }
 
-// Namespace middleware extracts the namespace from the X-Namespace header or
-// "namespace" query parameter. If absent, it resolves to the default namespace.
-// The resolved namespace ID is stored in the request context.
+// Namespace middleware extracts the namespace from the {namespace} URL path
+// parameter. The resolved namespace ID is stored in the request context.
 func Namespace(resolver NamespaceResolver) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			slug := r.Header.Get("X-Namespace")
-			if slug == "" {
-				slug = r.URL.Query().Get("namespace")
-			}
+			slug := chi.URLParam(r, "namespace")
 
 			var nsID uuid.UUID
 
@@ -49,7 +46,7 @@ func Namespace(resolver NamespaceResolver) func(http.Handler) http.Handler {
 					return
 				}
 				if !enabled {
-					writeNamespaceError(w, http.StatusForbidden, "NAMESPACES_DISABLED", "namespace feature is not enabled")
+					writeNamespaceError(w, http.StatusNotFound, "NOT_FOUND", "namespace not found")
 					return
 				}
 

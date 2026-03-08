@@ -15,6 +15,7 @@ import {
 import { TypeBadge } from '@/components/workitems/TypeBadge'
 import { useSearch } from '@/hooks/useSearch'
 import { useDebounce } from '@/hooks/useDebounce'
+import { nsPrefix } from '@/api/client'
 import type { SearchResult } from '@/api/search'
 import type { DropdownPosition } from '@/hooks/useMentionAutocomplete'
 
@@ -101,7 +102,7 @@ function buildMarkdownLink(result: SearchResult): string {
       return `[${parsed.text}](/projects/${key})`
     case 'attachment':
       if (key && num != null)
-        return `[${parsed.text}](/api/v1/projects/${key}/items/${num}/attachments/${result.entity_id}/file)`
+        return `[${parsed.text}](/api/v1${nsPrefix()}/projects/${key}/items/${num}/attachments/${result.entity_id}/file)`
       return `[${parsed.text}](#)`
     case 'comment':
       if (key && num != null)

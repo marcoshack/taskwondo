@@ -145,6 +145,14 @@ type WorkflowStatus struct {
 	Color       *string `json:"color,omitempty"`
 }
 
+// nsPrefix returns the namespace path prefix for project-scoped API routes.
+func (c *Client) nsPrefix() string {
+	if c.namespace != "" && c.namespace != "default" {
+		return "/" + c.namespace
+	}
+	return "/default"
+}
+
 // --- API methods ---
 
 func (c *Client) doRequest(method, path string, body interface{}) ([]byte, error) {
@@ -163,9 +171,6 @@ func (c *Client) doRequest(method, path string, body interface{}) ([]byte, error
 	}
 
 	req.Header.Set("Authorization", "Bearer "+c.apiKey)
-	if c.namespace != "" && c.namespace != "default" {
-		req.Header.Set("X-Namespace", c.namespace)
-	}
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
@@ -225,7 +230,7 @@ func (c *Client) ListNamespaces() ([]Namespace, error) {
 }
 
 func (c *Client) ListProjects() ([]Project, error) {
-	data, err := c.doRequest("GET", "/api/v1/projects", nil)
+	data, err := c.doRequest("GET", "/api/v1"+c.nsPrefix()+"/projects", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -241,7 +246,7 @@ func (c *Client) ListProjects() ([]Project, error) {
 }
 
 func (c *Client) GetProject(key string) (*Project, error) {
-	data, err := c.doRequest("GET", "/api/v1/projects/"+url.PathEscape(key), nil)
+	data, err := c.doRequest("GET", "/api/v1"+c.nsPrefix()+"/projects/"+url.PathEscape(key), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -291,7 +296,7 @@ func (c *Client) ListWorkItems(params ListWorkItemsParams) (*WorkItemList, error
 		q.Set("limit", fmt.Sprintf("%d", params.Limit))
 	}
 
-	path := fmt.Sprintf("/api/v1/projects/%s/items", url.PathEscape(params.Project))
+	path := fmt.Sprintf("/api/v1"+c.nsPrefix()+"/projects/%s/items", url.PathEscape(params.Project))
 	if len(q) > 0 {
 		path += "?" + q.Encode()
 	}
@@ -319,7 +324,7 @@ func (c *Client) ListWorkItems(params ListWorkItemsParams) (*WorkItemList, error
 }
 
 func (c *Client) GetWorkItem(projectKey string, itemNumber int) (*WorkItem, error) {
-	path := fmt.Sprintf("/api/v1/projects/%s/items/%d", url.PathEscape(projectKey), itemNumber)
+	path := fmt.Sprintf("/api/v1"+c.nsPrefix()+"/projects/%s/items/%d", url.PathEscape(projectKey), itemNumber)
 	data, err := c.doRequest("GET", path, nil)
 	if err != nil {
 		return nil, err
@@ -347,7 +352,7 @@ type CreateWorkItemParams struct {
 }
 
 func (c *Client) CreateWorkItem(params CreateWorkItemParams) (*WorkItem, error) {
-	path := fmt.Sprintf("/api/v1/projects/%s/items", url.PathEscape(params.Project))
+	path := fmt.Sprintf("/api/v1"+c.nsPrefix()+"/projects/%s/items", url.PathEscape(params.Project))
 	data, err := c.doRequest("POST", path, params)
 	if err != nil {
 		return nil, err
@@ -364,7 +369,7 @@ func (c *Client) CreateWorkItem(params CreateWorkItemParams) (*WorkItem, error) 
 }
 
 func (c *Client) UpdateWorkItem(projectKey string, itemNumber int, updates map[string]interface{}) (*WorkItem, error) {
-	path := fmt.Sprintf("/api/v1/projects/%s/items/%d", url.PathEscape(projectKey), itemNumber)
+	path := fmt.Sprintf("/api/v1"+c.nsPrefix()+"/projects/%s/items/%d", url.PathEscape(projectKey), itemNumber)
 	data, err := c.doRequest("PATCH", path, updates)
 	if err != nil {
 		return nil, err
@@ -381,7 +386,7 @@ func (c *Client) UpdateWorkItem(projectKey string, itemNumber int, updates map[s
 }
 
 func (c *Client) ListComments(projectKey string, itemNumber int) ([]Comment, error) {
-	path := fmt.Sprintf("/api/v1/projects/%s/items/%d/comments", url.PathEscape(projectKey), itemNumber)
+	path := fmt.Sprintf("/api/v1"+c.nsPrefix()+"/projects/%s/items/%d/comments", url.PathEscape(projectKey), itemNumber)
 	data, err := c.doRequest("GET", path, nil)
 	if err != nil {
 		return nil, err
@@ -403,7 +408,7 @@ type CreateCommentParams struct {
 }
 
 func (c *Client) CreateComment(projectKey string, itemNumber int, params CreateCommentParams) (*Comment, error) {
-	path := fmt.Sprintf("/api/v1/projects/%s/items/%d/comments", url.PathEscape(projectKey), itemNumber)
+	path := fmt.Sprintf("/api/v1"+c.nsPrefix()+"/projects/%s/items/%d/comments", url.PathEscape(projectKey), itemNumber)
 	data, err := c.doRequest("POST", path, params)
 	if err != nil {
 		return nil, err
@@ -474,7 +479,7 @@ func (c *Client) UploadAttachment(projectKey string, itemNumber int, filePath, c
 		return nil, fmt.Errorf("close multipart writer: %w", err)
 	}
 
-	path := fmt.Sprintf("/api/v1/projects/%s/items/%d/attachments", url.PathEscape(projectKey), itemNumber)
+	path := fmt.Sprintf("/api/v1"+c.nsPrefix()+"/projects/%s/items/%d/attachments", url.PathEscape(projectKey), itemNumber)
 	req, err := http.NewRequest("POST", c.baseURL+path, &body)
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
@@ -543,7 +548,7 @@ type Relation struct {
 }
 
 func (c *Client) ListEvents(projectKey string, itemNumber int) ([]Event, error) {
-	path := fmt.Sprintf("/api/v1/projects/%s/items/%d/events", url.PathEscape(projectKey), itemNumber)
+	path := fmt.Sprintf("/api/v1"+c.nsPrefix()+"/projects/%s/items/%d/events", url.PathEscape(projectKey), itemNumber)
 	data, err := c.doRequest("GET", path, nil)
 	if err != nil {
 		return nil, err
@@ -560,7 +565,7 @@ func (c *Client) ListEvents(projectKey string, itemNumber int) ([]Event, error) 
 }
 
 func (c *Client) CreateRelation(projectKey string, itemNumber int, targetDisplayID, relationType string) (*Relation, error) {
-	path := fmt.Sprintf("/api/v1/projects/%s/items/%d/relations", url.PathEscape(projectKey), itemNumber)
+	path := fmt.Sprintf("/api/v1"+c.nsPrefix()+"/projects/%s/items/%d/relations", url.PathEscape(projectKey), itemNumber)
 	params := map[string]string{
 		"target_display_id": targetDisplayID,
 		"relation_type":     relationType,
@@ -581,7 +586,7 @@ func (c *Client) CreateRelation(projectKey string, itemNumber int, targetDisplay
 }
 
 func (c *Client) ListRelations(projectKey string, itemNumber int) ([]Relation, error) {
-	path := fmt.Sprintf("/api/v1/projects/%s/items/%d/relations", url.PathEscape(projectKey), itemNumber)
+	path := fmt.Sprintf("/api/v1"+c.nsPrefix()+"/projects/%s/items/%d/relations", url.PathEscape(projectKey), itemNumber)
 	data, err := c.doRequest("GET", path, nil)
 	if err != nil {
 		return nil, err
@@ -598,7 +603,7 @@ func (c *Client) ListRelations(projectKey string, itemNumber int) ([]Relation, e
 }
 
 func (c *Client) ListAttachments(projectKey string, itemNumber int) ([]Attachment, error) {
-	path := fmt.Sprintf("/api/v1/projects/%s/items/%d/attachments", url.PathEscape(projectKey), itemNumber)
+	path := fmt.Sprintf("/api/v1"+c.nsPrefix()+"/projects/%s/items/%d/attachments", url.PathEscape(projectKey), itemNumber)
 	data, err := c.doRequest("GET", path, nil)
 	if err != nil {
 		return nil, err
@@ -636,7 +641,7 @@ type CreateTimeEntryParams struct {
 }
 
 func (c *Client) CreateTimeEntry(projectKey string, itemNumber int, params CreateTimeEntryParams) (*TimeEntry, error) {
-	path := fmt.Sprintf("/api/v1/projects/%s/items/%d/time-entries", url.PathEscape(projectKey), itemNumber)
+	path := fmt.Sprintf("/api/v1"+c.nsPrefix()+"/projects/%s/items/%d/time-entries", url.PathEscape(projectKey), itemNumber)
 	data, err := c.doRequest("POST", path, params)
 	if err != nil {
 		return nil, err
@@ -653,7 +658,7 @@ func (c *Client) CreateTimeEntry(projectKey string, itemNumber int, params Creat
 }
 
 func (c *Client) ListTimeEntries(projectKey string, itemNumber int) (*TimeEntryList, error) {
-	path := fmt.Sprintf("/api/v1/projects/%s/items/%d/time-entries", url.PathEscape(projectKey), itemNumber)
+	path := fmt.Sprintf("/api/v1"+c.nsPrefix()+"/projects/%s/items/%d/time-entries", url.PathEscape(projectKey), itemNumber)
 	data, err := c.doRequest("GET", path, nil)
 	if err != nil {
 		return nil, err
@@ -671,7 +676,7 @@ func (c *Client) ListTimeEntries(projectKey string, itemNumber int) (*TimeEntryL
 }
 
 func (c *Client) UpdateTimeEntry(projectKey string, itemNumber int, entryID string, updates map[string]interface{}) (*TimeEntry, error) {
-	path := fmt.Sprintf("/api/v1/projects/%s/items/%d/time-entries/%s", url.PathEscape(projectKey), itemNumber, url.PathEscape(entryID))
+	path := fmt.Sprintf("/api/v1"+c.nsPrefix()+"/projects/%s/items/%d/time-entries/%s", url.PathEscape(projectKey), itemNumber, url.PathEscape(entryID))
 	data, err := c.doRequest("PATCH", path, updates)
 	if err != nil {
 		return nil, err
@@ -688,7 +693,7 @@ func (c *Client) UpdateTimeEntry(projectKey string, itemNumber int, entryID stri
 }
 
 func (c *Client) DeleteTimeEntry(projectKey string, itemNumber int, entryID string) error {
-	path := fmt.Sprintf("/api/v1/projects/%s/items/%d/time-entries/%s", url.PathEscape(projectKey), itemNumber, url.PathEscape(entryID))
+	path := fmt.Sprintf("/api/v1"+c.nsPrefix()+"/projects/%s/items/%d/time-entries/%s", url.PathEscape(projectKey), itemNumber, url.PathEscape(entryID))
 	_, err := c.doRequest("DELETE", path, nil)
 	return err
 }
@@ -732,7 +737,7 @@ type Queue struct {
 // --- Project member methods ---
 
 func (c *Client) ListMembers(projectKey string) ([]ProjectMember, error) {
-	path := fmt.Sprintf("/api/v1/projects/%s/members", url.PathEscape(projectKey))
+	path := fmt.Sprintf("/api/v1"+c.nsPrefix()+"/projects/%s/members", url.PathEscape(projectKey))
 	data, err := c.doRequest("GET", path, nil)
 	if err != nil {
 		return nil, err
@@ -754,7 +759,7 @@ type AddMemberParams struct {
 }
 
 func (c *Client) AddMember(projectKey string, params AddMemberParams) (*ProjectMember, error) {
-	path := fmt.Sprintf("/api/v1/projects/%s/members", url.PathEscape(projectKey))
+	path := fmt.Sprintf("/api/v1"+c.nsPrefix()+"/projects/%s/members", url.PathEscape(projectKey))
 	data, err := c.doRequest("POST", path, params)
 	if err != nil {
 		return nil, err
@@ -771,7 +776,7 @@ func (c *Client) AddMember(projectKey string, params AddMemberParams) (*ProjectM
 }
 
 func (c *Client) UpdateMemberRole(projectKey, userID, role string) (*ProjectMember, error) {
-	path := fmt.Sprintf("/api/v1/projects/%s/members/%s", url.PathEscape(projectKey), url.PathEscape(userID))
+	path := fmt.Sprintf("/api/v1"+c.nsPrefix()+"/projects/%s/members/%s", url.PathEscape(projectKey), url.PathEscape(userID))
 	data, err := c.doRequest("PATCH", path, map[string]string{"role": role})
 	if err != nil {
 		return nil, err
@@ -788,7 +793,7 @@ func (c *Client) UpdateMemberRole(projectKey, userID, role string) (*ProjectMemb
 }
 
 func (c *Client) RemoveMember(projectKey, userID string) error {
-	path := fmt.Sprintf("/api/v1/projects/%s/members/%s", url.PathEscape(projectKey), url.PathEscape(userID))
+	path := fmt.Sprintf("/api/v1"+c.nsPrefix()+"/projects/%s/members/%s", url.PathEscape(projectKey), url.PathEscape(userID))
 	_, err := c.doRequest("DELETE", path, nil)
 	return err
 }
@@ -802,7 +807,7 @@ type CreateProjectParams struct {
 }
 
 func (c *Client) CreateProject(params CreateProjectParams) (*Project, error) {
-	data, err := c.doRequest("POST", "/api/v1/projects", params)
+	data, err := c.doRequest("POST", "/api/v1"+c.nsPrefix()+"/projects", params)
 	if err != nil {
 		return nil, err
 	}
@@ -818,7 +823,7 @@ func (c *Client) CreateProject(params CreateProjectParams) (*Project, error) {
 }
 
 func (c *Client) UpdateProject(key string, updates map[string]interface{}) (*Project, error) {
-	path := fmt.Sprintf("/api/v1/projects/%s", url.PathEscape(key))
+	path := fmt.Sprintf("/api/v1"+c.nsPrefix()+"/projects/%s", url.PathEscape(key))
 	data, err := c.doRequest("PATCH", path, updates)
 	if err != nil {
 		return nil, err
@@ -835,7 +840,7 @@ func (c *Client) UpdateProject(key string, updates map[string]interface{}) (*Pro
 }
 
 func (c *Client) DeleteProject(key string) error {
-	path := fmt.Sprintf("/api/v1/projects/%s", url.PathEscape(key))
+	path := fmt.Sprintf("/api/v1"+c.nsPrefix()+"/projects/%s", url.PathEscape(key))
 	_, err := c.doRequest("DELETE", path, nil)
 	return err
 }
@@ -843,7 +848,7 @@ func (c *Client) DeleteProject(key string) error {
 // --- Work item delete ---
 
 func (c *Client) DeleteWorkItem(projectKey string, itemNumber int) error {
-	path := fmt.Sprintf("/api/v1/projects/%s/items/%d", url.PathEscape(projectKey), itemNumber)
+	path := fmt.Sprintf("/api/v1"+c.nsPrefix()+"/projects/%s/items/%d", url.PathEscape(projectKey), itemNumber)
 	_, err := c.doRequest("DELETE", path, nil)
 	return err
 }
@@ -851,7 +856,7 @@ func (c *Client) DeleteWorkItem(projectKey string, itemNumber int) error {
 // --- Comment update/delete ---
 
 func (c *Client) UpdateComment(projectKey string, itemNumber int, commentID, body string) (*Comment, error) {
-	path := fmt.Sprintf("/api/v1/projects/%s/items/%d/comments/%s", url.PathEscape(projectKey), itemNumber, url.PathEscape(commentID))
+	path := fmt.Sprintf("/api/v1"+c.nsPrefix()+"/projects/%s/items/%d/comments/%s", url.PathEscape(projectKey), itemNumber, url.PathEscape(commentID))
 	data, err := c.doRequest("PATCH", path, map[string]string{"body": body})
 	if err != nil {
 		return nil, err
@@ -868,7 +873,7 @@ func (c *Client) UpdateComment(projectKey string, itemNumber int, commentID, bod
 }
 
 func (c *Client) DeleteComment(projectKey string, itemNumber int, commentID string) error {
-	path := fmt.Sprintf("/api/v1/projects/%s/items/%d/comments/%s", url.PathEscape(projectKey), itemNumber, url.PathEscape(commentID))
+	path := fmt.Sprintf("/api/v1"+c.nsPrefix()+"/projects/%s/items/%d/comments/%s", url.PathEscape(projectKey), itemNumber, url.PathEscape(commentID))
 	_, err := c.doRequest("DELETE", path, nil)
 	return err
 }
@@ -876,7 +881,7 @@ func (c *Client) DeleteComment(projectKey string, itemNumber int, commentID stri
 // --- Relation delete ---
 
 func (c *Client) DeleteRelation(projectKey string, itemNumber int, relationID string) error {
-	path := fmt.Sprintf("/api/v1/projects/%s/items/%d/relations/%s", url.PathEscape(projectKey), itemNumber, url.PathEscape(relationID))
+	path := fmt.Sprintf("/api/v1"+c.nsPrefix()+"/projects/%s/items/%d/relations/%s", url.PathEscape(projectKey), itemNumber, url.PathEscape(relationID))
 	_, err := c.doRequest("DELETE", path, nil)
 	return err
 }
@@ -885,7 +890,7 @@ func (c *Client) DeleteRelation(projectKey string, itemNumber int, relationID st
 
 // DownloadAttachment downloads an attachment and saves it to destPath.
 func (c *Client) DownloadAttachment(projectKey string, itemNumber int, attachmentID, destPath string) (int64, error) {
-	path := fmt.Sprintf("/api/v1/projects/%s/items/%d/attachments/%s", url.PathEscape(projectKey), itemNumber, url.PathEscape(attachmentID))
+	path := fmt.Sprintf("/api/v1"+c.nsPrefix()+"/projects/%s/items/%d/attachments/%s", url.PathEscape(projectKey), itemNumber, url.PathEscape(attachmentID))
 	reqURL := c.baseURL + path
 
 	req, err := http.NewRequest("GET", reqURL, nil)
@@ -921,7 +926,7 @@ func (c *Client) DownloadAttachment(projectKey string, itemNumber int, attachmen
 // --- Attachment delete ---
 
 func (c *Client) DeleteAttachment(projectKey string, itemNumber int, attachmentID string) error {
-	path := fmt.Sprintf("/api/v1/projects/%s/items/%d/attachments/%s", url.PathEscape(projectKey), itemNumber, url.PathEscape(attachmentID))
+	path := fmt.Sprintf("/api/v1"+c.nsPrefix()+"/projects/%s/items/%d/attachments/%s", url.PathEscape(projectKey), itemNumber, url.PathEscape(attachmentID))
 	_, err := c.doRequest("DELETE", path, nil)
 	return err
 }
@@ -935,7 +940,7 @@ type CreateMilestoneParams struct {
 }
 
 func (c *Client) ListMilestones(projectKey string) ([]Milestone, error) {
-	path := fmt.Sprintf("/api/v1/projects/%s/milestones", url.PathEscape(projectKey))
+	path := fmt.Sprintf("/api/v1"+c.nsPrefix()+"/projects/%s/milestones", url.PathEscape(projectKey))
 	data, err := c.doRequest("GET", path, nil)
 	if err != nil {
 		return nil, err
@@ -952,7 +957,7 @@ func (c *Client) ListMilestones(projectKey string) ([]Milestone, error) {
 }
 
 func (c *Client) CreateMilestone(projectKey string, params CreateMilestoneParams) (*Milestone, error) {
-	path := fmt.Sprintf("/api/v1/projects/%s/milestones", url.PathEscape(projectKey))
+	path := fmt.Sprintf("/api/v1"+c.nsPrefix()+"/projects/%s/milestones", url.PathEscape(projectKey))
 	data, err := c.doRequest("POST", path, params)
 	if err != nil {
 		return nil, err
@@ -969,7 +974,7 @@ func (c *Client) CreateMilestone(projectKey string, params CreateMilestoneParams
 }
 
 func (c *Client) GetMilestone(projectKey, milestoneID string) (*Milestone, error) {
-	path := fmt.Sprintf("/api/v1/projects/%s/milestones/%s", url.PathEscape(projectKey), url.PathEscape(milestoneID))
+	path := fmt.Sprintf("/api/v1"+c.nsPrefix()+"/projects/%s/milestones/%s", url.PathEscape(projectKey), url.PathEscape(milestoneID))
 	data, err := c.doRequest("GET", path, nil)
 	if err != nil {
 		return nil, err
@@ -986,7 +991,7 @@ func (c *Client) GetMilestone(projectKey, milestoneID string) (*Milestone, error
 }
 
 func (c *Client) UpdateMilestone(projectKey, milestoneID string, updates map[string]interface{}) (*Milestone, error) {
-	path := fmt.Sprintf("/api/v1/projects/%s/milestones/%s", url.PathEscape(projectKey), url.PathEscape(milestoneID))
+	path := fmt.Sprintf("/api/v1"+c.nsPrefix()+"/projects/%s/milestones/%s", url.PathEscape(projectKey), url.PathEscape(milestoneID))
 	data, err := c.doRequest("PATCH", path, updates)
 	if err != nil {
 		return nil, err
@@ -1003,7 +1008,7 @@ func (c *Client) UpdateMilestone(projectKey, milestoneID string, updates map[str
 }
 
 func (c *Client) DeleteMilestone(projectKey, milestoneID string) error {
-	path := fmt.Sprintf("/api/v1/projects/%s/milestones/%s", url.PathEscape(projectKey), url.PathEscape(milestoneID))
+	path := fmt.Sprintf("/api/v1"+c.nsPrefix()+"/projects/%s/milestones/%s", url.PathEscape(projectKey), url.PathEscape(milestoneID))
 	_, err := c.doRequest("DELETE", path, nil)
 	return err
 }
@@ -1019,7 +1024,7 @@ type CreateQueueParams struct {
 }
 
 func (c *Client) ListQueues(projectKey string) ([]Queue, error) {
-	path := fmt.Sprintf("/api/v1/projects/%s/queues", url.PathEscape(projectKey))
+	path := fmt.Sprintf("/api/v1"+c.nsPrefix()+"/projects/%s/queues", url.PathEscape(projectKey))
 	data, err := c.doRequest("GET", path, nil)
 	if err != nil {
 		return nil, err
@@ -1036,7 +1041,7 @@ func (c *Client) ListQueues(projectKey string) ([]Queue, error) {
 }
 
 func (c *Client) CreateQueue(projectKey string, params CreateQueueParams) (*Queue, error) {
-	path := fmt.Sprintf("/api/v1/projects/%s/queues", url.PathEscape(projectKey))
+	path := fmt.Sprintf("/api/v1"+c.nsPrefix()+"/projects/%s/queues", url.PathEscape(projectKey))
 	data, err := c.doRequest("POST", path, params)
 	if err != nil {
 		return nil, err
@@ -1053,7 +1058,7 @@ func (c *Client) CreateQueue(projectKey string, params CreateQueueParams) (*Queu
 }
 
 func (c *Client) GetQueue(projectKey, queueID string) (*Queue, error) {
-	path := fmt.Sprintf("/api/v1/projects/%s/queues/%s", url.PathEscape(projectKey), url.PathEscape(queueID))
+	path := fmt.Sprintf("/api/v1"+c.nsPrefix()+"/projects/%s/queues/%s", url.PathEscape(projectKey), url.PathEscape(queueID))
 	data, err := c.doRequest("GET", path, nil)
 	if err != nil {
 		return nil, err
@@ -1070,7 +1075,7 @@ func (c *Client) GetQueue(projectKey, queueID string) (*Queue, error) {
 }
 
 func (c *Client) UpdateQueue(projectKey, queueID string, updates map[string]interface{}) (*Queue, error) {
-	path := fmt.Sprintf("/api/v1/projects/%s/queues/%s", url.PathEscape(projectKey), url.PathEscape(queueID))
+	path := fmt.Sprintf("/api/v1"+c.nsPrefix()+"/projects/%s/queues/%s", url.PathEscape(projectKey), url.PathEscape(queueID))
 	data, err := c.doRequest("PATCH", path, updates)
 	if err != nil {
 		return nil, err
@@ -1087,7 +1092,7 @@ func (c *Client) UpdateQueue(projectKey, queueID string, updates map[string]inte
 }
 
 func (c *Client) DeleteQueue(projectKey, queueID string) error {
-	path := fmt.Sprintf("/api/v1/projects/%s/queues/%s", url.PathEscape(projectKey), url.PathEscape(queueID))
+	path := fmt.Sprintf("/api/v1"+c.nsPrefix()+"/projects/%s/queues/%s", url.PathEscape(projectKey), url.PathEscape(queueID))
 	_, err := c.doRequest("DELETE", path, nil)
 	return err
 }
@@ -1232,7 +1237,7 @@ func (c *Client) ClearCompletedInbox() (int, error) {
 }
 
 func (c *Client) ListProjectStatuses(projectKey string) ([]WorkflowStatus, error) {
-	path := fmt.Sprintf("/api/v1/projects/%s/workflows/statuses", url.PathEscape(projectKey))
+	path := fmt.Sprintf("/api/v1"+c.nsPrefix()+"/projects/%s/workflows/statuses", url.PathEscape(projectKey))
 	data, err := c.doRequest("GET", path, nil)
 	if err != nil {
 		return nil, err

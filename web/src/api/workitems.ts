@@ -1,4 +1,4 @@
-import { api } from './client'
+import { api, nsPrefix } from './client'
 
 // --- Types ---
 
@@ -176,55 +176,55 @@ export async function listWorkItems(projectKey: string, filter: WorkItemFilter =
   if (filter.limit) params.set('limit', String(filter.limit))
   if (filter.sort) params.set('sort', filter.sort)
   if (filter.order) params.set('order', filter.order)
-  const res = await api.get<WorkItemListResponse>(`/projects/${projectKey}/items`, { params })
+  const res = await api.get<WorkItemListResponse>(`${nsPrefix()}/projects/${projectKey}/items`, { params })
   return res.data
 }
 
 export async function getWorkItem(projectKey: string, itemNumber: number) {
-  const res = await api.get<DataResponse<WorkItem>>(`/projects/${projectKey}/items/${itemNumber}`)
+  const res = await api.get<DataResponse<WorkItem>>(`${nsPrefix()}/projects/${projectKey}/items/${itemNumber}`)
   return res.data.data
 }
 
 export async function createWorkItem(projectKey: string, input: CreateWorkItemInput) {
-  const res = await api.post<DataResponse<WorkItem>>(`/projects/${projectKey}/items`, input)
+  const res = await api.post<DataResponse<WorkItem>>(`${nsPrefix()}/projects/${projectKey}/items`, input)
   return res.data.data
 }
 
 export async function updateWorkItem(projectKey: string, itemNumber: number, input: UpdateWorkItemInput) {
-  const res = await api.patch<DataResponse<WorkItem>>(`/projects/${projectKey}/items/${itemNumber}`, input)
+  const res = await api.patch<DataResponse<WorkItem>>(`${nsPrefix()}/projects/${projectKey}/items/${itemNumber}`, input)
   return res.data.data
 }
 
 export async function deleteWorkItem(projectKey: string, itemNumber: number) {
-  await api.delete(`/projects/${projectKey}/items/${itemNumber}`)
+  await api.delete(`${nsPrefix()}/projects/${projectKey}/items/${itemNumber}`)
 }
 
 export async function listComments(projectKey: string, itemNumber: number) {
-  const res = await api.get<DataResponse<Comment[]>>(`/projects/${projectKey}/items/${itemNumber}/comments`)
+  const res = await api.get<DataResponse<Comment[]>>(`${nsPrefix()}/projects/${projectKey}/items/${itemNumber}/comments`)
   return res.data.data
 }
 
 export async function createComment(projectKey: string, itemNumber: number, body: string, visibility?: string) {
-  const res = await api.post<DataResponse<Comment>>(`/projects/${projectKey}/items/${itemNumber}/comments`, { body, visibility })
+  const res = await api.post<DataResponse<Comment>>(`${nsPrefix()}/projects/${projectKey}/items/${itemNumber}/comments`, { body, visibility })
   return res.data.data
 }
 
 export async function updateComment(projectKey: string, itemNumber: number, commentId: string, body: string) {
-  const res = await api.patch<DataResponse<Comment>>(`/projects/${projectKey}/items/${itemNumber}/comments/${commentId}`, { body })
+  const res = await api.patch<DataResponse<Comment>>(`${nsPrefix()}/projects/${projectKey}/items/${itemNumber}/comments/${commentId}`, { body })
   return res.data.data
 }
 
 export async function deleteComment(projectKey: string, itemNumber: number, commentId: string) {
-  await api.delete(`/projects/${projectKey}/items/${itemNumber}/comments/${commentId}`)
+  await api.delete(`${nsPrefix()}/projects/${projectKey}/items/${itemNumber}/comments/${commentId}`)
 }
 
 export async function listRelations(projectKey: string, itemNumber: number) {
-  const res = await api.get<DataResponse<Relation[]>>(`/projects/${projectKey}/items/${itemNumber}/relations`)
+  const res = await api.get<DataResponse<Relation[]>>(`${nsPrefix()}/projects/${projectKey}/items/${itemNumber}/relations`)
   return res.data.data
 }
 
 export async function createRelation(projectKey: string, itemNumber: number, targetDisplayId: string, relationType: string) {
-  const res = await api.post<DataResponse<Relation>>(`/projects/${projectKey}/items/${itemNumber}/relations`, {
+  const res = await api.post<DataResponse<Relation>>(`${nsPrefix()}/projects/${projectKey}/items/${itemNumber}/relations`, {
     target_display_id: targetDisplayId,
     relation_type: relationType,
   })
@@ -232,11 +232,11 @@ export async function createRelation(projectKey: string, itemNumber: number, tar
 }
 
 export async function deleteRelation(projectKey: string, itemNumber: number, relationId: string) {
-  await api.delete(`/projects/${projectKey}/items/${itemNumber}/relations/${relationId}`)
+  await api.delete(`${nsPrefix()}/projects/${projectKey}/items/${itemNumber}/relations/${relationId}`)
 }
 
 export async function listEvents(projectKey: string, itemNumber: number) {
-  const res = await api.get<DataResponse<WorkItemEvent[]>>(`/projects/${projectKey}/items/${itemNumber}/events`)
+  const res = await api.get<DataResponse<WorkItemEvent[]>>(`${nsPrefix()}/projects/${projectKey}/items/${itemNumber}/events`)
   return res.data.data
 }
 
@@ -257,7 +257,7 @@ export interface Attachment {
 
 export async function listAttachments(projectKey: string, itemNumber: number) {
   const res = await api.get<DataResponse<Attachment[]>>(
-    `/projects/${projectKey}/items/${itemNumber}/attachments`
+    `${nsPrefix()}/projects/${projectKey}/items/${itemNumber}/attachments`
   )
   return res.data.data
 }
@@ -274,7 +274,7 @@ export async function uploadAttachment(
     formData.append('comment', comment)
   }
   const res = await api.post<DataResponse<Attachment>>(
-    `/projects/${projectKey}/items/${itemNumber}/attachments`,
+    `${nsPrefix()}/projects/${projectKey}/items/${itemNumber}/attachments`,
     formData,
     { headers: { 'Content-Type': undefined as unknown as string } }
   )
@@ -287,7 +287,7 @@ export async function deleteAttachment(
   attachmentId: string
 ) {
   await api.delete(
-    `/projects/${projectKey}/items/${itemNumber}/attachments/${attachmentId}`
+    `${nsPrefix()}/projects/${projectKey}/items/${itemNumber}/attachments/${attachmentId}`
   )
 }
 
@@ -298,7 +298,7 @@ export async function updateAttachmentComment(
   comment: string
 ) {
   const res = await api.patch<DataResponse<Attachment>>(
-    `/projects/${projectKey}/items/${itemNumber}/attachments/${attachmentId}`,
+    `${nsPrefix()}/projects/${projectKey}/items/${itemNumber}/attachments/${attachmentId}`,
     { comment }
   )
   return res.data.data
@@ -309,7 +309,7 @@ export function getAttachmentDownloadURL(
   itemNumber: number,
   attachmentId: string
 ): string {
-  return `/api/v1/projects/${projectKey}/items/${itemNumber}/attachments/${attachmentId}`
+  return `/api/v1${nsPrefix()}/projects/${projectKey}/items/${itemNumber}/attachments/${attachmentId}`
 }
 
 // --- Time Entry Types ---
@@ -345,7 +345,7 @@ export interface UpdateTimeEntryInput {
 
 export async function listTimeEntries(projectKey: string, itemNumber: number) {
   const res = await api.get<DataResponse<TimeEntrySummary>>(
-    `/projects/${projectKey}/items/${itemNumber}/time-entries`
+    `${nsPrefix()}/projects/${projectKey}/items/${itemNumber}/time-entries`
   )
   return res.data.data
 }
@@ -356,7 +356,7 @@ export async function createTimeEntry(
   input: CreateTimeEntryInput
 ) {
   const res = await api.post<DataResponse<TimeEntry>>(
-    `/projects/${projectKey}/items/${itemNumber}/time-entries`,
+    `${nsPrefix()}/projects/${projectKey}/items/${itemNumber}/time-entries`,
     input
   )
   return res.data.data
@@ -369,7 +369,7 @@ export async function updateTimeEntry(
   input: UpdateTimeEntryInput
 ) {
   const res = await api.patch<DataResponse<TimeEntry>>(
-    `/projects/${projectKey}/items/${itemNumber}/time-entries/${entryId}`,
+    `${nsPrefix()}/projects/${projectKey}/items/${itemNumber}/time-entries/${entryId}`,
     input
   )
   return res.data.data
@@ -381,7 +381,7 @@ export async function deleteTimeEntry(
   entryId: string
 ) {
   await api.delete(
-    `/projects/${projectKey}/items/${itemNumber}/time-entries/${entryId}`
+    `${nsPrefix()}/projects/${projectKey}/items/${itemNumber}/time-entries/${entryId}`
   )
 }
 
@@ -389,26 +389,26 @@ export async function deleteTimeEntry(
 
 export async function listWatchers(projectKey: string, itemNumber: number) {
   const res = await api.get<DataResponse<Watcher[] | ViewerWatcherResponse>>(
-    `/projects/${projectKey}/items/${itemNumber}/watchers`
+    `${nsPrefix()}/projects/${projectKey}/items/${itemNumber}/watchers`
   )
   return res.data.data
 }
 
 export async function addWatcher(projectKey: string, itemNumber: number, userId: string) {
   const res = await api.post<DataResponse<Watcher>>(
-    `/projects/${projectKey}/items/${itemNumber}/watchers`,
+    `${nsPrefix()}/projects/${projectKey}/items/${itemNumber}/watchers`,
     { user_id: userId }
   )
   return res.data.data
 }
 
 export async function removeWatcher(projectKey: string, itemNumber: number, userId: string) {
-  await api.delete(`/projects/${projectKey}/items/${itemNumber}/watchers/${userId}`)
+  await api.delete(`${nsPrefix()}/projects/${projectKey}/items/${itemNumber}/watchers/${userId}`)
 }
 
 export async function toggleWatch(projectKey: string, itemNumber: number) {
   const res = await api.post<DataResponse<ToggleWatchResponse>>(
-    `/projects/${projectKey}/items/${itemNumber}/watch`
+    `${nsPrefix()}/projects/${projectKey}/items/${itemNumber}/watch`
   )
   return res.data.data
 }

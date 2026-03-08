@@ -227,7 +227,7 @@ test.describe('Namespace Frontend UI', () => {
     await attach(page, testInfo, '12-project-cleared');
 
     // Cleanup
-    await request.delete(`${BASE_URL}/api/v1/projects/${projKey}`, {
+    await request.delete(`${BASE_URL}/api/v1/default/projects/${projKey}`, {
       headers: { Authorization: `Bearer ${adminToken}` },
     });
     await api.deleteNamespace(request, adminToken, slug);
@@ -273,8 +273,8 @@ test.describe('Namespace Frontend UI', () => {
         await attach(page, testInfo, '10-after-transfer');
 
         // Verify project moved via API
-        const listRes = await request.get(`${BASE_URL}/api/v1/projects`, {
-          headers: { Authorization: `Bearer ${adminToken}`, 'X-Namespace': slug },
+        const listRes = await request.get(`${BASE_URL}/api/v1/${slug}/projects`, {
+          headers: { Authorization: `Bearer ${adminToken}` },
         });
         const listBody = await listRes.json();
         const found = listBody.data.find((p: any) => p.key === xferKey);
@@ -283,13 +283,13 @@ test.describe('Namespace Frontend UI', () => {
     }
 
     // Cleanup: delete projects in namespace, then namespace
-    const listRes = await request.get(`${BASE_URL}/api/v1/projects`, {
-      headers: { Authorization: `Bearer ${adminToken}`, 'X-Namespace': slug },
+    const listRes = await request.get(`${BASE_URL}/api/v1/${slug}/projects`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
     });
     if (listRes.ok()) {
       for (const p of (await listRes.json()).data) {
-        await request.delete(`${BASE_URL}/api/v1/projects/${p.key}`, {
-          headers: { Authorization: `Bearer ${adminToken}`, 'X-Namespace': slug },
+        await request.delete(`${BASE_URL}/api/v1/${slug}/projects/${p.key}`, {
+          headers: { Authorization: `Bearer ${adminToken}` },
         });
       }
     }

@@ -1,4 +1,4 @@
-import { api } from './client'
+import { api, nsPrefix } from './client'
 
 export interface BusinessHoursConfig {
   days: number[]       // 0=Sun, 1=Mon, ..., 6=Sat
@@ -42,7 +42,7 @@ export interface ProjectListResult {
 }
 
 export async function listProjects(): Promise<ProjectListResult> {
-  const res = await api.get<ProjectListResponse>('/projects')
+  const res = await api.get<ProjectListResponse>(`${nsPrefix()}/projects`)
   return {
     projects: res.data.data,
     ownedProjectCount: res.data.meta.owned_project_count,
@@ -51,7 +51,7 @@ export async function listProjects(): Promise<ProjectListResult> {
 }
 
 export async function getProject(projectKey: string) {
-  const res = await api.get<ProjectResponse>(`/projects/${projectKey}`)
+  const res = await api.get<ProjectResponse>(`${nsPrefix()}/projects/${projectKey}`)
   return res.data.data
 }
 
@@ -62,7 +62,7 @@ export interface CreateProjectInput {
 }
 
 export async function createProject(input: CreateProjectInput) {
-  const res = await api.post<ProjectResponse>('/projects', input)
+  const res = await api.post<ProjectResponse>(`${nsPrefix()}/projects`, input)
   return res.data.data
 }
 
@@ -81,7 +81,7 @@ export interface MemberListResponse {
 }
 
 export async function listMembers(projectKey: string): Promise<MemberListResponse> {
-  const res = await api.get<{ data: ProjectMember[]; total_count: number }>(`/projects/${projectKey}/members`)
+  const res = await api.get<{ data: ProjectMember[]; total_count: number }>(`${nsPrefix()}/projects/${projectKey}/members`)
   return { members: res.data.data, totalCount: res.data.total_count }
 }
 
@@ -91,16 +91,16 @@ export interface AddMemberInput {
 }
 
 export async function addMember(projectKey: string, input: AddMemberInput) {
-  const res = await api.post<{ data: ProjectMember }>(`/projects/${projectKey}/members`, input)
+  const res = await api.post<{ data: ProjectMember }>(`${nsPrefix()}/projects/${projectKey}/members`, input)
   return res.data.data
 }
 
 export async function updateMemberRole(projectKey: string, userId: string, role: string) {
-  await api.patch(`/projects/${projectKey}/members/${userId}`, { role })
+  await api.patch(`${nsPrefix()}/projects/${projectKey}/members/${userId}`, { role })
 }
 
 export async function removeMember(projectKey: string, userId: string) {
-  await api.delete(`/projects/${projectKey}/members/${userId}`)
+  await api.delete(`${nsPrefix()}/projects/${projectKey}/members/${userId}`)
 }
 
 export interface UpdateProjectInput {
@@ -111,12 +111,12 @@ export interface UpdateProjectInput {
 }
 
 export async function updateProject(projectKey: string, input: UpdateProjectInput) {
-  const res = await api.patch<ProjectResponse>(`/projects/${projectKey}`, input)
+  const res = await api.patch<ProjectResponse>(`${nsPrefix()}/projects/${projectKey}`, input)
   return res.data.data
 }
 
 export async function deleteProject(projectKey: string) {
-  await api.delete(`/projects/${projectKey}`)
+  await api.delete(`${nsPrefix()}/projects/${projectKey}`)
 }
 
 // --- Type Workflow Mappings ---
@@ -127,12 +127,12 @@ export interface ProjectTypeWorkflow {
 }
 
 export async function getTypeWorkflows(projectKey: string) {
-  const res = await api.get<{ data: ProjectTypeWorkflow[] }>(`/projects/${projectKey}/type-workflows`)
+  const res = await api.get<{ data: ProjectTypeWorkflow[] }>(`${nsPrefix()}/projects/${projectKey}/type-workflows`)
   return res.data.data
 }
 
 export async function updateTypeWorkflow(projectKey: string, workItemType: string, workflowId: string) {
-  const res = await api.put<{ data: ProjectTypeWorkflow }>(`/projects/${projectKey}/type-workflows/${workItemType}`, { workflow_id: workflowId })
+  const res = await api.put<{ data: ProjectTypeWorkflow }>(`${nsPrefix()}/projects/${projectKey}/type-workflows/${workItemType}`, { workflow_id: workflowId })
   return res.data.data
 }
 
@@ -165,17 +165,17 @@ export interface CreateInviteInput {
 }
 
 export async function listInvites(projectKey: string) {
-  const res = await api.get<{ data: ProjectInvite[] }>(`/projects/${projectKey}/invites`)
+  const res = await api.get<{ data: ProjectInvite[] }>(`${nsPrefix()}/projects/${projectKey}/invites`)
   return res.data.data
 }
 
 export async function createInvite(projectKey: string, input: CreateInviteInput) {
-  const res = await api.post<{ data: ProjectInvite }>(`/projects/${projectKey}/invites`, input)
+  const res = await api.post<{ data: ProjectInvite }>(`${nsPrefix()}/projects/${projectKey}/invites`, input)
   return res.data.data
 }
 
 export async function deleteInvite(projectKey: string, inviteId: string) {
-  await api.delete(`/projects/${projectKey}/invites/${inviteId}`)
+  await api.delete(`${nsPrefix()}/projects/${projectKey}/invites/${inviteId}`)
 }
 
 export async function getInviteInfo(code: string) {

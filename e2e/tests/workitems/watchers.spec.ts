@@ -338,7 +338,7 @@ test.describe('Watchers', () => {
 
     // Verify via API that the watcher was added
     const BASE_URL = process.env.BASE_URL || 'http://localhost:5173';
-    const res = await request.get(`${BASE_URL}/api/v1/projects/${testProject.key}/items?q=Item+with+watchers+from+form`, {
+    const res = await request.get(`${BASE_URL}/api/v1/default/projects/${testProject.key}/items?q=Item+with+watchers+from+form`, {
       headers: { Authorization: `Bearer ${testUser.token}` },
     });
     const body = await res.json();

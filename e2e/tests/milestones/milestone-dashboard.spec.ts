@@ -217,7 +217,7 @@ test.describe('Milestone Dashboard', () => {
 
     // Call stats API directly
     const BASE_URL = process.env.BASE_URL || 'http://localhost:5173';
-    const res = await request.get(`${BASE_URL}/api/v1/projects/${testProject.key}/milestones/${milestone.id}/stats`, {
+    const res = await request.get(`${BASE_URL}/api/v1/default/projects/${testProject.key}/milestones/${milestone.id}/stats`, {
       headers: { Authorization: `Bearer ${testUser.token}` },
     });
     expect(res.ok()).toBeTruthy();

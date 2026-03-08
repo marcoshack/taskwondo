@@ -396,7 +396,7 @@ func main() {
 			})
 
 			// Projects (namespace-scoped)
-			r.Route("/projects", func(r chi.Router) {
+			r.Route("/{namespace}/projects", func(r chi.Router) {
 				r.Use(middleware.Namespace(namespaceService))
 				r.Get("/", projects.List)
 				r.Post("/", projects.Create)

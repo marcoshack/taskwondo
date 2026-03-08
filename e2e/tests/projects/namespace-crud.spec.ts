@@ -96,13 +96,10 @@ test.describe('Namespace CRUD', () => {
     // Create namespace
     await api.createNamespace(request, adminToken, slug, 'NS With Projects');
 
-    // Create a project in this namespace (via X-Namespace header)
+    // Create a project in this namespace (via URL path)
     const projKey = `D${Date.now().toString(36).slice(-3).toUpperCase()}`;
-    const res = await request.post(`${BASE_URL}/api/v1/projects`, {
-      headers: {
-        Authorization: `Bearer ${adminToken}`,
-        'X-Namespace': slug,
-      },
+    const res = await request.post(`${BASE_URL}/api/v1/${slug}/projects`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
       data: { key: projKey, name: 'Delete Test Project' },
     });
     expect(res.ok()).toBe(true);
@@ -135,7 +132,7 @@ test.describe('Namespace CRUD', () => {
     await api.enableNamespaces(request, adminToken);
   });
 
-  test('requesting non-default namespace when feature disabled returns 403', async ({ request }) => {
+  test('requesting non-default namespace when feature disabled returns 404', async ({ request }) => {
     const adminToken = getAdminToken();
     const BASE_URL = process.env.BASE_URL || 'http://localhost:5173';
 
@@ -147,15 +144,12 @@ test.describe('Namespace CRUD', () => {
     await api.disableNamespaces(request, adminToken);
 
     // Try to list projects with that namespace context — middleware should block
-    const res = await request.get(`${BASE_URL}/api/v1/projects`, {
-      headers: {
-        Authorization: `Bearer ${adminToken}`,
-        'X-Namespace': slug,
-      },
+    const res = await request.get(`${BASE_URL}/api/v1/${slug}/projects`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
     });
-    expect(res.status()).toBe(403);
+    expect(res.status()).toBe(404);
     const body = await res.json();
-    expect(body.error.code).toBe('NAMESPACES_DISABLED');
+    expect(body.error.code).toBe('NOT_FOUND');
 
     // Re-enable for cleanup
     await api.enableNamespaces(request, adminToken);
@@ -250,21 +244,15 @@ test.describe('Namespace Project Isolation', () => {
     await api.createNamespace(request, adminToken, slug2, 'Isolation B');
 
     // Create project in namespace 1
-    const res1 = await request.post(`${BASE_URL}/api/v1/projects`, {
-      headers: {
-        Authorization: `Bearer ${adminToken}`,
-        'X-Namespace': slug1,
-      },
+    const res1 = await request.post(`${BASE_URL}/api/v1/${slug1}/projects`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
       data: { key: projKey, name: 'Isolation Project A' },
     });
     expect(res1.ok()).toBe(true);
 
     // Create project with SAME key in namespace 2 — should succeed
-    const res2 = await request.post(`${BASE_URL}/api/v1/projects`, {
-      headers: {
-        Authorization: `Bearer ${adminToken}`,
-        'X-Namespace': slug2,
-      },
+    const res2 = await request.post(`${BASE_URL}/api/v1/${slug2}/projects`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
       data: { key: projKey, name: 'Isolation Project B' },
     });
     expect(res2.ok()).toBe(true);
@@ -289,11 +277,8 @@ test.describe('Namespace Project Isolation', () => {
     await api.createNamespace(request, adminToken, dstSlug, 'Migration Dest');
 
     // Create project in source namespace
-    const createRes = await request.post(`${BASE_URL}/api/v1/projects`, {
-      headers: {
-        Authorization: `Bearer ${adminToken}`,
-        'X-Namespace': srcSlug,
-      },
+    const createRes = await request.post(`${BASE_URL}/api/v1/${srcSlug}/projects`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
       data: { key: projKey, name: 'Migration Test Project' },
     });
     expect(createRes.ok()).toBe(true);
@@ -302,11 +287,8 @@ test.describe('Namespace Project Isolation', () => {
     await api.migrateProject(request, adminToken, srcSlug, projKey, dstSlug);
 
     // Verify project is now accessible in destination namespace
-    const listRes = await request.get(`${BASE_URL}/api/v1/projects`, {
-      headers: {
-        Authorization: `Bearer ${adminToken}`,
-        'X-Namespace': dstSlug,
-      },
+    const listRes = await request.get(`${BASE_URL}/api/v1/${dstSlug}/projects`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
     });
     expect(listRes.ok()).toBe(true);
     const listBody = await listRes.json();
@@ -314,11 +296,8 @@ test.describe('Namespace Project Isolation', () => {
     expect(migratedProject).toBeDefined();
 
     // Verify project is no longer in source namespace
-    const srcListRes = await request.get(`${BASE_URL}/api/v1/projects`, {
-      headers: {
-        Authorization: `Bearer ${adminToken}`,
-        'X-Namespace': srcSlug,
-      },
+    const srcListRes = await request.get(`${BASE_URL}/api/v1/${srcSlug}/projects`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
     });
     expect(srcListRes.ok()).toBe(true);
     const srcListBody = await srcListRes.json();
@@ -339,11 +318,8 @@ test.describe('Namespace Project Isolation', () => {
 
     // Create project with same key in both namespaces
     for (const ns of [srcSlug, dstSlug]) {
-      const res = await request.post(`${BASE_URL}/api/v1/projects`, {
-        headers: {
-          Authorization: `Bearer ${adminToken}`,
-          'X-Namespace': ns,
-        },
+      const res = await request.post(`${BASE_URL}/api/v1/${ns}/projects`, {
+        headers: { Authorization: `Bearer ${adminToken}` },
         data: { key: projKey, name: `Collision Project ${ns}` },
       });
       expect(res.ok()).toBe(true);
@@ -375,25 +351,16 @@ test.describe('Namespace Backward Compatibility', () => {
     expect(item.display_id).toContain(testProject.key);
   });
 
-  test('default namespace query param works same as no param', async ({ request }) => {
+  test('default namespace path returns projects', async ({ request }) => {
     const adminToken = getAdminToken();
     const BASE_URL = process.env.BASE_URL || 'http://localhost:5173';
 
-    // List projects with explicit "default" namespace
-    const res = await request.get(`${BASE_URL}/api/v1/projects?namespace=default`, {
+    // List projects with explicit "default" namespace path
+    const res = await request.get(`${BASE_URL}/api/v1/default/projects`, {
       headers: { Authorization: `Bearer ${adminToken}` },
     });
     expect(res.ok()).toBe(true);
-
-    // List projects with no namespace
-    const res2 = await request.get(`${BASE_URL}/api/v1/projects`, {
-      headers: { Authorization: `Bearer ${adminToken}` },
-    });
-    expect(res2.ok()).toBe(true);
-
-    // Both should return the same projects
-    const body1 = await res.json();
-    const body2 = await res2.json();
-    expect(body1.data.length).toBe(body2.data.length);
+    const body = await res.json();
+    expect(Array.isArray(body.data)).toBe(true);
   });
 });
