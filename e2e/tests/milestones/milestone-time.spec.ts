@@ -38,7 +38,7 @@ test.describe('Milestone time tracking', () => {
     });
 
     // Navigate to milestones page
-    await page.goto(`/projects/${testProject.key}/milestones`);
+    await page.goto(`/d/projects/${testProject.key}/milestones`);
 
     // Wait for the milestone to render
     await expect(page.getByText('Time Tracking Milestone')).toBeVisible({ timeout: 10000 });
@@ -63,7 +63,7 @@ test.describe('Milestone time tracking', () => {
       milestone_id: milestone.id,
     });
 
-    await page.goto(`/projects/${testProject.key}/milestones`);
+    await page.goto(`/d/projects/${testProject.key}/milestones`);
 
     // The milestone should be visible
     await expect(page.getByText('No Time Milestone')).toBeVisible({ timeout: 10000 });
@@ -93,7 +93,7 @@ test.describe('Milestone time tracking', () => {
       duration_seconds: 7200, // 2h spent
     });
 
-    await page.goto(`/projects/${testProject.key}/milestones`);
+    await page.goto(`/d/projects/${testProject.key}/milestones`);
 
     // Wait for the milestone to render
     await expect(page.getByText('Over Budget Milestone')).toBeVisible({ timeout: 10000 });

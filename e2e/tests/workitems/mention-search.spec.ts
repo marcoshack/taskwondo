@@ -13,7 +13,7 @@ test.describe('@ mention search modal', () => {
       type: 'task',
     });
 
-    await page.goto(`/projects/${testProject.key}/items/${item.item_number}`);
+    await page.goto(`/d/projects/${testProject.key}/items/${item.item_number}`);
     await expect(page.getByText(item.title)).toBeVisible({ timeout: 5000 });
 
     // Focus the comment textarea and type @
@@ -44,7 +44,7 @@ test.describe('@ mention search modal', () => {
       type: 'task',
     });
 
-    await page.goto(`/projects/${testProject.key}/items/${item.item_number}`);
+    await page.goto(`/d/projects/${testProject.key}/items/${item.item_number}`);
     await expect(page.getByText(item.title)).toBeVisible({ timeout: 5000 });
 
     // Type @ in comment
@@ -67,7 +67,7 @@ test.describe('@ mention search modal', () => {
     await expect(searchInput).not.toBeVisible({ timeout: 3000 });
     const value = await textarea.inputValue();
     expect(value).toContain(`[${target.display_id}]`);
-    expect(value).toContain(`/projects/${testProject.key}/items/${target.item_number}`);
+    expect(value).toContain(`/d/projects/${testProject.key}/items/${target.item_number}`);
   });
 
   test('Enter key selects highlighted result', async ({
@@ -87,7 +87,7 @@ test.describe('@ mention search modal', () => {
       type: 'task',
     });
 
-    await page.goto(`/projects/${testProject.key}/items/${item.item_number}`);
+    await page.goto(`/d/projects/${testProject.key}/items/${item.item_number}`);
     await expect(page.getByText(item.title)).toBeVisible({ timeout: 5000 });
 
     const textarea = page.getByPlaceholder(/add a comment/i);
@@ -120,7 +120,7 @@ test.describe('@ mention search modal', () => {
       type: 'task',
     });
 
-    await page.goto(`/projects/${testProject.key}/items/${item.item_number}`);
+    await page.goto(`/d/projects/${testProject.key}/items/${item.item_number}`);
     await expect(page.getByText(item.title)).toBeVisible({ timeout: 5000 });
 
     const textarea = page.getByPlaceholder(/add a comment/i);
@@ -152,7 +152,7 @@ test.describe('@ mention search modal', () => {
       type: 'task',
     });
 
-    await page.goto(`/projects/${testProject.key}/items/${item.item_number}`);
+    await page.goto(`/d/projects/${testProject.key}/items/${item.item_number}`);
     await expect(page.getByText(item.title)).toBeVisible({ timeout: 5000 });
 
     // Double-click the description area to enter edit mode
@@ -190,7 +190,7 @@ test.describe('@ mention search modal', () => {
       type: 'task',
     });
 
-    await page.goto(`/projects/${testProject.key}/items/${item.item_number}`);
+    await page.goto(`/d/projects/${testProject.key}/items/${item.item_number}`);
     await expect(page.getByText(item.title)).toBeVisible({ timeout: 5000 });
 
     const textarea = page.getByPlaceholder(/add a comment/i);

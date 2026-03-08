@@ -23,7 +23,7 @@ export function VerifyEmailPage() {
   const [redirectTo, setRedirectTo] = useState<string | null>(null)
 
   if (user) {
-    return <Navigate to={redirectTo || '/projects'} replace />
+    return <Navigate to={redirectTo || '/d/projects'} replace />
   }
 
   if (!token) {
@@ -48,7 +48,7 @@ export function VerifyEmailPage() {
     try {
       const result = await authApi.verifyEmail(token, password)
       if (result.project_key) {
-        setRedirectTo(`/projects/${result.project_key}`)
+        setRedirectTo(`/d/projects/${result.project_key}`)
       }
       localStorage.removeItem('taskwondo_pending_invite')
       loginWithToken(result.token, result.user)

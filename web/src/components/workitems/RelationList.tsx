@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { useRelations, useCreateRelation, useDeleteRelation } from '@/hooks/useWorkItems'
+import { useNamespacePath } from '@/hooks/useNamespacePath'
 import { Button } from '@/components/ui/Button'
 import { WorkItemPicker } from '@/components/ui/WorkItemPicker'
 import { Select } from '@/components/ui/Select'
@@ -21,12 +22,6 @@ const INVERSE_TYPE_KEY: Record<string, string> = {
   caused_by: 'causes',
 }
 
-function displayIdToPath(displayId: string) {
-  const idx = displayId.lastIndexOf('-')
-  if (idx < 0) return '#'
-  return `/projects/${displayId.slice(0, idx)}/items/${displayId.slice(idx + 1)}`
-}
-
 interface RelationListProps {
   projectKey: string
   itemNumber: number
@@ -35,7 +30,14 @@ interface RelationListProps {
 
 export function RelationList({ projectKey, itemNumber, readOnly = false }: RelationListProps) {
   const { t } = useTranslation()
+  const { p } = useNamespacePath()
   const { data: relations, isLoading } = useRelations(projectKey, itemNumber)
+
+  function displayIdToPath(displayId: string) {
+    const idx = displayId.lastIndexOf('-')
+    if (idx < 0) return '#'
+    return p(`/projects/${displayId.slice(0, idx)}/items/${displayId.slice(idx + 1)}`)
+  }
   const createMutation = useCreateRelation(projectKey, itemNumber)
   const deleteMutation = useDeleteRelation(projectKey, itemNumber)
 

@@ -27,7 +27,7 @@ test.describe('Modal header overflow on mobile', () => {
     await page.setViewportSize({ width: 375, height: 667 });
 
     // Navigate to the work item detail page
-    await page.goto(`/projects/${testProject.key}/items/${item.item_number}`);
+    await page.goto(`/d/projects/${testProject.key}/items/${item.item_number}`);
 
     // Switch to the Attachments tab
     await page.getByRole('button', { name: 'Attachments', exact: false }).click();
@@ -95,7 +95,7 @@ test.describe('Modal header overflow on mobile', () => {
     // Set mobile viewport
     await page.setViewportSize({ width: 375, height: 667 });
 
-    await page.goto(`/projects/${testProject.key}/items/${item.item_number}`);
+    await page.goto(`/d/projects/${testProject.key}/items/${item.item_number}`);
 
     // Switch to the Activity tab
     await page.getByRole('button', { name: 'Activity', exact: true }).click();

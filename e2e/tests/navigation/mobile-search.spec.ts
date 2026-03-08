@@ -12,7 +12,7 @@ async function waitForPageReady(page: import('@playwright/test').Page) {
 test.describe('Mobile search icon and top bar layout', () => {
   test('search icon is visible on mobile and opens search modal', async ({ page, testProject }) => {
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await waitForPageReady(page);
 
     // Search icon button should be visible on mobile
@@ -32,7 +32,7 @@ test.describe('Mobile search icon and top bar layout', () => {
 
   test('search icon is visible on desktop', async ({ page, testProject }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await waitForPageReady(page);
 
     // Search icon button should be visible on all screen sizes
@@ -42,7 +42,7 @@ test.describe('Mobile search icon and top bar layout', () => {
 
   test('search icon is visible on tablet', async ({ page, testProject }) => {
     await page.setViewportSize({ width: 768, height: 1024 });
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await waitForPageReady(page);
 
     const searchButton = page.getByRole('button', { name: /^search$/i });
@@ -54,7 +54,7 @@ test.describe('Mobile search icon and top bar layout', () => {
     testProject,
   }) => {
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await waitForPageReady(page);
 
     // Home button should be visible
@@ -71,7 +71,7 @@ test.describe('Mobile search icon and top bar layout', () => {
     testProject,
   }) => {
     // First visit a project page to set lastProjectKey
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await waitForPageReady(page);
 
     await page.setViewportSize({ width: 375, height: 667 });
@@ -91,7 +91,7 @@ test.describe('Mobile search icon and top bar layout', () => {
     testProject,
   }) => {
     // First visit a project page to set lastProjectKey
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await waitForPageReady(page);
 
     await page.setViewportSize({ width: 375, height: 667 });
@@ -104,19 +104,19 @@ test.describe('Mobile search icon and top bar layout', () => {
 
   test('home icon navigates to projects list', async ({ page, testProject }) => {
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await waitForPageReady(page);
 
     const homeButton = page.getByRole('button', { name: /^home$/i });
     await expect(homeButton).toBeVisible({ timeout: 5000 });
     await homeButton.click();
 
-    await expect(page).toHaveURL(/\/projects\/?$/, { timeout: 5000 });
+    await expect(page).toHaveURL(/\/d\/projects\/?$/, { timeout: 5000 });
   });
 
   test('project key badge opens project switcher on mobile', async ({ page, testProject }) => {
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await waitForPageReady(page);
 
     // Click the project key badge in the top-left area
@@ -140,7 +140,7 @@ test.describe('Mobile search icon and top bar layout', () => {
 
   test('mobile icon order: search before inbox before menu', async ({ page, testProject }) => {
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await waitForPageReady(page);
 
     // Get bounding boxes to verify left-to-right order
@@ -160,7 +160,7 @@ test.describe('Mobile search icon and top bar layout', () => {
 
   test('keyboard hints footer uses pointer-fine media query for conditional display', async ({ page, testProject }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await waitForPageReady(page);
 
     // Open search modal
@@ -190,7 +190,7 @@ test.describe('Mobile search icon and top bar layout', () => {
 
   test('desktop top bar is unchanged with project active', async ({ page, testProject }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await waitForPageReady(page);
 
     // Brand name should be visible on desktop

@@ -11,7 +11,7 @@ async function dismissWelcomeModal(page: import('@playwright/test').Page) {
 
 test.describe('Search modal (g then k)', () => {
   test('g then k opens search modal and Escape closes it', async ({ page, testProject }) => {
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await dismissWelcomeModal(page);
     await expect(page.getByRole('heading', { name: /items/i })).toBeVisible({ timeout: 5000 });
 
@@ -40,7 +40,7 @@ test.describe('Search modal (g then k)', () => {
       type: 'task',
     });
 
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await dismissWelcomeModal(page);
     await expect(page.getByRole('heading', { name: /items/i })).toBeVisible({ timeout: 5000 });
 
@@ -71,7 +71,7 @@ test.describe('Search modal (g then k)', () => {
       type: 'task',
     });
 
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await dismissWelcomeModal(page);
     await expect(page.getByRole('heading', { name: /items/i })).toBeVisible({ timeout: 5000 });
 
@@ -88,13 +88,13 @@ test.describe('Search modal (g then k)', () => {
     // Press Enter should navigate to this item
     await searchInput.press('Enter');
     await expect(page).toHaveURL(
-      new RegExp(`/projects/${testProject.key}/items/${item.item_number}`),
+      new RegExp(`/d/projects/${testProject.key}/items/${item.item_number}`),
       { timeout: 5000 },
     );
   });
 
   test('search shows empty state when no results found', async ({ page, testProject }) => {
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await dismissWelcomeModal(page);
     await expect(page.getByRole('heading', { name: /items/i })).toBeVisible({ timeout: 5000 });
 
@@ -128,7 +128,7 @@ test.describe('Search modal (g then k)', () => {
       type: 'task',
     });
 
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await dismissWelcomeModal(page);
     await expect(page.getByRole('heading', { name: /items/i })).toBeVisible({ timeout: 5000 });
 
@@ -168,7 +168,7 @@ test.describe('Search modal (g then k)', () => {
       type: 'task',
     });
 
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await dismissWelcomeModal(page);
     await expect(page.getByRole('heading', { name: /items/i })).toBeVisible({ timeout: 5000 });
 
@@ -187,7 +187,7 @@ test.describe('Search modal (g then k)', () => {
 
     // Should navigate to the work item detail page
     await expect(page).toHaveURL(
-      new RegExp(`/projects/${testProject.key}/items/${item.item_number}`),
+      new RegExp(`/d/projects/${testProject.key}/items/${item.item_number}`),
       { timeout: 5000 },
     );
   });
@@ -204,7 +204,7 @@ test.describe('Search modal (g then k)', () => {
       type: 'task',
     });
 
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await dismissWelcomeModal(page);
     await expect(page.getByRole('heading', { name: /items/i })).toBeVisible({ timeout: 5000 });
 
@@ -221,13 +221,13 @@ test.describe('Search modal (g then k)', () => {
 
     // Should navigate to the work item detail page
     await expect(page).toHaveURL(
-      new RegExp(`/projects/${testProject.key}/items/${item.item_number}`),
+      new RegExp(`/d/projects/${testProject.key}/items/${item.item_number}`),
       { timeout: 5000 },
     );
   });
 
   test('search hint shown before typing', async ({ page, testProject }) => {
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await dismissWelcomeModal(page);
     await expect(page.getByRole('heading', { name: /items/i })).toBeVisible({ timeout: 5000 });
 
@@ -256,7 +256,7 @@ test.describe('Search modal (g then k)', () => {
 
     // Navigate with tab=comments&highlight=<commentId>
     await page.goto(
-      `/projects/${testProject.key}/items/${item.item_number}?tab=comments&highlight=${comment.id}`,
+      `/d/projects/${testProject.key}/items/${item.item_number}?tab=comments&highlight=${comment.id}`,
     );
     await dismissWelcomeModal(page);
 
@@ -290,7 +290,7 @@ test.describe('Search modal (g then k)', () => {
 
     // Navigate with tab=attachments&highlight=<attachmentId>
     await page.goto(
-      `/projects/${testProject.key}/items/${item.item_number}?tab=attachments&highlight=${attachment.id}`,
+      `/d/projects/${testProject.key}/items/${item.item_number}?tab=attachments&highlight=${attachment.id}`,
     );
     await dismissWelcomeModal(page);
 
@@ -306,7 +306,7 @@ test.describe('Search modal (g then k)', () => {
     page,
     testProject,
   }) => {
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await dismissWelcomeModal(page);
     await expect(page.getByRole('heading', { name: /items/i })).toBeVisible({ timeout: 5000 });
 

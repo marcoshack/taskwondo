@@ -43,7 +43,7 @@ export function InviteAcceptPage() {
         } else {
           showNotification(t('invite.accepted', { projectName: inviteInfo.project_name }))
         }
-        navigate(`/projects/${result.key}`, { replace: true })
+        navigate(`/d/projects/${result.key}`, { replace: true })
       })
       .catch((err) => {
         setAutoAccepting(false)
@@ -134,7 +134,7 @@ export function InviteAcceptPage() {
       } else {
         showNotification(t('invite.accepted', { projectName: inviteInfo.project_name }))
       }
-      navigate(`/projects/${result.key}`, { replace: true })
+      navigate(`/d/projects/${result.key}`, { replace: true })
     } catch (err) {
       if (isAxiosError(err) && err.response?.status === 409) {
         showNotification(t('invite.alreadyMember'), 'error')

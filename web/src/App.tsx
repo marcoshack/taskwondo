@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { AdminRoute } from '@/components/AdminRoute'
+import { NamespaceGuard } from '@/components/NamespaceGuard'
 import { AppShell } from '@/components/AppShell'
 import { LoginPage } from '@/pages/LoginPage'
 import { OAuthCallbackPage } from '@/pages/OAuthCallbackPage'
@@ -16,6 +17,13 @@ import { VerifyEmailPage } from '@/pages/VerifyEmailPage'
 import UserPage from '@/pages/InboxPage'
 import { NamespaceSettingsPage } from '@/pages/NamespaceSettingsPage'
 
+/** Redirect to stored namespace or default */
+function DefaultRedirect() {
+  const stored = localStorage.getItem('taskwondo_namespace') || 'default'
+  const segment = stored === 'default' ? 'd' : stored
+  return <Navigate to={`/${segment}/projects`} replace />
+}
+
 export default function App() {
   return (
     <Routes>
@@ -28,15 +36,17 @@ export default function App() {
       <Route path="/verify-email" element={<VerifyEmailPage />} />
       <Route element={<ProtectedRoute />}>
         <Route element={<AppShell />}>
-          <Route path="/projects" element={<ProjectListPage />} />
-          <Route path="/projects/:projectKey/*" element={<ProjectDetailPage />} />
+          <Route path="/:namespace" element={<NamespaceGuard />}>
+            <Route path="projects" element={<ProjectListPage />} />
+            <Route path="projects/:projectKey/*" element={<ProjectDetailPage />} />
+            <Route path="settings" element={<NamespaceSettingsPage />} />
+          </Route>
           <Route path="/user/*" element={<UserPage />} />
-          <Route path="/namespaces/:slug/settings" element={<NamespaceSettingsPage />} />
           <Route path="/preferences/*" element={<PreferencesPage />} />
           <Route path="/admin/*" element={<AdminRoute><SystemSettingsPage /></AdminRoute>} />
         </Route>
       </Route>
-      <Route path="*" element={<Navigate to="/projects" replace />} />
+      <Route path="*" element={<DefaultRedirect />} />
     </Routes>
   )
 }

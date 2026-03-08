@@ -68,7 +68,7 @@ test.describe('Email Registration', () => {
     await page.getByRole('button', { name: 'Set password & sign in' }).click();
 
     // Step 8: Should be redirected to projects (logged in)
-    await page.waitForURL(/\/projects/, { timeout: 10000 });
+    await page.waitForURL(/\/d\/projects/, { timeout: 10000 });
     await dismissWelcomeModal(page);
     await expect(page.getByRole('heading', { name: 'Projects' }).first()).toBeVisible();
   });

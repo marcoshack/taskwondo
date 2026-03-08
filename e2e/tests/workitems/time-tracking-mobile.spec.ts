@@ -19,7 +19,7 @@ test.describe('Time tracking — mobile layout', () => {
       type: 'task',
     });
 
-    await page.goto(`/projects/${testProject.key}/items/${item.item_number}`);
+    await page.goto(`/d/projects/${testProject.key}/items/${item.item_number}`);
     await dismissWelcomeModal(page);
 
     // Switch to the Time tab
@@ -65,7 +65,7 @@ test.describe('Time tracking — mobile layout', () => {
       type: 'task',
     });
 
-    await page.goto(`/projects/${testProject.key}/items/${item.item_number}`);
+    await page.goto(`/d/projects/${testProject.key}/items/${item.item_number}`);
     await dismissWelcomeModal(page);
 
     // Switch to the Time tab
@@ -103,7 +103,7 @@ test.describe('Time tracking — mobile layout', () => {
       type: 'task',
     });
 
-    await page.goto(`/projects/${testProject.key}/items/${item.item_number}`);
+    await page.goto(`/d/projects/${testProject.key}/items/${item.item_number}`);
     await dismissWelcomeModal(page);
 
     // Switch to the Time tab

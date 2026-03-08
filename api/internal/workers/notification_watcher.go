@@ -104,7 +104,7 @@ func (t *NotificationWatcherTask) Execute(ctx context.Context, payload []byte) e
 			"itemNumber", fmt.Sprintf("%d", evt.ItemNumber),
 			"title", evt.Title)
 
-		itemURL := fmt.Sprintf("%s/projects/%s/items/%d",
+		itemURL := fmt.Sprintf("%s/d/projects/%s/items/%d",
 			t.baseURL, evt.ProjectKey, evt.ItemNumber)
 
 		body := watcherEmailHTML(lang, actor.DisplayName, evt, itemURL)

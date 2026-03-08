@@ -17,17 +17,17 @@ test.describe('Back link navigation', () => {
       type: 'task',
     });
 
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await waitForPageReady(page);
 
     await page.getByRole('table').getByText('Back link list test').click();
-    await expect(page).toHaveURL(new RegExp(`/projects/${testProject.key}/items/${item.item_number}`), { timeout: 10000 });
+    await expect(page).toHaveURL(new RegExp(`/d/projects/${testProject.key}/items/${item.item_number}`), { timeout: 10000 });
 
     const backLink = page.getByText('Back to items');
     await expect(backLink).toBeVisible();
 
     await backLink.click();
-    await expect(page).toHaveURL(new RegExp(`/projects/${testProject.key}/items`), { timeout: 10000 });
+    await expect(page).toHaveURL(new RegExp(`/d/projects/${testProject.key}/items`), { timeout: 10000 });
   });
 
   test('from inbox navigates back and highlights the previously opened item', async ({ request, testUser, testProject, page }) => {
@@ -42,7 +42,7 @@ test.describe('Back link navigation', () => {
 
     // Store active row key should be set after click
     await page.getByRole('table').getByText('Back link inbox test').click();
-    await expect(page).toHaveURL(new RegExp(`/projects/${testProject.key}/items/${item.item_number}`), { timeout: 10000 });
+    await expect(page).toHaveURL(new RegExp(`/d/projects/${testProject.key}/items/${item.item_number}`), { timeout: 10000 });
 
     await page.getByText('Back to inbox').click();
     await expect(page).toHaveURL(/\/user\/inbox/, { timeout: 10000 });
@@ -63,7 +63,7 @@ test.describe('Back link navigation', () => {
     await waitForPageReady(page);
 
     await page.getByRole('table').getByText('Back link watchlist test').click();
-    await expect(page).toHaveURL(new RegExp(`/projects/${testProject.key}/items/${item.item_number}`), { timeout: 10000 });
+    await expect(page).toHaveURL(new RegExp(`/d/projects/${testProject.key}/items/${item.item_number}`), { timeout: 10000 });
 
     await page.getByText('Back to watchlist').click();
     await expect(page).toHaveURL(/\/user\/watchlist/, { timeout: 10000 });
@@ -85,14 +85,14 @@ test.describe('Back link navigation', () => {
       milestone_id: milestone.id,
     });
 
-    await page.goto(`/projects/${testProject.key}/milestones/${milestone.id}`);
+    await page.goto(`/d/projects/${testProject.key}/milestones/${milestone.id}`);
     await waitForPageReady(page);
 
     await page.getByText('Back link milestone test').first().click();
-    await expect(page).toHaveURL(new RegExp(`/projects/${testProject.key}/items/${item.item_number}`), { timeout: 10000 });
+    await expect(page).toHaveURL(new RegExp(`/d/projects/${testProject.key}/items/${item.item_number}`), { timeout: 10000 });
 
     await page.getByText('Back to milestone').click();
-    await expect(page).toHaveURL(new RegExp(`/projects/${testProject.key}/milestones/${milestone.id}`), { timeout: 10000 });
+    await expect(page).toHaveURL(new RegExp(`/d/projects/${testProject.key}/milestones/${milestone.id}`), { timeout: 10000 });
 
     // MilestoneDashboardPage WorkItemRow uses bg-indigo-50 for active
     const highlightedRow = page.locator('.bg-indigo-50').filter({ hasText: 'Back link milestone test' });

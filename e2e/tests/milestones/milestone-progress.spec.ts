@@ -34,7 +34,7 @@ test.describe('Milestone progress counter', () => {
     }
 
     // Navigate to milestones page
-    await page.goto(`/projects/${testProject.key}/milestones`);
+    await page.goto(`/d/projects/${testProject.key}/milestones`);
 
     // Verify milestone shows 3/3 items and 100%
     await expect(page.getByText('Progress Test')).toBeVisible({ timeout: 10000 });
@@ -88,7 +88,7 @@ test.describe('Milestone progress counter', () => {
     });
 
     // Navigate to milestones page
-    await page.goto(`/projects/${testProject.key}/milestones`);
+    await page.goto(`/d/projects/${testProject.key}/milestones`);
 
     // Verify milestone shows 2/3 items (done + cancelled count as closed)
     await expect(page.getByText('Split Progress')).toBeVisible({ timeout: 10000 });

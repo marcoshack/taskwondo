@@ -18,7 +18,7 @@ test.describe('Board View Scroll Chevrons', () => {
     await page.setViewportSize({ width: 800, height: 600 });
 
     // Navigate to board view
-    await page.goto(`/projects/${testProject.key}/items?view=board`);
+    await page.goto(`/d/projects/${testProject.key}/items?view=board`);
     await page.waitForLoadState('networkidle');
 
     // Click the Board toggle if not already active

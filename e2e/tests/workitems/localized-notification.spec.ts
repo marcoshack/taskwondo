@@ -79,7 +79,7 @@ test.describe('Localized notification emails', () => {
     const detail = await api.getMailpitMessage(request, msg.ID);
     expect(detail.HTML).toContain('Ver Item de Trabalho');
     expect(detail.HTML).toContain('Localized assignment test');
-    expect(detail.HTML).toContain(`/projects/${testProject.key}/items/${item.item_number}`);
+    expect(detail.HTML).toContain(`/d/projects/${testProject.key}/items/${item.item_number}`);
 
     const adminToken = getAdminToken();
     await api.deactivateUser(request, adminToken, userB.id).catch(() => {});

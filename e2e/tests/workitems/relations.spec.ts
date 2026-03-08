@@ -20,7 +20,7 @@ test.describe('Work item relations', () => {
       type: 'task',
     });
 
-    await page.goto(`/projects/${testProject.key}/items/${item1.item_number}`);
+    await page.goto(`/d/projects/${testProject.key}/items/${item1.item_number}`);
     await dismissWelcomeModal(page);
 
     // Switch to Relations tab
@@ -52,7 +52,7 @@ test.describe('Work item relations', () => {
     });
 
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto(`/projects/${testProject.key}/items/${item1.item_number}`);
+    await page.goto(`/d/projects/${testProject.key}/items/${item1.item_number}`);
     await dismissWelcomeModal(page);
 
     // Switch to Relations tab
@@ -97,7 +97,7 @@ test.describe('Work item relations', () => {
       relation_type: 'blocks',
     });
 
-    await page.goto(`/projects/${testProject.key}/items/${item1.item_number}`);
+    await page.goto(`/d/projects/${testProject.key}/items/${item1.item_number}`);
     await dismissWelcomeModal(page);
 
     // Switch to Relations tab
@@ -124,7 +124,7 @@ test.describe('Work item relations', () => {
       relation_type: 'relates_to',
     });
 
-    await page.goto(`/projects/${testProject.key}/items/${item1.item_number}`);
+    await page.goto(`/d/projects/${testProject.key}/items/${item1.item_number}`);
     await dismissWelcomeModal(page);
 
     // Switch to Relations tab

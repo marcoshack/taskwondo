@@ -23,6 +23,7 @@ type InboxRepository interface {
 	RemoveCompleted(ctx context.Context, userID uuid.UUID) (int, error)
 	Exists(ctx context.Context, userID, workItemID uuid.UUID) (bool, error)
 	GetWorkItemProjectID(ctx context.Context, workItemID uuid.UUID) (uuid.UUID, error)
+	RemoveByProjectID(ctx context.Context, projectID uuid.UUID) (int, error)
 }
 
 // InboxService handles inbox business logic.

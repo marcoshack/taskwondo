@@ -69,6 +69,7 @@ func (r *InboxRepository) List(ctx context.Context, userID uuid.UUID, excludeCom
 	qb := &queryBuilder{argIndex: 0}
 	qb.add("i.user_id = ?", userID)
 	qb.addRaw("wi.deleted_at IS NULL")
+	qb.addRaw("p.deleted_at IS NULL")
 
 	if excludeCompleted {
 		qb.addRaw("COALESCE(ws.category, '') NOT IN ('done', 'cancelled')")
@@ -93,6 +94,7 @@ func (r *InboxRepository) List(ctx context.Context, userID uuid.UUID, excludeCom
 	joinClause := `FROM inbox_items i
 		 JOIN work_items wi ON i.work_item_id = wi.id
 		 JOIN projects p ON wi.project_id = p.id
+		 JOIN namespaces ns ON p.namespace_id = ns.id
 		 LEFT JOIN users u ON wi.assignee_id = u.id
 		 LEFT JOIN project_type_workflows ptw ON ptw.project_id = p.id AND ptw.work_item_type = wi.type
 		 LEFT JOIN workflow_statuses ws ON ws.workflow_id = COALESCE(ptw.workflow_id, p.default_workflow_id) AND ws.name = wi.status`
@@ -125,7 +127,8 @@ func (r *InboxRepository) List(ctx context.Context, userID uuid.UUID, excludeCom
 	selectQuery := fmt.Sprintf(
 		`SELECT i.id, i.user_id, i.work_item_id, i.position, i.created_at,
 		        wi.display_id, wi.title, wi.type, wi.status, COALESCE(ws.category, ''), wi.priority,
-		        p.key, p.name, wi.assignee_id, COALESCE(u.display_name, ''), COALESCE(wi.description, ''),
+		        p.key, p.name, ns.slug, ns.display_name,
+		        wi.assignee_id, COALESCE(u.display_name, ''), COALESCE(wi.description, ''),
 		        wi.due_date, wi.sla_target_at, wi.updated_at
 		 %s %s
 		 ORDER BY i.position ASC, i.id ASC
@@ -147,7 +150,8 @@ func (r *InboxRepository) List(ctx context.Context, userID uuid.UUID, excludeCom
 		err := rows.Scan(
 			&item.ID, &item.UserID, &item.WorkItemID, &item.Position, &item.CreatedAt,
 			&item.DisplayID, &item.Title, &item.Type, &item.Status, &item.StatusCategory, &item.Priority,
-			&item.ProjectKey, &item.ProjectName, &assigneeID, &item.AssigneeDisplayName, &item.Description,
+			&item.ProjectKey, &item.ProjectName, &item.NamespaceSlug, &item.NamespaceName,
+			&assigneeID, &item.AssigneeDisplayName, &item.Description,
 			&dueDate, &slaTargetAt, &item.UpdatedAt,
 		)
 		if err != nil {
@@ -196,7 +200,7 @@ func (r *InboxRepository) CountByUser(ctx context.Context, userID uuid.UUID) (in
 		 JOIN projects p ON wi.project_id = p.id
 		 LEFT JOIN project_type_workflows ptw ON ptw.project_id = p.id AND ptw.work_item_type = wi.type
 		 LEFT JOIN workflow_statuses ws ON ws.workflow_id = COALESCE(ptw.workflow_id, p.default_workflow_id) AND ws.name = wi.status
-		 WHERE i.user_id = $1 AND wi.deleted_at IS NULL
+		 WHERE i.user_id = $1 AND wi.deleted_at IS NULL AND p.deleted_at IS NULL
 		   AND COALESCE(ws.category, '') NOT IN ('done', 'cancelled')`,
 		userID).Scan(&count)
 	if err != nil {
@@ -259,6 +263,19 @@ func (r *InboxRepository) RemoveCompleted(ctx context.Context, userID uuid.UUID)
 		userID)
 	if err != nil {
 		return 0, fmt.Errorf("removing completed inbox items: %w", err)
+	}
+	n, _ := result.RowsAffected()
+	return int(n), nil
+}
+
+// RemoveByProjectID deletes all inbox items for work items belonging to a project.
+func (r *InboxRepository) RemoveByProjectID(ctx context.Context, projectID uuid.UUID) (int, error) {
+	result, err := r.db.ExecContext(ctx,
+		`DELETE FROM inbox_items
+		 WHERE work_item_id IN (SELECT id FROM work_items WHERE project_id = $1)`,
+		projectID)
+	if err != nil {
+		return 0, fmt.Errorf("removing inbox items by project: %w", err)
 	}
 	n, _ := result.RowsAffected()
 	return int(n), nil

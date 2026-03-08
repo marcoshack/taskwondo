@@ -43,7 +43,7 @@ test.describe('Filter Persistence', () => {
       shared: false,
     });
 
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await waitForTable(page);
 
     // Apply the saved search to set type=bug
@@ -58,11 +58,11 @@ test.describe('Filter Persistence', () => {
     await waitForSave(page);
 
     // Navigate away
-    await page.goto(`/projects/${testProject.key}/settings`);
+    await page.goto(`/d/projects/${testProject.key}/settings`);
     await expect(page).toHaveURL(/settings/, { timeout: 5000 });
 
     // Navigate back to work items
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await waitForTable(page);
 
     // Verify type=bug filter is NOT in the URL (cleared state was persisted)
@@ -92,7 +92,7 @@ test.describe('Filter Persistence', () => {
       shared: false,
     });
 
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await waitForTable(page);
     await expect(page.getByRole('table').getByText('Bug beta')).toBeVisible({ timeout: 10000 });
 
@@ -107,7 +107,7 @@ test.describe('Filter Persistence', () => {
     await expect(page).toHaveURL(new RegExp(`items/${bug.item_number}`), { timeout: 10000 });
 
     // Navigate back to the list
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await waitForTable(page);
 
     // The type=bug filter should be restored
@@ -132,7 +132,7 @@ test.describe('Filter Persistence', () => {
       shared: false,
     });
 
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await waitForTable(page);
 
     // Apply saved search
@@ -143,11 +143,11 @@ test.describe('Filter Persistence', () => {
     await waitForSave(page);
 
     // Navigate away
-    await page.goto(`/projects/${testProject.key}/settings`);
+    await page.goto(`/d/projects/${testProject.key}/settings`);
     await expect(page).toHaveURL(/settings/, { timeout: 5000 });
 
     // Navigate back
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await waitForTable(page);
 
     // Saved search should still be selected
@@ -163,7 +163,7 @@ test.describe('Filter Persistence', () => {
       type: 'task',
     });
 
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await waitForTable(page);
     await expect(page.getByRole('table').getByText('Searchable item XYZ')).toBeVisible({ timeout: 10000 });
 
@@ -177,11 +177,11 @@ test.describe('Filter Persistence', () => {
     await waitForSave(page);
 
     // Navigate away
-    await page.goto(`/projects/${testProject.key}/settings`);
+    await page.goto(`/d/projects/${testProject.key}/settings`);
     await expect(page).toHaveURL(/settings/, { timeout: 5000 });
 
     // Navigate back
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
 
     // Board view and search text should be restored
     await expect(page).toHaveURL(/view=board/, { timeout: 10000 });
@@ -203,7 +203,7 @@ test.describe('Filter Persistence', () => {
       shared: false,
     });
 
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await waitForTable(page);
 
     // Apply saved search
@@ -221,11 +221,11 @@ test.describe('Filter Persistence', () => {
     await waitForSave(page);
 
     // Navigate away
-    await page.goto(`/projects/${testProject.key}/settings`);
+    await page.goto(`/d/projects/${testProject.key}/settings`);
     await expect(page).toHaveURL(/settings/, { timeout: 5000 });
 
     // Navigate back
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await waitForTable(page);
 
     // Saved search should still be selected
@@ -254,7 +254,7 @@ test.describe('Filter Persistence', () => {
       shared: false,
     });
 
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await waitForTable(page);
 
     // Apply saved search (sets type=bug, view=board)
@@ -290,7 +290,7 @@ test.describe('Filter Persistence', () => {
       shared: false,
     });
 
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await waitForTable(page);
 
     // Apply saved search
@@ -313,7 +313,7 @@ test.describe('Filter Persistence', () => {
     await expect(page).not.toHaveURL(/login/, { timeout: 10000 });
 
     // Navigate to work items
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await waitForTable(page);
 
     // Filter state should be restored from server-side settings

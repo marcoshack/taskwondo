@@ -10,7 +10,7 @@ async function dismissWelcomeModal(page: import('@playwright/test').Page) {
 
 test.describe('Keyboard shortcuts', () => {
   test('g then i navigates to inbox from project items', async ({ page, testProject }) => {
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await dismissWelcomeModal(page);
 
     // Wait for page content to be ready
@@ -23,7 +23,7 @@ test.describe('Keyboard shortcuts', () => {
   });
 
   test('g then i navigates to inbox from project list', async ({ page }) => {
-    await page.goto('/projects');
+    await page.goto('/d/projects');
     await dismissWelcomeModal(page);
 
     // Wait for page content to be ready
@@ -36,7 +36,7 @@ test.describe('Keyboard shortcuts', () => {
   });
 
   test('g then p opens project switcher', async ({ page, testProject }) => {
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await dismissWelcomeModal(page);
 
     await expect(page.getByRole('heading', { name: /items/i })).toBeVisible({ timeout: 5000 });
@@ -49,7 +49,7 @@ test.describe('Keyboard shortcuts', () => {
   });
 
   test('? opens keyboard shortcuts modal', async ({ page, testProject }) => {
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await dismissWelcomeModal(page);
 
     await expect(page.getByRole('heading', { name: /items/i })).toBeVisible({ timeout: 5000 });

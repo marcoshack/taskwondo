@@ -25,7 +25,7 @@ test.describe('Time tracking', () => {
     });
 
     // Navigate to the work item detail page
-    await page.goto(`/projects/${testProject.key}/items/${item.item_number}`);
+    await page.goto(`/d/projects/${testProject.key}/items/${item.item_number}`);
     await dismissWelcomeModal(page);
 
     // Switch to the Time tab
@@ -43,7 +43,7 @@ test.describe('Time tracking', () => {
       type: 'task',
     });
 
-    await page.goto(`/projects/${testProject.key}/items/${item.item_number}`);
+    await page.goto(`/d/projects/${testProject.key}/items/${item.item_number}`);
     await dismissWelcomeModal(page);
 
     // Switch to the Time tab
@@ -86,7 +86,7 @@ test.describe('Time tracking', () => {
       description: 'Entry to delete',
     });
 
-    await page.goto(`/projects/${testProject.key}/items/${item.item_number}`);
+    await page.goto(`/d/projects/${testProject.key}/items/${item.item_number}`);
     await dismissWelcomeModal(page);
 
     // Switch to the Time tab
@@ -134,7 +134,7 @@ test.describe('Time tracking', () => {
       duration_seconds: 3600, // 1h
     });
 
-    await page.goto(`/projects/${testProject.key}/items/${item.item_number}`);
+    await page.goto(`/d/projects/${testProject.key}/items/${item.item_number}`);
     await dismissWelcomeModal(page);
 
     // The sidebar should show the estimate and logged time

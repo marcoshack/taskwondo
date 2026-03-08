@@ -304,6 +304,30 @@ func scanProjects(rows *sql.Rows) ([]model.Project, error) {
 	return projects, rows.Err()
 }
 
+// ResolveNamespaces returns namespace slug and display_name for the given project keys.
+func (r *ProjectRepository) ResolveNamespaces(ctx context.Context, projectKeys []string) (map[string]model.ProjectNamespaceInfo, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT p.key, ns.slug, ns.display_name
+		 FROM projects p
+		 JOIN namespaces ns ON p.namespace_id = ns.id
+		 WHERE p.key = ANY($1) AND p.deleted_at IS NULL`,
+		pq.Array(projectKeys))
+	if err != nil {
+		return nil, fmt.Errorf("resolving project namespaces: %w", err)
+	}
+	defer rows.Close()
+
+	result := make(map[string]model.ProjectNamespaceInfo, len(projectKeys))
+	for rows.Next() {
+		var info model.ProjectNamespaceInfo
+		if err := rows.Scan(&info.ProjectKey, &info.NamespaceSlug, &info.NamespaceName); err != nil {
+			return nil, fmt.Errorf("scanning project namespace: %w", err)
+		}
+		result[info.ProjectKey] = info
+	}
+	return result, rows.Err()
+}
+
 func int64ArrayToIntSlice(arr pq.Int64Array) []int {
 	if arr == nil {
 		return []int{}

@@ -14,6 +14,8 @@ export interface SLAInfo {
 export interface WorkItem {
   id: string
   project_key: string
+  namespace_slug?: string
+  namespace_name?: string
   item_number: number
   display_id: string
   type: string

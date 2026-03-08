@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { usePublicSettings } from '@/hooks/useSystemSettings'
 import { useNamespaces } from '@/hooks/useNamespaces'
 import { setNamespaceSlug } from '@/api/client'
+import { toUrlSegment } from '@/hooks/useNamespacePath'
 import type { Namespace } from '@/api/namespaces'
 
 const NAMESPACE_KEY = 'taskwondo_namespace'
@@ -14,6 +15,8 @@ interface NamespaceContextValue {
   namespaces: Namespace[]
   activeNamespace: Namespace | null
   setActiveNamespace: (slug: string) => void
+  /** Sync the active namespace from a URL param (no navigation, no query invalidation) */
+  syncFromUrl: (slug: string) => void
   showSwitcher: boolean
   isLoading: boolean
 }
@@ -67,6 +70,7 @@ export function NamespaceProvider({ children }: { children: ReactNode }) {
   const namespacesEnabled = publicSettings?.namespaces_enabled === true
   const showSwitcher = namespacesEnabled
 
+  /** Switch active namespace and navigate to its projects page */
   const setActiveNamespace = useCallback(
     (slug: string) => {
       const ns = namespaces?.find((n) => n.slug === slug)
@@ -82,13 +86,25 @@ export function NamespaceProvider({ children }: { children: ReactNode }) {
 
       // Invalidate namespace-scoped queries
       queryClient.invalidateQueries({ queryKey: ['projects'] })
-      navigate('/projects')
+      navigate(`/${toUrlSegment(slug)}/projects`)
     },
     [namespaces, queryClient, navigate],
   )
 
+  /** Sync active namespace from URL param — no navigation or query invalidation */
+  const syncFromUrl = useCallback(
+    (slug: string) => {
+      if (slug === activeSlug) return
+      setActiveSlug(slug)
+      localStorage.setItem(NAMESPACE_KEY, slug)
+      const isDefault = slug === 'default'
+      setNamespaceSlug(isDefault ? null : slug)
+    },
+    [activeSlug],
+  )
+
   return (
-    <NamespaceContext.Provider value={{ namespaces: namespaces ?? [], activeNamespace, setActiveNamespace, showSwitcher, isLoading }}>
+    <NamespaceContext.Provider value={{ namespaces: namespaces ?? [], activeNamespace, setActiveNamespace, syncFromUrl, showSwitcher, isLoading }}>
       {children}
     </NamespaceContext.Provider>
   )

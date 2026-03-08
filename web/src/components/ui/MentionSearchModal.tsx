@@ -16,6 +16,7 @@ import { TypeBadge } from '@/components/workitems/TypeBadge'
 import { useSearch } from '@/hooks/useSearch'
 import { useDebounce } from '@/hooks/useDebounce'
 import { nsPrefix } from '@/api/client'
+import { useNamespacePath } from '@/hooks/useNamespacePath'
 import type { SearchResult } from '@/api/search'
 import type { DropdownPosition } from '@/hooks/useMentionAutocomplete'
 
@@ -86,7 +87,7 @@ function parseSnippet(result: SearchResult): { type?: string; text: string } {
   return { text: s.split('\n')[0] }
 }
 
-function buildMarkdownLink(result: SearchResult): string {
+function buildMarkdownLink(result: SearchResult, p: (path: string) => string): string {
   const key = result.project_key
   const num = result.item_number
   const parsed = parseSnippet(result)
@@ -95,26 +96,26 @@ function buildMarkdownLink(result: SearchResult): string {
     case 'work_item':
       if (key && num != null) {
         const displayId = `${key}-${num}`
-        return `[${displayId}](/projects/${key}/items/${num})`
+        return `[${displayId}](${p(`/projects/${key}/items/${num}`)})`
       }
       return `[${parsed.text}](#)`
     case 'project':
-      return `[${parsed.text}](/projects/${key})`
+      return `[${parsed.text}](${p(`/projects/${key}`)})`
     case 'attachment':
       if (key && num != null)
         return `[${parsed.text}](/api/v1${nsPrefix()}/projects/${key}/items/${num}/attachments/${result.entity_id}/file)`
       return `[${parsed.text}](#)`
     case 'comment':
       if (key && num != null)
-        return `[${key}-${num}#comment](/projects/${key}/items/${num}?tab=comments&highlight=${result.entity_id})`
+        return `[${key}-${num}#comment](${p(`/projects/${key}/items/${num}?tab=comments&highlight=${result.entity_id}`)})`
       return `[${parsed.text}](#)`
     case 'milestone':
       if (key)
-        return `[${parsed.text}](/projects/${key}/milestones)`
+        return `[${parsed.text}](${p(`/projects/${key}/milestones`)})`
       return `[${parsed.text}](#)`
     case 'queue':
       if (key)
-        return `[${parsed.text}](/projects/${key}/queues)`
+        return `[${parsed.text}](${p(`/projects/${key}/queues`)})`
       return `[${parsed.text}](#)`
     default:
       return `[${parsed.text}](#)`
@@ -130,6 +131,7 @@ interface MentionSearchModalProps {
 
 export function MentionSearchModal({ open, position, onClose, onSelect }: MentionSearchModalProps) {
   const { t } = useTranslation()
+  const { p } = useNamespacePath()
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -220,7 +222,7 @@ export function MentionSearchModal({ open, position, onClose, onSelect }: Mentio
                 key={`${result.entity_type}-${result.entity_id}`}
                 type="button"
                 data-selected={isSelected}
-                onClick={() => onSelect(buildMarkdownLink(result))}
+                onClick={() => onSelect(buildMarkdownLink(result, p))}
                 onMouseEnter={() => setSelectedIndex(globalIndex)}
                 className={`w-full text-left flex items-center gap-2 px-3 py-1.5 text-sm ${
                   isSelected
@@ -259,7 +261,7 @@ export function MentionSearchModal({ open, position, onClose, onSelect }: Mentio
     } else if (e.key === 'Enter') {
       e.preventDefault()
       if (allFlat[selectedIndex]) {
-        onSelect(buildMarkdownLink(allFlat[selectedIndex]))
+        onSelect(buildMarkdownLink(allFlat[selectedIndex], p))
       }
     }
   }, [allFlat, selectedIndex, onSelect])

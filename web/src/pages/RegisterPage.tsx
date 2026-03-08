@@ -26,7 +26,7 @@ export function RegisterPage() {
   const registrationEnabled = publicSettings?.auth_email_registration_enabled === true
 
   if (user) {
-    return <Navigate to="/projects" replace />
+    return <Navigate to="/d/projects" replace />
   }
 
   if (publicSettings && !registrationEnabled) {

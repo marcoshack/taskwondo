@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Trans, useTranslation } from 'react-i18next'
+import { toUrlSegment, fromUrlSegment } from '@/hooks/useNamespacePath'
 import { Check, Trash2 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useNamespaceContext } from '@/contexts/NamespaceContext'
@@ -28,7 +29,8 @@ const ROLE_BADGE_COLORS: Record<string, 'indigo' | 'blue' | 'green' | 'gray'> = 
 
 export function NamespaceSettingsPage() {
   const { t } = useTranslation()
-  const { slug } = useParams<{ slug: string }>()
+  const { namespace: urlNamespace } = useParams<{ namespace: string }>()
+  const slug = fromUrlSegment(urlNamespace ?? 'd')
   const navigate = useNavigate()
   const { user } = useAuth()
   const { collapsed } = useSidebar('app')
@@ -101,7 +103,7 @@ export function NamespaceSettingsPage() {
         setSlugInput(null)
         showSaved('general')
         if (updated.slug !== slug) {
-          navigate(`/namespaces/${updated.slug}/settings`, { replace: true })
+          navigate(`/${toUrlSegment(updated.slug)}/settings`, { replace: true })
         }
       },
       onError: (err) => {
@@ -114,10 +116,9 @@ export function NamespaceSettingsPage() {
   function handleDelete() {
     deleteMutation.mutate(slug!, {
       onSuccess: () => {
-        // Switch to default namespace
+        // Switch to default namespace (setActiveNamespace navigates to projects)
         const defaultNs = namespaces.find((ns) => ns.is_default)
         if (defaultNs) setActiveNamespace(defaultNs.slug)
-        navigate('/projects', { replace: true })
       },
       onError: (err) => {
         const axiosErr = err as AxiosError<{ error?: { message?: string } }>

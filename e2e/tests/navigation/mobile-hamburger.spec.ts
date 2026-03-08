@@ -59,7 +59,7 @@ test.describe('Mobile hamburger menu', () => {
     const dropdown = page.locator('.fixed.inset-0.z-40');
     await dropdown.getByText('Inbox').click();
 
-    await expect(page).toHaveURL(/\/user\/inbox/, { timeout: 5000 });
+    await expect(page).toHaveURL(/\/d\/inbox/, { timeout: 5000 });
   });
 
   test('hamburger menu closes when clicking outside', async ({ page }) => {
@@ -81,7 +81,7 @@ test.describe('Mobile hamburger menu', () => {
 
   test('shows hamburger menu on project pages', async ({ page, testProject }) => {
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await dismissWelcomeModal(page);
 
     // Hamburger button should be visible on project pages too
@@ -98,7 +98,7 @@ test.describe('Mobile hamburger menu', () => {
 
   test('shows project context navigation items in hamburger menu', async ({ page, testProject }) => {
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await dismissWelcomeModal(page);
 
     const hamburger = page.getByRole('button', { name: /menu/i });
@@ -118,7 +118,7 @@ test.describe('Mobile hamburger menu', () => {
 
   test('mobile hamburger project nav items navigate correctly', async ({ page, testProject }) => {
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await dismissWelcomeModal(page);
 
     // Navigate to Overview via hamburger
@@ -128,7 +128,7 @@ test.describe('Mobile hamburger menu', () => {
     const dropdown = page.locator('.fixed.inset-0.z-40');
     await dropdown.getByText('Overview').click();
 
-    await expect(page).toHaveURL(new RegExp(`/projects/${testProject.key}/?$`), { timeout: 5000 });
+    await expect(page).toHaveURL(new RegExp(`/d/projects/${testProject.key}/?$`), { timeout: 5000 });
 
     // Menu should close after navigation
     await expect(dropdown).not.toBeVisible();

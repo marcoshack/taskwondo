@@ -26,7 +26,7 @@ test.describe('Activity diff modal', () => {
     });
 
     // Navigate to the work item detail page
-    await page.goto(`/projects/${testProject.key}/items/${item.item_number}`);
+    await page.goto(`/d/projects/${testProject.key}/items/${item.item_number}`);
     await dismissWelcomeModal(page);
 
     // Switch to the Activity tab
@@ -81,7 +81,7 @@ test.describe('Activity diff modal', () => {
     });
 
     // Navigate to the work item detail page
-    await page.goto(`/projects/${testProject.key}/items/${item.item_number}`);
+    await page.goto(`/d/projects/${testProject.key}/items/${item.item_number}`);
     await dismissWelcomeModal(page);
 
     // Switch to the Activity tab
@@ -124,7 +124,7 @@ test.describe('Activity diff modal', () => {
     });
 
     // Navigate to the work item detail page
-    await page.goto(`/projects/${testProject.key}/items/${item.item_number}`);
+    await page.goto(`/d/projects/${testProject.key}/items/${item.item_number}`);
     await dismissWelcomeModal(page);
 
     // Switch to the Activity tab
@@ -176,7 +176,7 @@ test.describe('Activity diff modal', () => {
     await api.updateComment(request, testUser.token, testProject.key, item.item_number, comment.id, updatedComment);
 
     // Navigate to the work item detail page
-    await page.goto(`/projects/${testProject.key}/items/${item.item_number}`);
+    await page.goto(`/d/projects/${testProject.key}/items/${item.item_number}`);
     await dismissWelcomeModal(page);
 
     // Switch to the Activity tab
@@ -208,7 +208,7 @@ test.describe('Activity diff modal', () => {
     await api.updateComment(request, testUser.token, testProject.key, item.item_number, comment.id, updatedComment);
 
     // Navigate to the work item detail page
-    await page.goto(`/projects/${testProject.key}/items/${item.item_number}`);
+    await page.goto(`/d/projects/${testProject.key}/items/${item.item_number}`);
     await dismissWelcomeModal(page);
 
     // Switch to the Activity tab

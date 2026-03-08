@@ -22,6 +22,7 @@ import { useInboxItems } from '@/hooks/useInbox'
 import { usePreference, useSetPreference } from '@/hooks/usePreferences'
 import { useColumnWidths } from '@/hooks/useColumnWidths'
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
+import { toUrlSegment } from '@/hooks/useNamespacePath'
 import { useDebounce } from '@/hooks/useDebounce'
 import { useProjects, useMembers } from '@/hooks/useProjects'
 import { useWatchedItems, useWatchedItemIDs } from '@/hooks/useWorkItems'
@@ -67,6 +68,8 @@ function WatchlistSearchBar({ search, onSearchChange }: { search: string; onSear
 export default function WatchlistPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const itemUrl = (item: WorkItem) =>
+    `/${toUrlSegment(item.namespace_slug ?? 'default')}/projects/${item.project_key}/items/${item.item_number}`
   const { data: projects } = useProjects()
   const setPreferenceMutation = useSetPreference()
 
@@ -205,7 +208,7 @@ export default function WatchlistPage() {
     if (activeRow >= 0 && activeRow < allItems.length) {
       const item = allItems[activeRow]
       sessionStorage.setItem(activeRowStorageKey, item.id)
-      navigate(`/projects/${item.project_key}/items/${item.item_number}`, { state: { from: 'watchlist' } })
+      navigate(itemUrl(item), { state: { from: 'watchlist' } })
     }
   }, activeRow >= 0)
   useKeyboardShortcut({ key: 'Escape' }, () => setActiveRow(-1), activeRow >= 0)
@@ -471,7 +474,7 @@ export default function WatchlistPage() {
             <DataTable
               columns={columns}
               data={allItems}
-              onRowClick={(row) => { sessionStorage.setItem(activeRowStorageKey, row.id); navigate(`/projects/${row.project_key}/items/${row.item_number}`, { state: { from: 'watchlist' } }) }}
+              onRowClick={(row) => { sessionStorage.setItem(activeRowStorageKey, row.id); navigate(itemUrl(row), { state: { from: 'watchlist' } }) }}
               emptyMessage={t('workitems.empty')}
               sortBy={sort}
               sortOrder={order}
@@ -499,7 +502,7 @@ export default function WatchlistPage() {
                   assigneeName={assigneeName}
                   inboxItemId={inboxByWorkItemId.get(item.id)}
                   isWatching={watchedItemIdSet.has(item.id)}
-                  onClick={() => { sessionStorage.setItem(activeRowStorageKey, item.id); navigate(`/projects/${item.project_key}/items/${item.item_number}`, { state: { from: 'watchlist' } }) }}
+                  onClick={() => { sessionStorage.setItem(activeRowStorageKey, item.id); navigate(itemUrl(item), { state: { from: 'watchlist' } }) }}
                 />
               )
             })}
@@ -528,7 +531,7 @@ export default function WatchlistPage() {
           statuses={statuses}
           transitionsMap={transitionsMap}
           readOnly
-          onItemClick={(item) => { sessionStorage.setItem(activeRowStorageKey, item.id); navigate(`/projects/${item.project_key}/items/${item.item_number}`, { state: { from: 'watchlist' } }) }}
+          onItemClick={(item) => { sessionStorage.setItem(activeRowStorageKey, item.id); navigate(itemUrl(item), { state: { from: 'watchlist' } }) }}
         />
       )}
     </div>

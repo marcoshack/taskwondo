@@ -107,7 +107,7 @@ test.describe('Watcher email notifications', () => {
     const detail = await api.getMailpitMessage(request, msg.ID);
     expect(detail.HTML).toContain('Watcher notification test - status change');
     expect(detail.HTML).toContain(testProject.key);
-    expect(detail.HTML).toContain(`/projects/${testProject.key}/items/${item.item_number}`);
+    expect(detail.HTML).toContain(`/d/projects/${testProject.key}/items/${item.item_number}`);
     expect(detail.HTML).toContain('status');
 
     // Cleanup
@@ -290,7 +290,7 @@ test.describe('Watcher email notifications', () => {
     // Verify email body contains the comment preview
     const detail = await api.getMailpitMessage(request, msg.ID);
     expect(detail.HTML).toContain('Comment notification test');
-    expect(detail.HTML).toContain(`/projects/${testProject.key}/items/${item.item_number}`);
+    expect(detail.HTML).toContain(`/d/projects/${testProject.key}/items/${item.item_number}`);
 
     // Cleanup
     const adminToken = getAdminToken();

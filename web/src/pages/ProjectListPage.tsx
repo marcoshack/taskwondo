@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Search, Globe, Building2, Plus, Check } from 'lucide-react'
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
+import { useNamespacePath } from '@/hooks/useNamespacePath'
 import { useProjects, useCreateProject, useOwnedProjectCount, useMaxProjects } from '@/hooks/useProjects'
 import { useAuth } from '@/contexts/AuthContext'
 import { useNamespaceContext } from '@/contexts/NamespaceContext'
@@ -68,6 +69,7 @@ export function ProjectListPage() {
   const { data: maxProjectsValue } = useMaxProjects()
   const { user } = useAuth()
   const navigate = useNavigate()
+  const { p } = useNamespacePath()
   const createMutation = useCreateProject()
 
   const isAdmin = user?.global_role === 'admin'
@@ -93,7 +95,7 @@ export function ProjectListPage() {
   useKeyboardShortcut([{ key: 'ArrowUp' }, { key: 'k' }], () => setActiveRow((prev) => Math.max(prev - 1, 0)))
   useKeyboardShortcut([{ key: 'Enter' }, { key: 'o' }], () => {
     if (activeRow >= 0 && activeRow < projectList.length) {
-      navigate(`/projects/${projectList[activeRow].key}`)
+      navigate(p(`/projects/${projectList[activeRow].key}`))
     }
   }, activeRow >= 0)
   useKeyboardShortcut({ key: 'Escape' }, () => setActiveRow(-1), activeRow >= 0)
@@ -166,7 +168,7 @@ export function ProjectListPage() {
           setName('')
           setKey('')
           setDescription('')
-          navigate(`/projects/${project.key}`)
+          navigate(p(`/projects/${project.key}`))
         },
         onError: (err) => {
           if (err && typeof err === 'object' && 'response' in err) {
@@ -234,39 +236,39 @@ export function ProjectListPage() {
         {projectList.length === 0 ? (
           <p className="text-center text-sm text-gray-500 dark:text-gray-400 py-12">{t('projects.empty')}</p>
         ) : (
-          projectList.map((p) => (
+          projectList.map((proj) => (
             <button
-              key={p.key}
-              onClick={() => navigate(`/projects/${p.key}`)}
+              key={proj.key}
+              onClick={() => navigate(p(`/projects/${proj.key}`))}
               className="w-full text-left bg-white dark:bg-gray-800 rounded-lg shadow p-4 active:bg-gray-50 dark:active:bg-gray-700 transition-colors"
             >
               <div className="flex items-center gap-3">
-                <ProjectKeyBadge>{p.key}</ProjectKeyBadge>
-                <span className="font-medium text-gray-900 dark:text-gray-100 truncate">{p.name}</span>
+                <ProjectKeyBadge>{proj.key}</ProjectKeyBadge>
+                <span className="font-medium text-gray-900 dark:text-gray-100 truncate">{proj.name}</span>
               </div>
               <div className="flex items-center gap-4 mt-2.5 ml-1 text-xs text-gray-500 dark:text-gray-400">
                 <Tooltip content={t('projects.table.open')}>
                   <span className="inline-flex items-center gap-1">
                     <IconOpen className="w-3.5 h-3.5" />
-                    {p.open_count}
+                    {proj.open_count}
                   </span>
                 </Tooltip>
                 <Tooltip content={t('projects.table.inProgress')}>
                   <span className="inline-flex items-center gap-1">
                     <IconInProgress className="w-3.5 h-3.5" />
-                    {p.in_progress_count}
+                    {proj.in_progress_count}
                   </span>
                 </Tooltip>
                 <Tooltip content={t('projects.table.total')}>
                   <span className="inline-flex items-center gap-1">
                     <IconTotal className="w-3.5 h-3.5" />
-                    {p.item_counter}
+                    {proj.item_counter}
                   </span>
                 </Tooltip>
                 <Tooltip content={t('projects.table.members')}>
                   <span className="inline-flex items-center gap-1">
                     <IconMembers className="w-3.5 h-3.5" />
-                    {p.member_count}
+                    {proj.member_count}
                   </span>
                 </Tooltip>
               </div>
@@ -280,7 +282,7 @@ export function ProjectListPage() {
         <DataTable
           columns={columns}
           data={projectList}
-          onRowClick={(p) => navigate(`/projects/${p.key}`)}
+          onRowClick={(proj) => navigate(p(`/projects/${proj.key}`))}
           emptyMessage={t('projects.empty')}
           activeRowIndex={activeRow}
         />

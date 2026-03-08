@@ -36,7 +36,7 @@ test.describe('Theme Preferences', () => {
     await attach(page, testInfo, '02-projects-light');
 
     // Items page in light mode
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await page.waitForLoadState('networkidle');
     await attach(page, testInfo, '03-items-light');
 
@@ -54,7 +54,7 @@ test.describe('Theme Preferences', () => {
     await attach(page, testInfo, '05-projects-dark');
 
     // Items page in dark mode
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await page.waitForLoadState('networkidle');
     await attach(page, testInfo, '06-items-dark');
   });

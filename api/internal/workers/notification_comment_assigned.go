@@ -79,7 +79,7 @@ func (t *NotificationCommentOnAssignedTask) Execute(ctx context.Context, payload
 		"itemNumber", fmt.Sprintf("%d", evt.ItemNumber),
 		"title", evt.Title)
 
-	itemURL := fmt.Sprintf("%s/projects/%s/items/%d",
+	itemURL := fmt.Sprintf("%s/d/projects/%s/items/%d",
 		t.baseURL, evt.ProjectKey, evt.ItemNumber)
 
 	body := commentOnAssignedEmailHTML(lang, commenter.DisplayName, evt.ProjectKey, evt.ItemNumber, evt.Title, evt.Preview, itemURL)

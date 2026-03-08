@@ -142,7 +142,7 @@ test.describe('Watchers', () => {
       type: 'task',
     });
 
-    await page.goto(`/projects/${testProject.key}/items/${item.item_number}`);
+    await page.goto(`/d/projects/${testProject.key}/items/${item.item_number}`);
     await page.waitForLoadState('networkidle');
 
     // Find the desktop watch button (inside hidden lg:inline-flex container)
@@ -182,7 +182,7 @@ test.describe('Watchers', () => {
     // Owner watches the item via API
     await api.toggleWatch(request, testUser.token, testProject.key, item.item_number);
 
-    await page.goto(`/projects/${testProject.key}/items/${item.item_number}`);
+    await page.goto(`/d/projects/${testProject.key}/items/${item.item_number}`);
     await page.waitForLoadState('networkidle');
 
     // Navigate to Watchers tab
@@ -214,7 +214,7 @@ test.describe('Watchers', () => {
       type: 'task',
     });
 
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await page.waitForLoadState('networkidle');
 
     // Find the row containing our item
@@ -298,7 +298,7 @@ test.describe('Watchers', () => {
     const user2 = await createSecondUser(request, adminToken, testProject.key, testUser.token);
 
     // Navigate to the work item list page
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await page.waitForLoadState('networkidle');
 
     // Click create button — look for common create button patterns
@@ -358,7 +358,7 @@ test.describe('Watchers', () => {
     // Watch the item
     await api.toggleWatch(request, testUser.token, testProject.key, item.item_number);
 
-    await page.goto(`/projects/${testProject.key}/items/${item.item_number}`);
+    await page.goto(`/d/projects/${testProject.key}/items/${item.item_number}`);
     await page.waitForLoadState('networkidle');
 
     // Navigate to Watchers tab
@@ -396,7 +396,7 @@ test.describe('Watchers', () => {
     await page.getByText('Watchlist navigation test').first().click();
 
     // Verify navigated to detail page
-    await expect(page).toHaveURL(/\/projects\/.*\/items\/\d+/, { timeout: 10000 });
+    await expect(page).toHaveURL(/\/d\/projects\/.*\/items\/\d+/, { timeout: 10000 });
     await expect(page.getByText('Watchlist navigation test').first()).toBeVisible();
   });
 

@@ -28,6 +28,7 @@ type ProjectRepository interface {
 	CountByOwner(ctx context.Context, userID uuid.UUID) (int, error)
 	Update(ctx context.Context, project *model.Project) error
 	Delete(ctx context.Context, id uuid.UUID) error
+	ResolveNamespaces(ctx context.Context, projectKeys []string) (map[string]model.ProjectNamespaceInfo, error)
 }
 
 // ProjectMemberRepository defines the persistence operations for project members.
@@ -67,6 +68,8 @@ type ProjectService struct {
 	typeWorkflows  ProjectTypeWorkflowRepository
 	systemSettings SystemSettingRepositoryInterface
 	invites        ProjectInviteRepository
+	inboxItems     InboxRepository
+	watchers       WatcherRepository
 	publisher      EventPublisher
 	embedCache     *FeatureFlagCache
 }
@@ -82,7 +85,7 @@ func (s *ProjectService) SetEmbedCache(cache *FeatureFlagCache) {
 }
 
 // NewProjectService creates a new ProjectService.
-func NewProjectService(projects ProjectRepository, members ProjectMemberRepository, users UserRepository, workflows WorkflowRepository, typeWorkflows ProjectTypeWorkflowRepository, systemSettings SystemSettingRepositoryInterface, invites ProjectInviteRepository) *ProjectService {
+func NewProjectService(projects ProjectRepository, members ProjectMemberRepository, users UserRepository, workflows WorkflowRepository, typeWorkflows ProjectTypeWorkflowRepository, systemSettings SystemSettingRepositoryInterface, invites ProjectInviteRepository, inboxItems InboxRepository, watchers WatcherRepository) *ProjectService {
 	return &ProjectService{
 		projects:       projects,
 		members:        members,
@@ -91,6 +94,8 @@ func NewProjectService(projects ProjectRepository, members ProjectMemberReposito
 		typeWorkflows:  typeWorkflows,
 		systemSettings: systemSettings,
 		invites:        invites,
+		inboxItems:     inboxItems,
+		watchers:       watchers,
 	}
 }
 
@@ -404,6 +409,19 @@ func (s *ProjectService) Delete(ctx context.Context, info *model.AuthInfo, proje
 		return fmt.Errorf("deleting project: %w", err)
 	}
 
+	// Clean up user-facing references to the project's work items
+	inboxRemoved, err := s.inboxItems.RemoveByProjectID(ctx, project.ID)
+	if err != nil {
+		log.Ctx(ctx).Warn().Err(err).Msg("failed to remove inbox items for deleted project")
+	}
+	watchersRemoved, err := s.watchers.RemoveByProjectID(ctx, project.ID)
+	if err != nil {
+		log.Ctx(ctx).Warn().Err(err).Msg("failed to remove watchers for deleted project")
+	}
+	if err := s.invites.DeleteByProject(ctx, project.ID); err != nil {
+		log.Ctx(ctx).Warn().Err(err).Msg("failed to remove invites for deleted project")
+	}
+
 	// Delete project embedding
 	publishEmbedDelete(ctx, s.publisher, s.embedCache, model.EntityTypeProject, project.ID)
 
@@ -411,6 +429,8 @@ func (s *ProjectService) Delete(ctx context.Context, info *model.AuthInfo, proje
 		Str("project_id", project.ID.String()).
 		Str("project_key", project.Key).
 		Str("user_id", info.UserID.String()).
+		Int("inbox_items_removed", inboxRemoved).
+		Int("watchers_removed", watchersRemoved).
 		Msg("project deleted")
 
 	return nil

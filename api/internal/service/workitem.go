@@ -77,6 +77,7 @@ type WatcherRepository interface {
 	CountByWorkItem(ctx context.Context, workItemID uuid.UUID) (int, error)
 	IsWatching(ctx context.Context, workItemID, userID uuid.UUID) (bool, error)
 	ListWatchedItemIDs(ctx context.Context, userID uuid.UUID, projectID *uuid.UUID) ([]uuid.UUID, error)
+	RemoveByProjectID(ctx context.Context, projectID uuid.UUID) (int, error)
 }
 
 // EventPublisher publishes async events (e.g. notifications) to a message broker.
@@ -2197,6 +2198,11 @@ func (s *WorkItemService) ListWatchedItems(ctx context.Context, info *model.Auth
 	filter.ItemIDs = allIDs
 	filter.SkipProjectFilter = true
 	return s.items.List(ctx, uuid.Nil, filter)
+}
+
+// ResolveProjectNamespaces returns namespace info for the given project keys.
+func (s *WorkItemService) ResolveProjectNamespaces(ctx context.Context, projectKeys []string) (map[string]model.ProjectNamespaceInfo, error) {
+	return s.projects.ResolveNamespaces(ctx, projectKeys)
 }
 
 // parseDisplayID parses a display ID like "INFRA-38" into project key and item number.

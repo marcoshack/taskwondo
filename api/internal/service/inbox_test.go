@@ -117,6 +117,10 @@ func (m *mockInboxRepo) GetWorkItemProjectID(_ context.Context, workItemID uuid.
 	return pid, nil
 }
 
+func (m *mockInboxRepo) RemoveByProjectID(_ context.Context, _ uuid.UUID) (int, error) {
+	return 0, nil
+}
+
 // --- Helpers ---
 
 func newTestInboxService() (*InboxService, *mockInboxRepo, *mockProjectMemberRepo) {

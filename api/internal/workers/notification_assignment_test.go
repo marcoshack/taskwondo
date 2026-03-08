@@ -43,6 +43,10 @@ func (m *mockProjectRepo) GetByID(_ context.Context, id uuid.UUID) (*model.Proje
 	return p, nil
 }
 
+func (m *mockProjectRepo) ResolveNamespaces(_ context.Context, _ []string) (map[string]model.ProjectNamespaceInfo, error) {
+	return nil, nil
+}
+
 // mockUserSettingRepo is a test double for userSettingRepository.
 type mockUserSettingRepo struct {
 	settings map[string]*model.UserSetting // key: userID+projectID

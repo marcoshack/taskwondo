@@ -1,6 +1,7 @@
 import { Outlet, useNavigate, useMatch } from 'react-router-dom'
 
 import { useTranslation } from 'react-i18next'
+import { useNamespacePath, toUrlSegment } from '@/hooks/useNamespacePath'
 import { Settings, UserCog, Menu, HelpCircle, Inbox, LogOut, Search, Home, Globe, Building2, Plus } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useNamespaceContext } from '@/contexts/NamespaceContext'
@@ -59,7 +60,8 @@ export function AppShell() {
   }, [welcomeLoaded, welcomeNotFound, welcomeAutoShown, welcomeDismissed])
 
   const { data: inboxCount } = useInboxCount()
-  const projectMatch = useMatch('/projects/:projectKey/*')
+  const { p } = useNamespacePath()
+  const projectMatch = useMatch('/:namespace/projects/:projectKey/*')
   const adminMatch = useMatch('/admin/*')
   const preferencesMatch = useMatch('/preferences/*')
   const routeProjectKey = projectMatch?.params.projectKey
@@ -104,7 +106,7 @@ export function AppShell() {
     return registerSequentialCombo({
       id: 'go-to-items',
       keys: ['g', 'o'],
-      callback: () => guardedNavigate(`/projects/${activeProjectKey}/items`),
+      callback: () => guardedNavigate(p(`/projects/${activeProjectKey}/items`)),
     })
   }, [activeProjectKey, navigate, registerSequentialCombo])
 
@@ -131,14 +133,14 @@ export function AppShell() {
           <div className="flex justify-between h-14 relative">
             <div className="flex items-center gap-6 min-w-0">
               {/* Desktop: always show brand name */}
-              <button onClick={() => guardedNavigate('/projects')} className="hidden sm:block text-lg font-bold text-indigo-600 dark:text-indigo-400 shrink-0">
+              <button onClick={() => guardedNavigate(p('/projects'))} className="hidden sm:block text-lg font-bold text-indigo-600 dark:text-indigo-400 shrink-0">
                 {brandName}
               </button>
               {/* Mobile: home icon + project key when any project active, brand when none */}
               {activeProject ? (
                 <div className="flex sm:hidden items-center gap-2 min-w-0">
                   <button
-                    onClick={() => guardedNavigate('/projects')}
+                    onClick={() => guardedNavigate(p('/projects'))}
                     className="p-1.5 rounded-md text-indigo-600 dark:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-800 shrink-0"
                     aria-label={t('nav.home')}
                   >
@@ -152,7 +154,7 @@ export function AppShell() {
                   </button>
                 </div>
               ) : (
-                <button onClick={() => guardedNavigate('/projects')} className="sm:hidden text-lg font-bold text-indigo-600 dark:text-indigo-400 shrink-0">
+                <button onClick={() => guardedNavigate(p('/projects'))} className="sm:hidden text-lg font-bold text-indigo-600 dark:text-indigo-400 shrink-0">
                   {brandName}
                 </button>
               )}
@@ -250,7 +252,7 @@ export function AppShell() {
                               onClick={(e) => {
                                 e.stopPropagation()
                                 setNsDropdownOpen(false)
-                                guardedNavigate(`/namespaces/${ns.slug}/settings`)
+                                guardedNavigate(`/${toUrlSegment(ns.slug)}/settings`)
                               }}
                               className="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0"
                               aria-label={t('namespaces.settings')}
@@ -344,7 +346,7 @@ export function AppShell() {
         activeProjectKey={activeProjectKey}
         onSelect={(key) => {
           setSwitcherOpen(false)
-          guardedNavigate(`/projects/${key}`)
+          guardedNavigate(p(`/projects/${key}`))
         }}
       />
       <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />

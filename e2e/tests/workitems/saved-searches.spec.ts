@@ -37,7 +37,7 @@ test.describe('Saved Searches', () => {
       shared: false,
     });
 
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await dismissWelcomeModal(page);
 
     // Click the saved search selector
@@ -65,7 +65,7 @@ test.describe('Saved Searches', () => {
       shared: false,
     });
 
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await dismissWelcomeModal(page);
 
     // Wait for items to load in the table
@@ -89,7 +89,7 @@ test.describe('Saved Searches', () => {
       type: 'task',
     });
 
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await dismissWelcomeModal(page);
 
     // Wait for items to load in the table
@@ -124,7 +124,7 @@ test.describe('Saved Searches', () => {
       shared: false,
     });
 
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await dismissWelcomeModal(page);
     await waitForTable(page);
     await expect(page.getByRole('table').getByText('Clearable item')).toBeVisible({ timeout: 10000 });
@@ -174,7 +174,7 @@ test.describe('Saved Searches', () => {
       shared: true,
     });
 
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await dismissWelcomeModal(page);
 
     await openSelector(page);
@@ -197,7 +197,7 @@ test.describe('Saved Searches', () => {
       shared: false,
     });
 
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await dismissWelcomeModal(page);
     await waitForTable(page);
     await expect(page.getByRole('table').getByText('Unsaved indicator item')).toBeVisible({ timeout: 10000 });
@@ -226,7 +226,7 @@ test.describe('Saved Searches', () => {
       shared: false,
     });
 
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await dismissWelcomeModal(page);
 
     // Open selector
@@ -261,7 +261,7 @@ test.describe('Saved Searches', () => {
       shared: false,
     });
 
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await dismissWelcomeModal(page);
 
     await openSelector(page);
@@ -292,7 +292,7 @@ test.describe('Saved Searches', () => {
       shared: false,
     });
 
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await dismissWelcomeModal(page);
 
     await openSelector(page);
@@ -323,7 +323,7 @@ test.describe('Saved Searches', () => {
       shared: false,
     });
 
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await dismissWelcomeModal(page);
 
     await openSelector(page);
@@ -376,7 +376,7 @@ test.describe('Saved Searches', () => {
     await api.updateSavedSearch(request, testUser.token, testProject.key, s2.id, { position: 1 });
     await api.updateSavedSearch(request, testUser.token, testProject.key, s3.id, { position: 2 });
 
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await dismissWelcomeModal(page);
 
     await openSelector(page);
@@ -418,7 +418,7 @@ test.describe('Saved Searches', () => {
       shared: false,
     });
 
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await dismissWelcomeModal(page);
 
     await openSelector(page);
@@ -458,7 +458,7 @@ test.describe('Saved Searches', () => {
     await api.updateSavedSearch(request, testUser.token, testProject.key, s1.id, { position: 0 });
     await api.updateSavedSearch(request, testUser.token, testProject.key, s2.id, { position: 1 });
 
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await dismissWelcomeModal(page);
 
     await openSelector(page);
@@ -493,7 +493,7 @@ test.describe('Saved Searches - Mobile', () => {
       shared: false,
     });
 
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await dismissWelcomeModal(page);
 
     // Click the saved search button (folder-search icon)
@@ -523,7 +523,7 @@ test.describe('Saved Searches - Mobile', () => {
       shared: false,
     });
 
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await dismissWelcomeModal(page);
 
     // Open and select the search
@@ -547,7 +547,7 @@ test.describe('Saved Searches - Mobile', () => {
       shared: false,
     });
 
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await dismissWelcomeModal(page);
 
     // Open saved search modal
@@ -601,7 +601,7 @@ test.describe('Saved Searches - Mobile', () => {
     await api.updateSavedSearch(request, testUser.token, testProject.key, s1.id, { position: 0 });
     await api.updateSavedSearch(request, testUser.token, testProject.key, s2.id, { position: 1 });
 
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await dismissWelcomeModal(page);
 
     // Open saved search modal
@@ -642,7 +642,7 @@ test.describe('Saved Searches - Mobile', () => {
       shared: false,
     });
 
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await dismissWelcomeModal(page);
 
     // Open saved search modal
@@ -686,7 +686,7 @@ test.describe('Saved Searches - Mobile', () => {
       shared: false,
     });
 
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await dismissWelcomeModal(page);
 
     // Open saved search modal
@@ -714,7 +714,7 @@ test.describe('Saved Searches - Mobile', () => {
       shared: false,
     });
 
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await dismissWelcomeModal(page);
 
     // Open saved search modal

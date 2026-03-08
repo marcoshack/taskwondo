@@ -16,6 +16,8 @@ export interface InboxItem {
   priority: string
   project_key: string
   project_name: string
+  namespace_slug: string
+  namespace_name: string
   assignee_id: string | null
   assignee_display_name: string
   description: string

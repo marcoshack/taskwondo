@@ -52,7 +52,7 @@ test.describe('Feature Toggle — Activity Graph', () => {
     // Create a project to visit its overview
     const project = await api.createProject(request, adminToken, 'FT' + Date.now().toString(36).slice(-3).toUpperCase(), 'Feature Toggle Test');
 
-    await page.goto(`/projects/${project.key}`);
+    await page.goto(`/d/projects/${project.key}`);
     await page.waitForLoadState('networkidle');
 
     // The activity section heading should be visible
@@ -70,7 +70,7 @@ test.describe('Feature Toggle — Activity Graph', () => {
     // Create a project to visit its overview
     const project = await api.createProject(request, adminToken, 'FT' + Date.now().toString(36).slice(-3).toUpperCase(), 'Feature Toggle Test 2');
 
-    await page.goto(`/projects/${project.key}`);
+    await page.goto(`/d/projects/${project.key}`);
     await page.waitForLoadState('networkidle');
 
     // The "About" section should be visible (page loaded) but Activity section should not
@@ -109,7 +109,7 @@ test.describe('Feature Toggle — Activity Graph', () => {
     await attach(page, testInfo, '04-toggle-off');
 
     // 2. Navigate to project overview — chart should be hidden
-    await page.goto(`/projects/${project.key}`);
+    await page.goto(`/d/projects/${project.key}`);
     await page.waitForLoadState('networkidle');
 
     await expect(page.getByText('About', { exact: false }).first()).toBeVisible();
@@ -126,7 +126,7 @@ test.describe('Feature Toggle — Activity Graph', () => {
     await expect(toggle).toHaveAttribute('aria-checked', 'true');
 
     // 4. Navigate back — chart should be visible again
-    await page.goto(`/projects/${project.key}`);
+    await page.goto(`/d/projects/${project.key}`);
     await page.waitForLoadState('networkidle');
 
     await expect(page.getByText('Activity', { exact: false }).first()).toBeVisible();

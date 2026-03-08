@@ -66,7 +66,7 @@ func (t *NotificationNewItemTask) Execute(ctx context.Context, payload []byte) e
 		return fmt.Errorf("listing project members: %w", err)
 	}
 
-	itemURL := fmt.Sprintf("%s/projects/%s/items/%d", t.baseURL, evt.ProjectKey, evt.ItemNumber)
+	itemURL := fmt.Sprintf("%s/d/projects/%s/items/%d", t.baseURL, evt.ProjectKey, evt.ItemNumber)
 
 	for _, m := range members {
 		// Skip the creator

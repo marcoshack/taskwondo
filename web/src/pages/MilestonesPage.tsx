@@ -4,6 +4,7 @@ import { Trans, useTranslation } from 'react-i18next'
 import { useMilestones, useCreateMilestone, useUpdateMilestone, useDeleteMilestone } from '@/hooks/useMilestones'
 import { useMembers } from '@/hooks/useProjects'
 import { useAuth } from '@/contexts/AuthContext'
+import { useNamespacePath } from '@/hooks/useNamespacePath'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
@@ -216,6 +217,7 @@ function MilestoneCard({
   onDelete: () => void
 }) {
   const { t } = useTranslation()
+  const { p } = useNamespacePath()
   const percent = milestone.total_count > 0 ? Math.round((milestone.closed_count / milestone.total_count) * 100) : 0
 
   return (
@@ -223,7 +225,7 @@ function MilestoneCard({
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <Link to={`/projects/${projectKey}/milestones/${milestone.id}`} className="text-lg font-semibold text-gray-900 dark:text-gray-100 hover:text-indigo-600 dark:hover:text-indigo-400">{milestone.name}</Link>
+            <Link to={p(`/projects/${projectKey}/milestones/${milestone.id}`)} className="text-lg font-semibold text-gray-900 dark:text-gray-100 hover:text-indigo-600 dark:hover:text-indigo-400">{milestone.name}</Link>
             {milestone.due_date && <DueDateLabel dueDate={milestone.due_date} isClosed={milestone.status === 'closed'} />}
           </div>
           {milestone.description && (

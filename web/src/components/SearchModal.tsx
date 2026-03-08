@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { useNamespacePath } from '@/hooks/useNamespacePath'
 import {
   Search,
   FileText,
@@ -102,6 +103,7 @@ interface SearchModalProps {
 export function SearchModal({ open, onClose }: SearchModalProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const { p } = useNamespacePath()
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [limit, setLimit] = useState(20)
@@ -161,26 +163,26 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
 
       switch (result.entity_type) {
         case 'work_item':
-          if (key && num != null) navigate(`/projects/${key}/items/${num}`)
+          if (key && num != null) navigate(p(`/projects/${key}/items/${num}`))
           break
         case 'comment':
-          if (key && num != null) navigate(`/projects/${key}/items/${num}?tab=comments&highlight=${result.entity_id}`)
+          if (key && num != null) navigate(p(`/projects/${key}/items/${num}?tab=comments&highlight=${result.entity_id}`))
           break
         case 'attachment':
-          if (key && num != null) navigate(`/projects/${key}/items/${num}?tab=attachments&highlight=${result.entity_id}`)
+          if (key && num != null) navigate(p(`/projects/${key}/items/${num}?tab=attachments&highlight=${result.entity_id}`))
           break
         case 'project':
-          if (key) navigate(`/projects/${key}`)
+          if (key) navigate(p(`/projects/${key}`))
           break
         case 'milestone':
-          if (key) navigate(`/projects/${key}/milestones`)
+          if (key) navigate(p(`/projects/${key}/milestones`))
           break
         case 'queue':
-          if (key) navigate(`/projects/${key}/queues`)
+          if (key) navigate(p(`/projects/${key}/queues`))
           break
       }
     },
-    [navigate, onClose],
+    [navigate, onClose, p],
   )
 
   const handleKeyDown = useCallback(

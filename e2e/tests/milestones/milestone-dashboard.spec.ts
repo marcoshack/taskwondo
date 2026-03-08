@@ -49,7 +49,7 @@ test.describe('Milestone Dashboard', () => {
     });
 
     // Navigate to milestones list
-    await page.goto(`/projects/${testProject.key}/milestones`);
+    await page.goto(`/d/projects/${testProject.key}/milestones`);
     await expect(page.getByText('Dashboard Test')).toBeVisible({ timeout: 10000 });
 
     // Click milestone name to navigate to dashboard
@@ -80,7 +80,7 @@ test.describe('Milestone Dashboard', () => {
       name: 'Empty Milestone',
     });
 
-    await page.goto(`/projects/${testProject.key}/milestones/${milestone.id}`);
+    await page.goto(`/d/projects/${testProject.key}/milestones/${milestone.id}`);
 
     await expect(page.getByRole('heading', { name: 'Empty Milestone' })).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('No work items in this milestone yet.')).toBeVisible();
@@ -107,7 +107,7 @@ test.describe('Milestone Dashboard', () => {
       duration_seconds: 3600,
     });
 
-    await page.goto(`/projects/${testProject.key}/milestones/${milestone.id}`);
+    await page.goto(`/d/projects/${testProject.key}/milestones/${milestone.id}`);
 
     // Wait for the heading to confirm page loaded
     await expect(page.getByRole('heading', { name: 'Time Tracking Test' })).toBeVisible({ timeout: 10000 });
@@ -124,7 +124,7 @@ test.describe('Milestone Dashboard', () => {
       name: 'Breadcrumb Test',
     });
 
-    await page.goto(`/projects/${testProject.key}/milestones/${milestone.id}`);
+    await page.goto(`/d/projects/${testProject.key}/milestones/${milestone.id}`);
     await expect(page.getByRole('heading', { name: 'Breadcrumb Test' })).toBeVisible({ timeout: 10000 });
 
     // Click breadcrumb back to milestones list
@@ -138,7 +138,7 @@ test.describe('Milestone Dashboard', () => {
       name: 'Edit Test',
     });
 
-    await page.goto(`/projects/${testProject.key}/milestones/${milestone.id}`);
+    await page.goto(`/d/projects/${testProject.key}/milestones/${milestone.id}`);
     await expect(page.getByRole('heading', { name: 'Edit Test' })).toBeVisible({ timeout: 10000 });
 
     // Click edit button (pencil icon)
@@ -172,7 +172,7 @@ test.describe('Milestone Dashboard', () => {
       milestone_id: milestone.id,
     });
 
-    await page.goto(`/projects/${testProject.key}/milestones/${milestone.id}`);
+    await page.goto(`/d/projects/${testProject.key}/milestones/${milestone.id}`);
     await expect(page.getByText('Linked item')).toBeVisible({ timeout: 10000 });
 
     // Click item title to navigate to detail

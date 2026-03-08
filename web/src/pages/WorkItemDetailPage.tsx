@@ -40,6 +40,7 @@ import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { getMarkdownComponents } from '@/components/ui/markdownComponents'
 import { useNavigationGuard } from '@/contexts/NavigationGuardContext'
+import { useNamespacePath } from '@/hooks/useNamespacePath'
 
 type Tab = 'comments' | 'activity' | 'relations' | 'attachments' | 'time' | 'watchers'
 
@@ -47,6 +48,7 @@ export function WorkItemDetailPage() {
   const { t } = useTranslation()
   const { projectKey, itemNumber: itemNumberParam } = useParams<{ projectKey: string; itemNumber: string }>()
   const navigate = useNavigate()
+  const { p } = useNamespacePath()
   const itemNumber = Number(itemNumberParam)
 
   const { data: item, isLoading } = useWorkItem(projectKey ?? '', itemNumber)
@@ -124,10 +126,10 @@ export function WorkItemDetailPage() {
     if (fromPage === 'inbox') return '/user/inbox'
     if (fromPage === 'watchlist') return '/user/watchlist'
     if (fromPage === 'milestone' && navState?.backUrl) return navState.backUrl
-    const base = `/projects/${projectKey}/items`
+    const base = p(`/projects/${projectKey}/items`)
     const stored = sessionStorage.getItem(`taskwondo_listParams_${projectKey}`)
     return stored ? `${base}?${stored}` : base
-  }, [projectKey, fromPage, navState?.backUrl])
+  }, [projectKey, fromPage, navState?.backUrl, p])
   const backLabelKey = fromPage === 'inbox' ? 'workitems.backToInbox'
     : fromPage === 'watchlist' ? 'workitems.backToWatchlist'
     : fromPage === 'milestone' ? 'workitems.backToMilestone'

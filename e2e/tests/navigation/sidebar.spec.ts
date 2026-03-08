@@ -14,7 +14,7 @@ async function waitForPageReady(page: import('@playwright/test').Page) {
 
 test.describe('Unified sidebar', () => {
   test('shows user items on project pages', async ({ page, testProject }) => {
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await waitForPageReady(page);
 
     const sidebar = page.locator('nav.hidden.sm\\:block');
@@ -31,7 +31,7 @@ test.describe('Unified sidebar', () => {
   });
 
   test('shows project context with badge in sidebar and name in top bar', async ({ page, testProject }) => {
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await waitForPageReady(page);
 
     const sidebar = page.locator('nav.hidden.sm\\:block');
@@ -45,14 +45,14 @@ test.describe('Unified sidebar', () => {
   });
 
   test('Projects link navigates to project list with sidebar', async ({ page, testProject }) => {
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await waitForPageReady(page);
 
     const sidebar = page.locator('nav.hidden.sm\\:block');
 
     // Click "Projects" in sidebar
     await sidebar.getByText('Projects').click();
-    await expect(page).toHaveURL(/\/projects$/, { timeout: 5000 });
+    await expect(page).toHaveURL(/\/d\/projects$/, { timeout: 5000 });
 
     // Sidebar should still be visible on the project list page
     await expect(sidebar).toBeVisible();
@@ -62,13 +62,13 @@ test.describe('Unified sidebar', () => {
 
   test('project list page remembers last project in sidebar', async ({ page, testProject }) => {
     // Visit a project first to set the "last project"
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await waitForPageReady(page);
 
     // Navigate to project list
     const sidebar = page.locator('nav.hidden.sm\\:block');
     await sidebar.getByText('Projects').click();
-    await expect(page).toHaveURL(/\/projects$/, { timeout: 5000 });
+    await expect(page).toHaveURL(/\/d\/projects$/, { timeout: 5000 });
 
     // Sidebar should still show the last project context
     await expect(sidebar).toBeVisible();
@@ -85,7 +85,7 @@ test.describe('Unified sidebar', () => {
     await api.createProject(request, testUser.token, secondKey, secondName);
 
     // Navigate to first project
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await waitForPageReady(page);
 
     const sidebar = page.locator('nav.hidden.sm\\:block');
@@ -96,7 +96,7 @@ test.describe('Unified sidebar', () => {
     await expect(topBar.getByText(testProject.name)).toBeVisible();
 
     // Navigate to second project
-    await page.goto(`/projects/${secondKey}/items`);
+    await page.goto(`/d/projects/${secondKey}/items`);
 
     // Verify sidebar and top bar now show second project
     await expect(sidebar.getByText(secondKey)).toBeVisible({ timeout: 5000 });
@@ -105,7 +105,7 @@ test.describe('Unified sidebar', () => {
 
   test('sidebar remembers last project on user pages', async ({ page, testProject }) => {
     // Visit a project first to set the "last project"
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await waitForPageReady(page);
 
     // Navigate to user inbox
@@ -132,7 +132,7 @@ test.describe('Unified sidebar', () => {
     await expect(sidebar).toHaveClass(/w-14/, { timeout: 3000 });
 
     // Navigate to project page — sidebar should still be collapsed
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     const projectSidebar = page.locator('nav.hidden.sm\\:block');
     await expect(projectSidebar).toHaveClass(/w-14/, { timeout: 3000 });
   });

@@ -34,7 +34,7 @@ export function OAuthCallbackPage() {
           localStorage.removeItem('taskwondo_pending_invite')
           navigate(`/invite/${pendingInvite}`, { replace: true })
         } else {
-          navigate('/projects', { replace: true })
+          navigate('/d/projects', { replace: true })
         }
       })
       .catch(() => {

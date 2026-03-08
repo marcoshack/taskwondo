@@ -47,7 +47,7 @@ test.describe('Layout Preferences', () => {
     expect(navClassExpanded).not.toContain('max-w-7xl');
 
     // Check items page in expanded mode
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await page.waitForLoadState('networkidle');
     await attach(page, testInfo, '03-items-expanded');
 
@@ -76,7 +76,7 @@ test.describe('Layout Preferences', () => {
     expect(navClassBack).toContain('max-w-7xl');
 
     // Items page should be centered again
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await page.waitForLoadState('networkidle');
     const projectClassCentered = await projectContainer.getAttribute('class');
     expect(projectClassCentered).toContain('max-w-7xl');
@@ -93,7 +93,7 @@ test.describe('Layout Preferences', () => {
     await page.getByRole('button', { name: /Expanded/i }).click();
 
     // Navigate to items page
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await page.waitForLoadState('networkidle');
 
     // Should still be expanded

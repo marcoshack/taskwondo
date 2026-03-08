@@ -131,6 +131,10 @@ func (m *mockHandlerInboxRepo) GetWorkItemProjectID(_ context.Context, workItemI
 	return pid, nil
 }
 
+func (m *mockHandlerInboxRepo) RemoveByProjectID(_ context.Context, _ uuid.UUID) (int, error) {
+	return 0, nil
+}
+
 // --- Test setup ---
 
 func inboxTestSetup(t *testing.T) (*InboxHandler, *model.AuthInfo, *mockHandlerInboxRepo) {

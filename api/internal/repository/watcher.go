@@ -117,6 +117,19 @@ func (r *WatcherRepository) IsWatching(ctx context.Context, workItemID, userID u
 	return exists, nil
 }
 
+// RemoveByProjectID deletes all watchers for work items belonging to a project.
+func (r *WatcherRepository) RemoveByProjectID(ctx context.Context, projectID uuid.UUID) (int, error) {
+	result, err := r.db.ExecContext(ctx,
+		`DELETE FROM work_item_watchers
+		 WHERE work_item_id IN (SELECT id FROM work_items WHERE project_id = $1)`,
+		projectID)
+	if err != nil {
+		return 0, fmt.Errorf("removing watchers by project: %w", err)
+	}
+	n, _ := result.RowsAffected()
+	return int(n), nil
+}
+
 // ListWatchedItemIDs returns the work item IDs that a user is watching, optionally scoped to a project.
 func (r *WatcherRepository) ListWatchedItemIDs(ctx context.Context, userID uuid.UUID, projectID *uuid.UUID) ([]uuid.UUID, error) {
 	var rows *sql.Rows

@@ -905,6 +905,10 @@ func (m *mockWatcherRepo) ListWatchedItemIDs(_ context.Context, userID uuid.UUID
 	return result, nil
 }
 
+func (m *mockWatcherRepo) RemoveByProjectID(_ context.Context, _ uuid.UUID) (int, error) {
+	return 0, nil
+}
+
 // --- Test helpers ---
 
 type testWorkItemSetup struct {

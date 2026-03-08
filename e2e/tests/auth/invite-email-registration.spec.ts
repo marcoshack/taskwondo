@@ -76,8 +76,8 @@ test.describe('Invite + Email Registration', () => {
     await page.getByLabel('Confirm Password').fill(password);
     await page.getByRole('button', { name: 'Set password & sign in' }).click();
 
-    // Step 8: Should be redirected to the invited project (not /projects)
-    await page.waitForURL(new RegExp(`/projects/${projectKey}`, 'i'), { timeout: 10000 });
+    // Step 8: Should be redirected to the invited project (not /d/projects)
+    await page.waitForURL(new RegExp(`/d/projects/${projectKey}`, 'i'), { timeout: 10000 });
     await dismissWelcomeModal(page);
 
     // Verify we're on the project page

@@ -12,7 +12,7 @@ test.describe('Login redirect', () => {
       type: 'task',
     });
 
-    const targetPath = `/projects/${testProject.key}/items/${item.item_number}`;
+    const targetPath = `/d/projects/${testProject.key}/items/${item.item_number}`;
 
     // Navigate directly to the work item page (while not logged in)
     await page.goto(targetPath);
@@ -25,21 +25,21 @@ test.describe('Login redirect', () => {
     await page.getByLabel('Password').fill(testUser.password);
     await page.getByRole('button', { name: 'Sign in', exact: true }).click();
 
-    // Should be redirected to the original work item page, not /projects
+    // Should be redirected to the original work item page, not /d/projects
     await expect(page).toHaveURL(new RegExp(targetPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), { timeout: 10000 });
 
     // Verify the work item content is visible
     await expect(page.getByText('Redirect Test Item')).toBeVisible({ timeout: 10000 });
   });
 
-  test('redirects to /projects when no next param', async ({ testUser, page }) => {
+  test('redirects to /d/projects when no next param', async ({ testUser, page }) => {
     await page.goto('/login');
 
     await page.getByLabel('Email').fill(testUser.email);
     await page.getByLabel('Password').fill(testUser.password);
     await page.getByRole('button', { name: 'Sign in', exact: true }).click();
 
-    // Should land on /projects (default)
-    await expect(page).toHaveURL(/\/projects/, { timeout: 10000 });
+    // Should land on /d/projects (default)
+    await expect(page).toHaveURL(/\/d\/projects/, { timeout: 10000 });
   });
 });

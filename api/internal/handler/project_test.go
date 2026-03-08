@@ -129,6 +129,10 @@ func (m *mockProjectRepo) CountByOwner(_ context.Context, _ uuid.UUID) (int, err
 	return count, nil
 }
 
+func (m *mockProjectRepo) ResolveNamespaces(_ context.Context, _ []string) (map[string]model.ProjectNamespaceInfo, error) {
+	return nil, nil
+}
+
 type mockProjectMemberRepo struct {
 	members map[string]*model.ProjectMember
 }
@@ -282,6 +286,43 @@ func (m *mockProjectInviteRepo) DeleteByProject(_ context.Context, projectID uui
 	return nil
 }
 
+// noopInboxRepo is a minimal service.InboxRepository for project handler tests.
+type noopInboxRepo struct{}
+
+func (noopInboxRepo) Add(context.Context, *model.InboxItem) error                  { return nil }
+func (noopInboxRepo) Remove(context.Context, uuid.UUID, uuid.UUID) error           { return nil }
+func (noopInboxRepo) RemoveByID(context.Context, uuid.UUID, uuid.UUID) error       { return nil }
+func (noopInboxRepo) List(context.Context, uuid.UUID, bool, string, []string, *uuid.UUID, int) (*model.InboxItemList, error) {
+	return &model.InboxItemList{}, nil
+}
+func (noopInboxRepo) CountByUser(context.Context, uuid.UUID) (int, error)    { return 0, nil }
+func (noopInboxRepo) CountAllByUser(context.Context, uuid.UUID) (int, error) { return 0, nil }
+func (noopInboxRepo) UpdatePosition(context.Context, uuid.UUID, uuid.UUID, int) error {
+	return nil
+}
+func (noopInboxRepo) MaxPosition(context.Context, uuid.UUID) (int, error)       { return 0, nil }
+func (noopInboxRepo) RemoveCompleted(context.Context, uuid.UUID) (int, error)   { return 0, nil }
+func (noopInboxRepo) Exists(context.Context, uuid.UUID, uuid.UUID) (bool, error) { return false, nil }
+func (noopInboxRepo) GetWorkItemProjectID(context.Context, uuid.UUID) (uuid.UUID, error) {
+	return uuid.Nil, nil
+}
+func (noopInboxRepo) RemoveByProjectID(context.Context, uuid.UUID) (int, error) { return 0, nil }
+
+// noopWatcherRepo is a minimal service.WatcherRepository for project handler tests.
+type noopWatcherRepo struct{}
+
+func (noopWatcherRepo) Create(context.Context, *model.WorkItemWatcher) error { return nil }
+func (noopWatcherRepo) Delete(context.Context, uuid.UUID, uuid.UUID) error   { return nil }
+func (noopWatcherRepo) ListByWorkItem(context.Context, uuid.UUID) ([]model.WorkItemWatcherWithUser, error) {
+	return nil, nil
+}
+func (noopWatcherRepo) CountByWorkItem(context.Context, uuid.UUID) (int, error)      { return 0, nil }
+func (noopWatcherRepo) IsWatching(context.Context, uuid.UUID, uuid.UUID) (bool, error) { return false, nil }
+func (noopWatcherRepo) ListWatchedItemIDs(context.Context, uuid.UUID, *uuid.UUID) ([]uuid.UUID, error) {
+	return nil, nil
+}
+func (noopWatcherRepo) RemoveByProjectID(context.Context, uuid.UUID) (int, error) { return 0, nil }
+
 // --- Test setup ---
 
 func projectTestSetup(t *testing.T) (*ProjectHandler, *model.AuthInfo) {
@@ -293,7 +334,7 @@ func projectTestSetup(t *testing.T) (*ProjectHandler, *model.AuthInfo) {
 	workflowRepo := newMockWorkflowRepo()
 	typeWorkflowRepo := newMockTypeWorkflowRepo()
 	inviteRepo := newMockProjectInviteRepo()
-	projectSvc := service.NewProjectService(projectRepo, memberRepo, userRepo, workflowRepo, typeWorkflowRepo, newMockSystemSettingRepo(), inviteRepo)
+	projectSvc := service.NewProjectService(projectRepo, memberRepo, userRepo, workflowRepo, typeWorkflowRepo, newMockSystemSettingRepo(), inviteRepo, noopInboxRepo{}, noopWatcherRepo{})
 	h := NewProjectHandler(projectSvc, "http://localhost:3000")
 
 	info := &model.AuthInfo{

@@ -54,8 +54,10 @@ type createWorkItemRequest struct {
 // --- Response DTOs ---
 
 type workItemResponse struct {
-	ID           uuid.UUID              `json:"id"`
-	ProjectKey   string                 `json:"project_key"`
+	ID             uuid.UUID              `json:"id"`
+	ProjectKey     string                 `json:"project_key"`
+	NamespaceSlug  string                 `json:"namespace_slug,omitempty"`
+	NamespaceName  string                 `json:"namespace_name,omitempty"`
 	ItemNumber   int                    `json:"item_number"`
 	DisplayID    string                 `json:"display_id"`
 	Type         string                 `json:"type"`
@@ -1823,18 +1825,33 @@ func (h *WorkItemHandler) ListWatchedItemIDs(w http.ResponseWriter, r *http.Requ
 		}
 
 		// For cross-project responses, resolve project_key from display_id and compute SLA
+		// Collect unique project keys and resolve their namespaces
+		pkSet := map[string]struct{}{}
 		items := make([]workItemResponse, len(result.Items))
 		for i := range result.Items {
 			pk := projectKey
 			if len(projectKeys) != 1 {
-				// Extract project key from display_id (e.g. "TF-42" → "TF")
 				if idx := strings.LastIndex(result.Items[i].DisplayID, "-"); idx > 0 {
 					pk = result.Items[i].DisplayID[:idx]
 				}
 			}
+			pkSet[pk] = struct{}{}
 			items[i] = toWorkItemResponse(&result.Items[i], pk)
 			if slaMap := h.sla.ComputeSLAForItems(r.Context(), pk, []model.WorkItem{result.Items[i]}); slaMap != nil {
 				items[i].SLA = slaMap[result.Items[i].ID]
+			}
+		}
+		// Resolve namespace info for all project keys
+		keys := make([]string, 0, len(pkSet))
+		for k := range pkSet {
+			keys = append(keys, k)
+		}
+		if nsMap, err := h.items.ResolveProjectNamespaces(r.Context(), keys); err == nil {
+			for i := range items {
+				if info, ok := nsMap[items[i].ProjectKey]; ok {
+					items[i].NamespaceSlug = info.NamespaceSlug
+					items[i].NamespaceName = info.NamespaceName
+				}
 			}
 		}
 

@@ -26,7 +26,7 @@ export function ChangePasswordPage() {
   }
 
   if (!forcePasswordChange) {
-    return <Navigate to="/projects" replace />
+    return <Navigate to="/d/projects" replace />
   }
 
   const handleSubmit = async (e: FormEvent) => {
@@ -47,7 +47,7 @@ export function ChangePasswordPage() {
     try {
       const { token } = await authApi.changePassword(oldPassword, newPassword)
       clearForcePasswordChange(token)
-      navigate('/projects', { replace: true })
+      navigate('/d/projects', { replace: true })
     } catch (err) {
       if (isAxiosError(err) && err.response?.data?.error?.message) {
         setError(err.response.data.error.message)

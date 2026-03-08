@@ -52,7 +52,7 @@ test.describe('Namespace backward compatibility', () => {
     });
 
     // Navigate to the project page
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await expect(page.getByRole('table').getByText('UI backward compat test')).toBeVisible({ timeout: 15000 });
   });
 
@@ -68,7 +68,7 @@ test.describe('Namespace backward compatibility', () => {
       description: 'Verifying detail page works',
     });
 
-    await page.goto(`/projects/${testProject.key}/items/${item.item_number}`);
+    await page.goto(`/d/projects/${testProject.key}/items/${item.item_number}`);
     await expect(page.getByText('Detail page compat test')).toBeVisible({ timeout: 15000 });
   });
 

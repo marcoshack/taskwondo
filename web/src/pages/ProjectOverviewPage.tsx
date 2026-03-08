@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { NavLink, useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { useNamespacePath } from '@/hooks/useNamespacePath'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import {
@@ -25,6 +26,7 @@ const primaryTypes = new Set(['task', 'ticket', 'bug'])
 
 export function ProjectOverviewPage() {
   const { t } = useTranslation()
+  const { p } = useNamespacePath()
   const { projectKey } = useParams<{ projectKey: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -81,12 +83,12 @@ export function ProjectOverviewPage() {
     } else {
       params.set('type', allTypes.join(','))
     }
-    navigate(`/projects/${projectKey}/items?${params.toString()}`)
+    navigate(p(`/projects/${projectKey}/items?${params.toString()}`))
   }
 
   const loading = itemsLoading || !statuses.length
 
-  const base = `/projects/${projectKey}`
+  const base = p(`/projects/${projectKey}`)
   const navItems = [
     { to: '', label: t('sidebar.overview'), icon: LayoutDashboard, end: true },
     { to: 'items', label: t('sidebar.items'), icon: ClipboardList, end: false },

@@ -78,7 +78,7 @@ export function LoginPage() {
       // Removing here causes issues with React StrictMode double-rendering.
       return <Navigate to={`/invite/${pendingInvite}`} replace />
     }
-    return <Navigate to="/projects" replace />
+    return <Navigate to="/d/projects" replace />
   }
 
   const handleSubmit = async (e: FormEvent) => {

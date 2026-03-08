@@ -23,7 +23,7 @@ test.describe('Milestone filter', () => {
     });
 
     // Navigate to work items list
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
 
     // Both items should be visible initially (no filter)
     const table = page.getByRole('table');
@@ -74,7 +74,7 @@ test.describe('Milestone filter', () => {
       type: 'task',
     });
 
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
 
     const table = page.getByRole('table');
 

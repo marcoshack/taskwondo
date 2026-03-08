@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Trans, useTranslation } from 'react-i18next'
+import { useNamespacePath } from '@/hooks/useNamespacePath'
 import { useProject, useUpdateProject, useDeleteProject, useMembers, useAddMember, useUpdateMemberRole, useRemoveMember, useInvites, useCreateInvite, useDeleteInvite } from '@/hooks/useProjects'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/Button'
@@ -66,6 +67,7 @@ const ROLE_BADGE_COLORS: Record<string, 'indigo' | 'blue' | 'green' | 'gray'> = 
 
 export function ProjectSettingsPage() {
   const { t } = useTranslation()
+  const { p } = useNamespacePath()
   const { projectKey } = useParams<{ projectKey: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -176,7 +178,7 @@ export function ProjectSettingsPage() {
   function handleDelete() {
     deleteMutation.mutate(undefined, {
       onSuccess: () => {
-        navigate('/projects', { replace: true })
+        navigate(p('/projects'), { replace: true })
       },
       onError: (err) => {
         const axiosErr = err as AxiosError<{ error?: { message?: string } }>
@@ -231,7 +233,7 @@ export function ProjectSettingsPage() {
       onSuccess: () => {
         setRemoveTarget(null)
         if (removeTarget.userId === user?.id) {
-          navigate('/projects', { replace: true })
+          navigate(p('/projects'), { replace: true })
         }
       },
       onError: (err) => {

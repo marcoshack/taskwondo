@@ -65,7 +65,7 @@ test.describe('@ mention modal positioning', () => {
       await api.addComment(request, testUser.token, testProject.key, item.item_number, longComment);
     }
 
-    await page.goto(`/projects/${testProject.key}/items/${item.item_number}`);
+    await page.goto(`/d/projects/${testProject.key}/items/${item.item_number}`);
     await expect(page.getByText(item.title)).toBeVisible({ timeout: 5000 });
 
     // Scroll the comment textarea into view and type @
@@ -98,7 +98,7 @@ test.describe('@ mention modal positioning', () => {
       await api.addComment(request, testUser.token, testProject.key, item.item_number, longComment);
     }
 
-    await page.goto(`/projects/${testProject.key}/items/${item.item_number}`);
+    await page.goto(`/d/projects/${testProject.key}/items/${item.item_number}`);
     await expect(page.getByText(item.title)).toBeVisible({ timeout: 5000 });
 
     // Scroll back to the top to find the description
@@ -138,7 +138,7 @@ test.describe('@ mention modal positioning', () => {
       await api.addComment(request, testUser.token, testProject.key, item.item_number, longComment);
     }
 
-    await page.goto(`/projects/${testProject.key}/items/${item.item_number}`);
+    await page.goto(`/d/projects/${testProject.key}/items/${item.item_number}`);
     await expect(page.getByText(item.title)).toBeVisible({ timeout: 5000 });
 
     // Scroll to a middle position
@@ -179,7 +179,7 @@ test.describe('@ mention modal positioning', () => {
       await api.addComment(request, testUser.token, testProject.key, item.item_number, longComment);
     }
 
-    await page.goto(`/projects/${testProject.key}/items/${item.item_number}`);
+    await page.goto(`/d/projects/${testProject.key}/items/${item.item_number}`);
     await expect(page.getByText(item.title)).toBeVisible({ timeout: 5000 });
 
     const textarea = page.getByPlaceholder(/add a comment/i);
@@ -199,6 +199,6 @@ test.describe('@ mention modal positioning', () => {
     await expect(searchInput).not.toBeVisible({ timeout: 3000 });
     const value = await textarea.inputValue();
     expect(value).toContain(`[${target.display_id}]`);
-    expect(value).toContain(`/projects/${testProject.key}/items/${target.item_number}`);
+    expect(value).toContain(`/d/projects/${testProject.key}/items/${target.item_number}`);
   });
 });

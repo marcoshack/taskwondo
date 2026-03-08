@@ -7,6 +7,7 @@ import { useWorkItems } from '@/hooks/useWorkItems'
 import { useMembers } from '@/hooks/useProjects'
 import { useProjectWorkflow } from '@/hooks/useWorkflows'
 import { useAuth } from '@/contexts/AuthContext'
+import { useNamespacePath } from '@/hooks/useNamespacePath'
 import { Spinner } from '@/components/ui/Spinner'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
@@ -53,6 +54,7 @@ const priorityOrder: Record<string, number> = {
 
 export function MilestoneDashboardPage() {
   const { t } = useTranslation()
+  const { p } = useNamespacePath()
   const { projectKey, milestoneId } = useParams<{ projectKey: string; milestoneId: string }>()
   const { user } = useAuth()
   const { data: milestone, isLoading: milestoneLoading } = useMilestone(projectKey ?? '', milestoneId ?? '')
@@ -122,7 +124,7 @@ export function MilestoneDashboardPage() {
     <div className="max-w-4xl space-y-6">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
-        <Link to={`/projects/${projectKey}/milestones`} className="hover:text-gray-700 dark:hover:text-gray-300">
+        <Link to={p(`/projects/${projectKey}/milestones`)} className="hover:text-gray-700 dark:hover:text-gray-300">
           {t('milestone.dashboard.backToMilestones')}
         </Link>
         <ChevronRight className="h-3.5 w-3.5" />
@@ -326,6 +328,7 @@ function BreakdownChart({
   filterKey: string
 }) {
   const { t } = useTranslation()
+  const { p } = useNamespacePath()
   const entries = Object.entries(data).sort((a, b) => (b[1].open + b[1].closed) - (a[1].open + a[1].closed))
   const maxCount = Math.max(...entries.map(([, v]) => v.open + v.closed), 1)
 
@@ -342,7 +345,7 @@ function BreakdownChart({
           return (
             <Link
               key={key}
-              to={`/projects/${projectKey}/items?milestones=${milestoneId}&${filterParam}`}
+              to={p(`/projects/${projectKey}/items?milestones=${milestoneId}&${filterParam}`)}
               className="block group"
             >
               <div className="flex items-center justify-between text-xs mb-0.5">
@@ -460,6 +463,7 @@ function WorkItemsTable({
   statuses?: import('@/api/workflows').WorkflowStatus[]
 }) {
   const { t } = useTranslation()
+  const { p } = useNamespacePath()
   const [expanded, setExpanded] = useState(false)
   const [activeItemNumber, setActiveItemNumber] = useState(-1)
   const restoredRef = useRef(false)
@@ -494,7 +498,7 @@ function WorkItemsTable({
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('milestone.dashboard.workItems')}</h3>
         <Link
-          to={`/projects/${projectKey}/items?milestone=${milestoneId}`}
+          to={p(`/projects/${projectKey}/items?milestone=${milestoneId}`)}
           className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline"
         >
           {t('milestone.dashboard.viewAll')}
@@ -534,7 +538,7 @@ function WorkItemsTable({
                 </button>
               ) : hasMore ? (
                 <Link
-                  to={`/projects/${projectKey}/items?milestone=${milestoneId}`}
+                  to={p(`/projects/${projectKey}/items?milestone=${milestoneId}`)}
                   className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline"
                 >
                   {t('milestone.dashboard.viewAll')}
@@ -568,7 +572,8 @@ function WorkItemRow({
   statuses?: import('@/api/workflows').WorkflowStatus[]
 }) {
   const { t } = useTranslation()
-  const linkState = { state: { from: 'milestone', backUrl: `/projects/${projectKey}/milestones/${milestoneId}` } }
+  const { p } = useNamespacePath()
+  const linkState = { state: { from: 'milestone', backUrl: p(`/projects/${projectKey}/milestones/${milestoneId}`) } }
   const rowRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -583,7 +588,7 @@ function WorkItemRow({
     >
       <div className="px-3 py-2 shrink-0">
         <Link
-          to={`/projects/${projectKey}/items/${item.item_number}`}
+          to={p(`/projects/${projectKey}/items/${item.item_number}`)}
           {...linkState}
           onClick={() => onClick?.(item.item_number)}
           className="text-xs text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 font-mono"
@@ -593,7 +598,7 @@ function WorkItemRow({
       </div>
       <div className="px-3 py-2 shrink-0 sm:flex-1 sm:min-w-0">
         <Link
-          to={`/projects/${projectKey}/items/${item.item_number}`}
+          to={p(`/projects/${projectKey}/items/${item.item_number}`)}
           {...linkState}
           onClick={() => onClick?.(item.item_number)}
           className="text-gray-900 dark:text-gray-100 hover:text-indigo-600 dark:hover:text-indigo-400 whitespace-nowrap sm:truncate sm:block"

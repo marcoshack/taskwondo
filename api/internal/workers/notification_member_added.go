@@ -76,7 +76,7 @@ func (t *NotificationMemberAddedTask) Execute(ctx context.Context, payload []byt
 	subject := i18n.T(lang, "email.member_added.subject",
 		"projectName", evt.ProjectName)
 
-	projectURL := fmt.Sprintf("%s/projects/%s", t.baseURL, evt.ProjectKey)
+	projectURL := fmt.Sprintf("%s/d/projects/%s", t.baseURL, evt.ProjectKey)
 
 	body := memberAddedEmailHTML(lang, addedBy.DisplayName, evt.ProjectName, evt.ProjectKey, evt.Role, projectURL)
 

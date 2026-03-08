@@ -76,7 +76,7 @@ test.describe('Assignment email notifications', () => {
     const detail = await api.getMailpitMessage(request, msg.ID);
     expect(detail.HTML).toContain('Assignment on creation test');
     expect(detail.HTML).toContain(testProject.key);
-    expect(detail.HTML).toContain(`/projects/${testProject.key}/items/${item.item_number}`);
+    expect(detail.HTML).toContain(`/d/projects/${testProject.key}/items/${item.item_number}`);
 
     // Cleanup
     const adminToken = getAdminToken();
@@ -116,7 +116,7 @@ test.describe('Assignment email notifications', () => {
 
     const detail = await api.getMailpitMessage(request, msg.ID);
     expect(detail.HTML).toContain('Assignment on edit test');
-    expect(detail.HTML).toContain(`/projects/${testProject.key}/items/${item.item_number}`);
+    expect(detail.HTML).toContain(`/d/projects/${testProject.key}/items/${item.item_number}`);
 
     // Cleanup
     const adminToken = getAdminToken();

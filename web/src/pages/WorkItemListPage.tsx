@@ -33,6 +33,7 @@ import { SavedSearchSelector } from '@/components/workitems/SavedSearchSelector'
 import { SaveSearchModal } from '@/components/workitems/SaveSearchModal'
 import { InboxButton } from '@/components/workitems/InboxButton'
 import { WatchButton } from '@/components/workitems/WatchButton'
+import { useNamespacePath } from '@/hooks/useNamespacePath'
 
 import type { SavedSearch } from '@/api/savedSearches'
 import { listWorkItems, type WorkItem, type WorkItemFilter } from '@/api/workitems'
@@ -138,6 +139,7 @@ export function WorkItemListPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
 
+  const { p } = useNamespacePath()
   const { user } = useAuth()
   const { statuses, transitionsMap } = useProjectWorkflow(projectKey ?? '')
   const { data: allStatuses } = useAvailableStatuses(projectKey ?? '')
@@ -558,7 +560,7 @@ export function WorkItemListPage() {
     if (activeRow >= 0 && activeRow < allItems.length) {
       sessionStorage.setItem(activeRowStorageKey, String(allItems[activeRow].item_number))
       sessionStorage.setItem(filterStorageKey, currentParamsString())
-      navigate(`/projects/${projectKey}/items/${allItems[activeRow].item_number}`)
+      navigate(p(`/projects/${projectKey}/items/${allItems[activeRow].item_number}`))
     }
   }, activeRow >= 0)
   useKeyboardShortcut({ key: 'x' }, () => {
@@ -838,7 +840,7 @@ export function WorkItemListPage() {
               onRowClick={(row) => {
                 sessionStorage.setItem(activeRowStorageKey, String(row.item_number))
                 sessionStorage.setItem(filterStorageKey, currentParamsString())
-                navigate(`/projects/${projectKey}/items/${row.item_number}`)
+                navigate(p(`/projects/${projectKey}/items/${row.item_number}`))
               }}
               emptyMessage={t('workitems.empty')}
               sortBy={sort}
@@ -873,7 +875,7 @@ export function WorkItemListPage() {
                     onClick={() => {
                       sessionStorage.setItem(activeRowStorageKey, String(item.item_number))
                       sessionStorage.setItem(filterStorageKey, currentParamsString())
-                      navigate(`/projects/${projectKey}/items/${item.item_number}`)
+                      navigate(p(`/projects/${projectKey}/items/${item.item_number}`))
                     }}
                   />
                 )
@@ -906,7 +908,7 @@ export function WorkItemListPage() {
           readOnly={readOnly}
           onItemClick={(item) => {
             sessionStorage.setItem(filterStorageKey, currentParamsString())
-            navigate(`/projects/${projectKey}/items/${item.item_number}`)
+            navigate(p(`/projects/${projectKey}/items/${item.item_number}`))
           }}
         />
       )}

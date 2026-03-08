@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSidebar } from '@/contexts/SidebarContext'
 import { useNavigationGuard } from '@/contexts/NavigationGuardContext'
+import { useNamespacePath } from '@/hooks/useNamespacePath'
 import { useInboxCount } from '@/hooks/useInbox'
 import {
   Inbox,
@@ -38,6 +39,7 @@ const LAST_PROJECT_KEY = 'taskwondo_last_project_key'
 
 export function AppSidebar({ projectKey, mobileOnly }: AppSidebarProps) {
   const { t } = useTranslation()
+  const { p } = useNamespacePath()
   const { collapsed, toggleCollapsed, mobileOpen, closeMobile } = useSidebar('app')
   const { guardRef, guardedNavigate } = useNavigationGuard()
   const location = useLocation()
@@ -68,7 +70,7 @@ export function AppSidebar({ projectKey, mobileOnly }: AppSidebarProps) {
     { to: '/user/watchlist', label: t('user.sidebar.watchlist'), icon: Bookmark, end: false },
   ]
 
-  const projectBase = activeProjectKey ? `/projects/${activeProjectKey}` : ''
+  const projectBase = activeProjectKey ? p(`/projects/${activeProjectKey}`) : ''
 
   const projectNavItems: NavItem[] = activeProjectKey ? [
     { to: `${projectBase}/`, label: t('sidebar.overview'), icon: LayoutDashboard, end: true },
@@ -137,12 +139,12 @@ export function AppSidebar({ projectKey, mobileOnly }: AppSidebarProps) {
         return (
           <li>
             <NavLink
-              to="/projects"
+              to={p('/projects')}
               end
               onClick={(e) => {
                 if (guardRef.current?.()) {
                   e.preventDefault()
-                  guardedNavigate('/projects')
+                  guardedNavigate(p('/projects'))
                 }
               }}
               className={({ isActive }) =>
@@ -166,12 +168,12 @@ export function AppSidebar({ projectKey, mobileOnly }: AppSidebarProps) {
       return (
         <li>
           <NavLink
-            to="/projects"
+            to={p('/projects')}
             end
             onClick={(e) => {
               if (guardRef.current?.()) {
                 e.preventDefault()
-                guardedNavigate('/projects')
+                guardedNavigate(p('/projects'))
               }
             }}
             className={({ isActive }) =>
@@ -195,12 +197,12 @@ export function AppSidebar({ projectKey, mobileOnly }: AppSidebarProps) {
     return (
       <li>
         <NavLink
-          to="/projects"
+          to={p('/projects')}
           end
           onClick={(e) => {
             if (guardRef.current?.()) {
               e.preventDefault()
-              guardedNavigate('/projects')
+              guardedNavigate(p('/projects'))
             }
           }}
           className={({ isActive }) =>

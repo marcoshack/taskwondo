@@ -3,7 +3,7 @@ import { test, expect } from '../../lib/fixtures';
 test.describe('Invite Admin Role Warning', () => {
 
   test('shows warning and sets defaults when Admin role is selected', async ({ page, testProject }) => {
-    await page.goto(`/projects/${testProject.key}/settings`);
+    await page.goto(`/d/projects/${testProject.key}/settings`);
     await page.waitForLoadState('networkidle');
 
     // Locate the create invite form section by its heading text
@@ -35,7 +35,7 @@ test.describe('Invite Admin Role Warning', () => {
   });
 
   test('hides warning when switching away from Admin role', async ({ page, testProject }) => {
-    await page.goto(`/projects/${testProject.key}/settings`);
+    await page.goto(`/d/projects/${testProject.key}/settings`);
     await page.waitForLoadState('networkidle');
 
     const createInviteSection = page.locator('div.border').filter({ hasText: 'Create Invite Link' }).first();
@@ -52,7 +52,7 @@ test.describe('Invite Admin Role Warning', () => {
   });
 
   test('allows user to change auto-selected defaults for Admin invite', async ({ page, testProject }) => {
-    await page.goto(`/projects/${testProject.key}/settings`);
+    await page.goto(`/d/projects/${testProject.key}/settings`);
     await page.waitForLoadState('networkidle');
 
     const createInviteSection = page.locator('div.border').filter({ hasText: 'Create Invite Link' }).first();
@@ -78,7 +78,7 @@ test.describe('Invite Admin Role Warning', () => {
   });
 
   test('creates Admin invite successfully with warning defaults', async ({ page, testProject }) => {
-    await page.goto(`/projects/${testProject.key}/settings`);
+    await page.goto(`/d/projects/${testProject.key}/settings`);
     await page.waitForLoadState('networkidle');
 
     const createInviteSection = page.locator('div.border').filter({ hasText: 'Create Invite Link' }).first();

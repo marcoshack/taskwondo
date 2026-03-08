@@ -29,7 +29,7 @@ test.describe('Project Limit', () => {
     await api.setMaxProjects(request, adminToken, testUser.id, PROJECT_LIMIT);
 
     // Go to projects page and open the New Project modal
-    await page.goto('/projects');
+    await page.goto('/d/projects');
     await dismissWelcomeModal(page);
     await page.getByRole('button', { name: 'New Project' }).click();
 

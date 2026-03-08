@@ -53,6 +53,8 @@ type inboxItemResponse struct {
 	Priority       string     `json:"priority"`
 	ProjectKey     string     `json:"project_key"`
 	ProjectName    string     `json:"project_name"`
+	NamespaceSlug  string     `json:"namespace_slug"`
+	NamespaceName  string     `json:"namespace_name"`
 	AssigneeID          *uuid.UUID     `json:"assignee_id,omitempty"`
 	AssigneeDisplayName string         `json:"assignee_display_name,omitempty"`
 	Description         string         `json:"description,omitempty"`
@@ -91,6 +93,8 @@ func toInboxItemResponse(item model.InboxItemWithWorkItem) inboxItemResponse {
 		Priority:       item.Priority,
 		ProjectKey:     item.ProjectKey,
 		ProjectName:    item.ProjectName,
+		NamespaceSlug:  item.NamespaceSlug,
+		NamespaceName:  item.NamespaceName,
 		AssigneeID:          item.AssigneeID,
 		AssigneeDisplayName: item.AssigneeDisplayName,
 		Description:         item.Description,

@@ -109,7 +109,7 @@ test.describe('Inbox', () => {
     }
 
     // Navigate to any page
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await waitForPageReady(page);
 
     // Verify the inbox button in the top bar has a count badge with "2"
@@ -260,23 +260,23 @@ test.describe('Inbox', () => {
     await waitForPageReady(page);
 
     // Should be on inbox page
-    await expect(page).toHaveURL(/\/user\/inbox/);
+    await expect(page).toHaveURL(/\/d\/inbox/);
 
     // Click Feed in sidebar
     const sidebar = page.locator('nav.hidden.sm\\:block');
     await sidebar.getByText('Feed').click();
-    await expect(page).toHaveURL(/\/user\/feed/);
+    await expect(page).toHaveURL(/\/d\/feed/);
     await expect(page.getByText('Feeds coming soon')).toBeVisible();
 
     // Click Watchlist in sidebar
     await sidebar.getByText('Watchlist').click();
-    await expect(page).toHaveURL(/\/user\/watchlist/);
+    await expect(page).toHaveURL(/\/d\/watchlist/);
     // Watchlist is now a real page — verify the heading or empty state is visible
     await expect(page.getByText('Watchlist').first()).toBeVisible();
 
     // Click Inbox in sidebar to go back
     await sidebar.getByText('Inbox').click();
-    await expect(page).toHaveURL(/\/user\/inbox/);
+    await expect(page).toHaveURL(/\/d\/inbox/);
   });
 
   test('sidebar collapse and expand', async ({ page }) => {
@@ -429,7 +429,7 @@ test.describe('Inbox', () => {
     });
 
     // Navigate to work item list (mobile card view)
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await waitForPageReady(page);
 
     // Scope to the mobile card container (sm:hidden div) to avoid matching hidden desktop table rows
@@ -480,7 +480,7 @@ test.describe('Inbox', () => {
     await api.addToInbox(request, testUser.token, item.id);
 
     // Navigate to work item list (mobile card view)
-    await page.goto(`/projects/${testProject.key}/items`);
+    await page.goto(`/d/projects/${testProject.key}/items`);
     await waitForPageReady(page);
 
     // Scope to mobile card container
@@ -522,7 +522,7 @@ test.describe('Inbox', () => {
     await page.getByRole('table').getByText('Navigate detail test').click();
 
     // Should navigate to work item detail page
-    await expect(page).toHaveURL(new RegExp(`/projects/${testProject.key}/items/${item.item_number}`), { timeout: 10000 });
+    await expect(page).toHaveURL(new RegExp(`/d/projects/${testProject.key}/items/${item.item_number}`), { timeout: 10000 });
 
     // Should show "Back to inbox" link
     const backLink = page.getByText('Back to inbox');
@@ -530,7 +530,7 @@ test.describe('Inbox', () => {
 
     // Click back to inbox
     await backLink.click();
-    await expect(page).toHaveURL(/\/user\/inbox/, { timeout: 10000 });
+    await expect(page).toHaveURL(/\/d\/inbox/, { timeout: 10000 });
   });
 
   test('mobile edit mode toggle shows and hides card controls', async ({ request, testUser, testProject, page }) => {

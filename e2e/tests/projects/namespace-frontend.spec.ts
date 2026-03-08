@@ -64,7 +64,7 @@ test.describe('Namespace Feature Toggle', () => {
     await api.createNamespace(request, adminToken, slug, 'Toggle Test NS');
 
     // Navigate to projects — namespace switcher should appear
-    await page.goto('/projects');
+    await page.goto('/d/projects');
     await page.waitForLoadState('networkidle');
     const switcher = page.getByTestId('namespace-switcher');
     await expect(switcher).toBeVisible();
@@ -88,7 +88,7 @@ test.describe('Namespace Frontend UI', () => {
     // Create a second namespace so the switcher shows
     await api.createNamespace(request, adminToken, slug, 'Switcher Test NS');
 
-    await page.goto('/projects');
+    await page.goto('/d/projects');
     await page.waitForLoadState('networkidle');
 
     // The namespace switcher should be visible
@@ -104,7 +104,7 @@ test.describe('Namespace Frontend UI', () => {
   test('create namespace via modal from switcher dropdown', async ({ page, request }, testInfo) => {
     const adminToken = getAdminToken();
 
-    await page.goto('/projects');
+    await page.goto('/d/projects');
     await page.waitForLoadState('networkidle');
 
     // Open the namespace switcher dropdown
@@ -147,7 +147,7 @@ test.describe('Namespace Frontend UI', () => {
 
     await api.createNamespace(request, adminToken, slug, 'Settings Test NS');
 
-    await page.goto(`/namespaces/${slug}/settings`);
+    await page.goto(`/${slug}/settings`);
     await page.waitForLoadState('networkidle');
 
     // Should see settings page content
@@ -182,7 +182,7 @@ test.describe('Namespace Frontend UI', () => {
 
     await api.createNamespace(request, adminToken, slug, 'Members Test NS');
 
-    await page.goto(`/namespaces/${slug}/settings`);
+    await page.goto(`/${slug}/settings`);
     await page.waitForLoadState('networkidle');
 
     // Should see members section
@@ -205,11 +205,11 @@ test.describe('Namespace Frontend UI', () => {
     await api.createProject(request, adminToken, projKey, 'Switch Clear Project');
 
     // Navigate into the project so it becomes the active project in the nav
-    await page.goto(`/projects/${projKey}/items`);
+    await page.goto(`/d/projects/${projKey}/items`);
     await page.waitForLoadState('networkidle');
 
     // Verify we're on the project page
-    expect(page.url()).toContain(`/projects/${projKey}`);
+    expect(page.url()).toContain(`/d/projects/${projKey}`);
     // The project name should be visible in the nav bar (desktop)
     await expect(page.locator('nav').getByText('Switch Clear Project')).toBeVisible();
     await attach(page, testInfo, '11-project-active');
@@ -220,8 +220,8 @@ test.describe('Namespace Frontend UI', () => {
     await page.getByText('Switch Clear NS').click();
     await page.waitForLoadState('networkidle');
 
-    // Should have navigated to /projects (not a project detail page)
-    await expect(page).toHaveURL(/\/projects$/);
+    // Should have navigated to /<slug>/projects (not a project detail page)
+    await expect(page).toHaveURL(new RegExp(`/${slug}/projects$`));
     // The project name should no longer be in the nav
     await expect(page.locator('nav').getByText('Switch Clear Project')).not.toBeVisible();
     await attach(page, testInfo, '12-project-cleared');
@@ -246,7 +246,7 @@ test.describe('Namespace Frontend UI', () => {
     await api.createProject(request, adminToken, xferKey, 'Transfer Test Project');
 
     // Go to the project settings page
-    await page.goto(`/projects/${xferKey}/settings`);
+    await page.goto(`/d/projects/${xferKey}/settings`);
     await page.waitForLoadState('networkidle');
 
     await attach(page, testInfo, '08-project-settings');

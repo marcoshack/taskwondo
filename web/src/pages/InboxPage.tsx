@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { Routes, Route, useNavigate } from 'react-router-dom'
+import { toUrlSegment } from '@/hooks/useNamespacePath'
 import { Trans, useTranslation } from 'react-i18next'
 import { ChevronUp, ChevronDown, X, Search, BrushCleaning, Inbox, Check, Rss, Settings, User, History, Pencil, FolderKanban } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
@@ -460,7 +461,7 @@ function InboxListPage() {
 
   const handleClick = useCallback((item: InboxItem) => {
     sessionStorage.setItem(activeRowStorageKey, item.id)
-    navigate(`/projects/${item.project_key}/items/${item.display_id.split('-')[1]}`, { state: { from: 'inbox' } })
+    navigate(`/${toUrlSegment(item.namespace_slug)}/projects/${item.project_key}/items/${item.display_id.split('-')[1]}`, { state: { from: 'inbox' } })
   }, [navigate])
 
   // Reorder via arrow buttons — place item directly before/after neighbor
