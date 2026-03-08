@@ -265,6 +265,104 @@ test.describe('Namespace Project Isolation', () => {
     expect(body1.data.id).not.toBe(body2.data.id);
   });
 
+  test('work items in same-key projects across namespaces are isolated', async ({ request }) => {
+    const adminToken = getAdminToken();
+    const BASE_URL = process.env.BASE_URL || 'http://localhost:5173';
+    const slug = `ns-wi-${Date.now().toString(36)}`;
+    const projKey = `WI${Date.now().toString(36).slice(-3).toUpperCase()}`;
+
+    // Create a custom namespace
+    await api.createNamespace(request, adminToken, slug, 'Work Item Isolation');
+
+    // Create project with same key in default and custom namespace
+    const defRes = await request.post(`${BASE_URL}/api/v1/default/projects`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+      data: { key: projKey, name: 'Default NS Project' },
+    });
+    expect(defRes.ok()).toBe(true);
+
+    const customRes = await request.post(`${BASE_URL}/api/v1/${slug}/projects`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+      data: { key: projKey, name: 'Custom NS Project' },
+    });
+    expect(customRes.ok()).toBe(true);
+
+    // Create work items in the default namespace project
+    const defItem1 = await request.post(`${BASE_URL}/api/v1/default/projects/${projKey}/items`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+      data: { title: 'Default item 1', type: 'task' },
+    });
+    expect(defItem1.ok()).toBe(true);
+    const defItem1Body = await defItem1.json();
+
+    const defItem2 = await request.post(`${BASE_URL}/api/v1/default/projects/${projKey}/items`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+      data: { title: 'Default item 2', type: 'bug' },
+    });
+    expect(defItem2.ok()).toBe(true);
+    const defItem2Body = await defItem2.json();
+
+    // Create work items in the custom namespace project
+    const customItem1 = await request.post(`${BASE_URL}/api/v1/${slug}/projects/${projKey}/items`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+      data: { title: 'Custom item 1', type: 'task' },
+    });
+    expect(customItem1.ok()).toBe(true);
+    const customItem1Body = await customItem1.json();
+
+    const customItem2 = await request.post(`${BASE_URL}/api/v1/${slug}/projects/${projKey}/items`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+      data: { title: 'Custom item 2', type: 'bug' },
+    });
+    expect(customItem2.ok()).toBe(true);
+    const customItem2Body = await customItem2.json();
+
+    // Both projects should have their own item numbering (1, 2)
+    expect(defItem1Body.data.item_number).toBe(1);
+    expect(defItem2Body.data.item_number).toBe(2);
+    expect(customItem1Body.data.item_number).toBe(1);
+    expect(customItem2Body.data.item_number).toBe(2);
+
+    // Display IDs should use the same project key but different items
+    expect(defItem1Body.data.display_id).toBe(`${projKey}-1`);
+    expect(customItem1Body.data.display_id).toBe(`${projKey}-1`);
+
+    // List items in default namespace — should only see default items
+    const defList = await request.get(`${BASE_URL}/api/v1/default/projects/${projKey}/items`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    expect(defList.ok()).toBe(true);
+    const defListBody = await defList.json();
+    expect(defListBody.data.length).toBe(2);
+    const defTitles = defListBody.data.map((i: any) => i.title).sort();
+    expect(defTitles).toEqual(['Default item 1', 'Default item 2']);
+
+    // List items in custom namespace — should only see custom items
+    const customList = await request.get(`${BASE_URL}/api/v1/${slug}/projects/${projKey}/items`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    expect(customList.ok()).toBe(true);
+    const customListBody = await customList.json();
+    expect(customListBody.data.length).toBe(2);
+    const customTitles = customListBody.data.map((i: any) => i.title).sort();
+    expect(customTitles).toEqual(['Custom item 1', 'Custom item 2']);
+
+    // Get individual items by number — each namespace returns its own
+    const defGet = await request.get(`${BASE_URL}/api/v1/default/projects/${projKey}/items/1`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    expect(defGet.ok()).toBe(true);
+    const defGetBody = await defGet.json();
+    expect(defGetBody.data.title).toBe('Default item 1');
+
+    const customGet = await request.get(`${BASE_URL}/api/v1/${slug}/projects/${projKey}/items/1`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    expect(customGet.ok()).toBe(true);
+    const customGetBody = await customGet.json();
+    expect(customGetBody.data.title).toBe('Custom item 1');
+  });
+
   test('migrate project between namespaces', async ({ request }) => {
     const adminToken = getAdminToken();
     const BASE_URL = process.env.BASE_URL || 'http://localhost:5173';
