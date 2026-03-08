@@ -61,6 +61,7 @@ type projectResponse struct {
 	Name                    string                      `json:"name"`
 	Key                     string                      `json:"key"`
 	Description             *string                     `json:"description,omitempty"`
+	Namespace               *string                     `json:"namespace,omitempty"`
 	DefaultWorkflowID       *uuid.UUID                  `json:"default_workflow_id,omitempty"`
 	AllowedComplexityValues []int                       `json:"allowed_complexity_values"`
 	BusinessHours           *model.BusinessHoursConfig  `json:"business_hours,omitempty"`

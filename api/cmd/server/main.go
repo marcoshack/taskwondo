@@ -145,7 +145,7 @@ func main() {
 	inboxService := service.NewInboxService(inboxRepo, projectMemberRepo)
 	userSettingService := service.NewUserSettingService(userSettingRepo, projectRepo, projectMemberRepo)
 	systemSettingService := service.NewSystemSettingService(systemSettingRepo)
-	namespaceService := service.NewNamespaceService(namespaceRepo, namespaceMemberRepo, projectRepo, userRepo)
+	namespaceService := service.NewNamespaceService(namespaceRepo, namespaceMemberRepo, projectRepo, userRepo, systemSettingRepo)
 	adminService := service.NewAdminService(userRepo, projectRepo, projectMemberRepo)
 	statsService := service.NewStatsService(statsRepo, projectRepo, projectMemberRepo)
 
@@ -269,6 +269,7 @@ func main() {
 	inbox := handler.NewInboxHandler(inboxService, slaService)
 	stats := handler.NewStatsHandler(statsService)
 	search := handler.NewSearchHandler(searchService)
+	namespaces := handler.NewNamespaceHandler(namespaceService)
 
 	// Set up router
 	r := chi.NewRouter()
@@ -359,6 +360,24 @@ func main() {
 			// Semantic search
 			r.Get("/search", search.Search)
 
+			// Namespaces
+			r.Route("/namespaces", func(r chi.Router) {
+				r.Get("/", namespaces.List)
+				r.Post("/", namespaces.Create)
+				r.Route("/{slug}", func(r chi.Router) {
+					r.Get("/", namespaces.Get)
+					r.Patch("/", namespaces.Update)
+					r.Delete("/", namespaces.Delete)
+					r.Route("/members", func(r chi.Router) {
+						r.Get("/", namespaces.ListMembers)
+						r.Post("/", namespaces.AddMember)
+						r.Put("/{userId}", namespaces.UpdateMemberRole)
+						r.Delete("/{userId}", namespaces.RemoveMember)
+					})
+					r.Post("/projects/{projectKey}/migrate", namespaces.MigrateProject)
+				})
+			})
+
 			// Workflows
 			r.Route("/workflows", func(r chi.Router) {
 				r.Get("/", workflows.List)
@@ -376,8 +395,9 @@ func main() {
 				})
 			})
 
-			// Projects
+			// Projects (namespace-scoped)
 			r.Route("/projects", func(r chi.Router) {
+				r.Use(middleware.Namespace(namespaceService))
 				r.Get("/", projects.List)
 				r.Post("/", projects.Create)
 				r.Route("/{projectKey}", func(r chi.Router) {

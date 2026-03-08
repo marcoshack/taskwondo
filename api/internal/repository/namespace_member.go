@@ -123,6 +123,16 @@ func (r *NamespaceMemberRepository) Remove(ctx context.Context, namespaceID, use
 	return nil
 }
 
+// RemoveAllByNamespace deletes all members of a namespace (used before namespace deletion).
+func (r *NamespaceMemberRepository) RemoveAllByNamespace(ctx context.Context, namespaceID uuid.UUID) error {
+	_, err := r.db.ExecContext(ctx,
+		`DELETE FROM namespace_members WHERE namespace_id = $1`, namespaceID)
+	if err != nil {
+		return fmt.Errorf("removing all namespace members: %w", err)
+	}
+	return nil
+}
+
 // CountByRole returns the number of members with a given role in a namespace.
 func (r *NamespaceMemberRepository) CountByRole(ctx context.Context, namespaceID uuid.UUID, role string) (int, error) {
 	var count int

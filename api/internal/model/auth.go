@@ -50,6 +50,7 @@ func (a *AuthInfo) HasPermission(method string) bool {
 type contextKey string
 
 const authInfoKey contextKey = "auth_info"
+const namespaceIDKey contextKey = "namespace_id"
 
 // ContextWithAuthInfo stores auth info in the context.
 func ContextWithAuthInfo(ctx context.Context, info *AuthInfo) context.Context {
@@ -62,4 +63,18 @@ func AuthInfoFromContext(ctx context.Context) *AuthInfo {
 		return info
 	}
 	return nil
+}
+
+// ContextWithNamespaceID stores the resolved namespace ID in the context.
+func ContextWithNamespaceID(ctx context.Context, id uuid.UUID) context.Context {
+	return context.WithValue(ctx, namespaceIDKey, id)
+}
+
+// NamespaceIDFromContext retrieves the resolved namespace ID from the context.
+// Returns uuid.Nil if not set.
+func NamespaceIDFromContext(ctx context.Context) uuid.UUID {
+	if id, ok := ctx.Value(namespaceIDKey).(uuid.UUID); ok {
+		return id
+	}
+	return uuid.Nil
 }

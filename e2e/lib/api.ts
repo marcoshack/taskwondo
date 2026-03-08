@@ -738,6 +738,166 @@ export async function listWatchedItems(
   return await res.json();
 }
 
+// --- Namespaces ---
+
+export interface NamespaceResponse {
+  id: string;
+  slug: string;
+  display_name: string;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function createNamespace(
+  request: APIRequestContext,
+  token: string,
+  slug: string,
+  displayName: string,
+): Promise<NamespaceResponse> {
+  const res = await request.post(`${BASE_URL}/api/v1/namespaces`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { slug, display_name: displayName },
+  });
+  if (!res.ok()) throw new Error(`Create namespace failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function listNamespaces(
+  request: APIRequestContext,
+  token: string,
+): Promise<NamespaceResponse[]> {
+  const res = await request.get(`${BASE_URL}/api/v1/namespaces`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`List namespaces failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function getNamespace(
+  request: APIRequestContext,
+  token: string,
+  slug: string,
+): Promise<NamespaceResponse> {
+  const res = await request.get(`${BASE_URL}/api/v1/namespaces/${slug}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`Get namespace failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function updateNamespace(
+  request: APIRequestContext,
+  token: string,
+  slug: string,
+  data: { slug?: string; display_name?: string },
+): Promise<NamespaceResponse> {
+  const res = await request.patch(`${BASE_URL}/api/v1/namespaces/${slug}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data,
+  });
+  if (!res.ok()) throw new Error(`Update namespace failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function deleteNamespace(
+  request: APIRequestContext,
+  token: string,
+  slug: string,
+): Promise<void> {
+  const res = await request.delete(`${BASE_URL}/api/v1/namespaces/${slug}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`Delete namespace failed (${res.status()}): ${await res.text()}`);
+}
+
+export async function addNamespaceMember(
+  request: APIRequestContext,
+  token: string,
+  slug: string,
+  userId: string,
+  role: string,
+): Promise<{ namespace_id: string; user_id: string; role: string }> {
+  const res = await request.post(`${BASE_URL}/api/v1/namespaces/${slug}/members`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { user_id: userId, role },
+  });
+  if (!res.ok()) throw new Error(`Add namespace member failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function listNamespaceMembers(
+  request: APIRequestContext,
+  token: string,
+  slug: string,
+): Promise<{ user_id: string; email: string; display_name: string; role: string }[]> {
+  const res = await request.get(`${BASE_URL}/api/v1/namespaces/${slug}/members`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`List namespace members failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function updateNamespaceMemberRole(
+  request: APIRequestContext,
+  token: string,
+  slug: string,
+  userId: string,
+  role: string,
+): Promise<void> {
+  const res = await request.put(`${BASE_URL}/api/v1/namespaces/${slug}/members/${userId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { role },
+  });
+  if (!res.ok()) throw new Error(`Update namespace member role failed (${res.status()}): ${await res.text()}`);
+}
+
+export async function removeNamespaceMember(
+  request: APIRequestContext,
+  token: string,
+  slug: string,
+  userId: string,
+): Promise<void> {
+  const res = await request.delete(`${BASE_URL}/api/v1/namespaces/${slug}/members/${userId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`Remove namespace member failed (${res.status()}): ${await res.text()}`);
+}
+
+export async function migrateProject(
+  request: APIRequestContext,
+  token: string,
+  fromSlug: string,
+  projectKey: string,
+  targetNamespace: string,
+): Promise<void> {
+  const res = await request.post(`${BASE_URL}/api/v1/namespaces/${fromSlug}/projects/${projectKey}/migrate`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { target_namespace: targetNamespace },
+  });
+  if (!res.ok()) throw new Error(`Migrate project failed (${res.status()}): ${await res.text()}`);
+}
+
+export async function enableNamespaces(
+  request: APIRequestContext,
+  adminToken: string,
+): Promise<void> {
+  await setSystemSetting(request, adminToken, 'namespaces_enabled', true);
+}
+
+export async function disableNamespaces(
+  request: APIRequestContext,
+  adminToken: string,
+): Promise<void> {
+  await setSystemSetting(request, adminToken, 'namespaces_enabled', false);
+}
+
 // --- Attachments ---
 
 export async function uploadAttachment(

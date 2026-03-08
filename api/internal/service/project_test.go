@@ -44,6 +44,17 @@ func (m *mockProjectRepo) GetByKey(_ context.Context, key string) (*model.Projec
 	return p, nil
 }
 
+func (m *mockProjectRepo) GetByKeyAndNamespace(_ context.Context, namespaceID uuid.UUID, key string) (*model.Project, error) {
+	p, ok := m.byKey[key]
+	if !ok || p.DeletedAt != nil {
+		return nil, model.ErrNotFound
+	}
+	if p.NamespaceID == nil || *p.NamespaceID != namespaceID {
+		return nil, model.ErrNotFound
+	}
+	return p, nil
+}
+
 func (m *mockProjectRepo) GetByID(_ context.Context, id uuid.UUID) (*model.Project, error) {
 	p, ok := m.projects[id]
 	if !ok || p.DeletedAt != nil {

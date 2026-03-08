@@ -20,6 +20,7 @@ var projectKeyRegexp = regexp.MustCompile(`^[A-Z][A-Z0-9]{1,4}$`)
 type ProjectRepository interface {
 	Create(ctx context.Context, project *model.Project) error
 	GetByKey(ctx context.Context, key string) (*model.Project, error)
+	GetByKeyAndNamespace(ctx context.Context, namespaceID uuid.UUID, key string) (*model.Project, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*model.Project, error)
 	ListByUser(ctx context.Context, userID uuid.UUID) ([]model.Project, error)
 	ListAll(ctx context.Context) ([]model.Project, error)
@@ -118,13 +119,24 @@ func (s *ProjectService) Create(ctx context.Context, info *model.AuthInfo, name,
 		return nil, fmt.Errorf("project key must be 2-5 uppercase alphanumeric characters starting with a letter: %w", model.ErrConflict)
 	}
 
-	// Check for duplicate key
-	existing, err := s.projects.GetByKey(ctx, key)
-	if err == nil && existing != nil {
-		return nil, fmt.Errorf("project key %q already in use: %w", key, model.ErrAlreadyExists)
-	}
-	if err != nil && err != model.ErrNotFound {
-		return nil, fmt.Errorf("checking project key: %w", err)
+	// Check for duplicate key (namespace-scoped if namespace context present)
+	namespaceID := model.NamespaceIDFromContext(ctx)
+	if namespaceID != uuid.Nil {
+		existing, err := s.projects.GetByKeyAndNamespace(ctx, namespaceID, key)
+		if err == nil && existing != nil {
+			return nil, fmt.Errorf("project key %q already in use: %w", key, model.ErrAlreadyExists)
+		}
+		if err != nil && err != model.ErrNotFound {
+			return nil, fmt.Errorf("checking project key: %w", err)
+		}
+	} else {
+		existing, err := s.projects.GetByKey(ctx, key)
+		if err == nil && existing != nil {
+			return nil, fmt.Errorf("project key %q already in use: %w", key, model.ErrAlreadyExists)
+		}
+		if err != nil && err != model.ErrNotFound {
+			return nil, fmt.Errorf("checking project key: %w", err)
+		}
 	}
 
 	// Fetch all workflows for default assignment and type-workflow seeding
@@ -143,12 +155,19 @@ func (s *ProjectService) Create(ctx context.Context, info *model.AuthInfo, name,
 		}
 	}
 
+	// Set namespace from context
+	var nsPtr *uuid.UUID
+	if namespaceID != uuid.Nil {
+		nsPtr = &namespaceID
+	}
+
 	project := &model.Project{
 		ID:                uuid.New(),
 		Name:              name,
 		Key:               key,
 		Description:       description,
 		DefaultWorkflowID: defaultWorkflowID,
+		NamespaceID:       nsPtr,
 	}
 
 	if err := s.projects.Create(ctx, project); err != nil {
@@ -201,12 +220,31 @@ func (s *ProjectService) Get(ctx context.Context, info *model.AuthInfo, projectK
 	return project, nil
 }
 
-// List returns projects visible to the authenticated user.
+// List returns projects visible to the authenticated user, filtered by namespace context.
 func (s *ProjectService) List(ctx context.Context, info *model.AuthInfo) ([]model.Project, error) {
+	var projects []model.Project
+	var err error
 	if info.GlobalRole == model.RoleAdmin {
-		return s.projects.ListAll(ctx)
+		projects, err = s.projects.ListAll(ctx)
+	} else {
+		projects, err = s.projects.ListByUser(ctx, info.UserID)
 	}
-	return s.projects.ListByUser(ctx, info.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Filter by namespace context if present
+	namespaceID := model.NamespaceIDFromContext(ctx)
+	if namespaceID == uuid.Nil {
+		return projects, nil
+	}
+	filtered := make([]model.Project, 0, len(projects))
+	for _, p := range projects {
+		if p.NamespaceID != nil && *p.NamespaceID == namespaceID {
+			filtered = append(filtered, p)
+		}
+	}
+	return filtered, nil
 }
 
 // ListWithSummary returns projects with aggregate counts.
