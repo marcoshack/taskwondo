@@ -8,6 +8,12 @@ A self-hosted, open-source project management and issue tracking platform. Kanba
 
 ![Work Items](docs/screenshots/taskwondo-workitems.png)
 
+<p align="center">
+  <img src="docs/screenshots/taskwondo-mobile-items.png" width="33%" />
+  <img src="docs/screenshots/taskwondo-mobile-milestones.png" width="33%" />
+  <img src="docs/screenshots/taskwondo-mobile-workflows.png" width="33%" />
+</p>
+
 See [more screenshots](docs/overview.md) for a full walkthrough of features.
 
 ## Features

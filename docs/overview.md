@@ -79,3 +79,31 @@ Configure instance-wide settings like the brand name displayed across the UI.
 Enable or disable login methods, toggle email registration, and configure OAuth providers with drag-to-reorder.
 
 ![System Settings — Authentication](screenshots/taskwondo-systemsettings-authentication.png)
+
+## Mobile
+
+Taskwondo isn't just responsive — it features a dedicated mobile experience with purpose-built navigation, touch-optimized controls, and mobile-specific UI elements designed for phones and tablets.
+
+<p align="center">
+  <img src="screenshots/taskwondo-mobile-project_overview.png" width="33%" />
+  <img src="screenshots/taskwondo-mobile-items.png" width="33%" />
+  <img src="screenshots/taskwondo-mobile-items-filter.png" width="33%" />
+</p>
+
+<p align="center">
+  <img src="screenshots/taskwondo-mobile-items-new.png" width="33%" />
+  <img src="screenshots/taskwondo-mobile-item.png" width="33%" />
+  <img src="screenshots/taskwondo-mobile-item-activities.png" width="33%" />
+</p>
+
+<p align="center">
+  <img src="screenshots/taskwondo-mobile-inbox.png" width="33%" />
+  <img src="screenshots/taskwondo-mobile-watchlist.png" width="33%" />
+  <img src="screenshots/taskwondo-mobile-milestones.png" width="33%" />
+</p>
+
+<p align="center">
+  <img src="screenshots/taskwondo-mobile-milestones-details.png" width="33%" />
+  <img src="screenshots/taskwondo-mobile-workflows.png" width="33%" />
+  <img src="screenshots/taskwondo-mobile-user_preferences.png" width="33%" />
+</p>
