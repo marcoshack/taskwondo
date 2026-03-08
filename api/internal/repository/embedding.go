@@ -99,9 +99,11 @@ func (r *EmbeddingRepository) SearchByVector(ctx context.Context, vector []float
 		`SELECT e.entity_type, e.entity_id, e.project_id,
 		        1 - (e.embedding <=> $%d::vector) AS score, e.content,
 		        p.key AS project_key,
-		        COALESCE(w.item_number, cw.item_number, aw.item_number) AS item_number
+		        COALESCE(w.item_number, cw.item_number, aw.item_number) AS item_number,
+		        COALESCE(n.slug, 'default') AS namespace_slug
 		 FROM embeddings e
 		 LEFT JOIN projects p ON p.id = e.project_id
+		 LEFT JOIN namespaces n ON n.id = p.namespace_id
 		 LEFT JOIN work_items w ON w.id = e.entity_id AND e.entity_type = 'work_item'
 		 LEFT JOIN comments c ON c.id = e.entity_id AND e.entity_type = 'comment'
 		 LEFT JOIN work_items cw ON cw.id = c.work_item_id
@@ -123,7 +125,8 @@ func (r *EmbeddingRepository) SearchByVector(ctx context.Context, vector []float
 		var sr model.SearchResult
 		var projectKey sql.NullString
 		var itemNumber sql.NullInt64
-		if err := rows.Scan(&sr.EntityType, &sr.EntityID, &sr.ProjectID, &sr.Score, &sr.Content, &projectKey, &itemNumber); err != nil {
+		var namespaceSlug sql.NullString
+		if err := rows.Scan(&sr.EntityType, &sr.EntityID, &sr.ProjectID, &sr.Score, &sr.Content, &projectKey, &itemNumber, &namespaceSlug); err != nil {
 			return nil, fmt.Errorf("scanning search result: %w", err)
 		}
 		if projectKey.Valid {
@@ -132,6 +135,9 @@ func (r *EmbeddingRepository) SearchByVector(ctx context.Context, vector []float
 		if itemNumber.Valid {
 			n := int(itemNumber.Int64)
 			sr.ItemNumber = &n
+		}
+		if namespaceSlug.Valid {
+			sr.NamespaceSlug = namespaceSlug.String
 		}
 		results = append(results, sr)
 	}

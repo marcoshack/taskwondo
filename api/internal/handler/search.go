@@ -153,6 +153,7 @@ func (h *SearchHandler) searchSSE(w http.ResponseWriter, r *http.Request, info *
 	if ftsResults == nil {
 		ftsResults = []model.SearchResult{}
 	}
+	enrichResourcePaths(ftsResults)
 
 	semStatus := "pending"
 	if !semanticAvailable {
@@ -184,6 +185,7 @@ func (h *SearchHandler) searchSSE(w http.ResponseWriter, r *http.Request, info *
 			if semResults == nil {
 				semResults = []model.SearchResult{}
 			}
+			enrichResourcePaths(semResults)
 			writeSSEEvent(w, "semantic", semanticEventPayload{
 				Semantic: semanticSection{
 					Results:   semResults,
@@ -238,6 +240,7 @@ func (h *SearchHandler) searchJSON(w http.ResponseWriter, r *http.Request, info 
 	if ftsResults == nil {
 		ftsResults = []model.SearchResult{}
 	}
+	enrichResourcePaths(ftsResults)
 
 	semSection := semanticSection{
 		Available: semanticAvailable,
@@ -253,6 +256,7 @@ func (h *SearchHandler) searchJSON(w http.ResponseWriter, r *http.Request, info 
 			if semResults == nil {
 				semResults = []model.SearchResult{}
 			}
+			enrichResourcePaths(semResults)
 			semSection.Results = semResults
 			semSection.Total = len(semResults)
 		}
@@ -266,6 +270,44 @@ func (h *SearchHandler) searchJSON(w http.ResponseWriter, r *http.Request, info 
 		},
 		"semantic": semSection,
 	})
+}
+
+// enrichResourcePaths populates the ResourcePath field for each search result.
+func enrichResourcePaths(results []model.SearchResult) {
+	for i := range results {
+		r := &results[i]
+		ns := r.NamespaceSlug
+		if ns == "" {
+			ns = "default"
+		}
+		base := fmt.Sprintf("/api/v1/%s/%s/%s", ns, PathProjects, r.ProjectKey)
+		switch r.EntityType {
+		case model.EntityTypeWorkItem:
+			if r.ProjectKey != "" && r.ItemNumber != nil {
+				r.ResourcePath = fmt.Sprintf("%s/%s/%d", base, PathItems, *r.ItemNumber)
+			}
+		case model.EntityTypeComment:
+			if r.ProjectKey != "" && r.ItemNumber != nil {
+				r.ResourcePath = fmt.Sprintf("%s/%s/%d/%s/%s", base, PathItems, *r.ItemNumber, PathComments, r.EntityID)
+			}
+		case model.EntityTypeAttachment:
+			if r.ProjectKey != "" && r.ItemNumber != nil {
+				r.ResourcePath = fmt.Sprintf("%s/%s/%d/%s/%s", base, PathItems, *r.ItemNumber, PathAttachments, r.EntityID)
+			}
+		case model.EntityTypeProject:
+			if r.ProjectKey != "" {
+				r.ResourcePath = base
+			}
+		case model.EntityTypeMilestone:
+			if r.ProjectKey != "" {
+				r.ResourcePath = fmt.Sprintf("%s/%s/%s", base, PathMilestones, r.EntityID)
+			}
+		case model.EntityTypeQueue:
+			if r.ProjectKey != "" {
+				r.ResourcePath = fmt.Sprintf("%s/%s/%s", base, PathQueues, r.EntityID)
+			}
+		}
+	}
 }
 
 // writeSSEEvent writes a single SSE event in the format: event: <name>\ndata: <json>\n\n

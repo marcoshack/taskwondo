@@ -545,11 +545,13 @@ func (r *WorkItemRepository) SearchFTS(ctx context.Context, query string, projec
 	sqlQuery := fmt.Sprintf(
 		`SELECT w.id, w.project_id, w.item_number, w.display_id, w.type, w.title,
 		        p.key AS project_key,
+		        COALESCE(n.slug, 'default') AS namespace_slug,
 		        ts_rank(w.search_vector, plainto_tsquery('english', $%d)) +
 		        ts_rank(w.search_vector, plainto_tsquery('simple', $%d)) +
 		        CASE WHEN UPPER(w.display_id) = UPPER($%d) THEN 1000 ELSE 0 END AS rank
 		 FROM work_items w
 		 JOIN projects p ON p.id = w.project_id
+		 LEFT JOIN namespaces n ON n.id = p.namespace_id
 		 %s
 		 ORDER BY rank DESC, w.updated_at DESC
 		 LIMIT $%d`,
@@ -564,26 +566,28 @@ func (r *WorkItemRepository) SearchFTS(ctx context.Context, query string, projec
 	var results []model.SearchResult
 	for rows.Next() {
 		var (
-			id         uuid.UUID
-			projectID  uuid.UUID
-			itemNumber int
-			displayID  string
-			itemType   string
-			title      string
-			projectKey string
-			rank       float64
+			id            uuid.UUID
+			projectID     uuid.UUID
+			itemNumber    int
+			displayID     string
+			itemType      string
+			title         string
+			projectKey    string
+			namespaceSlug string
+			rank          float64
 		)
-		if err := rows.Scan(&id, &projectID, &itemNumber, &displayID, &itemType, &title, &projectKey, &rank); err != nil {
+		if err := rows.Scan(&id, &projectID, &itemNumber, &displayID, &itemType, &title, &projectKey, &namespaceSlug, &rank); err != nil {
 			return nil, fmt.Errorf("scanning fts result: %w", err)
 		}
 		results = append(results, model.SearchResult{
-			EntityType: model.EntityTypeWorkItem,
-			EntityID:   id,
-			ProjectID:  &projectID,
-			Score:      0, // FTS results don't have similarity scores
-			Content:    fmt.Sprintf("[%s] %s", itemType, title),
-			ProjectKey: projectKey,
-			ItemNumber: &itemNumber,
+			EntityType:    model.EntityTypeWorkItem,
+			EntityID:      id,
+			ProjectID:     &projectID,
+			Score:         0, // FTS results don't have similarity scores
+			Content:       fmt.Sprintf("[%s] %s", itemType, title),
+			ProjectKey:    projectKey,
+			ItemNumber:    &itemNumber,
+			NamespaceSlug: namespaceSlug,
 		})
 	}
 	return results, rows.Err()
