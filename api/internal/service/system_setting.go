@@ -135,6 +135,7 @@ func (s *SystemSettingService) GetPublic(ctx context.Context) (map[string]json.R
 		model.SettingFeatureStatsTimeline,
 		model.SettingFeatureSemanticSearch,
 		model.SettingOllamaAvailable,
+		model.SettingNamespacesEnabled,
 	}
 	result := make(map[string]json.RawMessage)
 

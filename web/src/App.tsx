@@ -14,6 +14,7 @@ import { CliAuthorizePage } from '@/pages/CliAuthorizePage'
 import { RegisterPage } from '@/pages/RegisterPage'
 import { VerifyEmailPage } from '@/pages/VerifyEmailPage'
 import UserPage from '@/pages/InboxPage'
+import { NamespaceSettingsPage } from '@/pages/NamespaceSettingsPage'
 
 export default function App() {
   return (
@@ -30,6 +31,7 @@ export default function App() {
           <Route path="/projects" element={<ProjectListPage />} />
           <Route path="/projects/:projectKey/*" element={<ProjectDetailPage />} />
           <Route path="/user/*" element={<UserPage />} />
+          <Route path="/namespaces/:slug/settings" element={<NamespaceSettingsPage />} />
           <Route path="/preferences/*" element={<PreferencesPage />} />
           <Route path="/admin/*" element={<AdminRoute><SystemSettingsPage /></AdminRoute>} />
         </Route>

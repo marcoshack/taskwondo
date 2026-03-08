@@ -24,9 +24,13 @@ func parseDisplayID(displayID string) (string, int, error) {
 	return parts[0], num, nil
 }
 
+// activeNamespace holds the currently active namespace slug for the session.
+// Empty string or "default" means the default namespace (no X-Namespace header).
+var activeNamespace string
+
 // getClient returns a configured API client, or an error tool result if not authenticated.
 func getClient() (*Client, error) {
-	baseURL, apiKey, err := ResolveAuth()
+	baseURL, apiKey, namespace, err := ResolveAuth()
 	if err != nil {
 		return nil, fmt.Errorf("authentication error: %w", err)
 	}
@@ -36,7 +40,12 @@ func getClient() (*Client, error) {
 	if apiKey == "" {
 		return nil, fmt.Errorf("not authenticated. Set TASKWONDO_API_KEY environment variable or run the login tool")
 	}
-	return NewClient(baseURL, apiKey), nil
+	// Session-level override takes precedence
+	ns := namespace
+	if activeNamespace != "" {
+		ns = activeNamespace
+	}
+	return NewClient(baseURL, apiKey, ns), nil
 }
 
 // --- Tool definitions ---
@@ -234,14 +243,18 @@ func handleWhoami(_ context.Context, request mcp.CallToolRequest) (*mcp.CallTool
 		return mcp.NewToolResultError(fmt.Sprintf("Failed to get user info: %v", err)), nil
 	}
 
-	baseURL, _, _ := ResolveAuth()
-	result := fmt.Sprintf("Logged in as: %s (%s)\nRole: %s\nInstance: %s",
-		user.DisplayName, user.Email, user.GlobalRole, baseURL)
+	baseURL, _, _, _ := ResolveAuth()
+	nsInfo := ""
+	if activeNamespace != "" && activeNamespace != "default" {
+		nsInfo = fmt.Sprintf("\nActive namespace: %s", activeNamespace)
+	}
+	result := fmt.Sprintf("Logged in as: %s (%s)\nRole: %s\nInstance: %s%s",
+		user.DisplayName, user.Email, user.GlobalRole, baseURL, nsInfo)
 	return mcp.NewToolResultText(result), nil
 }
 
 func handleLogin(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	baseURL, _, _ := ResolveAuth()
+	baseURL, _, _, _ := ResolveAuth()
 	if baseURL == "" {
 		return mcp.NewToolResultError("TASKWONDO_URL environment variable is required for login"), nil
 	}
@@ -252,7 +265,7 @@ func handleLogin(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult,
 	}
 
 	// Verify the key works
-	client := NewClient(creds.URL, creds.APIKey)
+	client := NewClient(creds.URL, creds.APIKey, "")
 	user, err := client.GetMe()
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Login succeeded but verification failed: %v", err)), nil
@@ -2165,4 +2178,93 @@ func formatWorkItemWithClient(item *WorkItem, client *Client) string {
 		fmt.Fprintf(&sb, "\n### Description\n\n%s\n", *item.Description)
 	}
 	return sb.String()
+}
+
+// --- Namespace tools ---
+
+func setNamespaceTool() mcp.Tool {
+	return mcp.NewTool("set_namespace",
+		mcp.WithDescription("Set the active namespace for subsequent API calls. Use 'default' to switch back to the default namespace. All project and work item operations will be scoped to the active namespace."),
+		mcp.WithString("namespace", mcp.Required(), mcp.Description("Namespace slug, e.g. 'myteam' or 'default'")),
+	)
+}
+
+func listNamespacesTool() mcp.Tool {
+	return mcp.NewTool("list_namespaces",
+		mcp.WithDescription("List all namespaces the current user belongs to. Shows namespace slug, display name, and whether it's the default namespace."),
+	)
+}
+
+func handleSetNamespace(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	namespace, err := request.RequireString("namespace")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	if namespace != "default" {
+		// Temporarily clear active namespace to list all namespaces
+		savedNs := activeNamespace
+		activeNamespace = ""
+		client, err := getClient()
+		activeNamespace = savedNs
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+		namespaces, listErr := client.ListNamespaces()
+		if listErr != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to list namespaces: %v", listErr)), nil
+		}
+		found := false
+		for _, ns := range namespaces {
+			if ns.Slug == namespace {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return mcp.NewToolResultError(fmt.Sprintf("Namespace %q not found. Use list_namespaces to see available namespaces.", namespace)), nil
+		}
+	}
+
+	activeNamespace = namespace
+
+	if namespace == "default" {
+		return mcp.NewToolResultText("Switched to default namespace."), nil
+	}
+	return mcp.NewToolResultText(fmt.Sprintf("Active namespace set to: %s", namespace)), nil
+}
+
+func handleListNamespaces(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := getClient()
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	namespaces, err := client.ListNamespaces()
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to list namespaces: %v", err)), nil
+	}
+
+	if len(namespaces) == 0 {
+		return mcp.NewToolResultText("No namespaces found."), nil
+	}
+
+	var sb strings.Builder
+	currentNs := activeNamespace
+	if currentNs == "" {
+		currentNs = "default"
+	}
+	fmt.Fprintf(&sb, "# Namespaces (active: %s)\n\n", currentNs)
+	for _, ns := range namespaces {
+		defaultFlag := ""
+		if ns.IsDefault {
+			defaultFlag = " (default)"
+		}
+		activeFlag := ""
+		if ns.Slug == currentNs || (currentNs == "default" && ns.IsDefault) {
+			activeFlag = " *active*"
+		}
+		fmt.Fprintf(&sb, "- **%s** — %s%s%s\n", ns.Slug, ns.DisplayName, defaultFlag, activeFlag)
+	}
+	return mcp.NewToolResultText(sb.String()), nil
 }

@@ -111,20 +111,26 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiOldProjectCollapsed, apiOldUserCollapsed])
 
-  // Sync API preferences to local state
+  // Sync API preferences to local state — only when localStorage is empty (cross-device sync).
+  // localStorage is the source of truth to avoid race conditions where async API
+  // values (including stale migration data) override the user's current preference.
   useEffect(() => {
     if (apiAppCollapsed === 'true' || apiAppCollapsed === 'false') {
-      const val = apiAppCollapsed === 'true'
-      setAppCollapsed(val)
-      localStorage.setItem(STORAGE_KEYS.app, String(val))
+      if (localStorage.getItem(STORAGE_KEYS.app) === null) {
+        const val = apiAppCollapsed === 'true'
+        setAppCollapsed(val)
+        localStorage.setItem(STORAGE_KEYS.app, String(val))
+      }
     }
   }, [apiAppCollapsed])
 
   useEffect(() => {
     if (apiSettingsCollapsed === 'true' || apiSettingsCollapsed === 'false') {
-      const val = apiSettingsCollapsed === 'true'
-      setSettingsCollapsed(val)
-      localStorage.setItem(STORAGE_KEYS.settings, String(val))
+      if (localStorage.getItem(STORAGE_KEYS.settings) === null) {
+        const val = apiSettingsCollapsed === 'true'
+        setSettingsCollapsed(val)
+        localStorage.setItem(STORAGE_KEYS.settings, String(val))
+      }
     }
   }, [apiSettingsCollapsed])
 

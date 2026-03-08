@@ -11,6 +11,7 @@ import { KeyboardShortcutProvider } from '@/contexts/KeyboardShortcutContext'
 import { NavigationGuardProvider } from '@/contexts/NavigationGuardContext'
 import { NotificationProvider } from '@/contexts/NotificationContext'
 import { BrandProvider } from '@/contexts/BrandContext'
+import { NamespaceProvider } from '@/contexts/NamespaceContext'
 import '@/i18n'
 import App from '@/App'
 import '@/index.css'
@@ -36,9 +37,11 @@ createRoot(document.getElementById('root')!).render(
                 <KeyboardShortcutProvider>
                   <NavigationGuardProvider>
                     <NotificationProvider>
-                      <SidebarProvider>
-                        <App />
-                      </SidebarProvider>
+                      <NamespaceProvider>
+                        <SidebarProvider>
+                          <App />
+                        </SidebarProvider>
+                      </NamespaceProvider>
                     </NotificationProvider>
                   </NavigationGuardProvider>
                 </KeyboardShortcutProvider>

@@ -10,7 +10,9 @@ import { Spinner } from '@/components/ui/Spinner'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import { Tooltip } from '@/components/ui/Tooltip'
-import { Check, Trash2, Copy, Link, AlertTriangle } from 'lucide-react'
+import { Check, Trash2, Copy, Link, AlertTriangle, ArrowRightLeft } from 'lucide-react'
+import { useNamespaceContext } from '@/contexts/NamespaceContext'
+import { useMigrateProject } from '@/hooks/useNamespaces'
 import { UserSearchInput } from '@/components/UserSearchInput'
 import { MentionSearchModal } from '@/components/ui/MentionSearchModal'
 import { useMentionAutocomplete } from '@/hooks/useMentionAutocomplete'
@@ -98,6 +100,13 @@ export function ProjectSettingsPage() {
   const [inviteMaxUses, setInviteMaxUses] = useState('')
   const [inviteError, setInviteError] = useState('')
   const [revokeTarget, setRevokeTarget] = useState<{ id: string; code: string } | null>(null)
+
+  // Namespace transfer state
+  const { namespaces, activeNamespace, showSwitcher: hasMultipleNamespaces } = useNamespaceContext()
+  const migrateMutation = useMigrateProject()
+  const [showTransferModal, setShowTransferModal] = useState(false)
+  const [transferTarget, setTransferTarget] = useState('')
+  const [transferError, setTransferError] = useState('')
 
   const descRef = useRef<HTMLTextAreaElement>(null)
   const descMention = useMentionAutocomplete({
@@ -672,6 +681,18 @@ export function ProjectSettingsPage() {
         <div className="px-4 py-3 border-b border-red-300 dark:border-red-800">
           <h3 className="text-base font-semibold text-red-600">{t('projects.settings.dangerZone')}</h3>
         </div>
+        {hasMultipleNamespaces && (
+          <div className="p-4 flex items-center justify-between border-b border-red-200 dark:border-red-900">
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('projects.settings.transferNamespace')}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t('projects.settings.transferNamespaceDescription')}</p>
+            </div>
+            <Button variant="danger" size="sm" onClick={() => { setTransferTarget(''); setTransferError(''); setShowTransferModal(true) }}>
+              <ArrowRightLeft className="h-4 w-4 mr-1" />
+              {t('projects.settings.transfer')}
+            </Button>
+          </div>
+        )}
         <div className="p-4 flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('projects.settings.deleteThisProject')}</p>
@@ -764,6 +785,55 @@ export function ProjectSettingsPage() {
             }}
           >
             {deleteInviteMutation.isPending ? t('common.deleting') : t('common.delete')}
+          </Button>
+        </div>
+      </Modal>
+
+      {/* Namespace transfer modal */}
+      <Modal open={showTransferModal} onClose={() => setShowTransferModal(false)} title={t('projects.settings.transferConfirmTitle')}>
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+          <Trans i18nKey="projects.settings.transferConfirmBody" values={{ projectKey: project.key }} components={{ bold: <strong /> }} />
+        </p>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('projects.settings.transferTargetNamespace')}</label>
+        <select
+          className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4"
+          value={transferTarget}
+          onChange={(e) => setTransferTarget(e.target.value)}
+        >
+          <option value="">{t('projects.settings.selectNamespace')}</option>
+          {namespaces
+            .filter((ns) => ns.slug !== activeNamespace?.slug)
+            .map((ns) => (
+              <option key={ns.slug} value={ns.slug}>
+                {ns.display_name} ({ns.slug})
+              </option>
+            ))}
+        </select>
+        {transferError && <p className="text-sm text-red-600 dark:text-red-400 mb-4">{transferError}</p>}
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={() => setShowTransferModal(false)}>{t('common.cancel')}</Button>
+          <Button
+            variant="danger"
+            disabled={!transferTarget || migrateMutation.isPending}
+            onClick={() => {
+              if (!transferTarget || !activeNamespace || !projectKey) return
+              setTransferError('')
+              migrateMutation.mutate(
+                { fromSlug: activeNamespace.slug, projectKey, targetSlug: transferTarget },
+                {
+                  onSuccess: () => {
+                    setShowTransferModal(false)
+                    showSaved('transfer')
+                  },
+                  onError: (err) => {
+                    const axiosErr = err as AxiosError<{ error?: { message?: string } }>
+                    setTransferError(axiosErr.response?.data?.error?.message ?? t('projects.settings.transferError'))
+                  },
+                },
+              )
+            }}
+          >
+            {migrateMutation.isPending ? t('common.saving') : t('projects.settings.transferConfirmButton')}
           </Button>
         </div>
       </Modal>

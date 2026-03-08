@@ -306,8 +306,8 @@ func TestSeedDefaultNamespace_CreatesNew(t *testing.T) {
 	if !ns.IsDefault {
 		t.Fatal("expected is_default to be true")
 	}
-	if ns.DisplayName != "Default" {
-		t.Fatalf("expected display name 'Default', got %q", ns.DisplayName)
+	if ns.DisplayName != "Public" {
+		t.Fatalf("expected display name 'Public', got %q", ns.DisplayName)
 	}
 
 	// Verify admin was added as owner

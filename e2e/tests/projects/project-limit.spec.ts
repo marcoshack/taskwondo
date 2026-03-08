@@ -57,9 +57,10 @@ test.describe('Project Limit', () => {
     // Verify warning message is visible
     await expect(page.getByText(/limit reached/i)).toBeVisible();
 
-    // Verify form is disabled
-    await expect(page.getByLabel(/name/i).first()).toBeDisabled();
-    await expect(page.getByRole('button', { name: /create/i })).toBeDisabled();
+    // Verify form is disabled (scope to the dialog to avoid matching the namespace switcher)
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByLabel(/name/i).first()).toBeDisabled();
+    await expect(dialog.getByRole('button', { name: /create/i })).toBeDisabled();
 
     await attach(page, testInfo, '02-modal-limit-reached');
   });

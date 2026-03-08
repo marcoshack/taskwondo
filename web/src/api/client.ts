@@ -2,6 +2,20 @@ import axios from 'axios'
 
 const TOKEN_KEY = 'taskwondo_token'
 
+// Active namespace slug (null = default namespace, no header sent)
+// Initialize from localStorage so the first request after refresh uses the correct namespace
+const NAMESPACE_KEY = 'taskwondo_namespace'
+const storedNs = localStorage.getItem(NAMESPACE_KEY)
+let activeNamespaceSlug: string | null = storedNs && storedNs !== 'default' ? storedNs : null
+
+export function setNamespaceSlug(slug: string | null) {
+  activeNamespaceSlug = slug
+}
+
+export function getNamespaceSlug(): string | null {
+  return activeNamespaceSlug
+}
+
 export const api = axios.create({
   baseURL: '/api/v1',
   headers: { 'Content-Type': 'application/json' },
@@ -11,6 +25,9 @@ api.interceptors.request.use((config) => {
   const token = localStorage.getItem(TOKEN_KEY)
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
+  }
+  if (activeNamespaceSlug) {
+    config.headers['X-Namespace'] = activeNamespaceSlug
   }
   return config
 })

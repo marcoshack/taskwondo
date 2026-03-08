@@ -1,13 +1,15 @@
 import { useState, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Search } from 'lucide-react'
+import { Search, Globe, Building2, Plus, Check } from 'lucide-react'
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
 import { useProjects, useCreateProject, useOwnedProjectCount, useMaxProjects } from '@/hooks/useProjects'
 import { useAuth } from '@/contexts/AuthContext'
+import { useNamespaceContext } from '@/contexts/NamespaceContext'
 import { useSidebar } from '@/contexts/SidebarContext'
 import { useLayout } from '@/contexts/LayoutContext'
 import { AppSidebar } from '@/components/AppSidebar'
+import { CreateNamespaceModal } from '@/components/CreateNamespaceModal'
 import { DataTable } from '@/components/ui/DataTable'
 import { Spinner } from '@/components/ui/Spinner'
 import { Button } from '@/components/ui/Button'
@@ -96,10 +98,17 @@ export function ProjectListPage() {
   }, activeRow >= 0)
   useKeyboardShortcut({ key: 'Escape' }, () => setActiveRow(-1), activeRow >= 0)
 
+  const { namespaces, activeNamespace, showSwitcher } = useNamespaceContext()
+
   const [name, setName] = useState('')
   const [key, setKey] = useState('')
   const [description, setDescription] = useState('')
+  const [selectedNamespace, setSelectedNamespace] = useState(activeNamespace?.slug ?? '')
   const [formError, setFormError] = useState('')
+  const [showNsPicker, setShowNsPicker] = useState(false)
+  const [showNsCreate, setShowNsCreate] = useState(false)
+
+  const selectedNs = namespaces.find((ns) => ns.slug === selectedNamespace) ?? activeNamespace
 
   const columns: Column<Project>[] = [
     {
@@ -320,6 +329,28 @@ export function ProjectListPage() {
             placeholder={t('projects.create.descriptionPlaceholder')}
             disabled={atLimit}
           />
+          {showSwitcher && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                {t('namespaces.namespace')}
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowNsPicker(true)}
+                disabled={atLimit}
+                className="w-full flex items-center gap-2.5 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 px-3 py-2 text-sm text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                {selectedNs?.is_default ? (
+                  <Globe className="h-4 w-4 shrink-0 text-gray-400" />
+                ) : (
+                  <Building2 className="h-4 w-4 shrink-0 text-gray-400" />
+                )}
+                <span className="flex-1 truncate text-gray-900 dark:text-gray-100">
+                  {selectedNs?.display_name ?? t('namespaces.selectNamespace')}
+                </span>
+              </button>
+            </div>
+          )}
           {formError && <p className="text-sm text-red-600 dark:text-red-400">{formError}</p>}
           <div className="flex justify-end gap-3 pt-2">
             <Button type="button" variant="secondary" onClick={() => setShowCreate(false)}>{t('common.cancel')}</Button>
@@ -329,6 +360,64 @@ export function ProjectListPage() {
           </div>
         </form>
       </Modal>
+
+      {/* Namespace picker modal (overlays New Project modal) */}
+      <Modal
+        open={showNsPicker}
+        onClose={() => setShowNsPicker(false)}
+        title={t('namespaces.selectNamespace')}
+      >
+        <div className="space-y-1">
+          {namespaces.map((ns) => (
+            <button
+              key={ns.slug}
+              onClick={() => {
+                setSelectedNamespace(ns.slug)
+                setShowNsPicker(false)
+              }}
+              className={`w-full text-left px-3 py-3 rounded-md text-sm flex items-center gap-3 ${
+                ns.slug === selectedNamespace
+                  ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+              }`}
+            >
+              {ns.is_default ? (
+                <Globe className="h-5 w-5 shrink-0 text-gray-400 dark:text-gray-500" />
+              ) : (
+                <Building2 className="h-5 w-5 shrink-0 text-gray-400 dark:text-gray-500" />
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="font-medium">{ns.display_name}</div>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                  {ns.is_default ? t('namespaces.publicHint') : t('namespaces.customHint')}
+                </p>
+              </div>
+              {ns.slug === selectedNamespace && (
+                <Check className="h-4 w-4 shrink-0 text-indigo-600 dark:text-indigo-400" />
+              )}
+            </button>
+          ))}
+        </div>
+        <div className="border-t border-gray-100 dark:border-gray-700 mt-3 pt-3">
+          <button
+            onClick={() => setShowNsCreate(true)}
+            className="w-full text-left px-3 py-2.5 rounded-md text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3"
+          >
+            <Plus className="h-5 w-5" />
+            {t('namespaces.createNew')}
+          </button>
+        </div>
+      </Modal>
+
+      <CreateNamespaceModal
+        open={showNsCreate}
+        onClose={() => setShowNsCreate(false)}
+        onCreated={(created) => {
+          setSelectedNamespace(created.slug)
+          setShowNsCreate(false)
+          setShowNsPicker(false)
+        }}
+      />
         </div>
       </div>
     </div>

@@ -513,6 +513,14 @@ func (s *NamespaceService) SeedDefaultNamespace(ctx context.Context) error {
 	// Check if default namespace already exists
 	existing, err := s.namespaces.GetDefault(ctx)
 	if err == nil {
+		// Rename legacy "Default" to "Public" if unchanged
+		if existing.DisplayName == "Default" {
+			existing.DisplayName = "Public"
+			if err := s.namespaces.Update(ctx, existing); err != nil {
+				log.Ctx(ctx).Warn().Err(err).Msg("failed to rename default namespace to Public")
+			}
+		}
+
 		log.Ctx(ctx).Debug().
 			Str("namespace_id", existing.ID.String()).
 			Msg("default namespace already exists, checking backfill")
@@ -533,7 +541,7 @@ func (s *NamespaceService) SeedDefaultNamespace(ctx context.Context) error {
 	ns := &model.Namespace{
 		ID:          uuid.New(),
 		Slug:        model.DefaultNamespaceSlug,
-		DisplayName: "Default",
+		DisplayName: "Public",
 		IsDefault:   true,
 		CreatedBy:   adminID,
 	}

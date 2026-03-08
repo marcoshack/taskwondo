@@ -18,18 +18,30 @@ import (
 type Client struct {
 	baseURL    string
 	apiKey     string
+	namespace  string // active namespace slug (empty = default)
 	httpClient *http.Client
 }
 
 // NewClient creates a new Taskwondo API client.
-func NewClient(baseURL, apiKey string) *Client {
+func NewClient(baseURL, apiKey, namespace string) *Client {
 	return &Client{
-		baseURL: strings.TrimRight(baseURL, "/"),
-		apiKey:  apiKey,
+		baseURL:   strings.TrimRight(baseURL, "/"),
+		apiKey:    apiKey,
+		namespace: namespace,
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
 	}
+}
+
+// Namespace is the API response for a namespace.
+type Namespace struct {
+	ID          string `json:"id"`
+	Slug        string `json:"slug"`
+	DisplayName string `json:"display_name"`
+	IsDefault   bool   `json:"is_default"`
+	CreatedAt   string `json:"created_at"`
+	UpdatedAt   string `json:"updated_at"`
 }
 
 // --- Response types ---
@@ -151,6 +163,9 @@ func (c *Client) doRequest(method, path string, body interface{}) ([]byte, error
 	}
 
 	req.Header.Set("Authorization", "Bearer "+c.apiKey)
+	if c.namespace != "" && c.namespace != "default" {
+		req.Header.Set("X-Namespace", c.namespace)
+	}
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
@@ -191,6 +206,22 @@ func (c *Client) GetMe() (*User, error) {
 		return nil, fmt.Errorf("decode user: %w", err)
 	}
 	return &user, nil
+}
+
+func (c *Client) ListNamespaces() ([]Namespace, error) {
+	data, err := c.doRequest("GET", "/api/v1/namespaces", nil)
+	if err != nil {
+		return nil, err
+	}
+	var resp apiResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+	var namespaces []Namespace
+	if err := json.Unmarshal(resp.Data, &namespaces); err != nil {
+		return nil, fmt.Errorf("decode namespaces: %w", err)
+	}
+	return namespaces, nil
 }
 
 func (c *Client) ListProjects() ([]Project, error) {

@@ -1,8 +1,9 @@
 import { Outlet, useNavigate, useMatch } from 'react-router-dom'
 
 import { useTranslation } from 'react-i18next'
-import { Settings, UserCog, Menu, HelpCircle, Inbox, LogOut, Search, Home } from 'lucide-react'
+import { Settings, UserCog, Menu, HelpCircle, Inbox, LogOut, Search, Home, Globe, Building2, Plus } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import { useNamespaceContext } from '@/contexts/NamespaceContext'
 import { useSidebar } from '@/contexts/SidebarContext'
 import { useNavigationGuard } from '@/contexts/NavigationGuardContext'
 import { useProject, useProjects } from '@/hooks/useProjects'
@@ -22,6 +23,7 @@ import { useLayout } from '@/contexts/LayoutContext'
 import { useInboxCount } from '@/hooks/useInbox'
 import { PoweredByFooter } from '@/components/PoweredByFooter'
 import { AppSidebar } from '@/components/AppSidebar'
+import { CreateNamespaceModal } from '@/components/CreateNamespaceModal'
 
 export function AppShell() {
   const { t } = useTranslation()
@@ -31,12 +33,16 @@ export function AppShell() {
   const navigate = useNavigate()
   const { guardedNavigate } = useNavigationGuard()
   const { toggleMobileOpen } = useSidebar()
+  const { namespaces, activeNamespace, setActiveNamespace, showSwitcher } = useNamespaceContext()
   const [menuOpen, setMenuOpen] = useState(false)
   const [switcherOpen, setSwitcherOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [welcomeOpen, setWelcomeOpen] = useState(false)
+  const [nsDropdownOpen, setNsDropdownOpen] = useState(false)
+  const [nsCreateOpen, setNsCreateOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  const nsRef = useRef<HTMLDivElement>(null)
 
   const { data: welcomeDismissed, isSuccess: welcomeLoaded, isError: welcomeNotFound } = usePreference<boolean>('welcome_dismissed')
   const { mutate: savePref } = useSetPreference()
@@ -62,15 +68,18 @@ export function AppShell() {
   const { data: activeProject } = useProject(activeProjectKey ?? '')
 
   useEffect(() => {
-    if (!menuOpen) return
+    if (!menuOpen && !nsDropdownOpen) return
     const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+      if (menuOpen && menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setMenuOpen(false)
+      }
+      if (nsDropdownOpen && nsRef.current && !nsRef.current.contains(e.target as Node)) {
+        setNsDropdownOpen(false)
       }
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
-  }, [menuOpen])
+  }, [menuOpen, nsDropdownOpen])
 
   // Sequential combos: g-p (project switcher), g-i (inbox), g-o (project items)
   // useLayoutEffect ensures combos are registered before paint, so keyboard
@@ -189,6 +198,84 @@ export function AppShell() {
                   </span>
                 )}
               </button>
+              {/* Namespace switcher — icon-only dropdown */}
+              {showSwitcher && (
+                <div className="relative" ref={nsRef}>
+                  <button
+                    onClick={() => setNsDropdownOpen(!nsDropdownOpen)}
+                    className="p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+                    aria-label={t('namespaces.switchNamespace')}
+                    data-testid="namespace-switcher"
+                  >
+                    {activeNamespace?.is_default ? (
+                      <Globe className="h-5 w-5" />
+                    ) : (
+                      <Building2 className="h-5 w-5" />
+                    )}
+                  </button>
+                  {nsDropdownOpen && (
+                    <div className="absolute right-0 top-full mt-1 w-64 bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm rounded-md shadow-lg border border-gray-200 dark:border-gray-600 py-1 z-50">
+                      <div className="px-3 py-1.5 text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                        {t('namespaces.title')}
+                      </div>
+                      {namespaces.map((ns) => (
+                        <button
+                          key={ns.slug}
+                          onClick={() => {
+                            setNsDropdownOpen(false)
+                            if (ns.slug !== activeNamespace?.slug) {
+                              setActiveNamespace(ns.slug)
+                            }
+                          }}
+                          className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2.5 ${
+                            ns.slug === activeNamespace?.slug
+                              ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
+                              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                          }`}
+                        >
+                          {ns.is_default ? (
+                            <Globe className="h-4 w-4 shrink-0 text-gray-400 dark:text-gray-500" />
+                          ) : (
+                            <Building2 className="h-4 w-4 shrink-0 text-gray-400 dark:text-gray-500" />
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <div className="font-medium truncate">{ns.display_name}</div>
+                            {!ns.is_default && <div className="text-xs text-gray-400 dark:text-gray-500">{ns.slug}</div>}
+                          </div>
+                          {ns.slug === activeNamespace?.slug && (
+                            <span className="text-xs text-indigo-600 dark:text-indigo-400 shrink-0">{t('common.current')}</span>
+                          )}
+                          {!ns.is_default && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setNsDropdownOpen(false)
+                                guardedNavigate(`/namespaces/${ns.slug}/settings`)
+                              }}
+                              className="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0"
+                              aria-label={t('namespaces.settings')}
+                            >
+                              <Settings className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </button>
+                      ))}
+                      <div className="border-t border-gray-100 dark:border-gray-700 mt-1 pt-1">
+                        <button
+                          onClick={() => {
+                            setNsDropdownOpen(false)
+                            setNsCreateOpen(true)
+                          }}
+                          className="w-full text-left px-3 py-2 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2.5"
+                        >
+                          <Plus className="h-4 w-4" />
+                          {t('namespaces.createNew')}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
               <button
                 onClick={toggleMobileOpen}
                 className="sm:hidden p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
@@ -267,6 +354,14 @@ export function AppShell() {
         onClose={() => setWelcomeOpen(false)}
         onDismiss={() => savePref({ key: 'welcome_dismissed', value: true })}
         alreadyDismissed={welcomeDismissed === true}
+      />
+      <CreateNamespaceModal
+        open={nsCreateOpen}
+        onClose={() => setNsCreateOpen(false)}
+        onCreated={(ns) => {
+          setNsCreateOpen(false)
+          setActiveNamespace(ns.slug)
+        }}
       />
     </div>
   )

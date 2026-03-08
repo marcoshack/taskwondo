@@ -16,8 +16,9 @@ import (
 
 // Credentials stores the Taskwondo connection info.
 type Credentials struct {
-	URL    string `json:"url"`
-	APIKey string `json:"api_key"`
+	URL       string `json:"url"`
+	APIKey    string `json:"api_key"`
+	Namespace string `json:"namespace,omitempty"`
 }
 
 // ConfigDir returns the configuration directory path.
@@ -76,15 +77,16 @@ func DeleteCredentials() error {
 	return nil
 }
 
-// ResolveAuth determines the API key and base URL from env vars or credentials file.
-func ResolveAuth() (baseURL, apiKey string, err error) {
+// ResolveAuth determines the API key, base URL, and namespace from env vars or credentials file.
+func ResolveAuth() (baseURL, apiKey, namespace string, err error) {
 	baseURL = os.Getenv("TASKWONDO_URL")
 	apiKey = os.Getenv("TASKWONDO_API_KEY")
+	namespace = os.Getenv("TASKWONDO_NAMESPACE")
 
 	if apiKey == "" {
 		creds, loadErr := LoadCredentials()
 		if loadErr != nil {
-			return "", "", loadErr
+			return "", "", "", loadErr
 		}
 		if creds != nil {
 			if apiKey == "" {
@@ -93,10 +95,13 @@ func ResolveAuth() (baseURL, apiKey string, err error) {
 			if baseURL == "" {
 				baseURL = creds.URL
 			}
+			if namespace == "" {
+				namespace = creds.Namespace
+			}
 		}
 	}
 
-	return baseURL, apiKey, nil
+	return baseURL, apiKey, namespace, nil
 }
 
 // BrowserLogin starts the browser-based login flow.

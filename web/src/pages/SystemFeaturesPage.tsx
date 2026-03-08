@@ -26,6 +26,9 @@ export function SystemFeaturesPage() {
   const semanticSearchEnabled = settings.feature_semantic_search === true
   const ollamaAvailable = settings.ollama_available as boolean | undefined
 
+  const namespacesEnabled = settings.namespaces_enabled === true
+  const hasCustomNamespaces = (settings.custom_namespace_count as number | undefined) ?? 0
+
   const handleToggle = (key: string, value: boolean) => {
     setSetting.mutate({ key, value })
   }
@@ -85,6 +88,29 @@ export function SystemFeaturesPage() {
             enabled={semanticSearchEnabled}
             onChange={(val) => handleToggle('feature_semantic_search', val)}
             disabled={!ollamaAvailable}
+          />
+        </div>
+      </div>
+      {/* Namespaces */}
+      <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+              {t('admin.features.namespaces.title')}
+            </h3>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              {t('admin.features.namespaces.description')}
+            </p>
+            {hasCustomNamespaces > 0 && namespacesEnabled && (
+              <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+                {t('admin.features.namespaces.cannotDisable', { count: hasCustomNamespaces })}
+              </p>
+            )}
+          </div>
+          <Toggle
+            enabled={namespacesEnabled}
+            onChange={(val) => handleToggle('namespaces_enabled', val)}
+            disabled={!namespacesEnabled ? false : hasCustomNamespaces > 0}
           />
         </div>
       </div>

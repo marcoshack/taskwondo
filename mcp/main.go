@@ -85,6 +85,10 @@ func main() {
 	s.AddTool(updateQueueTool(), handleUpdateQueue)
 	s.AddTool(deleteQueueTool(), handleDeleteQueue)
 
+	// Namespace tools
+	s.AddTool(setNamespaceTool(), handleSetNamespace)
+	s.AddTool(listNamespacesTool(), handleListNamespaces)
+
 	// Inbox tools
 	s.AddTool(listInboxTool(), handleListInbox)
 	s.AddTool(addToInboxTool(), handleAddToInbox)
