@@ -68,14 +68,20 @@ func (r *NamespaceRepository) List(ctx context.Context) ([]model.Namespace, erro
 	return scanNamespaces(rows)
 }
 
-// ListByUser returns namespaces the user belongs to (derived from project membership).
+// ListByUser returns namespaces the user belongs to via namespace membership,
+// project membership, or the default namespace (always visible to all users).
 func (r *NamespaceRepository) ListByUser(ctx context.Context, userID uuid.UUID) ([]model.Namespace, error) {
 	rows, err := r.db.QueryContext(ctx,
 		`SELECT DISTINCT n.id, n.slug, n.display_name, n.icon, n.color, n.is_default, n.created_by, n.created_at, n.updated_at
 		 FROM namespaces n
-		 JOIN projects p ON p.namespace_id = n.id
-		 JOIN project_members pm ON pm.project_id = p.id
-		 WHERE pm.user_id = $1 AND p.deleted_at IS NULL
+		 WHERE n.is_default = true
+		    OR n.id IN (
+		      SELECT nm.namespace_id FROM namespace_members nm WHERE nm.user_id = $1
+		      UNION
+		      SELECT p.namespace_id FROM projects p
+		        JOIN project_members pm ON pm.project_id = p.id
+		        WHERE pm.user_id = $1 AND p.deleted_at IS NULL AND p.namespace_id IS NOT NULL
+		    )
 		 ORDER BY n.is_default DESC, n.slug`, userID)
 	if err != nil {
 		return nil, fmt.Errorf("querying user namespaces: %w", err)

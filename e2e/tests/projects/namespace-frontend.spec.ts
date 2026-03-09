@@ -1,4 +1,4 @@
-import { test as base, expect } from '../../lib/fixtures';
+import { test as base, expect, test as userTest } from '../../lib/fixtures';
 import { getAdminToken } from '../../lib/fixtures';
 import * as api from '../../lib/api';
 
@@ -343,5 +343,90 @@ test.describe('Namespace Frontend UI', () => {
       }
     }
     await api.deleteNamespace(request, adminToken, slug);
+  });
+});
+
+// --- Regular (non-admin) user namespace tests ---
+
+userTest.describe('Namespace Switcher for Regular Users', () => {
+  userTest.beforeEach(async ({ request }) => {
+    const adminToken = getAdminToken();
+    await api.enableNamespaces(request, adminToken);
+  });
+
+  userTest('created namespace appears in switcher for regular user', async ({ page, request, testUser }, testInfo) => {
+    const adminToken = getAdminToken();
+    const slug = uniqueSlug();
+    const nsName = 'Regular User NS';
+
+    // Create a namespace via API as the regular user
+    const ns = await api.createNamespace(request, testUser.token, slug, nsName);
+    expect(ns.slug).toBe(slug);
+
+    // Verify the namespace appears in the list API for this user
+    const namespaces = await api.listNamespaces(request, testUser.token);
+    const found = namespaces.find(n => n.slug === slug);
+    expect(found).toBeDefined();
+    expect(found!.display_name).toBe(nsName);
+
+    // Navigate to the app and verify the namespace appears in the switcher UI
+    await page.goto('/d/projects');
+    await page.waitForLoadState('networkidle');
+
+    const switcher = page.getByTestId('namespace-switcher');
+    await switcher.click();
+    await expect(page.getByText(nsName)).toBeVisible();
+
+    await attach(page, testInfo, 'regular-user-ns-in-switcher');
+
+    // Cleanup
+    await api.deleteNamespace(request, adminToken, slug);
+  });
+
+  userTest('namespace created via UI modal appears in switcher for regular user', async ({ page, request, testUser }, testInfo) => {
+    const adminToken = getAdminToken();
+
+    await page.goto('/d/projects');
+    await page.waitForLoadState('networkidle');
+
+    // Open the namespace switcher dropdown
+    const switcher = page.getByTestId('namespace-switcher');
+    await switcher.click();
+
+    // Click "Create namespace"
+    await page.getByText('Create namespace').click();
+
+    // Fill in the form
+    const createSlug = uniqueSlug();
+    const nsName = 'UI Created NS';
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    await dialog.getByLabel('Display Name', { exact: false }).fill(nsName);
+    await dialog.getByLabel('Slug', { exact: false }).fill(createSlug);
+
+    // Submit
+    await dialog.getByRole('button', { name: /^create$/i }).click();
+
+    // Wait for navigation to the namespace settings page
+    await page.waitForURL(new RegExp(`/${createSlug}/settings`));
+    await page.waitForLoadState('networkidle');
+
+    // Now open the switcher and verify the new namespace appears in the dropdown
+    const switcherAfter = page.getByTestId('namespace-switcher');
+    await switcherAfter.click();
+    // Scope to the dropdown container (sibling of the switcher button)
+    const dropdown = switcherAfter.locator('..').locator('div.absolute');
+    await expect(dropdown).toBeVisible();
+    await expect(dropdown.getByText(nsName)).toBeVisible();
+
+    await attach(page, testInfo, 'regular-user-ui-ns-in-switcher');
+
+    // Verify via API that the list endpoint returns the namespace
+    const namespaces = await api.listNamespaces(request, testUser.token);
+    const found = namespaces.find(n => n.slug === createSlug);
+    expect(found).toBeDefined();
+
+    // Cleanup
+    await api.deleteNamespace(request, adminToken, createSlug);
   });
 });
