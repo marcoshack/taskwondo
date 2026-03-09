@@ -1176,9 +1176,14 @@ test.describe('Inbox', () => {
     await expect(table.getByText('Persist proj1 item')).toBeVisible({ timeout: 10000 });
     await expect(table.getByText('Persist proj2 item')).not.toBeVisible({ timeout: 5000 });
 
+    // Wait for the filter preference to be saved before navigating away
+    await page.waitForLoadState('networkidle');
+
     // Navigate away and back
     await page.goto('/user/watchlist');
+    await page.waitForLoadState('networkidle');
     await page.goto('/user/inbox');
+    await waitForPageReady(page);
 
     // Filter should still be applied (persisted via preference)
     await expect(table.getByText('Persist proj1 item')).toBeVisible({ timeout: 10000 });

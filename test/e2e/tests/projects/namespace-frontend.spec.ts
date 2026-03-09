@@ -28,6 +28,11 @@ function uniqueSlug() {
   return `ns-fe-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 5)}`;
 }
 
+// The Feature Toggle test temporarily disables namespaces, which breaks
+// other tests in this file that rely on the switcher being visible.
+// Run all describes serially so the toggle test completes before UI tests start.
+test.describe.configure({ mode: 'serial' });
+
 test.describe('Namespace Feature Toggle', () => {
   test('enabling namespaces via admin features toggle', async ({ page, request }, testInfo) => {
     const adminToken = getAdminToken();
@@ -131,7 +136,8 @@ test.describe('Namespace Frontend UI', () => {
     // Submit
     await dialog.getByRole('button', { name: /^create$/i }).click();
 
-    // Should navigate to projects (setActiveNamespace navigates)
+    // After creation the app navigates to the namespace settings page
+    await page.waitForURL(new RegExp(`/${createSlug}/`));
     await page.waitForLoadState('networkidle');
 
     // Verify the namespace was created via API
