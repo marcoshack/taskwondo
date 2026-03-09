@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { useNamespacePath } from '@/hooks/useNamespacePath'
+import { useNamespacePath, toUrlSegment } from '@/hooks/useNamespacePath'
 import {
   Search,
   FileText,
@@ -103,7 +103,7 @@ interface SearchModalProps {
 export function SearchModal({ open, onClose }: SearchModalProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { p } = useNamespacePath()
+  const { segment } = useNamespacePath()
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [limit, setLimit] = useState(20)
@@ -161,28 +161,34 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
       const key = result.project_key
       const num = result.item_number
 
+      // Use the result's namespace if available, otherwise fall back to current
+      const nsSegment = result.namespace_slug
+        ? toUrlSegment(result.namespace_slug)
+        : segment
+      const prefix = (path: string) => `/${nsSegment}${path.startsWith('/') ? path : `/${path}`}`
+
       switch (result.entity_type) {
         case 'work_item':
-          if (key && num != null) navigate(p(`/projects/${key}/items/${num}`))
+          if (key && num != null) navigate(prefix(`/projects/${key}/items/${num}`))
           break
         case 'comment':
-          if (key && num != null) navigate(p(`/projects/${key}/items/${num}?tab=comments&highlight=${result.entity_id}`))
+          if (key && num != null) navigate(prefix(`/projects/${key}/items/${num}?tab=comments&highlight=${result.entity_id}`))
           break
         case 'attachment':
-          if (key && num != null) navigate(p(`/projects/${key}/items/${num}?tab=attachments&highlight=${result.entity_id}`))
+          if (key && num != null) navigate(prefix(`/projects/${key}/items/${num}?tab=attachments&highlight=${result.entity_id}`))
           break
         case 'project':
-          if (key) navigate(p(`/projects/${key}`))
+          if (key) navigate(prefix(`/projects/${key}`))
           break
         case 'milestone':
-          if (key) navigate(p(`/projects/${key}/milestones`))
+          if (key) navigate(prefix(`/projects/${key}/milestones`))
           break
         case 'queue':
-          if (key) navigate(p(`/projects/${key}/queues`))
+          if (key) navigate(prefix(`/projects/${key}/queues`))
           break
       }
     },
-    [navigate, onClose, p],
+    [navigate, onClose, segment],
   )
 
   const handleKeyDown = useCallback(

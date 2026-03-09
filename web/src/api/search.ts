@@ -10,6 +10,7 @@ export interface SearchResult {
   snippet: string
   project_key?: string
   item_number?: number
+  namespace_slug?: string
 }
 
 export interface FTSSection {
