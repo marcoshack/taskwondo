@@ -56,6 +56,7 @@ export function CreateNamespaceModal({ open, onClose, onCreated }: Props) {
   return (
     <Modal open={open} onClose={handleClose} title={t('namespaces.createTitle')}>
       <form onSubmit={handleSubmit} className="space-y-4">
+        <p className="text-sm text-gray-500 dark:text-gray-400">{t('namespaces.createDescription')}</p>
         <Input
           label={t('namespaces.displayName')}
           value={displayName}

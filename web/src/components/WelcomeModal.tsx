@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { FolderKanban, ClipboardList, SquareStack, Target, Route, Inbox, Rss, Bookmark, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Boxes, FolderKanban, ClipboardList, SquareStack, Target, Route, Inbox, Rss, Bookmark, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 
@@ -11,8 +11,8 @@ interface WelcomeModalProps {
   alreadyDismissed?: boolean
 }
 
-const SLIDE_ICONS = [FolderKanban, ClipboardList, SquareStack, Target, Route, Inbox, Rss, Bookmark]
-const SLIDE_KEYS = ['projects', 'workItems', 'queues', 'milestones', 'workflows', 'inbox', 'feed', 'watchlist'] as const
+const SLIDE_ICONS = [Boxes, FolderKanban, ClipboardList, SquareStack, Target, Route, Inbox, Rss, Bookmark]
+const SLIDE_KEYS = ['namespaces', 'projects', 'workItems', 'queues', 'milestones', 'workflows', 'inbox', 'feed', 'watchlist'] as const
 
 export function WelcomeModal({ open, onClose, onDismiss, alreadyDismissed }: WelcomeModalProps) {
   const { t } = useTranslation()
