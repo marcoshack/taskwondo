@@ -10,6 +10,7 @@ import {
   updateNamespaceMemberRole,
   removeNamespaceMember,
   migrateProject,
+  type Namespace,
   type CreateNamespaceInput,
   type UpdateNamespaceInput,
   type AddNamespaceMemberInput,
@@ -35,7 +36,10 @@ export function useCreateNamespace() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: CreateNamespaceInput) => createNamespace(input),
-    onSuccess: () => {
+    onSuccess: (created) => {
+      qc.setQueryData<Namespace[]>(['namespaces'], (old) =>
+        old ? [...old, created] : [created],
+      )
       qc.invalidateQueries({ queryKey: ['namespaces'] })
     },
   })

@@ -144,6 +144,44 @@ test.describe('Namespace Frontend UI', () => {
     await api.deleteNamespace(request, adminToken, createSlug);
   });
 
+  test('sidebar shows namespace badge immediately after creation', async ({ page, request }, testInfo) => {
+    const adminToken = getAdminToken();
+
+    await page.goto('/d/projects');
+    await page.waitForLoadState('networkidle');
+
+    // Open the namespace switcher dropdown
+    const switcher = page.getByTestId('namespace-switcher');
+    await switcher.click();
+
+    // Click "Create namespace" in the dropdown
+    await page.getByText('Create namespace').click();
+
+    // Fill in the form
+    const createSlug = uniqueSlug();
+    const nsName = 'Sidebar Badge NS';
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    await dialog.getByLabel('Display Name', { exact: false }).fill(nsName);
+    await dialog.getByLabel('Slug', { exact: false }).fill(createSlug);
+
+    // Submit
+    await dialog.getByRole('button', { name: /^create$/i }).click();
+
+    // Wait for navigation to the namespace settings page
+    await page.waitForURL(new RegExp(`/${createSlug}/settings`));
+    await page.waitForLoadState('networkidle');
+
+    // The sidebar should show the new namespace name in the banner button
+    const nsBanner = page.getByRole('button', { name: /switch namespace/i }).filter({ hasText: nsName });
+    await expect(nsBanner).toBeVisible();
+
+    await attach(page, testInfo, 'sidebar-badge-after-create');
+
+    // Cleanup
+    await api.deleteNamespace(request, adminToken, createSlug);
+  });
+
   test('namespace settings page loads and allows rename', async ({ page, request }, testInfo) => {
     const adminToken = getAdminToken();
     const slug = uniqueSlug();
