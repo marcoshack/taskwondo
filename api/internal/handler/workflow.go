@@ -156,7 +156,7 @@ func toWorkflowDetailResponse(wf *model.Workflow) workflowDetailResponse {
 
 // --- System workflow handlers ---
 
-// List handles GET /api/v1/workflows
+// List handles GET /api/v1/admin/workflows
 func (h *WorkflowHandler) List(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
@@ -179,7 +179,7 @@ func (h *WorkflowHandler) List(w http.ResponseWriter, r *http.Request) {
 	writeData(w, http.StatusOK, resp)
 }
 
-// Create handles POST /api/v1/workflows
+// Create handles POST /api/v1/admin/workflows
 func (h *WorkflowHandler) Create(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
@@ -232,7 +232,7 @@ func (h *WorkflowHandler) Create(w http.ResponseWriter, r *http.Request) {
 	writeData(w, http.StatusCreated, toWorkflowDetailResponse(wf))
 }
 
-// Get handles GET /api/v1/workflows/{workflowId}
+// Get handles GET /api/v1/admin/workflows/{workflowId}
 func (h *WorkflowHandler) Get(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
@@ -255,7 +255,7 @@ func (h *WorkflowHandler) Get(w http.ResponseWriter, r *http.Request) {
 	writeData(w, http.StatusOK, toWorkflowDetailResponse(wf))
 }
 
-// Update handles PATCH /api/v1/workflows/{workflowId}
+// Update handles PATCH /api/v1/admin/workflows/{workflowId}
 func (h *WorkflowHandler) Update(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
@@ -313,7 +313,7 @@ func (h *WorkflowHandler) Update(w http.ResponseWriter, r *http.Request) {
 	writeData(w, http.StatusOK, toWorkflowDetailResponse(wf))
 }
 
-// Delete handles DELETE /api/v1/workflows/{workflowId}
+// Delete handles DELETE /api/v1/admin/workflows/{workflowId}
 func (h *WorkflowHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
@@ -335,7 +335,7 @@ func (h *WorkflowHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// ListSystemStatuses handles GET /api/v1/workflows/statuses
+// ListSystemStatuses handles GET /api/v1/admin/workflows/statuses
 func (h *WorkflowHandler) ListSystemStatuses(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
@@ -365,7 +365,7 @@ func (h *WorkflowHandler) ListSystemStatuses(w http.ResponseWriter, r *http.Requ
 	writeData(w, http.StatusOK, resp)
 }
 
-// ListTransitions handles GET /api/v1/workflows/{workflowId}/transitions
+// ListTransitions handles GET /api/v1/admin/workflows/{workflowId}/transitions
 func (h *WorkflowHandler) ListTransitions(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {

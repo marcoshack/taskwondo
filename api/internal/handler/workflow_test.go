@@ -39,7 +39,7 @@ func TestWorkflowHandler_List(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/workflows", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/workflows", nil)
 	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), info))
 	w := httptest.NewRecorder()
 
@@ -73,7 +73,7 @@ func TestWorkflowHandler_Create(t *testing.T) {
 		]
 	}`
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/workflows", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/workflows", bytes.NewBufferString(body))
 	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), info))
 	w := httptest.NewRecorder()
 
@@ -94,7 +94,7 @@ func TestWorkflowHandler_Create_MissingName(t *testing.T) {
 		]
 	}`
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/workflows", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/workflows", bytes.NewBufferString(body))
 	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), info))
 	w := httptest.NewRecorder()
 
@@ -123,9 +123,9 @@ func TestWorkflowHandler_Get(t *testing.T) {
 	}
 
 	r := chi.NewRouter()
-	r.Get("/api/v1/workflows/{workflowId}", h.Get)
+	r.Get("/api/v1/admin/workflows/{workflowId}", h.Get)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/workflows/"+created.ID.String(), nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/workflows/"+created.ID.String(), nil)
 	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), info))
 	w := httptest.NewRecorder()
 
@@ -140,9 +140,9 @@ func TestWorkflowHandler_Get_NotFound(t *testing.T) {
 	h, _, info := workflowTestSetup(t)
 
 	r := chi.NewRouter()
-	r.Get("/api/v1/workflows/{workflowId}", h.Get)
+	r.Get("/api/v1/admin/workflows/{workflowId}", h.Get)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/workflows/"+uuid.New().String(), nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/workflows/"+uuid.New().String(), nil)
 	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), info))
 	w := httptest.NewRecorder()
 
@@ -168,9 +168,9 @@ func TestWorkflowHandler_Update(t *testing.T) {
 
 	body := `{"name": "New Name"}`
 	r := chi.NewRouter()
-	r.Patch("/api/v1/workflows/{workflowId}", h.Update)
+	r.Patch("/api/v1/admin/workflows/{workflowId}", h.Update)
 
-	req := httptest.NewRequest(http.MethodPatch, "/api/v1/workflows/"+created.ID.String(), bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/admin/workflows/"+created.ID.String(), bytes.NewBufferString(body))
 	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), info))
 	w := httptest.NewRecorder()
 
@@ -210,9 +210,9 @@ func TestWorkflowHandler_ListTransitions(t *testing.T) {
 	}
 
 	r := chi.NewRouter()
-	r.Get("/api/v1/workflows/{workflowId}/transitions", h.ListTransitions)
+	r.Get("/api/v1/admin/workflows/{workflowId}/transitions", h.ListTransitions)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/workflows/"+created.ID.String()+"/transitions", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/workflows/"+created.ID.String()+"/transitions", nil)
 	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), info))
 	w := httptest.NewRecorder()
 
@@ -259,10 +259,10 @@ func TestWorkflowHandler_Create_AdminRequired(t *testing.T) {
 	r := chi.NewRouter()
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.RequireAdmin)
-		r.Post("/api/v1/workflows", h.Create)
+		r.Post("/api/v1/admin/workflows", h.Create)
 	})
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/workflows", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/workflows", bytes.NewBufferString(body))
 	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), userInfo))
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -278,7 +278,7 @@ func TestWorkflowHandler_Create_AdminRequired(t *testing.T) {
 		GlobalRole: model.RoleAdmin,
 	}
 
-	req2 := httptest.NewRequest(http.MethodPost, "/api/v1/workflows", bytes.NewBufferString(body))
+	req2 := httptest.NewRequest(http.MethodPost, "/api/v1/admin/workflows", bytes.NewBufferString(body))
 	req2 = req2.WithContext(model.ContextWithAuthInfo(req2.Context(), adminInfo))
 	w2 := httptest.NewRecorder()
 	r.ServeHTTP(w2, req2)
@@ -313,10 +313,10 @@ func TestWorkflowHandler_Update_AdminRequired(t *testing.T) {
 	r := chi.NewRouter()
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.RequireAdmin)
-		r.Patch("/api/v1/workflows/{workflowId}", h.Update)
+		r.Patch("/api/v1/admin/workflows/{workflowId}", h.Update)
 	})
 
-	req := httptest.NewRequest(http.MethodPatch, "/api/v1/workflows/"+created.ID.String(), bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/admin/workflows/"+created.ID.String(), bytes.NewBufferString(body))
 	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), userInfo))
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -332,7 +332,7 @@ func TestWorkflowHandler_Update_AdminRequired(t *testing.T) {
 		GlobalRole: model.RoleAdmin,
 	}
 
-	req2 := httptest.NewRequest(http.MethodPatch, "/api/v1/workflows/"+created.ID.String(), bytes.NewBufferString(body))
+	req2 := httptest.NewRequest(http.MethodPatch, "/api/v1/admin/workflows/"+created.ID.String(), bytes.NewBufferString(body))
 	req2 = req2.WithContext(model.ContextWithAuthInfo(req2.Context(), adminInfo))
 	w2 := httptest.NewRecorder()
 	r.ServeHTTP(w2, req2)
@@ -345,7 +345,7 @@ func TestWorkflowHandler_Update_AdminRequired(t *testing.T) {
 func TestWorkflowHandler_Unauthenticated(t *testing.T) {
 	h, _, _ := workflowTestSetup(t)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/workflows", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/workflows", nil)
 	// No auth info in context
 	w := httptest.NewRecorder()
 

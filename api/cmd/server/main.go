@@ -386,22 +386,6 @@ func main() {
 				})
 			})
 
-			// Workflows
-			r.Route("/workflows", func(r chi.Router) {
-				r.Get("/", workflows.List)
-				r.Get("/statuses", workflows.ListSystemStatuses)
-				r.Route("/{workflowId}", func(r chi.Router) {
-					r.Get("/", workflows.Get)
-					r.Get("/transitions", workflows.ListTransitions)
-				})
-				// Create/Update/Delete require admin role
-				r.Group(func(r chi.Router) {
-					r.Use(middleware.RequireAdmin)
-					r.Post("/", workflows.Create)
-					r.Patch("/{workflowId}", workflows.Update)
-					r.Delete("/{workflowId}", workflows.Delete)
-				})
-			})
 
 			// Projects (namespace-scoped)
 			r.Route("/{namespace}/"+handler.PathProjects, func(r chi.Router) {
@@ -526,6 +510,17 @@ func main() {
 			// Admin routes (requires admin role)
 			r.Route("/admin", func(r chi.Router) {
 				r.Use(middleware.RequireAdmin)
+				r.Route("/workflows", func(r chi.Router) {
+					r.Get("/", workflows.List)
+					r.Get("/statuses", workflows.ListSystemStatuses)
+					r.Post("/", workflows.Create)
+					r.Route("/{workflowId}", func(r chi.Router) {
+						r.Get("/", workflows.Get)
+						r.Get("/transitions", workflows.ListTransitions)
+						r.Patch("/", workflows.Update)
+						r.Delete("/", workflows.Delete)
+					})
+				})
 				r.Route("/users", func(r chi.Router) {
 					r.Get("/", admin.ListUsers)
 					r.Post("/", admin.CreateUser)

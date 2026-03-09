@@ -464,7 +464,7 @@ func (c *Client) CreateComment(projectKey string, itemNumber int, params CreateC
 }
 
 func (c *Client) ListWorkflows() ([]Workflow, error) {
-	data, err := c.doRequest("GET", "/api/v1/workflows", nil)
+	data, err := c.doRequest("GET", "/api/v1/admin/workflows", nil)
 	if err != nil {
 		return nil, err
 	}

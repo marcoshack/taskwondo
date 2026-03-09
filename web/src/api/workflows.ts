@@ -54,38 +54,38 @@ interface DataResponse<T> {
 }
 
 export async function listWorkflows() {
-  const res = await api.get<DataResponse<Workflow[]>>('/workflows')
+  const res = await api.get<DataResponse<Workflow[]>>('/admin/workflows')
   return res.data.data
 }
 
 export async function getWorkflow(workflowId: string) {
-  const res = await api.get<DataResponse<WorkflowDetail>>(`/workflows/${workflowId}`)
+  const res = await api.get<DataResponse<WorkflowDetail>>(`/admin/workflows/${workflowId}`)
   return res.data.data
 }
 
 export async function getTransitionsMap(workflowId: string) {
-  const res = await api.get<DataResponse<Record<string, WorkflowTransition[]>>>(`/workflows/${workflowId}/transitions`)
+  const res = await api.get<DataResponse<Record<string, WorkflowTransition[]>>>(`/admin/workflows/${workflowId}/transitions`)
   return res.data.data
 }
 
 // --- System Workflow API Functions ---
 
 export async function createSystemWorkflow(input: CreateWorkflowInput) {
-  const res = await api.post<DataResponse<WorkflowDetail>>('/workflows', input)
+  const res = await api.post<DataResponse<WorkflowDetail>>('/admin/workflows', input)
   return res.data.data
 }
 
 export async function updateSystemWorkflow(workflowId: string, input: UpdateWorkflowInput) {
-  const res = await api.patch<DataResponse<WorkflowDetail>>(`/workflows/${workflowId}`, input)
+  const res = await api.patch<DataResponse<WorkflowDetail>>(`/admin/workflows/${workflowId}`, input)
   return res.data.data
 }
 
 export async function deleteSystemWorkflow(workflowId: string) {
-  await api.delete(`/workflows/${workflowId}`)
+  await api.delete(`/admin/workflows/${workflowId}`)
 }
 
 export async function listSystemStatuses() {
-  const res = await api.get<DataResponse<WorkflowStatus[]>>('/workflows/statuses')
+  const res = await api.get<DataResponse<WorkflowStatus[]>>('/admin/workflows/statuses')
   return res.data.data
 }
 

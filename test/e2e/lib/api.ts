@@ -436,6 +436,93 @@ export async function updateSavedSearch(
   return body.data;
 }
 
+// --- Admin Workflows ---
+
+export interface WorkflowStatus {
+  name: string;
+  display_name: string;
+  category: string;
+  position: number;
+  color?: string | null;
+}
+
+export interface WorkflowTransition {
+  from_status: string;
+  to_status: string;
+  name?: string | null;
+}
+
+export interface CreateWorkflowInput {
+  name: string;
+  description?: string | null;
+  statuses: WorkflowStatus[];
+  transitions: WorkflowTransition[];
+}
+
+export async function listWorkflows(
+  request: APIRequestContext,
+  adminToken: string,
+): Promise<{ id: string; name: string; description: string | null; is_default: boolean }[]> {
+  const res = await request.get(`${BASE_URL}/api/v1/admin/workflows`, {
+    headers: { Authorization: `Bearer ${adminToken}` },
+  });
+  if (!res.ok()) throw new Error(`List workflows failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function getWorkflow(
+  request: APIRequestContext,
+  adminToken: string,
+  workflowId: string,
+): Promise<{ id: string; name: string; statuses: { name: string; category: string }[]; transitions: { from_status: string; to_status: string }[] }> {
+  const res = await request.get(`${BASE_URL}/api/v1/admin/workflows/${workflowId}`, {
+    headers: { Authorization: `Bearer ${adminToken}` },
+  });
+  if (!res.ok()) throw new Error(`Get workflow failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function listSystemStatuses(
+  request: APIRequestContext,
+  adminToken: string,
+): Promise<{ name: string; display_name: string; category: string }[]> {
+  const res = await request.get(`${BASE_URL}/api/v1/admin/workflows/statuses`, {
+    headers: { Authorization: `Bearer ${adminToken}` },
+  });
+  if (!res.ok()) throw new Error(`List system statuses failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function getTransitionsMap(
+  request: APIRequestContext,
+  adminToken: string,
+  workflowId: string,
+): Promise<Record<string, { from_status: string; to_status: string }[]>> {
+  const res = await request.get(`${BASE_URL}/api/v1/admin/workflows/${workflowId}/transitions`, {
+    headers: { Authorization: `Bearer ${adminToken}` },
+  });
+  if (!res.ok()) throw new Error(`Get transitions map failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function deleteWorkflow(
+  request: APIRequestContext,
+  adminToken: string,
+  workflowId: string,
+): Promise<void> {
+  const res = await request.delete(`${BASE_URL}/api/v1/admin/workflows/${workflowId}`, {
+    headers: { Authorization: `Bearer ${adminToken}` },
+  });
+  // 404 is OK — may already be deleted
+  if (!res.ok() && res.status() !== 404) {
+    throw new Error(`Delete workflow failed (${res.status()}): ${await res.text()}`);
+  }
+}
+
 // --- Preferences ---
 
 export async function setPreference(
