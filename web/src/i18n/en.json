@@ -1133,6 +1133,7 @@
   "projects.settings.transfer": "Transfer",
   "projects.settings.transferConfirmTitle": "Transfer Project",
   "projects.settings.transferConfirmBody": "Transfer <bold>{{projectKey}}</bold> to a different namespace. The project key must not already exist in the target namespace.",
+  "projects.settings.transferConfirmType": "Please type <bold>{{projectKey}}</bold> to confirm.",
   "projects.settings.transferTargetNamespace": "Target namespace",
   "projects.settings.selectNamespace": "Select a namespace...",
   "projects.settings.transferConfirmButton": "Transfer project",

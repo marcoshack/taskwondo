@@ -262,14 +262,22 @@ test.describe('Namespace Frontend UI', () => {
       await page.waitForTimeout(500);
       await attach(page, testInfo, '09-transfer-modal');
 
-      // Select target namespace in the modal
-      const nsSelect = page.getByRole('dialog').locator('select');
-      if (await nsSelect.isVisible().catch(() => false)) {
-        await nsSelect.selectOption({ label: new RegExp(nsName, 'i') });
+      // Type project key to confirm
+      const confirmInput = page.getByRole('dialog').locator(`input[placeholder="${xferKey}"]`);
+      await confirmInput.fill(xferKey);
+
+      // Select target namespace from custom dropdown
+      const nsDropdown = page.getByRole('dialog').getByRole('button', { name: /select a namespace/i });
+      if (await nsDropdown.isVisible().catch(() => false)) {
+        await nsDropdown.click();
+        await page.waitForTimeout(300);
+        // Click the namespace option in the portaled dropdown
+        const nsOption = page.locator(`button:has-text("${nsName}")`).last();
+        await nsOption.click();
       }
 
       // Confirm transfer
-      const confirmBtn = page.getByRole('dialog').getByRole('button', { name: /transfer|confirm|move/i });
+      const confirmBtn = page.getByRole('dialog').getByRole('button', { name: /transfer project/i });
       if (await confirmBtn.isVisible().catch(() => false)) {
         await confirmBtn.click();
         await page.waitForLoadState('networkidle');

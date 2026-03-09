@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Trans, useTranslation } from 'react-i18next'
 import { useNamespacePath } from '@/hooks/useNamespacePath'
@@ -11,9 +12,10 @@ import { Spinner } from '@/components/ui/Spinner'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import { Tooltip } from '@/components/ui/Tooltip'
-import { Check, Trash2, Copy, Link, AlertTriangle, ArrowRightLeft } from 'lucide-react'
+import { Check, Trash2, Copy, Link, AlertTriangle, ArrowRightLeft, ChevronDown } from 'lucide-react'
 import { useNamespaceContext } from '@/contexts/NamespaceContext'
 import { useMigrateProject } from '@/hooks/useNamespaces'
+import { NamespaceIcon } from '@/components/NamespaceIcon'
 import { UserSearchInput } from '@/components/UserSearchInput'
 import { MentionSearchModal } from '@/components/ui/MentionSearchModal'
 import { useMentionAutocomplete } from '@/hooks/useMentionAutocomplete'
@@ -108,7 +110,28 @@ export function ProjectSettingsPage() {
   const migrateMutation = useMigrateProject()
   const [showTransferModal, setShowTransferModal] = useState(false)
   const [transferTarget, setTransferTarget] = useState('')
+  const [transferConfirm, setTransferConfirm] = useState('')
+  const [transferDropdownOpen, setTransferDropdownOpen] = useState(false)
   const [transferError, setTransferError] = useState('')
+  const transferDropdownRef = useRef<HTMLDivElement>(null)
+  const transferButtonRef = useRef<HTMLButtonElement>(null)
+  const transferMenuRef = useRef<HTMLDivElement>(null)
+
+  // Close transfer dropdown on outside click
+  useEffect(() => {
+    if (!transferDropdownOpen) return
+    function handleClick(e: MouseEvent) {
+      const target = e.target as Node
+      if (
+        transferDropdownRef.current && !transferDropdownRef.current.contains(target) &&
+        transferMenuRef.current && !transferMenuRef.current.contains(target)
+      ) {
+        setTransferDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [transferDropdownOpen])
 
   const descRef = useRef<HTMLTextAreaElement>(null)
   const descMention = useMentionAutocomplete({
@@ -690,7 +713,7 @@ export function ProjectSettingsPage() {
               <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('projects.settings.transferNamespace')}</p>
               <p className="text-sm text-gray-500 dark:text-gray-400">{t('projects.settings.transferNamespaceDescription')}</p>
             </div>
-            <Button variant="danger" size="sm" onClick={() => { setTransferTarget(''); setTransferError(''); setShowTransferModal(true) }}>
+            <Button variant="danger" size="sm" onClick={() => { setTransferTarget(''); setTransferConfirm(''); setTransferError(''); setShowTransferModal(true) }}>
               <ArrowRightLeft className="h-4 w-4 mr-1" />
               {t('projects.settings.transfer')}
             </Button>
@@ -719,7 +742,7 @@ export function ProjectSettingsPage() {
         </p>
         <Input
           value={deleteConfirmText}
-          onChange={(e) => setDeleteConfirmText(e.target.value)}
+          onChange={(e) => setDeleteConfirmText(e.target.value.toUpperCase())}
           placeholder={project.key}
         />
         <div className="flex justify-end gap-2 mt-4">
@@ -797,27 +820,87 @@ export function ProjectSettingsPage() {
         <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
           <Trans i18nKey="projects.settings.transferConfirmBody" values={{ projectKey: project.key }} components={{ bold: <strong /> }} />
         </p>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('projects.settings.transferTargetNamespace')}</label>
-        <select
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">
+          <Trans i18nKey="projects.settings.transferConfirmType" values={{ projectKey: project.key }} components={{ bold: <strong /> }} />
+        </p>
+        <input
+          type="text"
+          value={transferConfirm}
+          onChange={(e) => setTransferConfirm(e.target.value.toUpperCase())}
           className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4"
-          value={transferTarget}
-          onChange={(e) => setTransferTarget(e.target.value)}
-        >
-          <option value="">{t('projects.settings.selectNamespace')}</option>
-          {namespaces
-            .filter((ns) => ns.slug !== activeNamespace?.slug)
-            .map((ns) => (
-              <option key={ns.slug} value={ns.slug}>
-                {ns.display_name} ({ns.slug})
-              </option>
-            ))}
-        </select>
+          placeholder={project.key}
+        />
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('projects.settings.transferTargetNamespace')}</label>
+        <div className="mb-4" ref={transferDropdownRef}>
+          <button
+            ref={transferButtonRef}
+            type="button"
+            onClick={() => setTransferDropdownOpen(!transferDropdownOpen)}
+            className="flex items-center gap-2 w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            {(() => {
+              const selected = namespaces.find((ns) => ns.slug === transferTarget)
+              return selected ? (
+                <>
+                  <NamespaceIcon
+                    icon={selected.icon}
+                    color={selected.color}
+                    className="h-4 w-4 shrink-0"
+                  />
+                  <span className="flex-1 text-left truncate">
+                    {selected.display_name}
+                  </span>
+                  <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0">{selected.slug}</span>
+                </>
+              ) : (
+                <span className="flex-1 text-left text-gray-400 dark:text-gray-500">{t('projects.settings.selectNamespace')}</span>
+              )
+            })()}
+            <ChevronDown className="h-4 w-4 shrink-0 text-gray-400" />
+          </button>
+          {transferDropdownOpen && createPortal(
+            <div
+              ref={transferMenuRef}
+              className="fixed z-[9999] rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg py-1 max-h-60 overflow-y-auto"
+              style={{
+                top: (transferButtonRef.current?.getBoundingClientRect().bottom ?? 0) + 4,
+                left: transferButtonRef.current?.getBoundingClientRect().left ?? 0,
+                width: transferButtonRef.current?.getBoundingClientRect().width ?? 'auto',
+              }}
+            >
+              {namespaces
+                .filter((ns) => ns.slug !== activeNamespace?.slug)
+                .map((ns) => (
+                  <button
+                    key={ns.slug}
+                    type="button"
+                    onClick={() => {
+                      setTransferTarget(ns.slug)
+                      setTransferDropdownOpen(false)
+                    }}
+                    className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2.5 ${
+                      ns.slug === transferTarget
+                        ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    <NamespaceIcon icon={ns.icon} color={ns.color} className="h-4 w-4 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium truncate">{ns.display_name}</div>
+                      {!ns.is_default && <div className="text-xs text-gray-400 dark:text-gray-500">{ns.slug}</div>}
+                    </div>
+                  </button>
+                ))}
+            </div>,
+            document.body,
+          )}
+        </div>
         {transferError && <p className="text-sm text-red-600 dark:text-red-400 mb-4">{transferError}</p>}
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={() => setShowTransferModal(false)}>{t('common.cancel')}</Button>
           <Button
             variant="danger"
-            disabled={!transferTarget || migrateMutation.isPending}
+            disabled={!transferTarget || transferConfirm !== project.key || migrateMutation.isPending}
             onClick={() => {
               if (!transferTarget || !activeNamespace || !projectKey) return
               setTransferError('')
@@ -826,7 +909,8 @@ export function ProjectSettingsPage() {
                 {
                   onSuccess: () => {
                     setShowTransferModal(false)
-                    showSaved('transfer')
+                    localStorage.removeItem('taskwondo_last_project_key')
+                    navigate(p('/projects'), { replace: true })
                   },
                   onError: (err) => {
                     const axiosErr = err as AxiosError<{ error?: { message?: string } }>
