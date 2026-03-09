@@ -1,9 +1,12 @@
 import { NavLink, useLocation } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSidebar } from '@/contexts/SidebarContext'
 import { useNavigationGuard } from '@/contexts/NavigationGuardContext'
-import { useNamespacePath } from '@/hooks/useNamespacePath'
+import { useNamespacePath, toUrlSegment } from '@/hooks/useNamespacePath'
+import { useNamespaceContext } from '@/contexts/NamespaceContext'
+import { NamespaceIcon } from '@/components/NamespaceIcon'
+import { CreateNamespaceModal } from '@/components/CreateNamespaceModal'
 import { useInboxCount } from '@/hooks/useInbox'
 import {
   Inbox,
@@ -18,6 +21,7 @@ import {
   Settings,
   PanelLeftClose,
   PanelLeftOpen,
+  Plus,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -43,7 +47,23 @@ export function AppSidebar({ projectKey, mobileOnly }: AppSidebarProps) {
   const { collapsed, toggleCollapsed, mobileOpen, closeMobile } = useSidebar('app')
   const { guardRef, guardedNavigate } = useNavigationGuard()
   const location = useLocation()
+  const { namespaces, activeNamespace, setActiveNamespace, showSwitcher } = useNamespaceContext()
   const { data: inboxCount } = useInboxCount()
+  const [nsDropdownOpen, setNsDropdownOpen] = useState(false)
+  const [nsCreateOpen, setNsCreateOpen] = useState(false)
+  const nsRef = useRef<HTMLDivElement>(null)
+
+  // Close namespace dropdown on click outside
+  useEffect(() => {
+    if (!nsDropdownOpen) return
+    const handler = (e: MouseEvent) => {
+      if (nsRef.current && !nsRef.current.contains(e.target as Node)) {
+        setNsDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [nsDropdownOpen])
 
   // Remember the last active project so sidebar persists on /projects and /user pages
   const [lastProjectKey, setLastProjectKey] = useState<string | undefined>(
@@ -59,9 +79,10 @@ export function AppSidebar({ projectKey, mobileOnly }: AppSidebarProps) {
 
   const activeProjectKey = projectKey ?? lastProjectKey
 
-  // Close mobile sidebar on route change
+  // Close mobile sidebar and namespace dropdown on route change
   useEffect(() => {
     closeMobile()
+    setNsDropdownOpen(false)
   }, [location.pathname, closeMobile])
 
   const userNavItems: NavItem[] = [
@@ -227,6 +248,91 @@ export function AppSidebar({ projectKey, mobileOnly }: AppSidebarProps) {
     )
   }
 
+  function renderNamespaceBanner(showLabels: boolean) {
+    if (!showSwitcher || !activeNamespace) return null
+
+    return (
+      <div className="relative mb-1" ref={nsRef}>
+        <button
+          onClick={() => setNsDropdownOpen(!nsDropdownOpen)}
+          className={`group/ns w-full flex items-center gap-2.5 rounded-md text-sm font-semibold transition-colors ${
+            showLabels ? 'px-3 py-2' : 'justify-center py-2'
+          } text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800`}
+          aria-label={t('namespaces.switchNamespace')}
+        >
+          <NamespaceIcon icon={activeNamespace.icon} color={activeNamespace.color} className="h-5 w-5 shrink-0" />
+          {showLabels && (
+            <span className="flex-1 truncate text-left">{activeNamespace.display_name}</span>
+          )}
+          {!showLabels && (
+            <span className="pointer-events-none absolute left-full ml-2 rounded bg-gray-900 px-2 py-1 text-xs whitespace-nowrap text-white opacity-0 transition-opacity group-hover/ns:opacity-100 dark:bg-gray-700 z-50">
+              {activeNamespace.display_name}
+            </span>
+          )}
+        </button>
+        {nsDropdownOpen && (
+          <div className={`absolute z-50 w-64 bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm rounded-md shadow-lg border border-gray-200 dark:border-gray-600 py-1 ${
+            showLabels ? 'left-0 top-full mt-1' : 'left-full top-0 ml-2'
+          }`}>
+            <div className="px-3 py-1.5 text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+              {t('namespaces.title')}
+            </div>
+            {namespaces.map((ns) => (
+              <button
+                key={ns.slug}
+                onClick={() => {
+                  setNsDropdownOpen(false)
+                  if (ns.slug !== activeNamespace.slug) {
+                    setActiveNamespace(ns.slug)
+                  }
+                }}
+                className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2.5 ${
+                  ns.slug === activeNamespace.slug
+                    ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                }`}
+              >
+                <NamespaceIcon icon={ns.icon} color={ns.color} className="h-4 w-4 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium truncate">{ns.display_name}</div>
+                  {!ns.is_default && <div className="text-xs text-gray-400 dark:text-gray-500">{ns.slug}</div>}
+                </div>
+                {ns.slug === activeNamespace.slug && (
+                  <span className="text-xs text-indigo-600 dark:text-indigo-400 shrink-0">{t('common.current')}</span>
+                )}
+                {!ns.is_default && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setNsDropdownOpen(false)
+                      guardedNavigate(`/${toUrlSegment(ns.slug)}/settings`)
+                    }}
+                    className="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0"
+                    aria-label={t('namespaces.settings')}
+                  >
+                    <Settings className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </button>
+            ))}
+            <div className="border-t border-gray-100 dark:border-gray-700 mt-1 pt-1">
+              <button
+                onClick={() => {
+                  setNsDropdownOpen(false)
+                  setNsCreateOpen(true)
+                }}
+                className="w-full text-left px-3 py-2 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2.5"
+              >
+                <Plus className="h-4 w-4" />
+                {t('namespaces.createNew')}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   function renderContent(showLabels: boolean) {
     return (
       <>
@@ -237,6 +343,9 @@ export function AppSidebar({ projectKey, mobileOnly }: AppSidebarProps) {
 
         {/* Separator */}
         <div className="border-t border-gray-200 dark:border-gray-700 my-2" />
+
+        {/* Namespace banner */}
+        {renderNamespaceBanner(showLabels)}
 
         {/* Projects section */}
         <ul className="space-y-1">
@@ -253,18 +362,34 @@ export function AppSidebar({ projectKey, mobileOnly }: AppSidebarProps) {
     )
   }
 
+  const createModal = (
+    <CreateNamespaceModal
+      open={nsCreateOpen}
+      onClose={() => setNsCreateOpen(false)}
+      onCreated={(ns) => {
+        setNsCreateOpen(false)
+        setActiveNamespace(ns.slug)
+        guardedNavigate(`/${toUrlSegment(ns.slug)}/settings`)
+      }}
+    />
+  )
+
   if (mobileOnly) {
     // Render only the mobile dropdown overlay (used in AppShell for global availability)
-    if (!mobileOpen) return null
     return (
-      <div className="fixed inset-0 z-40 sm:hidden" onClick={closeMobile}>
-        <nav
-          className="absolute right-4 top-14 w-52 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-2"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {renderContent(true)}
-        </nav>
-      </div>
+      <>
+        {mobileOpen && (
+          <div className="fixed inset-0 z-40 sm:hidden" onClick={closeMobile}>
+            <nav
+              className="absolute right-4 top-14 w-52 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-2"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {renderContent(true)}
+            </nav>
+          </div>
+        )}
+        {createModal}
+      </>
     )
   }
 
@@ -306,6 +431,7 @@ export function AppSidebar({ projectKey, mobileOnly }: AppSidebarProps) {
           </button>
         </div>
       </nav>
+      {createModal}
     </>
   )
 }

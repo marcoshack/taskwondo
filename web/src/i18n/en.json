@@ -1121,6 +1121,9 @@
   "namespaces.deleteError": "Failed to delete namespace.",
   "namespaces.removeMemberConfirmTitle": "Remove Member",
   "namespaces.removeMemberConfirmBody": "Are you sure you want to remove <bold>{{name}}</bold> from this namespace?",
+  "namespaces.icon": "Icon",
+  "namespaces.color": "Color",
+  "namespaces.preview": "Preview",
 
   "projects.settings.transferNamespace": "Transfer to another namespace",
   "projects.settings.transferNamespaceDescription": "Move this project to a different namespace.",

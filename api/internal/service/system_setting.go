@@ -20,8 +20,9 @@ type SystemSettingRepositoryInterface interface {
 
 // SystemSettingService handles system setting business logic.
 type SystemSettingService struct {
-	settings  SystemSettingRepositoryInterface
-	publisher EventPublisher
+	settings      SystemSettingRepositoryInterface
+	publisher     EventPublisher
+	onBrandChange func(ctx context.Context, name string) error
 }
 
 // NewSystemSettingService creates a new SystemSettingService.
@@ -32,6 +33,11 @@ func NewSystemSettingService(settings SystemSettingRepositoryInterface) *SystemS
 // SetPublisher configures the event publisher for backfill events.
 func (s *SystemSettingService) SetPublisher(p EventPublisher) {
 	s.publisher = p
+}
+
+// SetBrandChangeHandler configures a callback invoked when brand_name is updated.
+func (s *SystemSettingService) SetBrandChangeHandler(fn func(ctx context.Context, name string) error) {
+	s.onBrandChange = fn
 }
 
 // Set creates or updates a system setting. Requires admin role.
@@ -90,6 +96,15 @@ func (s *SystemSettingService) Set(ctx context.Context, info *model.AuthInfo, ke
 			if err := s.publisher.Publish("embed.backfill", model.EmbedBackfillEvent{Backfill: true}); err != nil {
 				log.Ctx(ctx).Warn().Err(err).Msg("failed to publish backfill event")
 			}
+		}
+	}
+
+	// Sync default namespace display name when brand name changes
+	if key == "brand_name" && s.onBrandChange != nil {
+		var name string
+		_ = json.Unmarshal(value, &name) // empty string if null/invalid
+		if err := s.onBrandChange(ctx, name); err != nil {
+			log.Ctx(ctx).Warn().Err(err).Msg("failed to update default namespace display name")
 		}
 	}
 

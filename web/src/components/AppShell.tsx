@@ -2,7 +2,8 @@ import { Outlet, useNavigate, useMatch } from 'react-router-dom'
 
 import { useTranslation } from 'react-i18next'
 import { useNamespacePath, toUrlSegment } from '@/hooks/useNamespacePath'
-import { Settings, UserCog, Menu, HelpCircle, Inbox, LogOut, Search, Home, Globe, Building2, Plus } from 'lucide-react'
+import { Settings, UserCog, Menu, HelpCircle, Inbox, LogOut, Search, Home, Plus } from 'lucide-react'
+import { NamespaceIcon } from '@/components/NamespaceIcon'
 import { useAuth } from '@/contexts/AuthContext'
 import { useNamespaceContext } from '@/contexts/NamespaceContext'
 import { useSidebar } from '@/contexts/SidebarContext'
@@ -180,7 +181,7 @@ export function AppShell() {
                 </button>
               ) : null}
             </div>
-            <div className="relative flex items-center gap-2 shrink-0" ref={menuRef}>
+            <div className="relative flex items-center gap-1.5 sm:gap-2 shrink-0" ref={menuRef}>
               <button
                 onClick={() => setSearchOpen(true)}
                 className="p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
@@ -205,15 +206,15 @@ export function AppShell() {
                 <div className="relative" ref={nsRef}>
                   <button
                     onClick={() => setNsDropdownOpen(!nsDropdownOpen)}
-                    className="p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+                    className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
                     aria-label={t('namespaces.switchNamespace')}
                     data-testid="namespace-switcher"
                   >
-                    {activeNamespace?.is_default ? (
-                      <Globe className="h-5 w-5" />
-                    ) : (
-                      <Building2 className="h-5 w-5" />
-                    )}
+                    <NamespaceIcon
+                      icon={activeNamespace?.icon ?? 'globe'}
+                      color={activeNamespace?.color ?? 'slate'}
+                      className="h-5 w-5"
+                    />
                   </button>
                   {nsDropdownOpen && (
                     <div className="absolute right-0 top-full mt-1 w-64 bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm rounded-md shadow-lg border border-gray-200 dark:border-gray-600 py-1 z-50">
@@ -235,11 +236,7 @@ export function AppShell() {
                               : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                           }`}
                         >
-                          {ns.is_default ? (
-                            <Globe className="h-4 w-4 shrink-0 text-gray-400 dark:text-gray-500" />
-                          ) : (
-                            <Building2 className="h-4 w-4 shrink-0 text-gray-400 dark:text-gray-500" />
-                          )}
+                          <NamespaceIcon icon={ns.icon} color={ns.color} className="h-4 w-4 shrink-0" />
                           <div className="min-w-0 flex-1">
                             <div className="font-medium truncate">{ns.display_name}</div>
                             {!ns.is_default && <div className="text-xs text-gray-400 dark:text-gray-500">{ns.slug}</div>}
@@ -363,6 +360,7 @@ export function AppShell() {
         onCreated={(ns) => {
           setNsCreateOpen(false)
           setActiveNamespace(ns.slug)
+          navigate(`/${toUrlSegment(ns.slug)}/settings`)
         }}
       />
     </div>

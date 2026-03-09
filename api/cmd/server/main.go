@@ -180,6 +180,9 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to seed default namespace")
 	}
 
+	// Sync default namespace display name when brand changes
+	systemSettingService.SetBrandChangeHandler(namespaceService.UpdateDefaultNamespaceDisplayName)
+
 	// Initialize encryption
 	var encKey []byte
 	if cfg.EncryptionKey != "" {

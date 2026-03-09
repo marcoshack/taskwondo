@@ -1,0 +1,2 @@
+ALTER TABLE namespaces ADD COLUMN icon TEXT NOT NULL DEFAULT 'building2';
+ALTER TABLE namespaces ADD COLUMN color TEXT NOT NULL DEFAULT 'slate';

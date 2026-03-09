@@ -118,6 +118,8 @@ func (s *NamespaceService) CreateNamespace(ctx context.Context, info *model.Auth
 		ID:          uuid.New(),
 		Slug:        slug,
 		DisplayName: displayName,
+		Icon:        "building2",
+		Color:       "slate",
 		IsDefault:   false,
 		CreatedBy:   info.UserID,
 	}
@@ -168,7 +170,7 @@ func (s *NamespaceService) ListUserNamespaces(ctx context.Context, info *model.A
 }
 
 // UpdateNamespace modifies a namespace. Requires owner or admin role in the namespace.
-func (s *NamespaceService) UpdateNamespace(ctx context.Context, info *model.AuthInfo, slug string, newSlug, displayName *string) (*model.Namespace, error) {
+func (s *NamespaceService) UpdateNamespace(ctx context.Context, info *model.AuthInfo, slug string, newSlug, displayName, icon, color *string) (*model.Namespace, error) {
 	ns, err := s.namespaces.GetBySlug(ctx, slug)
 	if err != nil {
 		return nil, err
@@ -207,6 +209,20 @@ func (s *NamespaceService) UpdateNamespace(ctx context.Context, info *model.Auth
 			return nil, fmt.Errorf("display_name cannot be empty: %w", model.ErrValidation)
 		}
 		ns.DisplayName = *displayName
+	}
+
+	if icon != nil {
+		if !model.ValidNamespaceIcons[*icon] {
+			return nil, fmt.Errorf("invalid namespace icon %q: %w", *icon, model.ErrValidation)
+		}
+		ns.Icon = *icon
+	}
+
+	if color != nil {
+		if !model.ValidNamespaceColors[*color] {
+			return nil, fmt.Errorf("invalid namespace color %q: %w", *color, model.ErrValidation)
+		}
+		ns.Color = *color
 	}
 
 	if err := s.namespaces.Update(ctx, ns); err != nil {
@@ -507,17 +523,63 @@ func (s *NamespaceService) GetBySlug(ctx context.Context, slug string) (*model.N
 
 // --- Startup / Seeding ---
 
+// getBrandName reads the brand_name system setting, falling back to model.DefaultBrandName.
+func (s *NamespaceService) getBrandName(ctx context.Context) string {
+	setting, err := s.systemSettings.Get(ctx, "brand_name")
+	if err != nil {
+		return model.DefaultBrandName
+	}
+	var name string
+	if err := json.Unmarshal(setting.Value, &name); err != nil || name == "" {
+		return model.DefaultBrandName
+	}
+	return name
+}
+
+// UpdateDefaultNamespaceDisplayName updates the default namespace's display name
+// to match the given brand name. Called when the brand_name system setting changes.
+func (s *NamespaceService) UpdateDefaultNamespaceDisplayName(ctx context.Context, name string) error {
+	if name == "" {
+		name = model.DefaultBrandName
+	}
+	ns, err := s.namespaces.GetDefault(ctx)
+	if err != nil {
+		return fmt.Errorf("getting default namespace: %w", err)
+	}
+	if ns.DisplayName == name {
+		return nil
+	}
+	ns.DisplayName = name
+	if err := s.namespaces.Update(ctx, ns); err != nil {
+		return fmt.Errorf("updating default namespace display name: %w", err)
+	}
+	log.Ctx(ctx).Info().
+		Str("brand_name", name).
+		Msg("default namespace display name synced with brand")
+	return nil
+}
+
 // SeedDefaultNamespace creates the default namespace if it doesn't exist and backfills
 // existing projects that have no namespace_id.
 func (s *NamespaceService) SeedDefaultNamespace(ctx context.Context) error {
+	brandName := s.getBrandName(ctx)
+
 	// Check if default namespace already exists
 	existing, err := s.namespaces.GetDefault(ctx)
 	if err == nil {
-		// Rename legacy "Default" to "Public" if unchanged
-		if existing.DisplayName == "Default" {
-			existing.DisplayName = "Public"
+		// Sync display name and icon for the default namespace
+		needsUpdate := false
+		if existing.DisplayName != brandName {
+			existing.DisplayName = brandName
+			needsUpdate = true
+		}
+		if existing.Icon != "globe" {
+			existing.Icon = "globe"
+			needsUpdate = true
+		}
+		if needsUpdate {
 			if err := s.namespaces.Update(ctx, existing); err != nil {
-				log.Ctx(ctx).Warn().Err(err).Msg("failed to rename default namespace to Public")
+				log.Ctx(ctx).Warn().Err(err).Msg("failed to sync default namespace")
 			}
 		}
 
@@ -541,7 +603,9 @@ func (s *NamespaceService) SeedDefaultNamespace(ctx context.Context) error {
 	ns := &model.Namespace{
 		ID:          uuid.New(),
 		Slug:        model.DefaultNamespaceSlug,
-		DisplayName: "Public",
+		DisplayName: brandName,
+		Icon:        "globe",
+		Color:       "slate",
 		IsDefault:   true,
 		CreatedBy:   adminID,
 	}

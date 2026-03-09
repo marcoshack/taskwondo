@@ -178,6 +178,7 @@ export function ProjectSettingsPage() {
   function handleDelete() {
     deleteMutation.mutate(undefined, {
       onSuccess: () => {
+        localStorage.removeItem('taskwondo_last_project_key')
         navigate(p('/projects'), { replace: true })
       },
       onError: (err) => {

@@ -306,8 +306,8 @@ func TestSeedDefaultNamespace_CreatesNew(t *testing.T) {
 	if !ns.IsDefault {
 		t.Fatal("expected is_default to be true")
 	}
-	if ns.DisplayName != "Public" {
-		t.Fatalf("expected display name 'Public', got %q", ns.DisplayName)
+	if ns.DisplayName != model.DefaultBrandName {
+		t.Fatalf("expected display name %q, got %q", model.DefaultBrandName, ns.DisplayName)
 	}
 
 	// Verify admin was added as owner
@@ -635,7 +635,7 @@ func TestUpdateNamespace_Success(t *testing.T) {
 	memberRepo.Add(context.Background(), &model.NamespaceMember{NamespaceID: ns.ID, UserID: userID, Role: model.NamespaceRoleOwner})
 
 	newName := "New Name"
-	updated, err := svc.UpdateNamespace(context.Background(), info, "test-ns", nil, &newName)
+	updated, err := svc.UpdateNamespace(context.Background(), info, "test-ns", nil, &newName, nil, nil)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -652,7 +652,7 @@ func TestUpdateNamespace_DefaultDenied(t *testing.T) {
 	nsRepo.Create(context.Background(), ns)
 
 	newName := "Not Default"
-	_, err := svc.UpdateNamespace(context.Background(), info, model.DefaultNamespaceSlug, nil, &newName)
+	_, err := svc.UpdateNamespace(context.Background(), info, model.DefaultNamespaceSlug, nil, &newName, nil, nil)
 	if !errors.Is(err, model.ErrForbidden) {
 		t.Fatalf("expected ErrForbidden, got %v", err)
 	}

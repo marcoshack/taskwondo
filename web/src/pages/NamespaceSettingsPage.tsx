@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { Trans, useTranslation } from 'react-i18next'
 import { toUrlSegment, fromUrlSegment } from '@/hooks/useNamespacePath'
 import { Check, Trash2 } from 'lucide-react'
+import { NamespaceIcon, NAMESPACE_ICONS, NAMESPACE_COLORS, getColorClasses, getIconComponent } from '@/components/NamespaceIcon'
 import { useAuth } from '@/contexts/AuthContext'
 import { useNamespaceContext } from '@/contexts/NamespaceContext'
 import { useNamespace, useUpdateNamespace, useDeleteNamespace, useNamespaceMembers, useAddNamespaceMember, useUpdateNamespaceMemberRole, useRemoveNamespaceMember } from '@/hooks/useNamespaces'
@@ -47,6 +48,8 @@ export function NamespaceSettingsPage() {
 
   const [displayName, setDisplayName] = useState<string | null>(null)
   const [slugInput, setSlugInput] = useState<string | null>(null)
+  const [iconInput, setIconInput] = useState<string | null>(null)
+  const [colorInput, setColorInput] = useState<string | null>(null)
   const [saveError, setSaveError] = useState('')
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
@@ -78,9 +81,13 @@ export function NamespaceSettingsPage() {
 
   const currentDisplayName = displayName ?? namespace.display_name
   const currentSlug = slugInput ?? namespace.slug
+  const currentIcon = iconInput ?? namespace.icon
+  const currentColor = colorInput ?? namespace.color
   const hasChanges =
     (displayName !== null && displayName !== namespace.display_name) ||
-    (slugInput !== null && slugInput !== namespace.slug)
+    (slugInput !== null && slugInput !== namespace.slug) ||
+    (iconInput !== null && iconInput !== namespace.icon) ||
+    (colorInput !== null && colorInput !== namespace.color)
 
   // Determine current user's role
   const currentUserMember = members?.find((m) => m.user_id === user?.id)
@@ -95,12 +102,16 @@ export function NamespaceSettingsPage() {
     const input: Record<string, string> = {}
     if (displayName !== null && displayName !== namespace!.display_name) input.display_name = displayName.trim()
     if (slugInput !== null && slugInput !== namespace!.slug) input.slug = slugInput.trim()
+    if (iconInput !== null && iconInput !== namespace!.icon) input.icon = iconInput
+    if (colorInput !== null && colorInput !== namespace!.color) input.color = colorInput
     if (Object.keys(input).length === 0) return
 
     updateMutation.mutate(input, {
       onSuccess: (updated) => {
         setDisplayName(null)
         setSlugInput(null)
+        setIconInput(null)
+        setColorInput(null)
         showSaved('general')
         if (updated.slug !== slug) {
           navigate(`/${toUrlSegment(updated.slug)}/settings`, { replace: true })
@@ -203,6 +214,68 @@ export function NamespaceSettingsPage() {
               disabled={!canManage}
             />
             <p className="text-xs text-gray-400 dark:text-gray-500 -mt-3">{t('namespaces.slugHint')}</p>
+
+            {/* Icon & Color pickers + Preview */}
+            <div className="flex gap-6 items-start">
+              <div className="flex-1 min-w-0 space-y-4">
+                {/* Icon picker */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('namespaces.icon')}</label>
+                  <div className="grid grid-cols-10 gap-1.5">
+                    {NAMESPACE_ICONS.map((iconName) => {
+                      const Icon = getIconComponent(iconName)
+                      const selected = currentIcon === iconName
+                      return (
+                        <button
+                          key={iconName}
+                          type="button"
+                          disabled={!canManage}
+                          onClick={() => setIconInput(iconName)}
+                          className={`p-2 rounded-lg border-2 transition-all ${
+                            selected
+                              ? `border-current ${getColorClasses(currentColor).text} bg-gray-100 dark:bg-gray-700`
+                              : 'border-transparent text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                          } disabled:opacity-50 disabled:cursor-not-allowed`}
+                        >
+                          <Icon className="h-5 w-5" />
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Color picker */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('namespaces.color')}</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {NAMESPACE_COLORS.map((c) => {
+                      const selected = currentColor === c
+                      return (
+                        <button
+                          key={c}
+                          type="button"
+                          disabled={!canManage}
+                          onClick={() => setColorInput(c)}
+                          className={`w-8 h-8 rounded-full transition-all ${getColorClasses(c).bg} ${
+                            selected ? 'ring-2 ring-offset-2 ring-offset-white dark:ring-offset-gray-900 ' + getColorClasses(c).ring : 'opacity-60 hover:opacity-100'
+                          } disabled:cursor-not-allowed`}
+                          aria-label={c}
+                        />
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Preview */}
+              <div className="shrink-0">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('namespaces.preview')}</label>
+                <div className="flex flex-col items-center gap-3 rounded-lg border border-gray-200 dark:border-gray-700 px-6 py-5 bg-white dark:bg-gray-800">
+                  <NamespaceIcon icon={currentIcon} color={currentColor} className="h-10 w-10" />
+                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{currentDisplayName}</span>
+                </div>
+              </div>
+            </div>
 
             {saveError && <p className="text-sm text-red-600 dark:text-red-400">{saveError}</p>}
 

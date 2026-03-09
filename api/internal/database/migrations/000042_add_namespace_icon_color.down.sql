@@ -1,0 +1,2 @@
+ALTER TABLE namespaces DROP COLUMN IF EXISTS icon;
+ALTER TABLE namespaces DROP COLUMN IF EXISTS color;

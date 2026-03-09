@@ -118,6 +118,9 @@ const SAME_VALUE_ALLOWED = new Set([
   'workitems.view.board',
   'workitems.visibilities.portal',
   'workitems.visibilities.public',
+
+  // "Color" is identical in English and Spanish
+  'namespaces.color',
 ])
 
 describe('i18n completeness', () => {

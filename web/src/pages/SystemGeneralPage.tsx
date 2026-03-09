@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useQueryClient } from '@tanstack/react-query'
 import { useSystemSetting, useSetSystemSetting } from '@/hooks/useSystemSettings'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
@@ -9,6 +10,7 @@ export function SystemGeneralPage() {
   const { t } = useTranslation()
   const { data: savedBrandName, isLoading } = useSystemSetting<string>('brand_name')
   const setSettingMutation = useSetSystemSetting()
+  const queryClient = useQueryClient()
 
   const [brandName, setBrandName] = useState('')
   const [brandSaved, setBrandSaved] = useState(false)
@@ -24,7 +26,10 @@ export function SystemGeneralPage() {
     setSettingMutation.mutate(
       { key: 'brand_name', value: brandName.trim() || null },
       {
-        onSuccess: () => setBrandSaved(true),
+        onSuccess: () => {
+          setBrandSaved(true)
+          queryClient.invalidateQueries({ queryKey: ['namespaces'] })
+        },
       },
     )
   }

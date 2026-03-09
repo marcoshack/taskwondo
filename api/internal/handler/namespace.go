@@ -34,6 +34,8 @@ type createNamespaceRequest struct {
 type updateNamespaceRequest struct {
 	Slug        *string `json:"slug,omitempty"`
 	DisplayName *string `json:"display_name,omitempty"`
+	Icon        *string `json:"icon,omitempty"`
+	Color       *string `json:"color,omitempty"`
 }
 
 type addNamespaceMemberRequest struct {
@@ -55,6 +57,8 @@ type namespaceResponse struct {
 	ID          uuid.UUID `json:"id"`
 	Slug        string    `json:"slug"`
 	DisplayName string    `json:"display_name"`
+	Icon        string    `json:"icon"`
+	Color       string    `json:"color"`
 	IsDefault   bool      `json:"is_default"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
@@ -74,6 +78,8 @@ func toNamespaceResponse(ns *model.Namespace) namespaceResponse {
 		ID:          ns.ID,
 		Slug:        ns.Slug,
 		DisplayName: ns.DisplayName,
+		Icon:        ns.Icon,
+		Color:       ns.Color,
 		IsDefault:   ns.IsDefault,
 		CreatedAt:   ns.CreatedAt,
 		UpdatedAt:   ns.UpdatedAt,
@@ -183,7 +189,7 @@ func (h *NamespaceHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ns, err := h.namespaces.UpdateNamespace(r.Context(), info, slug, req.Slug, req.DisplayName)
+	ns, err := h.namespaces.UpdateNamespace(r.Context(), info, slug, req.Slug, req.DisplayName, req.Icon, req.Color)
 	if err != nil {
 		handleNamespaceError(w, r, err, "failed to update namespace")
 		return

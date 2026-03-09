@@ -4,6 +4,8 @@ export interface Namespace {
   id: string
   slug: string
   display_name: string
+  icon: string
+  color: string
   is_default: boolean
   created_at: string
   updated_at: string
@@ -47,6 +49,8 @@ export async function createNamespace(input: CreateNamespaceInput): Promise<Name
 export interface UpdateNamespaceInput {
   slug?: string
   display_name?: string
+  icon?: string
+  color?: string
 }
 
 export async function updateNamespace(slug: string, input: UpdateNamespaceInput): Promise<Namespace> {

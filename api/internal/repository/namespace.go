@@ -22,9 +22,9 @@ func NewNamespaceRepository(db *sql.DB) *NamespaceRepository {
 // Create inserts a new namespace.
 func (r *NamespaceRepository) Create(ctx context.Context, ns *model.Namespace) error {
 	_, err := r.db.ExecContext(ctx,
-		`INSERT INTO namespaces (id, slug, display_name, is_default, created_by)
-		 VALUES ($1, $2, $3, $4, $5)`,
-		ns.ID, ns.Slug, ns.DisplayName, ns.IsDefault, ns.CreatedBy)
+		`INSERT INTO namespaces (id, slug, display_name, icon, color, is_default, created_by)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		ns.ID, ns.Slug, ns.DisplayName, ns.Icon, ns.Color, ns.IsDefault, ns.CreatedBy)
 	if err != nil {
 		return fmt.Errorf("inserting namespace: %w", err)
 	}
@@ -34,7 +34,7 @@ func (r *NamespaceRepository) Create(ctx context.Context, ns *model.Namespace) e
 // GetByID returns a namespace by its UUID.
 func (r *NamespaceRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.Namespace, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, slug, display_name, is_default, created_by, created_at, updated_at
+		`SELECT id, slug, display_name, icon, color, is_default, created_by, created_at, updated_at
 		 FROM namespaces WHERE id = $1`, id)
 	return scanNamespace(row)
 }
@@ -42,7 +42,7 @@ func (r *NamespaceRepository) GetByID(ctx context.Context, id uuid.UUID) (*model
 // GetBySlug returns a namespace by its slug.
 func (r *NamespaceRepository) GetBySlug(ctx context.Context, slug string) (*model.Namespace, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, slug, display_name, is_default, created_by, created_at, updated_at
+		`SELECT id, slug, display_name, icon, color, is_default, created_by, created_at, updated_at
 		 FROM namespaces WHERE slug = $1`, slug)
 	return scanNamespace(row)
 }
@@ -50,7 +50,7 @@ func (r *NamespaceRepository) GetBySlug(ctx context.Context, slug string) (*mode
 // GetDefault returns the default namespace.
 func (r *NamespaceRepository) GetDefault(ctx context.Context) (*model.Namespace, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, slug, display_name, is_default, created_by, created_at, updated_at
+		`SELECT id, slug, display_name, icon, color, is_default, created_by, created_at, updated_at
 		 FROM namespaces WHERE is_default = true`)
 	return scanNamespace(row)
 }
@@ -58,7 +58,7 @@ func (r *NamespaceRepository) GetDefault(ctx context.Context) (*model.Namespace,
 // List returns all namespaces ordered by slug.
 func (r *NamespaceRepository) List(ctx context.Context) ([]model.Namespace, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, slug, display_name, is_default, created_by, created_at, updated_at
+		`SELECT id, slug, display_name, icon, color, is_default, created_by, created_at, updated_at
 		 FROM namespaces ORDER BY is_default DESC, slug`)
 	if err != nil {
 		return nil, fmt.Errorf("querying namespaces: %w", err)
@@ -71,7 +71,7 @@ func (r *NamespaceRepository) List(ctx context.Context) ([]model.Namespace, erro
 // ListByUser returns namespaces the user belongs to (derived from project membership).
 func (r *NamespaceRepository) ListByUser(ctx context.Context, userID uuid.UUID) ([]model.Namespace, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT DISTINCT n.id, n.slug, n.display_name, n.is_default, n.created_by, n.created_at, n.updated_at
+		`SELECT DISTINCT n.id, n.slug, n.display_name, n.icon, n.color, n.is_default, n.created_by, n.created_at, n.updated_at
 		 FROM namespaces n
 		 JOIN projects p ON p.namespace_id = n.id
 		 JOIN project_members pm ON pm.project_id = p.id
@@ -88,9 +88,9 @@ func (r *NamespaceRepository) ListByUser(ctx context.Context, userID uuid.UUID) 
 // Update modifies a namespace's mutable fields (slug and display_name).
 func (r *NamespaceRepository) Update(ctx context.Context, ns *model.Namespace) error {
 	result, err := r.db.ExecContext(ctx,
-		`UPDATE namespaces SET slug = $1, display_name = $2, updated_at = now()
-		 WHERE id = $3`,
-		ns.Slug, ns.DisplayName, ns.ID)
+		`UPDATE namespaces SET slug = $1, display_name = $2, icon = $3, color = $4, updated_at = now()
+		 WHERE id = $5`,
+		ns.Slug, ns.DisplayName, ns.Icon, ns.Color, ns.ID)
 	if err != nil {
 		return fmt.Errorf("updating namespace: %w", err)
 	}
@@ -149,7 +149,7 @@ func (r *NamespaceRepository) CountNonDefault(ctx context.Context) (int, error) 
 
 func scanNamespace(row *sql.Row) (*model.Namespace, error) {
 	var ns model.Namespace
-	err := row.Scan(&ns.ID, &ns.Slug, &ns.DisplayName, &ns.IsDefault, &ns.CreatedBy, &ns.CreatedAt, &ns.UpdatedAt)
+	err := row.Scan(&ns.ID, &ns.Slug, &ns.DisplayName, &ns.Icon, &ns.Color, &ns.IsDefault, &ns.CreatedBy, &ns.CreatedAt, &ns.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, model.ErrNotFound
 	}
@@ -163,7 +163,7 @@ func scanNamespaces(rows *sql.Rows) ([]model.Namespace, error) {
 	var namespaces []model.Namespace
 	for rows.Next() {
 		var ns model.Namespace
-		if err := rows.Scan(&ns.ID, &ns.Slug, &ns.DisplayName, &ns.IsDefault, &ns.CreatedBy, &ns.CreatedAt, &ns.UpdatedAt); err != nil {
+		if err := rows.Scan(&ns.ID, &ns.Slug, &ns.DisplayName, &ns.Icon, &ns.Color, &ns.IsDefault, &ns.CreatedBy, &ns.CreatedAt, &ns.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("scanning namespace row: %w", err)
 		}
 		namespaces = append(namespaces, ns)
