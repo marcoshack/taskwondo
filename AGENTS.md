@@ -4,7 +4,7 @@ This file provides guidance to AI coding agents when working with code in this r
 
 ## Project
 
-Taskwondo — a self-hosted task and ticket management system. Monorepo with a Go REST API (`api/`), React frontend (`web/`), MCP server (`mcp/`), and Playwright E2E tests (`e2e/`).
+Taskwondo — a self-hosted task and ticket management system. Monorepo with a Go REST API (`api/`), React frontend (`web/`), MCP server (`mcp/`), and Playwright E2E tests (`test/e2e/`).
 
 ## Commands
 
@@ -123,11 +123,11 @@ In-package mocks (mock structs implementing repository interfaces) and `httptest
 ### Frontend (`web/`)
 Vitest for unit tests. Tests use `*.test.ts` naming and live alongside source files. Currently covers i18n validation (missing keys, extra keys, placeholder consistency, untranslated values). No component or hook tests — functional coverage comes from E2E.
 
-### E2E (`e2e/`)
-Playwright with `*.spec.ts` naming. Tests organized by domain under `e2e/tests/` (auth, admin, workitems, projects, milestones, navigation, preferences).
+### E2E (`test/e2e/`)
+Playwright with `*.spec.ts` naming. Tests organized by domain under `test/e2e/tests/` (auth, admin, workitems, projects, milestones, navigation, preferences).
 
 Key infrastructure:
-- **Fixtures** (`e2e/lib/fixtures.ts`): extends Playwright's base test with `testUser` and `testProject` fixtures that auto-create isolated users and projects per test
-- **API helpers** (`e2e/lib/api.ts`): 60+ typed functions for setting up test data via API (work items, comments, relations, milestones, etc.)
+- **Fixtures** (`test/e2e/lib/fixtures.ts`): extends Playwright's base test with `testUser` and `testProject` fixtures that auto-create isolated users and projects per test
+- **API helpers** (`test/e2e/lib/api.ts`): 60+ typed functions for setting up test data via API (work items, comments, relations, milestones, etc.)
 - **Multi-project setup**: auth.setup.ts → admin tests → chromium.setup.ts → main suite → cleanup.teardown.ts
 - **Fully containerized**: `make test-e2e` runs the entire stack in Docker (Postgres, MinIO, Mailpit, API, Web, Playwright)

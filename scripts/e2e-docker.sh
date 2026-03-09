@@ -21,7 +21,7 @@ echo "==> Cleaning up any previous E2E stack..."
 $COMPOSE down -v --remove-orphans 2>/dev/null || true
 
 # Clean previous test results (may be owned by root from Docker)
-docker run --rm -v "$(pwd)/e2e:/e2e" alpine sh -c "rm -rf /e2e/test-results /e2e/playwright-report" 2>/dev/null || true
+docker run --rm -v "$(pwd)/test/e2e:/e2e" alpine sh -c "rm -rf /e2e/test-results /e2e/playwright-report" 2>/dev/null || true
 
 # Build all images
 echo "==> Building images..."
@@ -50,9 +50,9 @@ else
     echo "==> E2E tests failed (exit code: $EXIT_CODE)"
 fi
 
-if [ -d "e2e/playwright-report" ]; then
+if [ -d "test/e2e/playwright-report" ]; then
     echo ""
-    echo "Report: e2e/playwright-report/index.html"
+    echo "Report: test/e2e/playwright-report/index.html"
     echo "Serve it with: make test-e2e-report"
 fi
 

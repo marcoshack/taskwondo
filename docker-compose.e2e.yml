@@ -131,7 +131,7 @@ services:
 
   playwright:
     build:
-      context: ./e2e
+      context: ./test/e2e
       dockerfile: Dockerfile
     depends_on:
       web:
@@ -146,6 +146,6 @@ services:
       ADMIN_PASSWORD: "E2eAdminPass123!"
       MAILPIT_URL: "http://mailpit:8025"
     volumes:
-      - ./e2e/test-results:/e2e/test-results
-      - ./e2e/playwright-report:/e2e/playwright-report
+      - ./test/e2e/test-results:/e2e/test-results
+      - ./test/e2e/playwright-report:/e2e/playwright-report
     restart: "no"

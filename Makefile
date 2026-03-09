@@ -229,10 +229,10 @@ test-e2e: ## Run E2E tests in isolated Docker stack (no host deps)
 test-e2e-dev: ## Run E2E tests against local dev server (localhost:5173)
 	@echo ""
 	@printf "$(CYAN)## Running E2E tests (dev)...$(RESET)\n"
-	cd e2e && npx playwright test
+	cd test/e2e && npx playwright test
 	@printf "$(GREEN)## E2E tests passed$(RESET)\n"
 
 test-e2e-report: ## Serve the last E2E HTML report at http://localhost:9323
 	@echo "Serving report at http://localhost:9323"
 	@echo "Press Ctrl+C to stop"
-	docker run --rm -p 9323:80 -v "$$(pwd)/e2e/playwright-report:/usr/share/nginx/html:ro" nginx:alpine
+	docker run --rm -p 9323:80 -v "$$(pwd)/test/e2e/playwright-report:/usr/share/nginx/html:ro" nginx:alpine
