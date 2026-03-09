@@ -180,6 +180,11 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to seed default namespace")
 	}
 
+	// Seed default limit settings (max projects/namespaces per user)
+	if err := systemSettingService.SeedDefaultLimits(ctx); err != nil {
+		log.Fatal().Err(err).Msg("failed to seed default limit settings")
+	}
+
 	// Sync default namespace display name when brand changes
 	systemSettingService.SetBrandChangeHandler(namespaceService.UpdateDefaultNamespaceDisplayName)
 

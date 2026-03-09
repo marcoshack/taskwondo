@@ -140,6 +140,7 @@ func (s *SystemSettingService) GetPublic(ctx context.Context) (map[string]json.R
 	publicKeys := []string{
 		"brand_name",
 		model.SettingMaxProjectsPerUser,
+		model.SettingMaxNamespacesPerUser,
 		model.SettingAuthEmailLoginEnabled,
 		model.SettingAuthEmailRegistrationEnabled,
 		model.SettingAuthDiscordEnabled,
@@ -166,6 +167,26 @@ func (s *SystemSettingService) GetPublic(ctx context.Context) (map[string]json.R
 	}
 
 	return result, nil
+}
+
+// SeedDefaultLimits creates default values for max_projects_per_user and
+// max_namespaces_per_user if they do not already exist.
+func (s *SystemSettingService) SeedDefaultLimits(ctx context.Context) error {
+	defaults := map[string]int{
+		model.SettingMaxProjectsPerUser:   model.DefaultMaxProjectsPerUser,
+		model.SettingMaxNamespacesPerUser: model.DefaultMaxNamespacesPerUser,
+	}
+	for key, value := range defaults {
+		if _, err := s.settings.Get(ctx, key); err == nil {
+			continue // already set
+		}
+		raw, _ := json.Marshal(value)
+		if err := s.settings.Upsert(ctx, &model.SystemSetting{Key: key, Value: raw}); err != nil {
+			return fmt.Errorf("seeding %s: %w", key, err)
+		}
+		log.Ctx(ctx).Info().Str("key", key).Int("value", value).Msg("seeded default limit setting")
+	}
+	return nil
 }
 
 func requireAdmin(info *model.AuthInfo) error {

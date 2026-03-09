@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useAdminUsers, useUpdateUser, useCreateUser, useResetUserPassword, useUserProjects, useAddUserToProject, useUpdateUserProjectRole, useRemoveUserFromProject } from '@/hooks/useAdmin'
 import { usePreference, useSetPreference } from '@/hooks/usePreferences'
 import { useProjects } from '@/hooks/useProjects'
-import { useSystemSetting, useSetSystemSetting } from '@/hooks/useSystemSettings'
+import { useSystemSetting, useSetSystemSetting, usePublicSettings } from '@/hooks/useSystemSettings'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import { ProjectKeyBadge } from '@/components/ui/ProjectKeyBadge'
@@ -130,6 +130,74 @@ export function AdminUsersPage() {
     const raw = userLimitInputs[u.id]
     if (raw === undefined) return false
     const current = u.max_projects != null ? String(u.max_projects) : ''
+    return raw !== current
+  }
+
+  // Global default namespace limit
+  const { data: publicSettings } = usePublicSettings()
+  const namespacesEnabled = publicSettings?.namespaces_enabled === true
+  const { data: savedNamespaceLimit, isLoading: nsLimitLoading } = useSystemSetting<number>('max_namespaces_per_user')
+  const [namespaceLimit, setNamespaceLimit] = useState('')
+  const [nsLimitSaved, setNsLimitSaved] = useState(false)
+
+  useEffect(() => {
+    if (savedNamespaceLimit !== undefined) {
+      setNamespaceLimit(savedNamespaceLimit != null ? String(savedNamespaceLimit) : '1')
+    }
+  }, [savedNamespaceLimit])
+
+  const nsLimitDirty = namespaceLimit !== (savedNamespaceLimit != null ? String(savedNamespaceLimit) : '1')
+
+  function handleNsLimitSave() {
+    setNsLimitSaved(false)
+    const value = parseInt(namespaceLimit, 10)
+    if (isNaN(value) || value < 0) return
+    setSettingMutation.mutate(
+      { key: 'max_namespaces_per_user', value },
+      { onSuccess: () => setNsLimitSaved(true) },
+    )
+  }
+
+  // Per-user namespace limit
+  const [userNsLimitInputs, setUserNsLimitInputs] = useState<Record<string, string>>({})
+
+  function handleUserNsLimitChange(userId: string, value: string) {
+    setUserNsLimitInputs((prev) => ({ ...prev, [userId]: value }))
+  }
+
+  function handleUserNsLimitSave(userId: string, currentMaxNamespaces: number | null | undefined) {
+    const raw = userNsLimitInputs[userId]
+    if (raw === undefined) return
+    const trimmed = raw.trim()
+
+    if (trimmed === '') {
+      if (currentMaxNamespaces == null) return
+      updateUserMutation.mutate(
+        { userId, input: { max_namespaces: -1 } },
+        { onSuccess: () => showSaved(`nslimit:${userId}`) },
+      )
+      return
+    }
+
+    const value = parseInt(trimmed, 10)
+    if (isNaN(value) || value < 0) return
+    if (currentMaxNamespaces != null && value === currentMaxNamespaces) return
+    updateUserMutation.mutate(
+      { userId, input: { max_namespaces: value } },
+      { onSuccess: () => showSaved(`nslimit:${userId}`) },
+    )
+  }
+
+  function getUserNsLimitDisplay(u: AdminUser): string {
+    if (userNsLimitInputs[u.id] !== undefined) return userNsLimitInputs[u.id]
+    if (u.max_namespaces != null) return String(u.max_namespaces)
+    return ''
+  }
+
+  function isUserNsLimitDirty(u: AdminUser): boolean {
+    const raw = userNsLimitInputs[u.id]
+    if (raw === undefined) return false
+    const current = u.max_namespaces != null ? String(u.max_namespaces) : ''
     return raw !== current
   }
 
@@ -310,6 +378,40 @@ export function AdminUsersPage() {
         </div>
       </div>
 
+      {/* Global default namespace limit — only when namespaces feature is enabled */}
+      {namespacesEnabled && (
+        <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+          <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
+            {t('admin.general.namespaceLimit.title')}
+          </h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            {t('admin.general.namespaceLimit.help')}
+          </p>
+          <div className="flex items-end gap-3">
+            <Input
+              label={t('admin.general.namespaceLimit.label')}
+              type="number"
+              min={0}
+              value={namespaceLimit}
+              onChange={(e) => { setNamespaceLimit(e.target.value); setNsLimitSaved(false) }}
+              className="w-24"
+              disabled={nsLimitLoading}
+            />
+            <Button
+              onClick={handleNsLimitSave}
+              disabled={!nsLimitDirty || setSettingMutation.isPending}
+            >
+              {setSettingMutation.isPending ? t('common.saving') : t('common.save')}
+            </Button>
+            {nsLimitSaved && (
+              <span className="text-sm text-green-600 dark:text-green-400 pb-2">
+                {t('admin.general.namespaceLimit.saved')}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       {error && (
         <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
       )}
@@ -354,7 +456,7 @@ export function AdminUsersPage() {
                     </div>
                     {/* Desktop-only: controls inline on row 1 */}
                     <div className="hidden sm:flex items-center gap-3 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                      {(saved[`role:${u.id}`] || saved[`status:${u.id}`] || saved[`limit:${u.id}`]) && (
+                      {(saved[`role:${u.id}`] || saved[`status:${u.id}`] || saved[`limit:${u.id}`] || saved[`nslimit:${u.id}`]) && (
                         <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
                       )}
                       {u.global_role !== 'admin' && (
@@ -363,7 +465,7 @@ export function AdminUsersPage() {
                             <input
                               type="number"
                               min={0}
-                              className="w-[5.2rem] rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-1.5 py-1 text-xs text-center shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              className="w-14 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-1 py-1 text-xs text-center shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                               placeholder={t('admin.users.maxProjectsDefault')}
                               value={getUserLimitDisplay(u)}
                               onChange={(e) => handleUserLimitChange(u.id, e.target.value)}
@@ -373,6 +475,28 @@ export function AdminUsersPage() {
                               className={`px-1 py-1 rounded-md border ${isUserLimitDirty(u) ? 'border-indigo-400 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-500 dark:text-indigo-400 dark:hover:bg-indigo-900/30' : 'border-gray-300 text-gray-300 cursor-default dark:border-gray-600 dark:text-gray-600'}`}
                               onClick={() => isUserLimitDirty(u) && handleUserLimitSave(u.id, u.max_projects)}
                               disabled={!isUserLimitDirty(u)}
+                            >
+                              <Save className="h-3.5 w-3.5" />
+                            </button>
+                          </span>
+                        </Tooltip>
+                      )}
+                      {u.global_role !== 'admin' && namespacesEnabled && (
+                        <Tooltip content={t('admin.users.maxNamespacesHelp')}>
+                          <span className="inline-flex items-center gap-1">
+                            <input
+                              type="number"
+                              min={0}
+                              className="w-14 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-1 py-1 text-xs text-center shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              placeholder={t('admin.users.maxNamespacesDefault')}
+                              value={getUserNsLimitDisplay(u)}
+                              onChange={(e) => handleUserNsLimitChange(u.id, e.target.value)}
+                              onKeyDown={(e) => { if (e.key === 'Enter') handleUserNsLimitSave(u.id, u.max_namespaces) }}
+                            />
+                            <button
+                              className={`px-1 py-1 rounded-md border ${isUserNsLimitDirty(u) ? 'border-indigo-400 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-500 dark:text-indigo-400 dark:hover:bg-indigo-900/30' : 'border-gray-300 text-gray-300 cursor-default dark:border-gray-600 dark:text-gray-600'}`}
+                              onClick={() => isUserNsLimitDirty(u) && handleUserNsLimitSave(u.id, u.max_namespaces)}
+                              disabled={!isUserNsLimitDirty(u)}
                             >
                               <Save className="h-3.5 w-3.5" />
                             </button>
@@ -492,6 +616,13 @@ export function AdminUsersPage() {
                       saved: !!saved[`limit:${u.id}`],
                       onChange: (v: string) => handleUserLimitChange(u.id, v),
                       onSave: () => handleUserLimitSave(u.id, u.max_projects),
+                    } : undefined}
+                    mobileNamespaceLimit={u.global_role !== 'admin' && namespacesEnabled ? {
+                      value: getUserNsLimitDisplay(u),
+                      dirty: isUserNsLimitDirty(u),
+                      saved: !!saved[`nslimit:${u.id}`],
+                      onChange: (v: string) => handleUserNsLimitChange(u.id, v),
+                      onSave: () => handleUserNsLimitSave(u.id, u.max_namespaces),
                     } : undefined}
                   />
                 )}
@@ -628,10 +759,12 @@ function UserProjectsPanel({
   userId,
   userName,
   mobileProjectLimit,
+  mobileNamespaceLimit,
 }: {
   userId: string
   userName: string
   mobileProjectLimit?: MobileProjectLimit
+  mobileNamespaceLimit?: MobileProjectLimit
 }) {
   const { t } = useTranslation()
   const { data: userProjects, isLoading } = useUserProjects(userId)
@@ -703,7 +836,7 @@ function UserProjectsPanel({
             <input
               type="number"
               min={0}
-              className="w-20 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1 text-xs text-center shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-14 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-1 py-1 text-xs text-center shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               placeholder={t('admin.users.maxProjectsDefault')}
               value={mobileProjectLimit.value}
               onChange={(e) => mobileProjectLimit.onChange(e.target.value)}
@@ -717,6 +850,34 @@ function UserProjectsPanel({
               <Save className="h-3.5 w-3.5" />
             </button>
             {mobileProjectLimit.saved && (
+              <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
+            )}
+          </div>
+        </div>
+      )}
+      {mobileNamespaceLimit && (
+        <div className="sm:hidden border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            {t('admin.general.namespaceLimit.label')}
+          </label>
+          <div className="flex items-center gap-2 mt-2">
+            <input
+              type="number"
+              min={0}
+              className="w-14 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-1 py-1 text-xs text-center shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              placeholder={t('admin.users.maxNamespacesDefault')}
+              value={mobileNamespaceLimit.value}
+              onChange={(e) => mobileNamespaceLimit.onChange(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') mobileNamespaceLimit.onSave() }}
+            />
+            <button
+              className={`px-1 py-1 rounded-md border ${mobileNamespaceLimit.dirty ? 'border-indigo-400 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-500 dark:text-indigo-400 dark:hover:bg-indigo-900/30' : 'border-gray-300 text-gray-300 cursor-default dark:border-gray-600 dark:text-gray-600'}`}
+              onClick={() => mobileNamespaceLimit.dirty && mobileNamespaceLimit.onSave()}
+              disabled={!mobileNamespaceLimit.dirty}
+            >
+              <Save className="h-3.5 w-3.5" />
+            </button>
+            {mobileNamespaceLimit.saved && (
               <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
             )}
           </div>

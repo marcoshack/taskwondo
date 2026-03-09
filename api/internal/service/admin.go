@@ -24,6 +24,7 @@ type AdminUserRepository interface {
 	UpdateIsActive(ctx context.Context, id uuid.UUID, isActive bool) error
 	UpdatePasswordHash(ctx context.Context, id uuid.UUID, hash string, forceChange bool) error
 	UpdateMaxProjects(ctx context.Context, id uuid.UUID, maxProjects *int) error
+	UpdateMaxNamespaces(ctx context.Context, id uuid.UUID, maxNamespaces *int) error
 	CountByRole(ctx context.Context, role string) (int, error)
 }
 
@@ -59,8 +60,8 @@ func (s *AdminService) ListUsers(ctx context.Context) ([]model.User, error) {
 	return s.users.ListAll(ctx)
 }
 
-// UpdateUser updates a user's global role, active status, and/or project limit.
-func (s *AdminService) UpdateUser(ctx context.Context, callerID, targetID uuid.UUID, role *string, isActive *bool, maxProjects *int) (*model.User, error) {
+// UpdateUser updates a user's global role, active status, project limit, and/or namespace limit.
+func (s *AdminService) UpdateUser(ctx context.Context, callerID, targetID uuid.UUID, role *string, isActive *bool, maxProjects *int, maxNamespaces *int) (*model.User, error) {
 	// Prevent self-modification for role and active status
 	if callerID == targetID {
 		if role != nil {
@@ -112,6 +113,20 @@ func (s *AdminService) UpdateUser(ctx context.Context, callerID, targetID uuid.U
 		}
 		// *maxProjects == -1 means clear (reset to global default), dbVal stays nil
 		if err := s.users.UpdateMaxProjects(ctx, targetID, dbVal); err != nil {
+			return nil, err
+		}
+	}
+
+	if maxNamespaces != nil {
+		if *maxNamespaces < -1 {
+			return nil, fmt.Errorf("%w: max_namespaces must be -1 (default), 0 (unlimited), or a positive number", model.ErrValidation)
+		}
+		var dbVal *int
+		if *maxNamespaces >= 0 {
+			dbVal = maxNamespaces
+		}
+		// *maxNamespaces == -1 means clear (reset to global default), dbVal stays nil
+		if err := s.users.UpdateMaxNamespaces(ctx, targetID, dbVal); err != nil {
 			return nil, err
 		}
 	}

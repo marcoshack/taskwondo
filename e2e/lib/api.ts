@@ -94,6 +94,19 @@ export async function setMaxProjects(
   if (!res.ok()) throw new Error(`Set max projects failed (${res.status()}): ${await res.text()}`);
 }
 
+export async function setMaxNamespaces(
+  request: APIRequestContext,
+  adminToken: string,
+  userId: string,
+  maxNamespaces: number,
+): Promise<void> {
+  const res = await request.patch(`${BASE_URL}/api/v1/admin/users/${userId}`, {
+    headers: { Authorization: `Bearer ${adminToken}` },
+    data: { max_namespaces: maxNamespaces },
+  });
+  if (!res.ok()) throw new Error(`Set max namespaces failed (${res.status()}): ${await res.text()}`);
+}
+
 export async function deactivateUser(
   request: APIRequestContext,
   adminToken: string,

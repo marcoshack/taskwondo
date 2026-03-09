@@ -33,6 +33,7 @@ type adminUserResponse struct {
 	IsActive            bool       `json:"is_active"`
 	ForcePasswordChange bool       `json:"force_password_change"`
 	MaxProjects         *int       `json:"max_projects,omitempty"`
+	MaxNamespaces       *int       `json:"max_namespaces,omitempty"`
 	LastLoginAt         *time.Time `json:"last_login_at,omitempty"`
 	CreatedAt           time.Time  `json:"created_at"`
 }
@@ -47,6 +48,7 @@ func toAdminUserResponse(u *model.User) adminUserResponse {
 		IsActive:            u.IsActive,
 		ForcePasswordChange: u.ForcePasswordChange,
 		MaxProjects:         u.MaxProjects,
+		MaxNamespaces:       u.MaxNamespaces,
 		LastLoginAt:         u.LastLoginAt,
 		CreatedAt:           u.CreatedAt,
 	}
@@ -150,9 +152,10 @@ func (h *AdminHandler) ResetUserPassword(w http.ResponseWriter, r *http.Request)
 }
 
 type updateUserRequest struct {
-	GlobalRole  *string `json:"global_role,omitempty"`
-	IsActive    *bool   `json:"is_active,omitempty"`
-	MaxProjects *int    `json:"max_projects,omitempty"`
+	GlobalRole    *string `json:"global_role,omitempty"`
+	IsActive      *bool   `json:"is_active,omitempty"`
+	MaxProjects   *int    `json:"max_projects,omitempty"`
+	MaxNamespaces *int    `json:"max_namespaces,omitempty"`
 }
 
 // UpdateUser handles PATCH /api/v1/admin/users/{userId}.
@@ -171,12 +174,12 @@ func (h *AdminHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.GlobalRole == nil && req.IsActive == nil && req.MaxProjects == nil {
+	if req.GlobalRole == nil && req.IsActive == nil && req.MaxProjects == nil && req.MaxNamespaces == nil {
 		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "at least one field must be provided")
 		return
 	}
 
-	user, err := h.admin.UpdateUser(r.Context(), info.UserID, userID, req.GlobalRole, req.IsActive, req.MaxProjects)
+	user, err := h.admin.UpdateUser(r.Context(), info.UserID, userID, req.GlobalRole, req.IsActive, req.MaxProjects, req.MaxNamespaces)
 	if err != nil {
 		if errors.Is(err, model.ErrNotFound) {
 			writeError(w, http.StatusNotFound, "NOT_FOUND", "user not found")

@@ -146,12 +146,32 @@ func (h *NamespaceHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ownedCount, err := h.namespaces.CountOwnedByUser(r.Context(), info.UserID)
+	if err != nil {
+		log.Ctx(r.Context()).Error().Err(err).Msg("failed to count owned namespaces")
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		return
+	}
+
+	effectiveLimit, err := h.namespaces.ResolveEffectiveLimit(r.Context(), info)
+	if err != nil {
+		log.Ctx(r.Context()).Error().Err(err).Msg("failed to resolve namespace limit")
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		return
+	}
+
 	resp := make([]namespaceResponse, len(namespaces))
 	for i := range namespaces {
 		resp[i] = toNamespaceResponse(&namespaces[i])
 	}
 
-	writeData(w, http.StatusOK, resp)
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"data": resp,
+		"meta": map[string]interface{}{
+			"owned_namespace_count": ownedCount,
+			"max_namespaces":        effectiveLimit,
+		},
+	})
 }
 
 // Get handles GET /api/v1/namespaces/{slug}

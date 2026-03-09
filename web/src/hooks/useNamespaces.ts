@@ -10,7 +10,7 @@ import {
   updateNamespaceMemberRole,
   removeNamespaceMember,
   migrateProject,
-  type Namespace,
+  type NamespaceListResult,
   type CreateNamespaceInput,
   type UpdateNamespaceInput,
   type AddNamespaceMemberInput,
@@ -20,7 +20,24 @@ export function useNamespaces(enabled = true) {
   return useQuery({
     queryKey: ['namespaces'],
     queryFn: listNamespaces,
+    select: (data) => data.namespaces,
     enabled,
+  })
+}
+
+export function useOwnedNamespaceCount() {
+  return useQuery({
+    queryKey: ['namespaces'],
+    queryFn: listNamespaces,
+    select: (data) => data.ownedNamespaceCount,
+  })
+}
+
+export function useMaxNamespaces() {
+  return useQuery({
+    queryKey: ['namespaces'],
+    queryFn: listNamespaces,
+    select: (data) => data.maxNamespaces,
   })
 }
 
@@ -37,8 +54,10 @@ export function useCreateNamespace() {
   return useMutation({
     mutationFn: (input: CreateNamespaceInput) => createNamespace(input),
     onSuccess: (created) => {
-      qc.setQueryData<Namespace[]>(['namespaces'], (old) =>
-        old ? [...old, created] : [created],
+      qc.setQueryData<NamespaceListResult>(['namespaces'], (old) =>
+        old
+          ? { ...old, namespaces: [...old.namespaces, created], ownedNamespaceCount: old.ownedNamespaceCount + 1 }
+          : { namespaces: [created], ownedNamespaceCount: 1, maxNamespaces: 0 },
       )
       qc.invalidateQueries({ queryKey: ['namespaces'] })
     },

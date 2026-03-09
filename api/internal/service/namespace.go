@@ -45,6 +45,7 @@ type NamespaceMemberRepository interface {
 	Remove(ctx context.Context, namespaceID, userID uuid.UUID) error
 	RemoveAllByNamespace(ctx context.Context, namespaceID uuid.UUID) error
 	CountByRole(ctx context.Context, namespaceID uuid.UUID, role string) (int, error)
+	CountOwnedByUser(ctx context.Context, userID uuid.UUID) (int, error)
 }
 
 // NamespaceProjectRepository defines the project operations needed by the namespace service.
@@ -91,6 +92,23 @@ func NewNamespaceService(namespaces NamespaceRepository, members NamespaceMember
 func (s *NamespaceService) CreateNamespace(ctx context.Context, info *model.AuthInfo, slug, displayName string) (*model.Namespace, error) {
 	if err := s.requireNamespacesEnabled(ctx); err != nil {
 		return nil, err
+	}
+
+	// Enforce per-user namespace limit (admins are exempt)
+	if info.GlobalRole != model.RoleAdmin {
+		limit, err := s.resolveNamespaceLimit(ctx, info.UserID)
+		if err != nil {
+			return nil, fmt.Errorf("resolving namespace limit: %w", err)
+		}
+		if limit > 0 {
+			count, err := s.members.CountOwnedByUser(ctx, info.UserID)
+			if err != nil {
+				return nil, fmt.Errorf("counting user namespaces: %w", err)
+			}
+			if count >= limit {
+				return nil, fmt.Errorf("namespace ownership limit reached; contact an administrator to increase your limit: %w", model.ErrForbidden)
+			}
+		}
 	}
 
 	if !namespaceSlugRegexp.MatchString(slug) {
@@ -302,6 +320,13 @@ func (s *NamespaceService) AddNamespaceMember(ctx context.Context, info *model.A
 		}
 	}
 
+	// Enforce namespace limit when adding as owner
+	if role == model.NamespaceRoleOwner {
+		if err := s.checkNamespaceLimit(ctx, targetUserID); err != nil {
+			return nil, err
+		}
+	}
+
 	// Verify user exists
 	if _, err := s.users.GetByID(ctx, targetUserID); err != nil {
 		return nil, fmt.Errorf("looking up user: %w", err)
@@ -368,6 +393,13 @@ func (s *NamespaceService) UpdateNamespaceMemberRole(ctx context.Context, info *
 	target, err := s.members.GetByNamespaceAndUser(ctx, ns.ID, targetUserID)
 	if err != nil {
 		return err
+	}
+
+	// Enforce namespace limit when promoting to owner
+	if role == model.NamespaceRoleOwner && target.Role != model.NamespaceRoleOwner {
+		if err := s.checkNamespaceLimit(ctx, targetUserID); err != nil {
+			return err
+		}
 	}
 
 	// Protect last owner
@@ -729,6 +761,72 @@ func (s *NamespaceService) findAdminUser(ctx context.Context) (uuid.UUID, error)
 		return users[0].ID, nil
 	}
 	return uuid.Nil, fmt.Errorf("no users found to create default namespace")
+}
+
+// checkNamespaceLimit checks whether the target user has reached their namespace ownership limit.
+// Admins are exempt.
+func (s *NamespaceService) checkNamespaceLimit(ctx context.Context, userID uuid.UUID) error {
+	user, err := s.users.GetByID(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("looking up user for namespace limit: %w", err)
+	}
+	if user.GlobalRole == model.RoleAdmin {
+		return nil
+	}
+
+	limit, err := s.resolveNamespaceLimit(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("resolving namespace limit: %w", err)
+	}
+	if limit > 0 {
+		count, err := s.members.CountOwnedByUser(ctx, userID)
+		if err != nil {
+			return fmt.Errorf("counting user namespaces: %w", err)
+		}
+		if count >= limit {
+			return fmt.Errorf("namespace ownership limit reached; contact an administrator to increase the limit: %w", model.ErrForbidden)
+		}
+	}
+	return nil
+}
+
+// resolveNamespaceLimit returns the effective namespace limit for a user.
+// Priority: per-user MaxNamespaces > global system setting > hardcoded default.
+func (s *NamespaceService) resolveNamespaceLimit(ctx context.Context, userID uuid.UUID) (int, error) {
+	user, err := s.users.GetByID(ctx, userID)
+	if err != nil {
+		log.Ctx(ctx).Warn().Err(err).Msg("could not fetch user for namespace limit; using global default")
+		return s.globalNamespaceLimit(ctx), nil
+	}
+	if user.MaxNamespaces != nil {
+		return *user.MaxNamespaces, nil
+	}
+	return s.globalNamespaceLimit(ctx), nil
+}
+
+// globalNamespaceLimit returns the global max_namespaces_per_user setting, or the default.
+func (s *NamespaceService) globalNamespaceLimit(ctx context.Context) int {
+	if setting, err := s.systemSettings.Get(ctx, model.SettingMaxNamespacesPerUser); err == nil {
+		var v int
+		if json.Unmarshal(setting.Value, &v) == nil && v >= 0 {
+			return v
+		}
+	}
+	return model.DefaultMaxNamespacesPerUser
+}
+
+// ResolveEffectiveLimit returns the effective namespace limit for the given auth info.
+// Admins get 0 (unlimited).
+func (s *NamespaceService) ResolveEffectiveLimit(ctx context.Context, info *model.AuthInfo) (int, error) {
+	if info.GlobalRole == model.RoleAdmin {
+		return 0, nil
+	}
+	return s.resolveNamespaceLimit(ctx, info.UserID)
+}
+
+// CountOwnedByUser returns the number of namespaces owned by the given user.
+func (s *NamespaceService) CountOwnedByUser(ctx context.Context, userID uuid.UUID) (int, error) {
+	return s.members.CountOwnedByUser(ctx, userID)
 }
 
 func isValidNamespaceRole(role string) bool {

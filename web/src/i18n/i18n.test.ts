@@ -45,11 +45,21 @@ const SAME_VALUE_ALLOWED = new Set([
   'milestones.timeEstimated',
   'milestones.timeSpent',
   'milestones.timeProgress',
+  'namespaces.limitCounter',
   'projects.limitCounter',
   'projects.overview.range_24h',
   'projects.overview.range_3d',
   'projects.overview.range_7d',
   'sla.mode24x7',
+
+  // Namespace limit keys (English placeholders in non-English files)
+  'admin.general.namespaceLimit.title',
+  'admin.general.namespaceLimit.label',
+  'admin.general.namespaceLimit.help',
+  'admin.general.namespaceLimit.saved',
+  'admin.users.maxNamespacesDefault',
+  'admin.users.maxNamespacesHelp',
+  'namespaces.limitReached',
 
   // Technical terms / loanwords commonly kept in target languages
   'activity.fields.description',

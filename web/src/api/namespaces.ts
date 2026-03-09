@@ -24,11 +24,21 @@ interface DataResponse<T> {
   data: T
 }
 
+export interface NamespaceListResult {
+  namespaces: Namespace[]
+  ownedNamespaceCount: number
+  maxNamespaces: number
+}
+
 // --- Namespace CRUD ---
 
-export async function listNamespaces(): Promise<Namespace[]> {
-  const res = await api.get<DataResponse<Namespace[]>>('/namespaces')
-  return res.data.data
+export async function listNamespaces(): Promise<NamespaceListResult> {
+  const res = await api.get<{ data: Namespace[]; meta?: { owned_namespace_count?: number; max_namespaces?: number } }>('/namespaces')
+  return {
+    namespaces: res.data.data,
+    ownedNamespaceCount: res.data.meta?.owned_namespace_count ?? 0,
+    maxNamespaces: res.data.meta?.max_namespaces ?? 0,
+  }
 }
 
 export async function getNamespace(slug: string): Promise<Namespace> {

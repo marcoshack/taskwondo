@@ -108,6 +108,10 @@ func (m *mockAdminUserRepo) UpdateMaxProjects(_ context.Context, id uuid.UUID, m
 	return nil
 }
 
+func (m *mockAdminUserRepo) UpdateMaxNamespaces(_ context.Context, _ uuid.UUID, _ *int) error {
+	return nil
+}
+
 type mockAdminProjectRepo struct {
 	byID map[uuid.UUID]*model.Project
 }

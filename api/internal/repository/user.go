@@ -23,7 +23,7 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*model.User, error) {
 	row := r.db.QueryRowContext(ctx,
 		`SELECT id, email, display_name, password_hash, global_role, avatar_url,
-		        is_active, force_password_change, max_projects, last_login_at, created_at, updated_at
+		        is_active, force_password_change, max_projects, max_namespaces, last_login_at, created_at, updated_at
 		 FROM users WHERE email = $1`, email)
 
 	return scanUser(row)
@@ -33,7 +33,7 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*model.U
 func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.User, error) {
 	row := r.db.QueryRowContext(ctx,
 		`SELECT id, email, display_name, password_hash, global_role, avatar_url,
-		        is_active, force_password_change, max_projects, last_login_at, created_at, updated_at
+		        is_active, force_password_change, max_projects, max_namespaces, last_login_at, created_at, updated_at
 		 FROM users WHERE id = $1`, id)
 
 	return scanUser(row)
@@ -97,7 +97,7 @@ func (r *UserRepository) Search(ctx context.Context, query string) ([]model.User
 	q := "%" + query + "%"
 	rows, err := r.db.QueryContext(ctx,
 		`SELECT id, email, display_name, password_hash, global_role, avatar_url,
-		        is_active, force_password_change, max_projects, last_login_at, created_at, updated_at
+		        is_active, force_password_change, max_projects, max_namespaces, last_login_at, created_at, updated_at
 		 FROM users
 		 WHERE is_active = true
 		   AND (email ILIKE $1 OR display_name ILIKE $1)
@@ -114,10 +114,11 @@ func (r *UserRepository) Search(ctx context.Context, query string) ([]model.User
 		var passwordHash sql.NullString
 		var avatarURL sql.NullString
 		var maxProjects sql.NullInt32
+		var maxNamespaces sql.NullInt32
 		var lastLoginAt sql.NullTime
 		if err := rows.Scan(
 			&u.ID, &u.Email, &u.DisplayName, &passwordHash, &u.GlobalRole,
-			&avatarURL, &u.IsActive, &u.ForcePasswordChange, &maxProjects, &lastLoginAt, &u.CreatedAt, &u.UpdatedAt,
+			&avatarURL, &u.IsActive, &u.ForcePasswordChange, &maxProjects, &maxNamespaces, &lastLoginAt, &u.CreatedAt, &u.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scanning user row: %w", err)
 		}
@@ -127,6 +128,10 @@ func (r *UserRepository) Search(ctx context.Context, query string) ([]model.User
 		if maxProjects.Valid {
 			v := int(maxProjects.Int32)
 			u.MaxProjects = &v
+		}
+		if maxNamespaces.Valid {
+			v := int(maxNamespaces.Int32)
+			u.MaxNamespaces = &v
 		}
 		if lastLoginAt.Valid {
 			u.LastLoginAt = &lastLoginAt.Time
@@ -140,7 +145,7 @@ func (r *UserRepository) Search(ctx context.Context, query string) ([]model.User
 func (r *UserRepository) ListAll(ctx context.Context) ([]model.User, error) {
 	rows, err := r.db.QueryContext(ctx,
 		`SELECT id, email, display_name, password_hash, global_role, avatar_url,
-		        is_active, force_password_change, max_projects, last_login_at, created_at, updated_at
+		        is_active, force_password_change, max_projects, max_namespaces, last_login_at, created_at, updated_at
 		 FROM users
 		 ORDER BY display_name ASC`)
 	if err != nil {
@@ -154,10 +159,11 @@ func (r *UserRepository) ListAll(ctx context.Context) ([]model.User, error) {
 		var passwordHash sql.NullString
 		var avatarURL sql.NullString
 		var maxProjects sql.NullInt32
+		var maxNamespaces sql.NullInt32
 		var lastLoginAt sql.NullTime
 		if err := rows.Scan(
 			&u.ID, &u.Email, &u.DisplayName, &passwordHash, &u.GlobalRole,
-			&avatarURL, &u.IsActive, &u.ForcePasswordChange, &maxProjects, &lastLoginAt, &u.CreatedAt, &u.UpdatedAt,
+			&avatarURL, &u.IsActive, &u.ForcePasswordChange, &maxProjects, &maxNamespaces, &lastLoginAt, &u.CreatedAt, &u.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scanning user row: %w", err)
 		}
@@ -167,6 +173,10 @@ func (r *UserRepository) ListAll(ctx context.Context) ([]model.User, error) {
 		if maxProjects.Valid {
 			v := int(maxProjects.Int32)
 			u.MaxProjects = &v
+		}
+		if maxNamespaces.Valid {
+			v := int(maxNamespaces.Int32)
+			u.MaxNamespaces = &v
 		}
 		if lastLoginAt.Valid {
 			u.LastLoginAt = &lastLoginAt.Time
@@ -234,6 +244,28 @@ func (r *UserRepository) UpdateMaxProjects(ctx context.Context, id uuid.UUID, ma
 	return nil
 }
 
+// UpdateMaxNamespaces sets or clears the per-user namespace limit.
+func (r *UserRepository) UpdateMaxNamespaces(ctx context.Context, id uuid.UUID, maxNamespaces *int) error {
+	var val sql.NullInt32
+	if maxNamespaces != nil {
+		val = sql.NullInt32{Int32: int32(*maxNamespaces), Valid: true}
+	}
+	result, err := r.db.ExecContext(ctx,
+		`UPDATE users SET max_namespaces = $1, updated_at = now() WHERE id = $2`,
+		val, id)
+	if err != nil {
+		return fmt.Errorf("updating max_namespaces: %w", err)
+	}
+	n, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("checking rows affected: %w", err)
+	}
+	if n == 0 {
+		return model.ErrNotFound
+	}
+	return nil
+}
+
 // CountByRole returns the number of users with a given global role.
 func (r *UserRepository) CountByRole(ctx context.Context, role string) (int, error) {
 	var count int
@@ -268,11 +300,12 @@ func scanUser(row *sql.Row) (*model.User, error) {
 	var passwordHash sql.NullString
 	var avatarURL sql.NullString
 	var maxProjects sql.NullInt32
+	var maxNamespaces sql.NullInt32
 	var lastLoginAt sql.NullTime
 
 	err := row.Scan(
 		&u.ID, &u.Email, &u.DisplayName, &passwordHash, &u.GlobalRole,
-		&avatarURL, &u.IsActive, &u.ForcePasswordChange, &maxProjects, &lastLoginAt, &u.CreatedAt, &u.UpdatedAt,
+		&avatarURL, &u.IsActive, &u.ForcePasswordChange, &maxProjects, &maxNamespaces, &lastLoginAt, &u.CreatedAt, &u.UpdatedAt,
 	)
 	if err == sql.ErrNoRows {
 		return nil, model.ErrNotFound
@@ -288,6 +321,10 @@ func scanUser(row *sql.Row) (*model.User, error) {
 	if maxProjects.Valid {
 		v := int(maxProjects.Int32)
 		u.MaxProjects = &v
+	}
+	if maxNamespaces.Valid {
+		v := int(maxNamespaces.Int32)
+		u.MaxNamespaces = &v
 	}
 	if lastLoginAt.Valid {
 		u.LastLoginAt = &lastLoginAt.Time

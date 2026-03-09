@@ -190,6 +190,10 @@ func (r *mockNamespaceMemberRepo) CountByRole(_ context.Context, nsID uuid.UUID,
 	return count, nil
 }
 
+func (r *mockNamespaceMemberRepo) CountOwnedByUser(_ context.Context, _ uuid.UUID) (int, error) {
+	return 0, nil
+}
+
 type mockNamespaceProjectRepo struct {
 	projects []model.Project
 }

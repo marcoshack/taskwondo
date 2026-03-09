@@ -133,6 +133,18 @@ func (r *NamespaceMemberRepository) RemoveAllByNamespace(ctx context.Context, na
 	return nil
 }
 
+// CountOwnedByUser returns the number of namespaces where the given user is an owner.
+func (r *NamespaceMemberRepository) CountOwnedByUser(ctx context.Context, userID uuid.UUID) (int, error) {
+	var count int
+	err := r.db.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM namespace_members WHERE user_id = $1 AND role = 'owner'`,
+		userID).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("counting namespaces owned by user: %w", err)
+	}
+	return count, nil
+}
+
 // CountByRole returns the number of members with a given role in a namespace.
 func (r *NamespaceMemberRepository) CountByRole(ctx context.Context, namespaceID uuid.UUID, role string) (int, error) {
 	var count int

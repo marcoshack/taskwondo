@@ -618,6 +618,11 @@
   "admin.general.projectLimit.help": "Default limit for non-admin users. Set to 0 for unlimited. Admins are always exempt. Override per user in the list below.",
   "admin.general.projectLimit.saved": "Project limit saved.",
 
+  "admin.general.namespaceLimit.title": "Namespace Limits",
+  "admin.general.namespaceLimit.label": "Max namespaces per user",
+  "admin.general.namespaceLimit.help": "Default limit for non-admin users. Set to 0 for unlimited. Admins are always exempt. Override per user in the list below.",
+  "admin.general.namespaceLimit.saved": "Namespace limit saved.",
+
   "admin.users.title": "Users",
   "admin.users.description": "Manage user accounts, roles, and project access.",
   "admin.users.name": "Name",
@@ -650,6 +655,8 @@
   "admin.users.updateError": "Failed to update user.",
   "admin.users.maxProjectsDefault": "default",
   "admin.users.maxProjectsHelp": "Per-user project limit. Empty = default, 0 = unlimited.",
+  "admin.users.maxNamespacesDefault": "default",
+  "admin.users.maxNamespacesHelp": "Per-user namespace limit. Empty = default, 0 = unlimited.",
   "admin.users.alreadyMember": "User is already a member of this project.",
 
   "admin.users.disableConfirmTitle": "Disable User",
@@ -1120,6 +1127,8 @@
   "namespaces.deleteConfirmType": "Type <bold>{{slug}}</bold> to confirm:",
   "namespaces.deleteConfirmButton": "Delete namespace",
   "namespaces.createError": "Failed to create namespace.",
+  "namespaces.limitCounter": "{{count}}/{{limit}}",
+  "namespaces.limitReached": "Namespace ownership limit reached. Contact an administrator to increase your limit.",
   "namespaces.updateError": "Failed to update namespace.",
   "namespaces.deleteError": "Failed to delete namespace.",
   "namespaces.removeMemberConfirmTitle": "Remove Member",

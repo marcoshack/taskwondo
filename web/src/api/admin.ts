@@ -8,6 +8,7 @@ export interface AdminUser {
   avatar_url?: string
   is_active: boolean
   max_projects?: number | null
+  max_namespaces?: number | null
   force_password_change: boolean
   last_login_at?: string
   created_at: string
@@ -27,7 +28,7 @@ export async function listUsers() {
   return res.data.data
 }
 
-export async function updateUser(userId: string, input: { global_role?: string; is_active?: boolean; max_projects?: number }) {
+export async function updateUser(userId: string, input: { global_role?: string; is_active?: boolean; max_projects?: number; max_namespaces?: number }) {
   const res = await api.patch<{ data: AdminUser }>(`/admin/users/${userId}`, input)
   return res.data.data
 }

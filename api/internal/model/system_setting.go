@@ -8,7 +8,8 @@ import (
 
 // Well-known system setting keys.
 const (
-	SettingMaxProjectsPerUser   = "max_projects_per_user"
+	SettingMaxProjectsPerUser    = "max_projects_per_user"
+	SettingMaxNamespacesPerUser = "max_namespaces_per_user"
 	SettingDefaultTypeWorkflows = "default_type_workflows"
 	SettingSMTPConfig           = "smtp_config"
 
@@ -140,6 +141,9 @@ func OAuthEnabledToConfigKey(enabledKey string) string {
 
 // DefaultMaxProjectsPerUser is the fallback when the setting is not configured.
 const DefaultMaxProjectsPerUser = 5
+
+// DefaultMaxNamespacesPerUser is the fallback when the setting is not configured.
+const DefaultMaxNamespacesPerUser = 1
 
 // SystemSetting stores a global key-value setting (not scoped to any user or project).
 type SystemSetting struct {
