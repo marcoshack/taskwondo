@@ -260,23 +260,23 @@ test.describe('Inbox', () => {
     await waitForPageReady(page);
 
     // Should be on inbox page
-    await expect(page).toHaveURL(/\/d\/inbox/);
+    await expect(page).toHaveURL(/\/user\/inbox/);
 
     // Click Feed in sidebar
     const sidebar = page.locator('nav.hidden.sm\\:block');
     await sidebar.getByText('Feed').click();
-    await expect(page).toHaveURL(/\/d\/feed/);
+    await expect(page).toHaveURL(/\/user\/feed/);
     await expect(page.getByText('Feeds coming soon')).toBeVisible();
 
     // Click Watchlist in sidebar
     await sidebar.getByText('Watchlist').click();
-    await expect(page).toHaveURL(/\/d\/watchlist/);
+    await expect(page).toHaveURL(/\/user\/watchlist/);
     // Watchlist is now a real page — verify the heading or empty state is visible
     await expect(page.getByText('Watchlist').first()).toBeVisible();
 
     // Click Inbox in sidebar to go back
     await sidebar.getByText('Inbox').click();
-    await expect(page).toHaveURL(/\/d\/inbox/);
+    await expect(page).toHaveURL(/\/user\/inbox/);
   });
 
   test('sidebar collapse and expand', async ({ page }) => {
@@ -530,7 +530,7 @@ test.describe('Inbox', () => {
 
     // Click back to inbox
     await backLink.click();
-    await expect(page).toHaveURL(/\/d\/inbox/, { timeout: 10000 });
+    await expect(page).toHaveURL(/\/user\/inbox/, { timeout: 10000 });
   });
 
   test('mobile edit mode toggle shows and hides card controls', async ({ request, testUser, testProject, page }) => {

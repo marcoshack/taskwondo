@@ -32,9 +32,6 @@ test.describe('Namespace Feature Toggle', () => {
   test('enabling namespaces via admin features toggle', async ({ page, request }, testInfo) => {
     const adminToken = getAdminToken();
 
-    // Ensure namespaces are disabled before testing the toggle
-    await api.disableNamespaces(request, adminToken);
-
     // Navigate to the admin features page
     await page.goto('/admin/features');
     await page.waitForLoadState('networkidle');
@@ -43,7 +40,13 @@ test.describe('Namespace Feature Toggle', () => {
     const namespacesSection = page.locator('div').filter({ hasText: /^Namespaces/ }).first();
     const toggle = namespacesSection.locator('button[role="switch"]');
 
-    // Toggle should be off
+    // Ensure toggle is off — if already on (parallel test enabled it), turn off via UI first
+    if (await toggle.getAttribute('aria-checked') === 'true') {
+      await toggle.click();
+      await page.waitForResponse(resp =>
+        resp.url().includes('/settings/public') && resp.status() === 200,
+      );
+    }
     await expect(toggle).toHaveAttribute('aria-checked', 'false');
     await attach(page, testInfo, '00-toggle-off');
 
@@ -150,8 +153,8 @@ test.describe('Namespace Frontend UI', () => {
     await page.goto(`/${slug}/settings`);
     await page.waitForLoadState('networkidle');
 
-    // Should see settings page content
-    await expect(page.getByText('Settings Test NS').or(page.getByText('Namespace Settings', { exact: false }))).toBeVisible();
+    // Should see settings page heading
+    await expect(page.getByRole('heading', { name: 'Namespace Settings' })).toBeVisible();
 
     await attach(page, testInfo, '05-settings-page');
 

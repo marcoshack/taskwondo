@@ -59,7 +59,7 @@ test.describe('Mobile hamburger menu', () => {
     const dropdown = page.locator('.fixed.inset-0.z-40');
     await dropdown.getByText('Inbox').click();
 
-    await expect(page).toHaveURL(/\/d\/inbox/, { timeout: 5000 });
+    await expect(page).toHaveURL(/\/user\/inbox/, { timeout: 5000 });
   });
 
   test('hamburger menu closes when clicking outside', async ({ page }) => {
