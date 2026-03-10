@@ -4,14 +4,21 @@ A self-hosted, open-source project management and issue tracking platform. Kanba
 
 ## Screenshots
 
-![Project Overview](docs/screenshots/taskwondo-project-overview.png)
+<p align="center">
+  <img src="docs/screenshots/taskwondo-project-overview.png" width="46%" />
+  <img src="docs/screenshots/taskwondo-workitems.png" width="46%" />
+  <img src="docs/screenshots/taskwondo-milestone-dashboard.png" width="46%" />
+  <img src="docs/screenshots/taskwondo-systemsettings-authentication.png" width="46%" />
+</p>
 
-![Work Items](docs/screenshots/taskwondo-workitems.png)
 
 <p align="center">
-  <img src="docs/screenshots/taskwondo-mobile-items.png" width="33%" />
-  <img src="docs/screenshots/taskwondo-mobile-milestones.png" width="33%" />
-  <img src="docs/screenshots/taskwondo-mobile-workflows.png" width="33%" />
+  <img src="docs/screenshots/taskwondo-mobile-project_overview.png" width="15%" />
+  <img src="docs/screenshots/taskwondo-mobile-items.png" width="15%" />
+  <img src="docs/screenshots/taskwondo-mobile-item-activities.png" width="15%" />
+  <img src="docs/screenshots/taskwondo-mobile-milestones.png" width="15%" />
+  <img src="docs/screenshots/taskwondo-mobile-milestones-details.png" width="15%" />
+  <img src="docs/screenshots/taskwondo-mobile-workflows.png" width="15%" />
 </p>
 
 See [more screenshots](docs/overview.md) for a full walkthrough of features.
