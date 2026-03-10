@@ -24,15 +24,20 @@ test.describe('Board View Scroll Chevrons', () => {
     // Click the Board toggle if not already active
     const boardBtn = page.getByRole('button', { name: /Board/i });
     await boardBtn.click();
-    await page.waitForTimeout(500);
+
+    // Wait for board columns to render (statuses load via chained API calls)
+    await page.waitForFunction(() => {
+      const el = document.querySelector('[class*="overflow-x-auto"]');
+      return el && el.scrollWidth > el.clientWidth;
+    }, null, { timeout: 15000 });
 
     // The board scroll container should exist
     const scrollContainer = page.locator('[class*="overflow-x-auto"]').first();
-    await expect(scrollContainer).toBeVisible({ timeout: 5000 });
+    await expect(scrollContainer).toBeVisible();
 
     // Right chevron should be visible (columns overflow to the right)
     const rightChevron = page.getByRole('button', { name: /Scroll to next status column/i });
-    await expect(rightChevron).toBeVisible({ timeout: 5000 });
+    await expect(rightChevron).toBeVisible({ timeout: 10000 });
     await testInfo.attach('01-right-chevron-visible', {
       body: await page.screenshot(),
       contentType: 'image/png',

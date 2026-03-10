@@ -40,9 +40,9 @@ test.describe('Project Limit', () => {
     // Close the modal
     await page.keyboard.press('Escape');
 
-    // Create projects via API up to the limit
+    // Create projects via API up to the limit (use longer suffix to avoid key collisions)
     for (let i = 0; i < PROJECT_LIMIT; i++) {
-      const suffix = randomUUID().slice(0, 2).toUpperCase();
+      const suffix = randomUUID().slice(0, 4).toUpperCase();
       await api.createProject(request, testUser.token, `T${suffix}`, `Test Project ${i + 1}`);
     }
 

@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   listWorkflows,
@@ -15,6 +16,7 @@ import {
   listAvailableStatuses,
   type CreateWorkflowInput,
   type UpdateWorkflowInput,
+  type WorkflowTransition,
 } from '@/api/workflows'
 import { useProject, useTypeWorkflows } from './useProjects'
 
@@ -43,14 +45,15 @@ export function useTransitionsMap(workflowId: string) {
 
 /**
  * Resolves the effective workflow for a project and optional work item type.
- * Priority: type-specific mapping > project default > first global default.
+ * Uses project-level endpoints accessible to all project members.
+ * Priority: type-specific mapping > project default > first available default.
  */
 export function useProjectWorkflow(projectKey: string, workItemType?: string) {
   const { data: project } = useProject(projectKey)
-  const { data: allWorkflows } = useWorkflows()
+  const { data: projectWorkflows } = useProjectWorkflows(projectKey)
   const { data: typeWorkflows } = useTypeWorkflows(projectKey)
 
-  // Resolve workflow ID: type-specific > project default > first global default
+  // Resolve workflow ID: type-specific > project default > first available default
   let workflowId = ''
   if (workItemType && typeWorkflows) {
     const mapping = typeWorkflows.find((tw) => tw.work_item_type === workItemType)
@@ -58,18 +61,29 @@ export function useProjectWorkflow(projectKey: string, workItemType?: string) {
   }
   if (!workflowId) {
     workflowId = project?.default_workflow_id
-      ?? allWorkflows?.find((w) => w.is_default)?.id
+      ?? projectWorkflows?.find((w) => w.is_default)?.id
       ?? ''
   }
 
-  const workflowQuery = useWorkflow(workflowId)
-  const transitionsQuery = useTransitionsMap(workflowId)
+  // Fetch workflow detail via project-level endpoint (includes statuses + transitions)
+  const workflowQuery = useProjectWorkflowDetail(projectKey, workflowId)
+
+  // Build transitions map from workflow detail
+  const transitionsMap = useMemo(() => {
+    if (!workflowQuery.data?.transitions) return undefined
+    const map: Record<string, WorkflowTransition[]> = {}
+    for (const t of workflowQuery.data.transitions) {
+      if (!map[t.from_status]) map[t.from_status] = []
+      map[t.from_status].push(t)
+    }
+    return map
+  }, [workflowQuery.data?.transitions])
 
   return {
     workflowId,
     workflow: workflowQuery.data,
     statuses: workflowQuery.data?.statuses ?? [],
-    transitionsMap: transitionsQuery.data,
+    transitionsMap,
   }
 }
 

@@ -2,6 +2,10 @@ import { test as base, expect, test as userTest } from '../../lib/fixtures';
 import { getAdminToken } from '../../lib/fixtures';
 import * as api from '../../lib/api';
 
+// Tests in this file share mutable global state (namespaces_enabled setting)
+// so they must run serially to avoid race conditions.
+base.describe.configure({ mode: 'serial' });
+
 // Admin context — namespace management requires admin role
 const test = base.extend({
   storageState: async ({}, use) => {
@@ -37,7 +41,10 @@ test.describe('Namespace Feature Toggle', () => {
   test('enabling namespaces via admin features toggle', async ({ page, request }, testInfo) => {
     const adminToken = getAdminToken();
 
-    // Navigate to the admin features page
+    // Ensure namespaces are disabled via API, then navigate to pick up the new state
+    await api.disableNamespaces(request, adminToken);
+
+    // Navigate to the admin features page (fresh load picks up API state)
     await page.goto('/admin/features');
     await page.waitForLoadState('networkidle');
 
@@ -45,12 +52,10 @@ test.describe('Namespace Feature Toggle', () => {
     const namespacesSection = page.locator('div').filter({ hasText: /^Namespaces/ }).first();
     const toggle = namespacesSection.locator('button[role="switch"]');
 
-    // Ensure toggle is off — if already on (parallel test enabled it), turn off via UI first
+    // If a parallel test re-enabled namespaces between our API call and page load, turn it off via UI
     if (await toggle.getAttribute('aria-checked') === 'true') {
       await toggle.click();
-      await page.waitForResponse(resp =>
-        resp.url().includes('/settings/public') && resp.status() === 200,
-      );
+      await expect(toggle).toHaveAttribute('aria-checked', 'false', { timeout: 10000 });
     }
     await expect(toggle).toHaveAttribute('aria-checked', 'false');
     await attach(page, testInfo, '00-toggle-off');
@@ -58,13 +63,8 @@ test.describe('Namespace Feature Toggle', () => {
     // Click to enable
     await toggle.click();
 
-    // Wait for the setting to be saved and refetched
-    await page.waitForResponse(resp =>
-      resp.url().includes('/settings/public') && resp.status() === 200,
-    );
-
     // Toggle should now be on
-    await expect(toggle).toHaveAttribute('aria-checked', 'true');
+    await expect(toggle).toHaveAttribute('aria-checked', 'true', { timeout: 10000 });
     await attach(page, testInfo, '00-toggle-on');
 
     // Verify the feature actually works: create a namespace via API
@@ -133,11 +133,9 @@ test.describe('Namespace Frontend UI', () => {
 
     await attach(page, testInfo, '03-create-form-filled');
 
-    // Submit
+    // Submit and wait for navigation to the namespace settings page
     await dialog.getByRole('button', { name: /^create$/i }).click();
-
-    // After creation the app navigates to the namespace settings page
-    await page.waitForURL(new RegExp(`/${createSlug}/`));
+    await page.waitForURL(new RegExp(`/${createSlug}/settings`), { timeout: 15000 });
     await page.waitForLoadState('networkidle');
 
     // Verify the namespace was created via API

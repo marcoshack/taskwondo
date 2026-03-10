@@ -505,7 +505,12 @@ test.describe('Watchers', () => {
     const boardBtn = page.getByRole('button', { name: /board/i });
     await expect(boardBtn).toBeVisible({ timeout: 5000 });
     await boardBtn.click();
-    await page.waitForTimeout(500);
+
+    // Wait for board columns to render (statuses load via chained API calls)
+    await page.waitForFunction(() => {
+      const el = document.querySelector('[class*="overflow-x-auto"]');
+      return el && el.children.length > 0;
+    }, null, { timeout: 15000 });
 
     // Board view should still show the item
     await expect(page.getByText('Watchlist view toggle item').first()).toBeVisible({ timeout: 10000 });
@@ -513,10 +518,9 @@ test.describe('Watchers', () => {
     // Switch back to list
     const listBtn = page.getByRole('button', { name: /list/i });
     await listBtn.click();
-    await page.waitForTimeout(500);
 
     // Item should still be visible in list view
-    await expect(page.getByText('Watchlist view toggle item').first()).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Watchlist view toggle item').first()).toBeVisible({ timeout: 10000 });
   });
 
   test('watchlist page column sorting works', async ({ request, testUser, testProject, page }) => {

@@ -6,7 +6,7 @@ import { useParams, useNavigate, useLocation, useSearchParams } from 'react-rout
 import { Trans, useTranslation } from 'react-i18next'
 import { useWorkItem, useUpdateWorkItem, useDeleteWorkItem, useUploadAttachment, useAttachments } from '@/hooks/useWorkItems'
 import { useProject, useMembers, useTypeWorkflows } from '@/hooks/useProjects'
-import { useProjectWorkflow, useWorkflows } from '@/hooks/useWorkflows'
+import { useProjectWorkflow, useProjectWorkflows } from '@/hooks/useWorkflows'
 import { useMilestones } from '@/hooks/useMilestones'
 import { Spinner } from '@/components/ui/Spinner'
 import { Button } from '@/components/ui/Button'
@@ -56,7 +56,7 @@ export function WorkItemDetailPage() {
   const { data: project } = useProject(projectKey ?? '')
   const { data: members } = useMembers(projectKey ?? '')
   const { data: typeWorkflows } = useTypeWorkflows(projectKey ?? '')
-  const { data: allWorkflows } = useWorkflows()
+  const { data: allWorkflows } = useProjectWorkflows(projectKey ?? '')
   const { data: milestones } = useMilestones(projectKey ?? '')
   const { user } = useAuth()
   const updateMutation = useUpdateWorkItem(projectKey ?? '')
