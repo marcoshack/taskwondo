@@ -25,7 +25,7 @@ docker run --rm -v "$(pwd)/test/e2e:/e2e" alpine sh -c "rm -rf /e2e/test-results
 
 # Build all images
 echo "==> Building images..."
-$COMPOSE build
+$COMPOSE build --no-cache
 
 # Start the stack in detached mode, then wait for playwright to finish.
 # We can't use --exit-code-from because --abort-on-container-exit (implied)
