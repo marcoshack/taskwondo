@@ -20,23 +20,56 @@ interface Props {
   projectKey: string
 }
 
-const RANGES: StatsRange[] = ['24h', '3d', '7d']
+const PRESETS: StatsRange[] = ['24h', '3d', '7d']
 
 function useDarkMode() {
   // Check if dark class is on html element
   return document.documentElement.classList.contains('dark')
 }
 
+function parseRange(range_: string): { value: number; unit: 'h' | 'd' } {
+  const m = range_.match(/^(\d+)([hd])$/)
+  if (!m) return { value: 7, unit: 'd' }
+  return { value: parseInt(m[1], 10), unit: m[2] as 'h' | 'd' }
+}
+
 export function StatsTimelineChart({ projectKey }: Props) {
   const { t } = useTranslation()
   const { data: publicSettings } = usePublicSettings()
   const [range_, setRange] = useState<StatsRange>('7d')
+  const [customValue, setCustomValue] = useState('14')
+  const [customUnit, setCustomUnit] = useState<'h' | 'd'>('d')
+  const [isCustomActive, setIsCustomActive] = useState(false)
   const { data: points, isLoading } = useStatsTimeline(projectKey, range_)
   const isDark = useDarkMode()
 
   // Feature toggle: hidden when explicitly disabled
   const featureEnabled = publicSettings?.feature_stats_timeline !== false
   if (!featureEnabled) return null
+
+  const handlePreset = (r: StatsRange) => {
+    setRange(r)
+    setIsCustomActive(false)
+  }
+
+  const applyCustomRange = (value: string, unit: 'h' | 'd') => {
+    const n = parseInt(value, 10)
+    if (isNaN(n) || n < 1) return
+    const maxVal = unit === 'd' ? 365 : 8760
+    if (n > maxVal) return
+    setRange(`${n}${unit}`)
+    setIsCustomActive(true)
+  }
+
+  const handleCustomValueChange = (value: string) => {
+    setCustomValue(value)
+    applyCustomRange(value, customUnit)
+  }
+
+  const handleCustomUnitChange = (unit: 'h' | 'd') => {
+    setCustomUnit(unit)
+    applyCustomRange(customValue, unit)
+  }
 
   const chartData = useMemo(() => {
     if (!points || points.length === 0) return []
@@ -72,13 +105,13 @@ export function StatsTimelineChart({ projectKey }: Props) {
         <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
           {t('projects.overview.activity')}
         </h2>
-        <div className="flex gap-1">
-          {RANGES.map((r) => (
+        <div className="flex items-center gap-1">
+          {PRESETS.map((r) => (
             <button
               key={r}
-              onClick={() => setRange(r)}
+              onClick={() => handlePreset(r)}
               className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
-                range_ === r
+                range_ === r && !isCustomActive
                   ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300'
                   : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
               }`}
@@ -86,6 +119,39 @@ export function StatsTimelineChart({ projectKey }: Props) {
               {t(`projects.overview.range_${r}`)}
             </button>
           ))}
+          <span className="mx-1 text-gray-300 dark:text-gray-600">|</span>
+          <div className={`flex items-center gap-1 rounded-md px-1.5 py-0.5 ${
+            isCustomActive
+              ? 'bg-indigo-100 dark:bg-indigo-900/40'
+              : ''
+          }`}>
+            <input
+              type="number"
+              min={1}
+              max={customUnit === 'd' ? 365 : 8760}
+              value={customValue}
+              onChange={(e) => handleCustomValueChange(e.target.value)}
+              className={`w-12 text-xs font-medium text-center border rounded px-1 py-0.5 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 ${
+                isCustomActive
+                  ? 'text-indigo-700 dark:text-indigo-300'
+                  : 'text-gray-500 dark:text-gray-400'
+              }`}
+              data-testid="custom-range-value"
+            />
+            <select
+              value={customUnit}
+              onChange={(e) => handleCustomUnitChange(e.target.value as 'h' | 'd')}
+              className={`text-xs font-medium border rounded px-1 py-0.5 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 ${
+                isCustomActive
+                  ? 'text-indigo-700 dark:text-indigo-300'
+                  : 'text-gray-500 dark:text-gray-400'
+              }`}
+              data-testid="custom-range-unit"
+            >
+              <option value="h">{t('projects.overview.customRangeHours')}</option>
+              <option value="d">{t('projects.overview.customRangeDays')}</option>
+            </select>
+          </div>
         </div>
       </div>
       <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
@@ -144,11 +210,14 @@ export function StatsTimelineChart({ projectKey }: Props) {
   )
 }
 
-function formatTime(date: Date, range_: StatsRange): string {
-  if (range_ === '24h') {
+function formatTime(date: Date, range_: string): string {
+  const { value, unit } = parseRange(range_)
+  const totalHours = unit === 'h' ? value : value * 24
+
+  if (totalHours <= 24) {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   }
-  if (range_ === '3d') {
+  if (totalHours <= 72) {
     return `${date.toLocaleDateString([], { month: 'short', day: 'numeric' })} ${date.toLocaleTimeString([], { hour: '2-digit' })}`
   }
   return date.toLocaleDateString([], { month: 'short', day: 'numeric' })

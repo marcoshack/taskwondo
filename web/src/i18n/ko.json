@@ -531,6 +531,8 @@
   "projects.overview.range_24h": "24시간",
   "projects.overview.range_3d": "3일",
   "projects.overview.range_7d": "7일",
+  "projects.overview.customRangeHours": "시간",
+  "projects.overview.customRangeDays": "일",
   "projects.overview.seriesCancelled": "취소됨",
   "projects.overview.seriesDone": "완료",
   "projects.overview.seriesInProgress": "진행 중",

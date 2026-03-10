@@ -21,7 +21,7 @@ type mockStatsRepo struct {
 	snapshots []model.ProjectStatsSnapshot
 }
 
-func (m *mockStatsRepo) Timeline(_ context.Context, projectID uuid.UUID, since time.Time) ([]model.ProjectStatsSnapshot, error) {
+func (m *mockStatsRepo) Timeline(_ context.Context, projectID uuid.UUID, since time.Time, daily bool) ([]model.ProjectStatsSnapshot, error) {
 	var result []model.ProjectStatsSnapshot
 	for _, s := range m.snapshots {
 		if s.ProjectID == projectID && !s.CapturedAt.Before(since) {
@@ -122,10 +122,27 @@ func TestStatsHandler_Timeline_DefaultRange(t *testing.T) {
 	}
 }
 
-func TestStatsHandler_Timeline_InvalidRange(t *testing.T) {
+func TestStatsHandler_Timeline_CustomRange(t *testing.T) {
 	h, _, info, projectKey := statsTestSetup(t)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/default/projects/"+projectKey+"/stats/timeline?range=30d", nil)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", projectKey)
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), info))
+	w := httptest.NewRecorder()
+
+	h.Timeline(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 for custom range 30d, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestStatsHandler_Timeline_InvalidRange(t *testing.T) {
+	h, _, info, projectKey := statsTestSetup(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/default/projects/"+projectKey+"/stats/timeline?range=abc", nil)
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))

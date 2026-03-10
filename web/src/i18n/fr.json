@@ -531,6 +531,8 @@
   "projects.overview.range_24h": "24h",
   "projects.overview.range_3d": "3j",
   "projects.overview.range_7d": "7j",
+  "projects.overview.customRangeHours": "heures",
+  "projects.overview.customRangeDays": "jours",
   "projects.overview.seriesCancelled": "Annulé",
   "projects.overview.seriesDone": "Terminé",
   "projects.overview.seriesInProgress": "En cours",

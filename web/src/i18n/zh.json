@@ -531,6 +531,8 @@
   "projects.overview.range_24h": "24小时",
   "projects.overview.range_3d": "3天",
   "projects.overview.range_7d": "7天",
+  "projects.overview.customRangeHours": "小时",
+  "projects.overview.customRangeDays": "天",
   "projects.overview.seriesCancelled": "已取消",
   "projects.overview.seriesDone": "已完成",
   "projects.overview.seriesInProgress": "进行中",

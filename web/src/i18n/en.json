@@ -197,6 +197,8 @@
   "projects.overview.range_24h": "24h",
   "projects.overview.range_3d": "3d",
   "projects.overview.range_7d": "7d",
+  "projects.overview.customRangeHours": "hours",
+  "projects.overview.customRangeDays": "days",
   "projects.overview.noActivityData": "No activity data available yet.",
   "projects.overview.seriesTodo": "Open",
   "projects.overview.seriesInProgress": "In Progress",

@@ -336,16 +336,31 @@ func (r *StatsRepository) backfillAtTime(ctx context.Context, t time.Time) (int6
 }
 
 // Timeline returns project-level stats snapshots for the given project within
-// the time range [since, now], ordered chronologically.
-func (r *StatsRepository) Timeline(ctx context.Context, projectID uuid.UUID, since time.Time) ([]model.ProjectStatsSnapshot, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, project_id, todo_count, in_progress_count, done_count, cancelled_count, captured_at
-		FROM project_stats_snapshots
-		WHERE project_id = $1
-		  AND user_id IS NULL
-		  AND captured_at >= $2
-		ORDER BY captured_at ASC
-	`, projectID, since)
+// the time range [since, now], ordered chronologically. When daily is true,
+// returns one data point per day (last snapshot of each day) for chart readability.
+func (r *StatsRepository) Timeline(ctx context.Context, projectID uuid.UUID, since time.Time, daily bool) ([]model.ProjectStatsSnapshot, error) {
+	var query string
+	if daily {
+		query = `
+			SELECT id, project_id, todo_count, in_progress_count, done_count, cancelled_count, captured_at
+			FROM (
+				SELECT DISTINCT ON (date_trunc('day', captured_at))
+					id, project_id, todo_count, in_progress_count, done_count, cancelled_count, captured_at
+				FROM project_stats_snapshots
+				WHERE project_id = $1 AND user_id IS NULL AND captured_at >= $2
+				ORDER BY date_trunc('day', captured_at) DESC, captured_at DESC
+			) sub
+			ORDER BY captured_at ASC`
+	} else {
+		query = `
+			SELECT id, project_id, todo_count, in_progress_count, done_count, cancelled_count, captured_at
+			FROM project_stats_snapshots
+			WHERE project_id = $1
+			  AND user_id IS NULL
+			  AND captured_at >= $2
+			ORDER BY captured_at ASC`
+	}
+	rows, err := r.db.QueryContext(ctx, query, projectID, since)
 	if err != nil {
 		return nil, fmt.Errorf("querying timeline: %w", err)
 	}

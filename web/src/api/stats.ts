@@ -8,7 +8,7 @@ export interface StatsTimelinePoint {
   cancelled_count: number
 }
 
-export type StatsRange = '24h' | '3d' | '7d'
+export type StatsRange = string
 
 export async function getStatsTimeline(
   projectKey: string,

@@ -531,6 +531,8 @@
   "projects.overview.range_24h": "24 س",
   "projects.overview.range_3d": "3 أ",
   "projects.overview.range_7d": "7 أ",
+  "projects.overview.customRangeHours": "ساعات",
+  "projects.overview.customRangeDays": "أيام",
   "projects.overview.seriesCancelled": "ملغى",
   "projects.overview.seriesDone": "مكتمل",
   "projects.overview.seriesInProgress": "قيد التنفيذ",

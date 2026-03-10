@@ -16,7 +16,7 @@ type mockStatsRepo struct {
 	snapshots []model.ProjectStatsSnapshot
 }
 
-func (m *mockStatsRepo) Timeline(_ context.Context, projectID uuid.UUID, since time.Time) ([]model.ProjectStatsSnapshot, error) {
+func (m *mockStatsRepo) Timeline(_ context.Context, projectID uuid.UUID, since time.Time, daily bool) ([]model.ProjectStatsSnapshot, error) {
 	var result []model.ProjectStatsSnapshot
 	for _, s := range m.snapshots {
 		if s.ProjectID == projectID && !s.CapturedAt.Before(since) {
@@ -83,9 +83,78 @@ func TestStatsTimeline_InvalidRange(t *testing.T) {
 	info := userAuthInfo()
 	setupStatsProject(t, projectRepo, memberRepo, info, model.ProjectRoleMember)
 
-	_, err := svc.Timeline(context.Background(), info, "STAT", "30d")
+	_, err := svc.Timeline(context.Background(), info, "STAT", "abc")
 	if err == nil {
 		t.Fatal("expected validation error for invalid range")
+	}
+}
+
+func TestStatsTimeline_CustomRange(t *testing.T) {
+	svc, _, projectRepo, memberRepo := newTestStatsService()
+	info := userAuthInfo()
+	setupStatsProject(t, projectRepo, memberRepo, info, model.ProjectRoleMember)
+
+	// 30d should now be valid
+	_, err := svc.Timeline(context.Background(), info, "STAT", "30d")
+	if err != nil {
+		t.Fatalf("expected no error for 30d, got %v", err)
+	}
+}
+
+func TestParseSince(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		wantErr bool
+	}{
+		{"1 hour", "1h", false},
+		{"24 hours", "24h", false},
+		{"3 days", "3d", false},
+		{"7 days", "7d", false},
+		{"14 days", "14d", false},
+		{"30 days", "30d", false},
+		{"365 days", "365d", false},
+		{"compound", "2h30m", false},
+		{"30 minutes", "30m", false},
+		{"empty", "", true},
+		{"garbage", "abc", true},
+		{"zero days", "0d", true},
+		{"negative hours", "-5h", true},
+		{"over max days", "400d", true},
+		{"over max hours", "9000h", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := parseSince(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("parseSince(%q) error = %v, wantErr %v", tt.input, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestNeedsDailyGranularity(t *testing.T) {
+	tests := []struct {
+		input string
+		want  bool
+	}{
+		{"7d", false},
+		{"8d", true},
+		{"168h", false},
+		{"169h", true},
+		{"24h", false},
+		{"30d", true},
+		{"3d", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := needsDailyGranularity(tt.input)
+			if got != tt.want {
+				t.Errorf("needsDailyGranularity(%q) = %v, want %v", tt.input, got, tt.want)
+			}
+		})
 	}
 }
 
