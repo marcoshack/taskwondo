@@ -77,12 +77,28 @@ export function ProjectListPage() {
   const projectCount = ownedCount ?? 0
   const atLimit = !isAdmin && maxProjects > 0 && projectCount >= maxProjects
 
+  const { namespaces, activeNamespace, showSwitcher } = useNamespaceContext()
+
   const [showCreate, setShowCreate] = useState(false)
   const [activeRow, setActiveRow] = useState(-1)
   const [searchInput, setSearchInput] = useState('')
   const searchRef = useRef<HTMLInputElement>(null)
+  const [name, setName] = useState('')
+  const [key, setKey] = useState('')
+  const [description, setDescription] = useState('')
+  const [selectedNamespace, setSelectedNamespace] = useState(activeNamespace?.slug ?? '')
+  const [formError, setFormError] = useState('')
+  const [showNsPicker, setShowNsPicker] = useState(false)
+  const [showNsCreate, setShowNsCreate] = useState(false)
 
-  useKeyboardShortcut({ key: 'n' }, () => setShowCreate(true))
+  const selectedNs = namespaces.find((ns) => ns.slug === selectedNamespace) ?? activeNamespace
+
+  const openCreateModal = () => {
+    setSelectedNamespace(activeNamespace?.slug ?? '')
+    setShowCreate(true)
+  }
+
+  useKeyboardShortcut({ key: 'n' }, () => openCreateModal())
   useKeyboardShortcut({ key: '/' }, () => searchRef.current?.focus())
 
   const projectList = useMemo(() => {
@@ -99,18 +115,6 @@ export function ProjectListPage() {
     }
   }, activeRow >= 0)
   useKeyboardShortcut({ key: 'Escape' }, () => setActiveRow(-1), activeRow >= 0)
-
-  const { namespaces, activeNamespace, showSwitcher } = useNamespaceContext()
-
-  const [name, setName] = useState('')
-  const [key, setKey] = useState('')
-  const [description, setDescription] = useState('')
-  const [selectedNamespace, setSelectedNamespace] = useState(activeNamespace?.slug ?? '')
-  const [formError, setFormError] = useState('')
-  const [showNsPicker, setShowNsPicker] = useState(false)
-  const [showNsCreate, setShowNsCreate] = useState(false)
-
-  const selectedNs = namespaces.find((ns) => ns.slug === selectedNamespace) ?? activeNamespace
 
   const columns: Column<Project>[] = [
     {
@@ -215,7 +219,7 @@ export function ProjectListPage() {
         <div className="flex-1 min-w-0">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('projects.title')}</h1>
-        <Button onClick={() => setShowCreate(true)} className="border border-transparent">{t('projects.new')}</Button>
+        <Button onClick={openCreateModal} className="border border-transparent">{t('projects.new')}</Button>
       </div>
 
       {/* Search */}

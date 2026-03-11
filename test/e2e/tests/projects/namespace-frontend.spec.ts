@@ -273,6 +273,37 @@ test.describe('Namespace Frontend UI', () => {
     await api.deleteNamespace(request, adminToken, slug);
   });
 
+  test('new project modal auto-selects the current namespace', async ({ page, request }, testInfo) => {
+    const adminToken = getAdminToken();
+    const slug = uniqueSlug();
+    const nsName = 'Auto Select NS';
+
+    // Create a second namespace so the switcher and namespace picker appear
+    await api.createNamespace(request, adminToken, slug, nsName);
+
+    // Navigate to the default namespace project list
+    await page.goto('/d/projects');
+    await page.waitForLoadState('networkidle');
+
+    // Switch to the new namespace
+    const switcher = page.getByTestId('namespace-switcher');
+    await switcher.click();
+    await page.getByText(nsName).click();
+    await page.waitForLoadState('networkidle');
+
+    // Open the New Project modal
+    await page.getByRole('button', { name: /new project/i }).click();
+
+    // The namespace selector button inside the modal should show the current namespace
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByText(nsName)).toBeVisible();
+    await attach(page, testInfo, 'new-project-auto-select-ns');
+
+    // Cleanup
+    await api.deleteNamespace(request, adminToken, slug);
+  });
+
   test('project transfer between namespaces via settings page', async ({ page, request }, testInfo) => {
     const adminToken = getAdminToken();
     const slug = uniqueSlug();
