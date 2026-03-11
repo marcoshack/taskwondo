@@ -129,4 +129,33 @@ test.describe('Project switcher — cross-namespace', () => {
     // Should navigate to the project in the other namespace
     await expect(page).toHaveURL(new RegExp(`/${nsSlug}/projects/${nsProjectKey}`), { timeout: 5000 });
   });
+
+  test('no "Project not found" flash when switching namespaces via project switcher', async ({ page }) => {
+    // First, visit the default project to populate the TanStack Query cache
+    await page.goto(`/d/projects/${defaultProjectKey}`);
+    await page.waitForLoadState('networkidle');
+    await expect(page.getByText(`Default Project ${defaultProjectKey}`)).toBeVisible({ timeout: 5000 });
+
+    // Open project switcher and navigate to project in the other namespace
+    await page.keyboard.press('g');
+    await page.keyboard.press('p');
+
+    const modal = page.getByRole('dialog');
+    const searchInput = modal.getByRole('textbox', { name: /search projects/i });
+    await expect(searchInput).toBeVisible({ timeout: 5000 });
+
+    await searchInput.fill(nsProjectKey);
+    const nsProjectRow = modal.getByRole('button', { name: new RegExp(nsProjectKey, 'i') });
+    await expect(nsProjectRow).toBeVisible({ timeout: 3000 });
+    await nsProjectRow.click();
+
+    // Wait for navigation to complete
+    await expect(page).toHaveURL(new RegExp(`/${nsSlug}/projects/${nsProjectKey}`), { timeout: 5000 });
+
+    // The project overview should load — "Project not found." must never appear
+    await expect(page.getByText('Project not found.')).not.toBeVisible({ timeout: 3000 });
+
+    // The project name should appear in the overview
+    await expect(page.getByText(`NS Project ${nsProjectKey}`)).toBeVisible({ timeout: 5000 });
+  });
 });

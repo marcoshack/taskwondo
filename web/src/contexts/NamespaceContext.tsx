@@ -15,7 +15,7 @@ interface NamespaceContextValue {
   namespaces: Namespace[]
   activeNamespace: Namespace | null
   setActiveNamespace: (slug: string) => void
-  /** Sync the active namespace from a URL param (no navigation, no query invalidation) */
+  /** Sync the active namespace from a URL param (no navigation) */
   syncFromUrl: (slug: string) => void
   showSwitcher: boolean
   isLoading: boolean
@@ -84,14 +84,15 @@ export function NamespaceProvider({ children }: { children: ReactNode }) {
       // Clear last project so the nav doesn't show a stale project from the old namespace
       localStorage.removeItem('taskwondo_last_project_key')
 
-      // Invalidate namespace-scoped queries
-      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      // Remove namespace-scoped query cache so the new namespace starts fresh
+      // (loading state instead of stale data/errors from the old namespace)
+      queryClient.removeQueries({ queryKey: ['projects'] })
       navigate(`/${toUrlSegment(slug)}/projects`)
     },
     [namespaces, queryClient, navigate],
   )
 
-  /** Sync active namespace from URL param — no navigation or query invalidation */
+  /** Sync active namespace from URL param — no navigation, but clears stale cache */
   const syncFromUrl = useCallback(
     (slug: string) => {
       if (slug === activeSlug) return
@@ -99,8 +100,13 @@ export function NamespaceProvider({ children }: { children: ReactNode }) {
       localStorage.setItem(NAMESPACE_KEY, slug)
       const isDefault = slug === 'default'
       setNamespaceSlug(isDefault ? null : slug)
+
+      // Remove namespace-scoped query cache to prevent stale data from the
+      // previous namespace (e.g. "Project not found" flash when switching
+      // namespaces via the project switcher modal).
+      queryClient.removeQueries({ queryKey: ['projects'] })
     },
-    [activeSlug],
+    [activeSlug, queryClient],
   )
 
   return (
