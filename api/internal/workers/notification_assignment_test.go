@@ -47,6 +47,10 @@ func (m *mockProjectRepo) ResolveNamespaces(_ context.Context, _ []string) (map[
 	return nil, nil
 }
 
+func (m *mockProjectRepo) ResolveNamespacesByIDs(_ context.Context, _ []uuid.UUID) (map[uuid.UUID]model.ProjectNamespaceInfo, error) {
+	return nil, nil
+}
+
 // mockUserSettingRepo is a test double for userSettingRepository.
 type mockUserSettingRepo struct {
 	settings map[string]*model.UserSetting // key: userID+projectID

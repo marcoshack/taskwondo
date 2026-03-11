@@ -59,8 +59,9 @@ export async function createProject(
   token: string,
   key: string,
   name: string,
+  namespace = 'default',
 ): Promise<{ id: string; key: string; name: string }> {
-  const res = await request.post(`${BASE_URL}/api/v1/default/projects`, {
+  const res = await request.post(`${BASE_URL}/api/v1/${namespace}/projects`, {
     headers: { Authorization: `Bearer ${token}` },
     data: { key, name },
   });

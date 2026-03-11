@@ -19,6 +19,9 @@ export interface Project {
   member_count: number
   open_count: number
   in_progress_count: number
+  namespace_slug?: string
+  namespace_icon?: string
+  namespace_color?: string
   created_at: string
   updated_at: string
 }
@@ -48,6 +51,12 @@ export async function listProjects(): Promise<ProjectListResult> {
     ownedProjectCount: res.data.meta.owned_project_count,
     maxProjects: res.data.meta.max_projects,
   }
+}
+
+/** List all projects across all namespaces (no namespace prefix). */
+export async function listAllProjects(): Promise<Project[]> {
+  const res = await api.get<ProjectListResponse>('/projects')
+  return res.data.data
 }
 
 export async function getProject(projectKey: string) {

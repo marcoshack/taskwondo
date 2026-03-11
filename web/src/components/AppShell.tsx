@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useNamespaceContext } from '@/contexts/NamespaceContext'
 import { useSidebar } from '@/contexts/SidebarContext'
 import { useNavigationGuard } from '@/contexts/NavigationGuardContext'
-import { useProject, useProjects } from '@/hooks/useProjects'
+import { useProject, useAllProjects } from '@/hooks/useProjects'
 import { Avatar } from '@/components/ui/Avatar'
 import { Modal } from '@/components/ui/Modal'
 import { ProjectKeyBadge } from '@/components/ui/ProjectKeyBadge'
@@ -341,9 +341,11 @@ export function AppShell() {
         open={switcherOpen}
         onClose={() => setSwitcherOpen(false)}
         activeProjectKey={activeProjectKey}
-        onSelect={(key) => {
+        activeNamespaceSlug={activeNamespace?.slug}
+        onSelect={(key, nsSlug) => {
           setSwitcherOpen(false)
-          guardedNavigate(p(`/projects/${key}`))
+          const segment = toUrlSegment(nsSlug || activeNamespace?.slug || 'default')
+          guardedNavigate(`/${segment}/projects/${key}`)
         }}
       />
       <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
@@ -371,15 +373,18 @@ function ProjectSwitcherModal({
   open,
   onClose,
   activeProjectKey,
+  activeNamespaceSlug,
   onSelect,
 }: {
   open: boolean
   onClose: () => void
   activeProjectKey?: string
-  onSelect: (key: string) => void
+  activeNamespaceSlug?: string
+  onSelect: (key: string, nsSlug?: string) => void
 }) {
   const { t } = useTranslation()
-  const { data: projects, isLoading } = useProjects()
+  const { showSwitcher: showNamespaces } = useNamespaceContext()
+  const { data: projects, isLoading } = useAllProjects()
   const [search, setSearch] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -396,7 +401,7 @@ function ProjectSwitcherModal({
   const filtered = (projects ?? []).filter((p) => {
     if (!search) return true
     const q = search.toLowerCase()
-    return p.key.toLowerCase().includes(q) || p.name.toLowerCase().includes(q)
+    return p.key.toLowerCase().includes(q) || p.name.toLowerCase().includes(q) || (p.namespace_slug ?? '').toLowerCase().includes(q)
   })
 
   // Reset selection when search changes
@@ -425,9 +430,13 @@ function ProjectSwitcherModal({
       scrollSelectedIntoView(prev)
     } else if (e.key === 'Enter' && filtered.length > 0) {
       e.preventDefault()
-      onSelect(filtered[selectedIndex].key)
+      const item = filtered[selectedIndex]
+      onSelect(item.key, item.namespace_slug)
     }
   }, [selectedIndex, filtered, onSelect, scrollSelectedIntoView])
+
+  const isCurrent = (p: { key: string; namespace_slug?: string }) =>
+    p.key === activeProjectKey && (!showNamespaces || p.namespace_slug === activeNamespaceSlug)
 
   return (
     <Modal open={open} onClose={onClose} title={t('projects.switcher.title')} position="top">
@@ -447,9 +456,9 @@ function ProjectSwitcherModal({
       ) : (
         <ul ref={listRef} className="max-h-64 overflow-y-auto -mx-2">
           {filtered.map((p, i) => (
-            <li key={p.key}>
+            <li key={p.id}>
               <button
-                onClick={() => onSelect(p.key)}
+                onClick={() => onSelect(p.key, p.namespace_slug)}
                 onMouseEnter={() => setSelectedIndex(i)}
                 className={`w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-md text-sm ${
                   i === selectedIndex
@@ -459,9 +468,17 @@ function ProjectSwitcherModal({
               >
                 <ProjectKeyBadge>{p.key}</ProjectKeyBadge>
                 <span className="text-gray-900 dark:text-gray-100 font-medium truncate">{p.name}</span>
-                {p.key === activeProjectKey && (
-                  <span className="ml-auto text-xs text-indigo-600 dark:text-indigo-400 shrink-0">{t('common.current')}</span>
-                )}
+                <span className="ml-auto flex items-center gap-2 shrink-0">
+                  {isCurrent(p) && (
+                    <span className="text-xs text-indigo-600 dark:text-indigo-400">{t('common.current')}</span>
+                  )}
+                  {showNamespaces && p.namespace_slug && (
+                    <span className="flex items-center gap-1 text-[0.7rem] text-gray-400 dark:text-gray-500">
+                      <span>{p.namespace_slug}</span>
+                      <NamespaceIcon icon={p.namespace_icon ?? 'building2'} color={p.namespace_color ?? 'slate'} className="h-3 w-3" />
+                    </span>
+                  )}
+                </span>
               </button>
             </li>
           ))}

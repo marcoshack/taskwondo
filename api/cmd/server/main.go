@@ -387,6 +387,9 @@ func main() {
 			})
 
 
+			// Projects (cross-namespace, no namespace middleware — returns all projects)
+			r.Get("/"+handler.PathProjects, projects.List)
+
 			// Projects (namespace-scoped)
 			r.Route("/{namespace}/"+handler.PathProjects, func(r chi.Router) {
 				r.Use(middleware.Namespace(namespaceService))

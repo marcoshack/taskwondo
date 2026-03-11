@@ -304,10 +304,10 @@ func scanProjects(rows *sql.Rows) ([]model.Project, error) {
 	return projects, rows.Err()
 }
 
-// ResolveNamespaces returns namespace slug and display_name for the given project keys.
+// ResolveNamespaces returns namespace slug, display_name, icon, and color for the given project keys.
 func (r *ProjectRepository) ResolveNamespaces(ctx context.Context, projectKeys []string) (map[string]model.ProjectNamespaceInfo, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT p.key, ns.slug, ns.display_name
+		`SELECT p.key, ns.slug, ns.display_name, COALESCE(ns.icon, 'building2'), COALESCE(ns.color, 'slate')
 		 FROM projects p
 		 JOIN namespaces ns ON p.namespace_id = ns.id
 		 WHERE p.key = ANY($1) AND p.deleted_at IS NULL`,
@@ -320,10 +320,35 @@ func (r *ProjectRepository) ResolveNamespaces(ctx context.Context, projectKeys [
 	result := make(map[string]model.ProjectNamespaceInfo, len(projectKeys))
 	for rows.Next() {
 		var info model.ProjectNamespaceInfo
-		if err := rows.Scan(&info.ProjectKey, &info.NamespaceSlug, &info.NamespaceName); err != nil {
+		if err := rows.Scan(&info.ProjectKey, &info.NamespaceSlug, &info.NamespaceName, &info.NamespaceIcon, &info.NamespaceColor); err != nil {
 			return nil, fmt.Errorf("scanning project namespace: %w", err)
 		}
 		result[info.ProjectKey] = info
+	}
+	return result, rows.Err()
+}
+
+// ResolveNamespacesByIDs returns namespace info keyed by project ID (avoids key collision across namespaces).
+func (r *ProjectRepository) ResolveNamespacesByIDs(ctx context.Context, projectIDs []uuid.UUID) (map[uuid.UUID]model.ProjectNamespaceInfo, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT p.id, p.key, ns.slug, ns.display_name, COALESCE(ns.icon, 'building2'), COALESCE(ns.color, 'slate')
+		 FROM projects p
+		 JOIN namespaces ns ON p.namespace_id = ns.id
+		 WHERE p.id = ANY($1) AND p.deleted_at IS NULL`,
+		pq.Array(projectIDs))
+	if err != nil {
+		return nil, fmt.Errorf("resolving project namespaces by IDs: %w", err)
+	}
+	defer rows.Close()
+
+	result := make(map[uuid.UUID]model.ProjectNamespaceInfo, len(projectIDs))
+	for rows.Next() {
+		var id uuid.UUID
+		var info model.ProjectNamespaceInfo
+		if err := rows.Scan(&id, &info.ProjectKey, &info.NamespaceSlug, &info.NamespaceName, &info.NamespaceIcon, &info.NamespaceColor); err != nil {
+			return nil, fmt.Errorf("scanning project namespace by ID: %w", err)
+		}
+		result[id] = info
 	}
 	return result, rows.Err()
 }

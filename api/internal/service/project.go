@@ -29,6 +29,7 @@ type ProjectRepository interface {
 	Update(ctx context.Context, project *model.Project) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	ResolveNamespaces(ctx context.Context, projectKeys []string) (map[string]model.ProjectNamespaceInfo, error)
+	ResolveNamespacesByIDs(ctx context.Context, projectIDs []uuid.UUID) (map[uuid.UUID]model.ProjectNamespaceInfo, error)
 }
 
 // ProjectMemberRepository defines the persistence operations for project members.
@@ -282,6 +283,16 @@ func (s *ProjectService) ListWithSummary(ctx context.Context, info *model.AuthIn
 // CountOwnedByUser returns the number of projects owned by the given user.
 func (s *ProjectService) CountOwnedByUser(ctx context.Context, userID uuid.UUID) (int, error) {
 	return s.projects.CountByOwner(ctx, userID)
+}
+
+// ResolveProjectNamespaces returns namespace info for the given project keys.
+func (s *ProjectService) ResolveProjectNamespaces(ctx context.Context, projectKeys []string) (map[string]model.ProjectNamespaceInfo, error) {
+	return s.projects.ResolveNamespaces(ctx, projectKeys)
+}
+
+// ResolveProjectNamespacesByIDs returns namespace info keyed by project ID.
+func (s *ProjectService) ResolveProjectNamespacesByIDs(ctx context.Context, projectIDs []uuid.UUID) (map[uuid.UUID]model.ProjectNamespaceInfo, error) {
+	return s.projects.ResolveNamespacesByIDs(ctx, projectIDs)
 }
 
 // resolveProjectLimit returns the effective project limit for a user.

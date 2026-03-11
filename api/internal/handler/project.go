@@ -72,9 +72,12 @@ type projectResponse struct {
 
 type projectListItemResponse struct {
 	projectResponse
-	MemberCount     int `json:"member_count"`
-	OpenCount       int `json:"open_count"`
-	InProgressCount int `json:"in_progress_count"`
+	MemberCount    int    `json:"member_count"`
+	OpenCount      int    `json:"open_count"`
+	InProgressCount int   `json:"in_progress_count"`
+	NamespaceSlug  string `json:"namespace_slug,omitempty"`
+	NamespaceIcon  string `json:"namespace_icon,omitempty"`
+	NamespaceColor string `json:"namespace_color,omitempty"`
 }
 
 type memberResponse struct {
@@ -189,6 +192,18 @@ func (h *ProjectHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Resolve namespace info for all projects (keyed by project ID to avoid key collision across namespaces)
+	ids := make([]uuid.UUID, len(projects))
+	for i := range projects {
+		ids[i] = projects[i].ID
+	}
+	nsMap, err := h.projects.ResolveProjectNamespacesByIDs(r.Context(), ids)
+	if err != nil {
+		log.Ctx(r.Context()).Error().Err(err).Msg("failed to resolve project namespaces")
+		// Non-fatal: continue without namespace info
+		nsMap = nil
+	}
+
 	resp := make([]projectListItemResponse, len(projects))
 	for i := range projects {
 		resp[i] = projectListItemResponse{
@@ -196,6 +211,11 @@ func (h *ProjectHandler) List(w http.ResponseWriter, r *http.Request) {
 			MemberCount:     projects[i].MemberCount,
 			OpenCount:       projects[i].OpenCount,
 			InProgressCount: projects[i].InProgressCount,
+		}
+		if nsInfo, ok := nsMap[projects[i].ID]; ok {
+			resp[i].NamespaceSlug = nsInfo.NamespaceSlug
+			resp[i].NamespaceIcon = nsInfo.NamespaceIcon
+			resp[i].NamespaceColor = nsInfo.NamespaceColor
 		}
 	}
 

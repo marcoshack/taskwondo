@@ -30,11 +30,13 @@ type Project struct {
 	DeletedAt               *time.Time `json:"-"`
 }
 
-// ProjectNamespaceInfo maps a project key to its namespace slug and display name.
+// ProjectNamespaceInfo maps a project key to its namespace slug, display name, icon, and color.
 type ProjectNamespaceInfo struct {
-	ProjectKey    string `json:"project_key"`
-	NamespaceSlug string `json:"namespace_slug"`
-	NamespaceName string `json:"namespace_name"`
+	ProjectKey     string `json:"project_key"`
+	NamespaceSlug  string `json:"namespace_slug"`
+	NamespaceName  string `json:"namespace_name"`
+	NamespaceIcon  string `json:"namespace_icon"`
+	NamespaceColor string `json:"namespace_color"`
 }
 
 // ProjectSummary holds aggregate counts for a project list view.

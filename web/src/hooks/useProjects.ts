@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   listProjects,
+  listAllProjects,
   getProject,
   createProject,
   listMembers,
@@ -27,6 +28,14 @@ export function useProjects() {
     queryKey: ['projects'],
     queryFn: listProjects,
     select: (data) => data.projects,
+  })
+}
+
+/** Fetch all projects across all namespaces (for project switcher). */
+export function useAllProjects() {
+  return useQuery({
+    queryKey: ['projects', 'all'],
+    queryFn: listAllProjects,
   })
 }
 

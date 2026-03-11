@@ -135,6 +135,10 @@ func (m *mockProjectRepo) ResolveNamespaces(_ context.Context, _ []string) (map[
 	return nil, nil
 }
 
+func (m *mockProjectRepo) ResolveNamespacesByIDs(_ context.Context, _ []uuid.UUID) (map[uuid.UUID]model.ProjectNamespaceInfo, error) {
+	return nil, nil
+}
+
 type mockProjectMemberRepo struct {
 	members map[string]*model.ProjectMember // key: "projectID:userID"
 }
