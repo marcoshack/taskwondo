@@ -71,6 +71,7 @@ type ProjectService struct {
 	invites        ProjectInviteRepository
 	inboxItems     InboxRepository
 	watchers       WatcherRepository
+	userSettings   UserSettingRepository
 	publisher      EventPublisher
 	embedCache     *FeatureFlagCache
 }
@@ -86,7 +87,7 @@ func (s *ProjectService) SetEmbedCache(cache *FeatureFlagCache) {
 }
 
 // NewProjectService creates a new ProjectService.
-func NewProjectService(projects ProjectRepository, members ProjectMemberRepository, users UserRepository, workflows WorkflowRepository, typeWorkflows ProjectTypeWorkflowRepository, systemSettings SystemSettingRepositoryInterface, invites ProjectInviteRepository, inboxItems InboxRepository, watchers WatcherRepository) *ProjectService {
+func NewProjectService(projects ProjectRepository, members ProjectMemberRepository, users UserRepository, workflows WorkflowRepository, typeWorkflows ProjectTypeWorkflowRepository, systemSettings SystemSettingRepositoryInterface, invites ProjectInviteRepository, inboxItems InboxRepository, watchers WatcherRepository, userSettings UserSettingRepository) *ProjectService {
 	return &ProjectService{
 		projects:       projects,
 		members:        members,
@@ -97,6 +98,7 @@ func NewProjectService(projects ProjectRepository, members ProjectMemberReposito
 		invites:        invites,
 		inboxItems:     inboxItems,
 		watchers:       watchers,
+		userSettings:   userSettings,
 	}
 }
 
@@ -230,7 +232,7 @@ func (s *ProjectService) Get(ctx context.Context, info *model.AuthInfo, projectK
 func (s *ProjectService) List(ctx context.Context, info *model.AuthInfo) ([]model.Project, error) {
 	var projects []model.Project
 	var err error
-	if info.GlobalRole == model.RoleAdmin {
+	if info.GlobalRole == model.RoleAdmin && !s.adminHidesNonMemberProjects(ctx, info.UserID) {
 		projects, err = s.projects.ListAll(ctx)
 	} else {
 		projects, err = s.projects.ListByUser(ctx, info.UserID)
@@ -1281,6 +1283,23 @@ func isValidInviteRole(role string) bool {
 
 // requireMembership checks that the user is a member of the project or a global admin.
 // Returns ErrNotFound (not ErrForbidden) to avoid leaking project existence.
+// adminHidesNonMemberProjects checks whether the admin user has enabled the
+// "hide_non_member_projects" global preference. Returns false on any error.
+func (s *ProjectService) adminHidesNonMemberProjects(ctx context.Context, userID uuid.UUID) bool {
+	if s.userSettings == nil {
+		return false
+	}
+	setting, err := s.userSettings.Get(ctx, userID, nil, "hide_non_member_projects")
+	if err != nil {
+		return false
+	}
+	var hide bool
+	if err := json.Unmarshal(setting.Value, &hide); err != nil {
+		return false
+	}
+	return hide
+}
+
 func (s *ProjectService) requireMembership(ctx context.Context, info *model.AuthInfo, projectID uuid.UUID) error {
 	if info.GlobalRole == model.RoleAdmin {
 		return nil

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useSidebar } from '@/contexts/SidebarContext'
 import {
   User,
+  Settings,
   Palette,
   Key,
   Bell,
@@ -18,6 +19,7 @@ export function PreferencesSidebar() {
 
   const navItems: { to: string; label: string; icon: LucideIcon; end: boolean }[] = [
     { to: 'profile', label: t('preferences.sidebar.profile'), icon: User, end: false },
+    { to: 'general', label: t('preferences.sidebar.general'), icon: Settings, end: false },
     { to: 'appearance', label: t('preferences.sidebar.appearance'), icon: Palette, end: false },
     { to: 'notifications', label: t('preferences.sidebar.notifications'), icon: Bell, end: false },
     { to: 'api-keys', label: t('preferences.sidebar.apiKeys'), icon: Key, end: false },

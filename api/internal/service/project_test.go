@@ -16,8 +16,10 @@ import (
 // --- Mock repositories ---
 
 type mockProjectRepo struct {
-	projects map[uuid.UUID]*model.Project
-	byKey    map[string]*model.Project
+	projects         map[uuid.UUID]*model.Project
+	byKey            map[string]*model.Project
+	listAllCalled    bool
+	listByUserCalled bool
 }
 
 func newMockProjectRepo() *mockProjectRepo {
@@ -64,6 +66,7 @@ func (m *mockProjectRepo) GetByID(_ context.Context, id uuid.UUID) (*model.Proje
 }
 
 func (m *mockProjectRepo) ListByUser(_ context.Context, userID uuid.UUID) ([]model.Project, error) {
+	m.listByUserCalled = true
 	// This mock doesn't filter by user — the service layer handles that via membership.
 	// For testing, return all non-deleted projects.
 	var result []model.Project
@@ -76,6 +79,7 @@ func (m *mockProjectRepo) ListByUser(_ context.Context, userID uuid.UUID) ([]mod
 }
 
 func (m *mockProjectRepo) ListAll(_ context.Context) ([]model.Project, error) {
+	m.listAllCalled = true
 	var result []model.Project
 	for _, p := range m.projects {
 		if p.DeletedAt == nil {
@@ -340,6 +344,7 @@ type testProjectSetup struct {
 	typeWorkflowRepo *mockTypeWorkflowRepo
 	settingsRepo     *mockSystemSettingRepo
 	inviteRepo       *mockProjectInviteRepo
+	userSettingRepo  *mockUserSettingRepo
 }
 
 func newTestProjectSetup() *testProjectSetup {
@@ -350,7 +355,8 @@ func newTestProjectSetup() *testProjectSetup {
 	typeWorkflowRepo := newMockTypeWorkflowRepo()
 	settingsRepo := newMockSystemSettingRepo()
 	inviteRepo := newMockProjectInviteRepo()
-	svc := NewProjectService(projectRepo, memberRepo, userRepo, workflowRepo, typeWorkflowRepo, settingsRepo, inviteRepo, noopInboxRepo{}, noopWatcherRepo{})
+	userSettingRepo := newMockUserSettingRepo()
+	svc := NewProjectService(projectRepo, memberRepo, userRepo, workflowRepo, typeWorkflowRepo, settingsRepo, inviteRepo, noopInboxRepo{}, noopWatcherRepo{}, userSettingRepo)
 	return &testProjectSetup{
 		svc:              svc,
 		projectRepo:      projectRepo,
@@ -360,6 +366,7 @@ func newTestProjectSetup() *testProjectSetup {
 		typeWorkflowRepo: typeWorkflowRepo,
 		settingsRepo:     settingsRepo,
 		inviteRepo:       inviteRepo,
+		userSettingRepo:  userSettingRepo,
 	}
 }
 
@@ -1044,6 +1051,52 @@ func TestListProject_AdminSeesAll(t *testing.T) {
 	}
 	if len(projects) < 1 {
 		t.Fatal("expected admin to see all projects")
+	}
+}
+
+func TestListProject_AdminHidesNonMemberProjects(t *testing.T) {
+	s := newTestProjectSetup()
+	owner := userAuthInfo()
+	admin := adminAuthInfo()
+
+	_, err := s.svc.Create(context.Background(), owner, "Test", "TT", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Without preference, admin should call ListAll
+	s.projectRepo.listAllCalled = false
+	s.projectRepo.listByUserCalled = false
+	_, err = s.svc.List(context.Background(), admin)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !s.projectRepo.listAllCalled {
+		t.Fatal("expected ListAll to be called for admin without preference")
+	}
+	if s.projectRepo.listByUserCalled {
+		t.Fatal("expected ListByUser NOT to be called for admin without preference")
+	}
+
+	// Set the hide preference for admin
+	s.userSettingRepo.settings[settingKey(admin.UserID, nil, "hide_non_member_projects")] = &model.UserSetting{
+		UserID: admin.UserID,
+		Key:    "hide_non_member_projects",
+		Value:  json.RawMessage(`true`),
+	}
+
+	// With preference, admin should call ListByUser
+	s.projectRepo.listAllCalled = false
+	s.projectRepo.listByUserCalled = false
+	_, err = s.svc.List(context.Background(), admin)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if s.projectRepo.listAllCalled {
+		t.Fatal("expected ListAll NOT to be called for admin with hide preference")
+	}
+	if !s.projectRepo.listByUserCalled {
+		t.Fatal("expected ListByUser to be called for admin with hide preference")
 	}
 }
 

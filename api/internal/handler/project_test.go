@@ -327,6 +327,23 @@ func (noopWatcherRepo) ListWatchedItemIDs(context.Context, uuid.UUID, *uuid.UUID
 }
 func (noopWatcherRepo) RemoveByProjectID(context.Context, uuid.UUID) (int, error) { return 0, nil }
 
+// noopUserSettingRepo is a minimal service.UserSettingRepository for project handler tests.
+type noopUserSettingRepo struct{}
+
+func (noopUserSettingRepo) Upsert(context.Context, *model.UserSetting) error { return nil }
+func (noopUserSettingRepo) Get(context.Context, uuid.UUID, *uuid.UUID, string) (*model.UserSetting, error) {
+	return nil, model.ErrNotFound
+}
+func (noopUserSettingRepo) ListByProject(context.Context, uuid.UUID, uuid.UUID) ([]model.UserSetting, error) {
+	return nil, nil
+}
+func (noopUserSettingRepo) ListGlobal(context.Context, uuid.UUID) ([]model.UserSetting, error) {
+	return nil, nil
+}
+func (noopUserSettingRepo) Delete(context.Context, uuid.UUID, *uuid.UUID, string) error {
+	return nil
+}
+
 // --- Test setup ---
 
 func projectTestSetup(t *testing.T) (*ProjectHandler, *model.AuthInfo) {
@@ -338,7 +355,7 @@ func projectTestSetup(t *testing.T) (*ProjectHandler, *model.AuthInfo) {
 	workflowRepo := newMockWorkflowRepo()
 	typeWorkflowRepo := newMockTypeWorkflowRepo()
 	inviteRepo := newMockProjectInviteRepo()
-	projectSvc := service.NewProjectService(projectRepo, memberRepo, userRepo, workflowRepo, typeWorkflowRepo, newMockSystemSettingRepo(), inviteRepo, noopInboxRepo{}, noopWatcherRepo{})
+	projectSvc := service.NewProjectService(projectRepo, memberRepo, userRepo, workflowRepo, typeWorkflowRepo, newMockSystemSettingRepo(), inviteRepo, noopInboxRepo{}, noopWatcherRepo{}, noopUserSettingRepo{})
 	h := NewProjectHandler(projectSvc, "http://localhost:3000")
 
 	info := &model.AuthInfo{
