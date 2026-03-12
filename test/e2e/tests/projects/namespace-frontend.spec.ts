@@ -423,6 +423,128 @@ test.describe('Namespace Frontend UI', () => {
     // Cleanup
     await api.deleteNamespace(request, adminToken, slug);
   });
+
+  test('namespace settings icon grid is properly spaced on mobile', async ({ page, request }, testInfo) => {
+    const adminToken = getAdminToken();
+    const slug = uniqueSlug();
+    await api.createNamespace(request, adminToken, slug, 'Mobile Icons NS');
+
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto(`/${slug}/settings`);
+    await page.waitForLoadState('networkidle');
+
+    await expect(page.getByRole('heading', { name: 'Namespace Settings' })).toBeVisible();
+    await attach(page, testInfo, '01-mobile-settings');
+
+    // The page should not have horizontal overflow
+    const hasOverflow = await page.evaluate(() => {
+      return document.documentElement.scrollWidth > document.documentElement.clientWidth;
+    });
+    expect(hasOverflow).toBe(false);
+
+    // All 20 icon buttons should exist in the grid
+    const iconBtns = page.locator('.grid button .lucide').locator('..');
+    const btnCount = await iconBtns.count();
+    expect(btnCount).toBe(20);
+
+    // The icon grid scroll container should fit within the viewport
+    const scrollContainer = page.locator('.grid').locator('..');
+    const scrollBox = await scrollContainer.boundingBox();
+    expect(scrollBox).not.toBeNull();
+    expect(scrollBox!.x + scrollBox!.width).toBeLessThanOrEqual(375 + 2);
+
+    // Verify the icons are in at most 3 rows by checking distinct Y positions
+    const yPositions = new Set<number>();
+    for (let i = 0; i < btnCount; i++) {
+      const box = await iconBtns.nth(i).boundingBox();
+      if (box) yPositions.add(Math.round(box.y));
+    }
+    expect(yPositions.size).toBeLessThanOrEqual(3);
+
+    // Click an icon and verify the selected border doesn't cause page overflow
+    await iconBtns.first().click();
+    await page.waitForTimeout(200);
+    const hasOverflowAfterSelect = await page.evaluate(() => {
+      return document.documentElement.scrollWidth > document.documentElement.clientWidth;
+    });
+    expect(hasOverflowAfterSelect).toBe(false);
+
+    await attach(page, testInfo, '02-mobile-icon-selected');
+
+    // Cleanup
+    await api.deleteNamespace(request, adminToken, slug);
+  });
+
+  test('project switcher all-namespaces toggle filters projects', async ({ page, request }, testInfo) => {
+    const adminToken = getAdminToken();
+    const slug = uniqueSlug();
+    const BASE_URL = process.env.BASE_URL || 'http://localhost:5173';
+
+    // Create a second namespace with a project (unique name to avoid collisions)
+    await api.createNamespace(request, adminToken, slug, 'Toggle NS');
+    const uid = Date.now().toString(36).slice(-3).toUpperCase();
+    const projKey = `TN${uid}`;
+    const projName = `ToggleNSProject ${uid}`;
+    await api.createProject(request, adminToken, projKey, projName, slug);
+
+    // Navigate fresh to pick up the new project
+    await page.goto('/d/projects');
+    await page.waitForLoadState('networkidle');
+
+    // Open project switcher
+    await page.keyboard.press('g');
+    await page.keyboard.press('p');
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+
+    // The all-namespaces toggle should be visible
+    const toggle = dialog.getByTestId('all-namespaces-toggle');
+    await expect(toggle).toBeVisible();
+
+    // The project from the other namespace should be visible when "All namespaces" is on
+    await expect(dialog.getByText(projName)).toBeVisible();
+    await attach(page, testInfo, '01-all-namespaces-on');
+
+    // Count projects with all namespaces enabled
+    const allCount = await dialog.locator('ul > li').count();
+
+    // Uncheck the toggle to filter to current namespace only
+    await toggle.locator('input[type="checkbox"]').uncheck();
+    await page.waitForTimeout(300);
+
+    // The project from the other namespace should be hidden
+    await expect(dialog.getByText(projName)).not.toBeVisible();
+
+    // Fewer projects should be visible
+    const filteredCount = await dialog.locator('ul > li').count();
+    expect(filteredCount).toBeLessThan(allCount);
+    await attach(page, testInfo, '02-all-namespaces-off');
+
+    // Re-check to show all again
+    await toggle.locator('input[type="checkbox"]').check();
+    await page.waitForTimeout(300);
+    await expect(dialog.getByText(projName)).toBeVisible();
+    await attach(page, testInfo, '03-all-namespaces-on-again');
+
+    // Close, reopen — preference should persist (uncheck then close)
+    await toggle.locator('input[type="checkbox"]').uncheck();
+    await page.waitForTimeout(300);
+    await page.keyboard.press('Escape');
+    await expect(dialog).not.toBeVisible();
+
+    await page.keyboard.press('g');
+    await page.keyboard.press('p');
+    await expect(dialog).toBeVisible();
+    // Should still be unchecked (persisted preference)
+    await expect(dialog.getByText(projName)).not.toBeVisible();
+    await attach(page, testInfo, '04-persisted');
+
+    // Cleanup (best effort — namespace may have residual state from retries)
+    await request.delete(`${BASE_URL}/api/v1/${slug}/projects/${projKey}`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    }).catch(() => {});
+    await api.deleteNamespace(request, adminToken, slug).catch(() => {});
+  });
 });
 
 // --- Regular (non-admin) user namespace tests ---
