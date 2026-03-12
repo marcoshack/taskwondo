@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   BarChart,
@@ -13,6 +13,7 @@ import {
 } from 'recharts'
 import { useStatsTimeline } from '@/hooks/useStats'
 import { usePublicSettings } from '@/hooks/useSystemSettings'
+import { usePreference, useSetPreference } from '@/hooks/usePreferences'
 import { Spinner } from '@/components/ui/Spinner'
 import type { StatsRange } from '@/api/stats'
 
@@ -36,12 +37,33 @@ function parseRange(range_: string): { value: number; unit: 'h' | 'd' } {
 export function StatsTimelineChart({ projectKey }: Props) {
   const { t } = useTranslation()
   const { data: publicSettings } = usePublicSettings()
+  const prefKey = `activity_graph_range_${projectKey}`
+  const { data: savedRange, isSuccess: prefLoaded } = usePreference<string>(prefKey)
+  const { mutate: savePref } = useSetPreference()
   const [range_, setRange] = useState<StatsRange>('7d')
   const [customValue, setCustomValue] = useState('14')
   const [customUnit, setCustomUnit] = useState<'h' | 'd'>('d')
   const [isCustomActive, setIsCustomActive] = useState(false)
+  const [initialized, setInitialized] = useState(false)
   const { data: points, isLoading } = useStatsTimeline(projectKey, range_)
   const isDark = useDarkMode()
+
+  // Restore saved range from user preferences (once per mount)
+  useEffect(() => {
+    if (!prefLoaded || initialized) return
+    setInitialized(true)
+    if (savedRange && typeof savedRange === 'string') {
+      const parsed = parseRange(savedRange)
+      if (parsed.value > 0) {
+        setRange(savedRange as StatsRange)
+        if (!PRESETS.includes(savedRange as StatsRange)) {
+          setIsCustomActive(true)
+          setCustomValue(String(parsed.value))
+          setCustomUnit(parsed.unit)
+        }
+      }
+    }
+  }, [prefLoaded, savedRange, initialized])
 
   // Feature toggle: hidden when explicitly disabled
   const featureEnabled = publicSettings?.feature_stats_timeline !== false
@@ -50,6 +72,7 @@ export function StatsTimelineChart({ projectKey }: Props) {
   const handlePreset = (r: StatsRange) => {
     setRange(r)
     setIsCustomActive(false)
+    savePref({ key: prefKey, value: r })
   }
 
   const applyCustomRange = (value: string, unit: 'h' | 'd') => {
@@ -57,8 +80,10 @@ export function StatsTimelineChart({ projectKey }: Props) {
     if (isNaN(n) || n < 1) return
     const maxVal = unit === 'd' ? 365 : 8760
     if (n > maxVal) return
-    setRange(`${n}${unit}`)
+    const newRange = `${n}${unit}`
+    setRange(newRange)
     setIsCustomActive(true)
+    savePref({ key: prefKey, value: newRange })
   }
 
   const handleCustomValueChange = (value: string) => {
