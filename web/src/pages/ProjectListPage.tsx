@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Search, Globe, Building2, Plus, Check } from 'lucide-react'
+import { Search, Plus, Check } from 'lucide-react'
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
 import { useNamespacePath } from '@/hooks/useNamespacePath'
 import { useProjects, useCreateProject, useOwnedProjectCount, useMaxProjects } from '@/hooks/useProjects'
@@ -11,6 +11,7 @@ import { useSidebar } from '@/contexts/SidebarContext'
 import { useLayout } from '@/contexts/LayoutContext'
 import { AppSidebar } from '@/components/AppSidebar'
 import { CreateNamespaceModal } from '@/components/CreateNamespaceModal'
+import { NamespaceIcon } from '@/components/NamespaceIcon'
 import { DataTable } from '@/components/ui/DataTable'
 import { Spinner } from '@/components/ui/Spinner'
 import { Button } from '@/components/ui/Button'
@@ -346,11 +347,7 @@ export function ProjectListPage() {
                 disabled={atLimit}
                 className="w-full flex items-center gap-2.5 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 px-3 py-2 text-sm text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
-                {selectedNs?.is_default ? (
-                  <Globe className="h-4 w-4 shrink-0 text-gray-400" />
-                ) : (
-                  <Building2 className="h-4 w-4 shrink-0 text-gray-400" />
-                )}
+                <NamespaceIcon icon={selectedNs?.icon ?? 'globe'} color={selectedNs?.color} className="h-4 w-4 shrink-0" />
                 <span className="flex-1 truncate text-gray-900 dark:text-gray-100">
                   {selectedNs?.display_name ?? t('namespaces.selectNamespace')}
                 </span>
@@ -387,11 +384,7 @@ export function ProjectListPage() {
                   : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}
             >
-              {ns.is_default ? (
-                <Globe className="h-5 w-5 shrink-0 text-gray-400 dark:text-gray-500" />
-              ) : (
-                <Building2 className="h-5 w-5 shrink-0 text-gray-400 dark:text-gray-500" />
-              )}
+              <NamespaceIcon icon={ns.icon ?? 'globe'} color={ns.color} className="h-5 w-5 shrink-0" />
               <div className="min-w-0 flex-1">
                 <div className="font-medium">{ns.display_name}</div>
                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">

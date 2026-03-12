@@ -374,6 +374,55 @@ test.describe('Namespace Frontend UI', () => {
     }
     await api.deleteNamespace(request, adminToken, slug);
   });
+
+  test('namespace icon and color show in New Project modal namespace selector', async ({ page, request }, testInfo) => {
+    const adminToken = getAdminToken();
+    const slug = uniqueSlug();
+
+    // Create a namespace with a custom icon and color
+    const ns = await api.createNamespace(request, adminToken, slug, 'Icon Test NS');
+    await api.updateNamespace(request, adminToken, slug, { icon: 'rocket', color: 'green' });
+
+    await page.goto('/d/projects');
+    await page.waitForLoadState('networkidle');
+
+    // Open New Project modal
+    await page.getByRole('button', { name: /new project/i }).click();
+    const modal = page.getByRole('dialog');
+    await expect(modal).toBeVisible();
+
+    // The namespace selector button should show the NamespaceIcon (not a generic Globe/Building2)
+    // The active namespace is default, which uses globe icon — click to open the picker
+    const nsButton = modal.locator('button').filter({ hasText: /namespace/i }).first();
+    // If namespace button isn't visible (single namespace), the selector field should be there
+    const nsSelectorBtn = modal.locator('button[type="button"]').filter({ has: page.locator('.lucide') }).last();
+
+    // Open the namespace picker
+    await nsSelectorBtn.click();
+
+    // A second modal with the namespace list should appear
+    const pickerModal = page.getByRole('dialog').filter({ hasText: /select namespace/i });
+    await expect(pickerModal).toBeVisible();
+
+    // The custom namespace should show a rocket icon (lucide-rocket class)
+    const nsRow = pickerModal.locator('button').filter({ hasText: 'Icon Test NS' });
+    await expect(nsRow).toBeVisible();
+    await expect(nsRow.locator('.lucide-rocket')).toBeVisible();
+
+    await attach(page, testInfo, 'ns-icon-in-picker');
+
+    // Select the custom namespace
+    await nsRow.click();
+
+    // The selector button in the form should now show the rocket icon too
+    const selectedBtn = modal.locator('button[type="button"]').filter({ hasText: 'Icon Test NS' });
+    await expect(selectedBtn.locator('.lucide-rocket')).toBeVisible();
+
+    await attach(page, testInfo, 'ns-icon-in-selector');
+
+    // Cleanup
+    await api.deleteNamespace(request, adminToken, slug);
+  });
 });
 
 // --- Regular (non-admin) user namespace tests ---

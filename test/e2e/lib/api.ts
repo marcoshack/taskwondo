@@ -845,6 +845,8 @@ export interface NamespaceResponse {
   id: string;
   slug: string;
   display_name: string;
+  icon: string;
+  color: string;
   is_default: boolean;
   created_at: string;
   updated_at: string;
@@ -894,7 +896,7 @@ export async function updateNamespace(
   request: APIRequestContext,
   token: string,
   slug: string,
-  data: { slug?: string; display_name?: string },
+  data: { slug?: string; display_name?: string; icon?: string; color?: string },
 ): Promise<NamespaceResponse> {
   const res = await request.patch(`${BASE_URL}/api/v1/namespaces/${slug}`, {
     headers: { Authorization: `Bearer ${token}` },
