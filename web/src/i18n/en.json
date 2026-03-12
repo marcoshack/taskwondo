@@ -545,7 +545,11 @@
 
   "preferences.sidebar.notifications": "Notifications",
   "preferences.notifications.title": "Notifications",
-  "preferences.notifications.description": "Configure email notifications for your projects. Settings are per-project.",
+  "preferences.notifications.description": "Configure email notifications. Global notifications apply across all projects. Per-project notifications can be customized for each project.",
+  "preferences.notifications.globalSection": "Global notifications",
+  "preferences.notifications.globalDescription": "These notifications apply regardless of which project triggers them.",
+  "preferences.notifications.perProjectSection": "Per-project notifications",
+  "preferences.notifications.perProjectDescription": "These notifications can be configured separately for each project.",
   "preferences.notifications.noProjects": "You are not a member of any projects yet.",
   "preferences.notifications.assignedToMe": "Assigned to me",
   "preferences.notifications.assignedToMeDesc": "When a work item is assigned to you",

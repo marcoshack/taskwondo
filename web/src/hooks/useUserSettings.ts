@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { isAxiosError } from 'axios'
-import { getUserSettings, getUserSetting, setUserSetting, deleteUserSetting } from '@/api/userSettings'
+import { getUserSettings, getUserSetting, setUserSetting, deleteUserSetting, getGlobalPreference, setGlobalPreference } from '@/api/userSettings'
 
 export function useUserSettings(projectKey: string) {
   return useQuery({
@@ -44,6 +44,32 @@ export function useDeleteUserSetting(projectKey: string) {
     mutationFn: (key: string) => deleteUserSetting(projectKey, key),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['user-settings', projectKey] })
+    },
+  })
+}
+
+export function useGlobalPreference<T = unknown>(key: string) {
+  return useQuery({
+    queryKey: ['global-preferences', key],
+    queryFn: async () => {
+      const setting = await getGlobalPreference(key)
+      return setting.value as T
+    },
+    enabled: !!key,
+    retry: (count, error) => {
+      if (isAxiosError(error) && error.response?.status === 404) return false
+      return count < 3
+    },
+  })
+}
+
+export function useSetGlobalPreference() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ key, value }: { key: string; value: unknown }) =>
+      setGlobalPreference(key, value),
+    onSuccess: (_data, { key }) => {
+      qc.invalidateQueries({ queryKey: ['global-preferences', key] })
     },
   })
 }

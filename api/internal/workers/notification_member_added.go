@@ -88,14 +88,14 @@ func (t *NotificationMemberAddedTask) Execute(ctx context.Context, payload []byt
 	return nil
 }
 
-func (t *NotificationMemberAddedTask) isEnabled(ctx context.Context, userID, projectID uuid.UUID) bool {
-	setting, err := t.settings.Get(ctx, userID, &projectID, "notifications")
+func (t *NotificationMemberAddedTask) isEnabled(ctx context.Context, userID, _ uuid.UUID) bool {
+	setting, err := t.settings.Get(ctx, userID, nil, "global_notifications")
 	if err != nil {
-		// No project-level setting yet — default is false (opt-in)
+		// No global setting yet — default is false (opt-in)
 		return false
 	}
 
-	var prefs model.NotificationPreferences
+	var prefs model.GlobalNotificationPreferences
 	if err := json.Unmarshal(setting.Value, &prefs); err != nil {
 		return false
 	}

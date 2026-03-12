@@ -22,7 +22,6 @@ type NotificationPreferences struct {
 	CommentsOnWatched         bool `json:"comments_on_watched"`
 	StatusChangesIntermediate bool `json:"status_changes_intermediate"`
 	StatusChangesFinal        bool `json:"status_changes_final"`
-	AddedToProject            bool `json:"added_to_project"`
 }
 
 // DefaultNotificationPreferences returns the default notification settings.
@@ -30,6 +29,16 @@ func DefaultNotificationPreferences() NotificationPreferences {
 	return NotificationPreferences{
 		AssignedToMe: true,
 	}
+}
+
+// GlobalNotificationPreferences holds global (non-project-scoped) notification toggles.
+type GlobalNotificationPreferences struct {
+	AddedToProject bool `json:"added_to_project"`
+}
+
+// DefaultGlobalNotificationPreferences returns the default global notification settings.
+func DefaultGlobalNotificationPreferences() GlobalNotificationPreferences {
+	return GlobalNotificationPreferences{}
 }
 
 // NewItemEvent is published when a work item is created in a project.

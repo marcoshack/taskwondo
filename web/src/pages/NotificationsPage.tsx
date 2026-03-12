@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronDown, ChevronRight, Check } from 'lucide-react'
 import { useProjects } from '@/hooks/useProjects'
-import { useUserSetting, useSetUserSetting } from '@/hooks/useUserSettings'
+import { useUserSetting, useSetUserSetting, useGlobalPreference, useSetGlobalPreference } from '@/hooks/useUserSettings'
 import { Spinner } from '@/components/ui/Spinner'
 
 interface NotificationPreferences {
@@ -13,7 +13,6 @@ interface NotificationPreferences {
   comments_on_watched: boolean
   status_changes_intermediate: boolean
   status_changes_final: boolean
-  added_to_project: boolean
 }
 
 const defaultPreferences: NotificationPreferences = {
@@ -24,6 +23,13 @@ const defaultPreferences: NotificationPreferences = {
   comments_on_watched: false,
   status_changes_intermediate: false,
   status_changes_final: false,
+}
+
+interface GlobalNotificationPreferences {
+  added_to_project: boolean
+}
+
+const defaultGlobalPreferences: GlobalNotificationPreferences = {
   added_to_project: false,
 }
 
@@ -31,7 +37,7 @@ interface NotificationOption {
   key: keyof NotificationPreferences
   labelKey: string
   descKey: string
-  enabled: boolean // whether this option is functional (not "coming soon")
+  enabled: boolean
 }
 
 const notificationOptions: NotificationOption[] = [
@@ -42,6 +48,16 @@ const notificationOptions: NotificationOption[] = [
   { key: 'comments_on_watched', labelKey: 'preferences.notifications.commentsOnWatched', descKey: 'preferences.notifications.commentsOnWatchedDesc', enabled: true },
   { key: 'status_changes_intermediate', labelKey: 'preferences.notifications.statusChangesIntermediate', descKey: 'preferences.notifications.statusChangesIntermediateDesc', enabled: true },
   { key: 'status_changes_final', labelKey: 'preferences.notifications.statusChangesFinal', descKey: 'preferences.notifications.statusChangesFinalDesc', enabled: true },
+]
+
+interface GlobalNotificationOption {
+  key: keyof GlobalNotificationPreferences
+  labelKey: string
+  descKey: string
+  enabled: boolean
+}
+
+const globalNotificationOptions: GlobalNotificationOption[] = [
   { key: 'added_to_project', labelKey: 'preferences.notifications.addedToProject', descKey: 'preferences.notifications.addedToProjectDesc', enabled: true },
 ]
 
@@ -71,22 +87,110 @@ export function NotificationsPage() {
         {t('preferences.notifications.description')}
       </p>
 
-      <div className="mt-6 space-y-3">
-        {!projects || projects.length === 0 ? (
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            {t('preferences.notifications.noProjects')}
-          </p>
-        ) : (
-          projects.map((project) => (
-            <ProjectNotificationCard
-              key={project.key}
-              projectKey={project.key}
-              projectName={project.name}
-              isExpanded={expanded[project.key] ?? false}
-              onToggle={() => toggleExpanded(project.key)}
+      {/* Global notifications section */}
+      <div className="mt-6">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+          {t('preferences.notifications.globalSection')}
+        </h3>
+        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          {t('preferences.notifications.globalDescription')}
+        </p>
+        <div className="mt-3">
+          <GlobalNotificationCard />
+        </div>
+      </div>
+
+      {/* Per-project notifications section */}
+      <div className="mt-8">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+          {t('preferences.notifications.perProjectSection')}
+        </h3>
+        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          {t('preferences.notifications.perProjectDescription')}
+        </p>
+        <div className="mt-3 space-y-3">
+          {!projects || projects.length === 0 ? (
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {t('preferences.notifications.noProjects')}
+            </p>
+          ) : (
+            projects.map((project) => (
+              <ProjectNotificationCard
+                key={project.key}
+                projectKey={project.key}
+                projectName={project.name}
+                isExpanded={expanded[project.key] ?? false}
+                onToggle={() => toggleExpanded(project.key)}
+              />
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function GlobalNotificationCard() {
+  const { t } = useTranslation()
+  const { data: prefs, isLoading } = useGlobalPreference<GlobalNotificationPreferences>('global_notifications')
+  const { mutate: setGlobal } = useSetGlobalPreference()
+  const [savedId, setSavedId] = useState<string | null>(null)
+
+  const currentPrefs: GlobalNotificationPreferences = prefs ?? defaultGlobalPreferences
+
+  function handleToggle(optionKey: keyof GlobalNotificationPreferences) {
+    const updated = { ...currentPrefs, [optionKey]: !currentPrefs[optionKey] }
+    setGlobal(
+      { key: 'global_notifications', value: updated },
+      {
+        onSuccess: () => {
+          setSavedId(optionKey)
+          setTimeout(() => setSavedId(null), 2000)
+        },
+      },
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-4">
+        <Spinner />
+      </div>
+    )
+  }
+
+  return (
+    <div className="rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-3">
+      <div className="space-y-3">
+        {globalNotificationOptions.map((option) => (
+          <label
+            key={option.key}
+            className={`flex items-start gap-3 ${
+              option.enabled ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'
+            }`}
+          >
+            <input
+              type="checkbox"
+              checked={currentPrefs[option.key]}
+              onChange={() => handleToggle(option.key)}
+              disabled={!option.enabled}
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800"
             />
-          ))
-        )}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  {t(option.labelKey)}
+                </span>
+                {savedId === option.key && (
+                  <Check className="h-4 w-4 text-green-500" />
+                )}
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {t(option.descKey)}
+              </p>
+            </div>
+          </label>
+        ))}
       </div>
     </div>
   )

@@ -27,3 +27,15 @@ export async function setUserSetting(projectKey: string, key: string, value: unk
 export async function deleteUserSetting(projectKey: string, key: string): Promise<void> {
   await api.delete(`${nsPrefix()}/projects/${projectKey}/user-settings/${key}`)
 }
+
+// Global preferences (not scoped to a project)
+
+export async function getGlobalPreference(key: string): Promise<UserSetting> {
+  const res = await api.get<DataResponse<UserSetting>>(`/user/preferences/${key}`)
+  return res.data.data
+}
+
+export async function setGlobalPreference(key: string, value: unknown): Promise<UserSetting> {
+  const res = await api.put<DataResponse<UserSetting>>(`/user/preferences/${key}`, { value })
+  return res.data.data
+}

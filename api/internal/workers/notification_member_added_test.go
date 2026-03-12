@@ -28,10 +28,10 @@ func TestNotificationMemberAdded_Execute_SendsToUser(t *testing.T) {
 		addedByID: {ID: addedByID, Email: "admin@example.com", DisplayName: "Bob"},
 	}}
 
-	prefs := model.NotificationPreferences{AddedToProject: true}
+	prefs := model.GlobalNotificationPreferences{AddedToProject: true}
 	prefsJSON, _ := json.Marshal(prefs)
 	settings := &mockUserSettingRepo{settings: map[string]*model.UserSetting{
-		settingKey(userID, projectID, "notifications"): {UserID: userID, ProjectID: &projectID, Key: "notifications", Value: prefsJSON},
+		userID.String() + "global_notifications": {UserID: userID, Key: "global_notifications", Value: prefsJSON},
 	}}
 	sender := &mockEmailSender{}
 

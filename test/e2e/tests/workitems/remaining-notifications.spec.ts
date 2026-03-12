@@ -89,9 +89,25 @@ async function setNotificationPrefs(
     comments_on_watched: false,
     status_changes_intermediate: false,
     status_changes_final: false,
-    added_to_project: false,
   };
   await api.setProjectUserSetting(request, token, projectKey, 'notifications', {
+    ...defaults,
+    ...overrides,
+  });
+}
+
+/**
+ * Helper: enable specific global notification preferences for a user.
+ */
+async function setGlobalNotificationPrefs(
+  request: any,
+  token: string,
+  overrides: Partial<Record<string, boolean>> = {},
+): Promise<void> {
+  const defaults = {
+    added_to_project: false,
+  };
+  await api.setPreference(request, token, 'global_notifications', {
     ...defaults,
     ...overrides,
   });
@@ -423,25 +439,18 @@ test.describe('Status change (final) notifications', () => {
 // ===== 5. Added to project notification =====
 
 test.describe('Added to project notifications', () => {
-  test('user with enabled preference receives email when re-added to a project', async ({
+  test('user with enabled global preference receives email when added to a project', async ({
     request,
     testUser,
     testProject,
   }) => {
     const adminToken = getAdminToken();
 
-    // Create user and add to project so they can set prefs
+    // Create standalone user and enable global added_to_project preference
     const userB = await createStandaloneUser(request);
-    await api.addMember(request, testUser.token, testProject.key, userB.id, 'member');
-    await new Promise((r) => setTimeout(r, 1000));
+    await setGlobalNotificationPrefs(request, userB.token, { added_to_project: true });
 
-    // Enable added_to_project preference
-    await setNotificationPrefs(request, userB.token, testProject.key, { added_to_project: true });
-
-    // Remove user B
-    await api.removeMember(request, testUser.token, testProject.key, userB.id);
-
-    // Re-add user B — should get email
+    // Add user B to the project — should trigger email
     await api.addMember(request, testUser.token, testProject.key, userB.id, 'member');
 
     const msg = await waitForMailTo(request, userB.email, 15000, 'added');
