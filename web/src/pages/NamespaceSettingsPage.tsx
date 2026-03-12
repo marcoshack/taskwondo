@@ -19,7 +19,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { UserSearchInput } from '@/components/UserSearchInput'
 import type { AxiosError } from 'axios'
-import type { UserSearchResult } from '@/api/auth'
+import type { UserSearchResult } from '@/api/users'
 
 const ROLE_OPTIONS = ['admin', 'member'] as const
 const ROLE_BADGE_COLORS: Record<string, 'indigo' | 'blue' | 'green' | 'gray'> = {

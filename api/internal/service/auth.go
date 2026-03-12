@@ -40,7 +40,7 @@ type UserRepository interface {
 	UpdateDisplayName(ctx context.Context, id uuid.UUID, displayName string) error
 	UpdateAvatarURL(ctx context.Context, id uuid.UUID, avatarURL string) error
 	UpdatePasswordHash(ctx context.Context, id uuid.UUID, hash string, forceChange bool) error
-	Search(ctx context.Context, query string) ([]model.User, error)
+	Search(ctx context.Context, callerID uuid.UUID, query string) ([]model.User, error)
 }
 
 // APIKeyRepository defines the persistence operations the auth service needs for API keys.
@@ -250,12 +250,12 @@ func (s *AuthService) GetUser(ctx context.Context, id uuid.UUID) (*model.User, e
 	return user, nil
 }
 
-// SearchUsers finds active users matching a query string (by email or display name).
-func (s *AuthService) SearchUsers(ctx context.Context, query string) ([]model.User, error) {
-	if len(query) < 2 {
+// SearchUsers finds active co-project members matching an optional query string.
+func (s *AuthService) SearchUsers(ctx context.Context, callerID uuid.UUID, query string) ([]model.User, error) {
+	if query != "" && len(query) < 2 {
 		return nil, nil
 	}
-	users, err := s.users.Search(ctx, query)
+	users, err := s.users.Search(ctx, callerID, query)
 	if err != nil {
 		return nil, fmt.Errorf("searching users: %w", err)
 	}

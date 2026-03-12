@@ -91,7 +91,7 @@ func (m *mockUserRepo) UpdatePasswordHash(_ context.Context, id uuid.UUID, hash 
 	return nil
 }
 
-func (m *mockUserRepo) Search(_ context.Context, query string) ([]model.User, error) {
+func (m *mockUserRepo) Search(_ context.Context, _ uuid.UUID, query string) ([]model.User, error) {
 	var result []model.User
 	q := strings.ToLower(query)
 	for _, u := range m.byID {

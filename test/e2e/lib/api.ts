@@ -748,6 +748,29 @@ export async function waitForMailpitMessage(
   throw new Error(`No Mailpit message found for ${recipientEmail} within ${timeoutMs}ms`);
 }
 
+// --- User Search ---
+
+export interface UserSearchResultE2E {
+  id: string;
+  email: string;
+  display_name: string;
+  global_role: string;
+}
+
+export async function searchUsers(
+  request: APIRequestContext,
+  token: string,
+  query?: string,
+): Promise<UserSearchResultE2E[]> {
+  const params = query ? `?q=${encodeURIComponent(query)}` : '';
+  const res = await request.get(`${BASE_URL}/api/v1/users${params}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`Search users failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
 // --- Invites ---
 
 export async function createInvite(

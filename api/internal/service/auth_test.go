@@ -93,7 +93,7 @@ func (m *mockUserRepo) UpdatePasswordHash(_ context.Context, id uuid.UUID, hash 
 	return nil
 }
 
-func (m *mockUserRepo) Search(_ context.Context, query string) ([]model.User, error) {
+func (m *mockUserRepo) Search(_ context.Context, _ uuid.UUID, query string) ([]model.User, error) {
 	var result []model.User
 	q := strings.ToLower(query)
 	for _, u := range m.byID {
@@ -790,10 +790,11 @@ func TestGetUser_NotFound(t *testing.T) {
 
 func TestSearchUsers_Success(t *testing.T) {
 	svc, userRepo, _ := newTestAuthService()
+	caller := createTestUser(t, userRepo, "caller@example.com", "pass", model.RoleUser)
 	createTestUser(t, userRepo, "alice@example.com", "pass", model.RoleUser)
 	createTestUser(t, userRepo, "bob@example.com", "pass", model.RoleUser)
 
-	results, err := svc.SearchUsers(context.Background(), "alice")
+	results, err := svc.SearchUsers(context.Background(), caller.ID, "alice")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -808,7 +809,7 @@ func TestSearchUsers_Success(t *testing.T) {
 func TestSearchUsers_TooShort(t *testing.T) {
 	svc, _, _ := newTestAuthService()
 
-	results, err := svc.SearchUsers(context.Background(), "a")
+	results, err := svc.SearchUsers(context.Background(), uuid.New(), "a")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -819,14 +820,30 @@ func TestSearchUsers_TooShort(t *testing.T) {
 
 func TestSearchUsers_NoMatch(t *testing.T) {
 	svc, userRepo, _ := newTestAuthService()
+	caller := createTestUser(t, userRepo, "caller@example.com", "pass", model.RoleUser)
 	createTestUser(t, userRepo, "alice@example.com", "pass", model.RoleUser)
 
-	results, err := svc.SearchUsers(context.Background(), "zzzz")
+	results, err := svc.SearchUsers(context.Background(), caller.ID, "zzzz")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(results) != 0 {
 		t.Fatalf("expected 0 results, got %d", len(results))
+	}
+}
+
+func TestSearchUsers_EmptyQuery(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	caller := createTestUser(t, userRepo, "caller@example.com", "pass", model.RoleUser)
+	createTestUser(t, userRepo, "alice@example.com", "pass", model.RoleUser)
+
+	results, err := svc.SearchUsers(context.Background(), caller.ID, "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Empty query returns all visible users (mock doesn't filter by co-project)
+	if results == nil {
+		t.Fatal("expected results for empty query, got nil")
 	}
 }
 

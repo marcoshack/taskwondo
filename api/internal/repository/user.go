@@ -91,18 +91,23 @@ func (r *UserRepository) UpdateAvatarURL(ctx context.Context, id uuid.UUID, avat
 	return nil
 }
 
-// Search returns active users whose email or display_name match the query (ILIKE).
+// Search returns active users visible to the caller (co-project members).
+// When query is non-empty, results are filtered by email or display_name (ILIKE).
 // Results are limited to 20.
-func (r *UserRepository) Search(ctx context.Context, query string) ([]model.User, error) {
+func (r *UserRepository) Search(ctx context.Context, callerID uuid.UUID, query string) ([]model.User, error) {
 	q := "%" + query + "%"
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, email, display_name, password_hash, global_role, avatar_url,
-		        is_active, force_password_change, max_projects, max_namespaces, last_login_at, created_at, updated_at
-		 FROM users
-		 WHERE is_active = true
-		   AND (email ILIKE $1 OR display_name ILIKE $1)
-		 ORDER BY display_name ASC
-		 LIMIT 20`, q)
+		`SELECT DISTINCT u.id, u.email, u.display_name, u.password_hash, u.global_role, u.avatar_url,
+		        u.is_active, u.force_password_change, u.max_projects, u.max_namespaces, u.last_login_at, u.created_at, u.updated_at
+		 FROM users u
+		 JOIN project_members pm1 ON pm1.user_id = u.id
+		 JOIN project_members pm2 ON pm2.project_id = pm1.project_id
+		 WHERE pm2.user_id = $1
+		   AND u.id != $1
+		   AND u.is_active = true
+		   AND ($2 = '%%' OR u.email ILIKE $2 OR u.display_name ILIKE $2)
+		 ORDER BY u.display_name ASC
+		 LIMIT 20`, callerID, q)
 	if err != nil {
 		return nil, fmt.Errorf("searching users: %w", err)
 	}

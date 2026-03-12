@@ -41,19 +41,6 @@ export async function refresh() {
   return res.data.data
 }
 
-export interface UserSearchResult {
-  id: string
-  email: string
-  display_name: string
-  global_role: string
-  avatar_url?: string
-}
-
-export async function searchUsers(query: string) {
-  const res = await api.get<{ data: UserSearchResult[] }>('/users/search', { params: { q: query } })
-  return res.data.data
-}
-
 // Auth providers
 
 export type AuthProviders = Record<string, boolean>

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { searchUsers } from '@/api/auth'
+import { searchUsers } from '@/api/users'
 
 export function useSearchUsers(query: string) {
   return useQuery({

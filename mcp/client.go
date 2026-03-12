@@ -1139,7 +1139,7 @@ func (c *Client) DeleteQueue(projectKey, queueID string) error {
 // --- User search ---
 
 func (c *Client) SearchUsers(query string) ([]User, error) {
-	path := "/api/v1/users/search?q=" + url.QueryEscape(query)
+	path := "/api/v1/users?q=" + url.QueryEscape(query)
 	data, err := c.doRequest("GET", path, nil)
 	if err != nil {
 		return nil, err

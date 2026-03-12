@@ -301,7 +301,7 @@ func (h *AuthHandler) CreateAPIKey(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// SearchUsers handles GET /api/v1/users/search?q=...
+// SearchUsers handles GET /api/v1/users?q=...
 func (h *AuthHandler) SearchUsers(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
@@ -310,12 +310,8 @@ func (h *AuthHandler) SearchUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	query := r.URL.Query().Get("q")
-	if query == "" {
-		writeData(w, http.StatusOK, []userResponse{})
-		return
-	}
 
-	users, err := h.auth.SearchUsers(r.Context(), query)
+	users, err := h.auth.SearchUsers(r.Context(), info.UserID, query)
 	if err != nil {
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to search users")
 		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
@@ -327,6 +323,12 @@ func (h *AuthHandler) SearchUsers(w http.ResponseWriter, r *http.Request) {
 		resp[i] = toUserResponse(&users[i])
 	}
 	writeData(w, http.StatusOK, resp)
+}
+
+// SearchUsersDeprecated handles GET /api/v1/users/search?q=... (deprecated path).
+func (h *AuthHandler) SearchUsersDeprecated(w http.ResponseWriter, r *http.Request) {
+	log.Ctx(r.Context()).Warn().Msg("deprecated: use '/api/v1/users' instead of '/api/v1/users/search'")
+	h.SearchUsers(w, r)
 }
 
 type changePasswordRequest struct {

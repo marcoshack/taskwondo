@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useDebounce } from '@/hooks/useDebounce'
 import { useSearchUsers } from '@/hooks/useUsers'
-import type { UserSearchResult } from '@/api/auth'
+import type { UserSearchResult } from '@/api/users'
 
 interface UserSearchInputProps {
   excludeUserIds: string[]

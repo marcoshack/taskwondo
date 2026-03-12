@@ -20,7 +20,7 @@ import { UserSearchInput } from '@/components/UserSearchInput'
 import { MentionSearchModal } from '@/components/ui/MentionSearchModal'
 import { useMentionAutocomplete } from '@/hooks/useMentionAutocomplete'
 import type { AxiosError } from 'axios'
-import type { UserSearchResult } from '@/api/auth'
+import type { UserSearchResult } from '@/api/users'
 
 function TruncatedName({ name, className }: { name: string; className?: string }) {
   const ref = useRef<HTMLSpanElement>(null)

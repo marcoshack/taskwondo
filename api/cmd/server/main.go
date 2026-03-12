@@ -334,12 +334,6 @@ func main() {
 			r.Patch("/user/api-keys/{keyId}", auth.RenameAPIKey)
 			r.Delete("/user/api-keys/{keyId}", auth.DeleteAPIKey)
 
-			// User search
-			r.Get("/users/search", auth.SearchUsers)
-
-			// Accept invite (authenticated)
-			r.Post("/invites/{code}/accept", projects.AcceptInvite)
-
 			// Global user preferences
 			r.Route("/user/preferences", func(r chi.Router) {
 				r.Get("/", userSettings.ListGlobal)
@@ -365,6 +359,13 @@ func main() {
 			// User watchlist
 			r.Get("/user/watchlist", items.ListWatchedItemIDs)
 
+			// User search (scoped to co-project members)
+			r.Get("/users", auth.SearchUsers)
+			r.Get("/users/search", auth.SearchUsersDeprecated) // deprecated — use /users
+
+			// Accept invite (authenticated)
+			r.Post("/invites/{code}/accept", projects.AcceptInvite)
+
 			// Semantic search
 			r.Get("/search", search.Search)
 
@@ -385,7 +386,6 @@ func main() {
 					r.Post("/projects/{projectKey}/migrate", namespaces.MigrateProject)
 				})
 			})
-
 
 			// Projects (cross-namespace, no namespace middleware — returns all projects)
 			r.Get("/"+handler.PathProjects, projects.List)
@@ -499,12 +499,12 @@ func main() {
 								r.Delete("/{timeEntryId}", items.DeleteTimeEntry)
 							})
 							r.Route("/"+handler.PathWatchers, func(r chi.Router) {
-							r.Get("/", items.ListWatchers)
-							r.Post("/", items.AddWatcher)
-							r.Delete("/{userId}", items.RemoveWatcher)
-						})
-						r.Post("/watch", items.ToggleWatch)
-						r.Get("/"+handler.PathEvents, items.ListEvents)
+								r.Get("/", items.ListWatchers)
+								r.Post("/", items.AddWatcher)
+								r.Delete("/{userId}", items.RemoveWatcher)
+							})
+							r.Post("/watch", items.ToggleWatch)
+							r.Get("/"+handler.PathEvents, items.ListEvents)
 						})
 					})
 				})
