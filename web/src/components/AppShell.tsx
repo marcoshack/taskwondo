@@ -385,6 +385,10 @@ function ProjectSwitcherModal({
   const { t } = useTranslation()
   const { showSwitcher: showNamespaces } = useNamespaceContext()
   const { data: projects, isLoading } = useAllProjects()
+  const { data: showAllNsPref, isSuccess: prefLoaded } = usePreference<boolean>('project_switcher_all_namespaces')
+  const { mutate: savePref } = useSetPreference()
+  const [showAllLocal, setShowAllLocal] = useState<boolean | null>(null)
+  const showAllNamespaces = showAllLocal ?? (!prefLoaded || showAllNsPref !== false)
   const [search, setSearch] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -399,15 +403,17 @@ function ProjectSwitcherModal({
   }, [open])
 
   const filtered = (projects ?? []).filter((p) => {
+    // Filter by namespace when toggle is off
+    if (showNamespaces && !showAllNamespaces && p.namespace_slug !== activeNamespaceSlug) return false
     if (!search) return true
     const q = search.toLowerCase()
     return p.key.toLowerCase().includes(q) || p.name.toLowerCase().includes(q) || (p.namespace_slug ?? '').toLowerCase().includes(q)
   })
 
-  // Reset selection when search changes
+  // Reset selection when search or namespace filter changes
   useEffect(() => {
     setSelectedIndex(0)
-  }, [search])
+  }, [search, showAllNamespaces])
 
   // Scroll selected item into view
   const scrollSelectedIntoView = useCallback((index: number) => {
@@ -437,6 +443,12 @@ function ProjectSwitcherModal({
 
   const isCurrent = (p: { key: string; namespace_slug?: string }) =>
     p.key === activeProjectKey && (!showNamespaces || p.namespace_slug === activeNamespaceSlug)
+
+  const handleToggleAllNamespaces = () => {
+    const newValue = !showAllNamespaces
+    setShowAllLocal(newValue)
+    savePref({ key: 'project_switcher_all_namespaces', value: newValue })
+  }
 
   return (
     <Modal open={open} onClose={onClose} title={t('projects.switcher.title')} position="top">
@@ -483,6 +495,19 @@ function ProjectSwitcherModal({
             </li>
           ))}
         </ul>
+      )}
+      {showNamespaces && (
+        <div className="flex justify-end mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+          <label className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none" data-testid="all-namespaces-toggle">
+            <input
+              type="checkbox"
+              checked={showAllNamespaces}
+              onChange={handleToggleAllNamespaces}
+              className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 h-3.5 w-3.5"
+            />
+            {t('projects.switcher.showAllNamespaces')}
+          </label>
+        </div>
       )}
     </Modal>
   )

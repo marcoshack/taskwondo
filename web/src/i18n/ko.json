@@ -621,6 +621,7 @@
   "projects.settings.workflows": "워크플로",
   "projects.settings.workflowsDescription": "각 작업 항목 유형에 사용할 워크플로를 구성합니다.",
   "projects.switcher.search": "프로젝트 검색...",
+  "projects.switcher.showAllNamespaces": "모든 네임스페이스",
   "projects.switcher.title": "프로젝트 전환",
   "projects.table.inProgress": "진행 중",
   "projects.table.key": "키",

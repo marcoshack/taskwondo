@@ -209,6 +209,7 @@
 
   "projects.switcher.title": "Switch Project",
   "projects.switcher.search": "Search projects...",
+  "projects.switcher.showAllNamespaces": "All namespaces",
 
   "projects.placeholder.comingSoon": "{{title}} view coming soon.",
   "projects.queuesComingSoon": "Queues coming soon",

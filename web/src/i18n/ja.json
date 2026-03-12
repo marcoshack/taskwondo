@@ -621,6 +621,7 @@
   "projects.settings.workflows": "ワークフロー",
   "projects.settings.workflowsDescription": "各アイテムの種別に使用するワークフローを設定します。",
   "projects.switcher.search": "プロジェクトを検索...",
+  "projects.switcher.showAllNamespaces": "すべての名前空間",
   "projects.switcher.title": "プロジェクト切替",
   "projects.table.inProgress": "進行中",
   "projects.table.key": "キー",

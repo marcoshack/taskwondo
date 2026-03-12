@@ -621,6 +621,7 @@
   "projects.settings.workflows": "Workflows",
   "projects.settings.workflowsDescription": "Konfigurieren Sie, welcher Workflow für jeden Elementtyp verwendet wird.",
   "projects.switcher.search": "Projekte suchen...",
+  "projects.switcher.showAllNamespaces": "Alle Namensräume",
   "projects.switcher.title": "Projekt wechseln",
   "projects.table.inProgress": "In Bearbeitung",
   "projects.table.key": "Schlüssel",

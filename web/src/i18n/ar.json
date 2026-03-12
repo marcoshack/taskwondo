@@ -621,6 +621,7 @@
   "projects.settings.workflows": "سير العمل",
   "projects.settings.workflowsDescription": "قم بتكوين سير العمل المستخدم لكل نوع من عناصر العمل.",
   "projects.switcher.search": "البحث في المشاريع...",
+  "projects.switcher.showAllNamespaces": "جميع مساحات الأسماء",
   "projects.switcher.title": "تبديل المشروع",
   "projects.table.inProgress": "قيد التنفيذ",
   "projects.table.key": "المفتاح",

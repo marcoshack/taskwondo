@@ -621,6 +621,7 @@
   "projects.settings.workflows": "工作流",
   "projects.settings.workflowsDescription": "配置每种工作条目类型使用的工作流。",
   "projects.switcher.search": "搜索项目...",
+  "projects.switcher.showAllNamespaces": "所有命名空间",
   "projects.switcher.title": "切换项目",
   "projects.table.inProgress": "进行中",
   "projects.table.key": "标识",

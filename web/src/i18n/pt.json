@@ -621,6 +621,7 @@
   "projects.settings.workflows": "Fluxos de trabalho",
   "projects.settings.workflowsDescription": "Configure qual fluxo de trabalho é usado para cada tipo de item.",
   "projects.switcher.search": "Buscar projetos...",
+  "projects.switcher.showAllNamespaces": "Todos os namespaces",
   "projects.switcher.title": "Trocar Projeto",
   "projects.table.inProgress": "Em andamento",
   "projects.table.key": "Chave",
