@@ -30,5 +30,10 @@
   "email.member_added.subject": "تمت إضافتك إلى مشروع {{projectName}}",
   "email.member_added.intro": "قام <strong>{{addedByName}}</strong> بإضافتك إلى مشروع <strong>{{projectName}}</strong> بصفة <strong>{{role}}</strong>.",
   "email.member_added.cta": "عرض المشروع",
-  "email.member_added.footer": "لقد تلقيت هذا البريد الإلكتروني لأن إشعارات عضوية المشروع مفعّلة. يمكنك تغيير تفضيلات الإشعارات في إعدادات Taskwondo."
+  "email.member_added.footer": "لقد تلقيت هذا البريد الإلكتروني لأن إشعارات عضوية المشروع مفعّلة. يمكنك تغيير تفضيلات الإشعارات في إعدادات Taskwondo.",
+
+  "email.invite.subject": "تمت دعوتك إلى مشروع {{projectName}}",
+  "email.invite.intro": "قام <strong>{{inviterName}}</strong> بدعوتك للانضمام إلى مشروع <strong>{{projectName}}</strong> بصفة <strong>{{role}}</strong>.",
+  "email.invite.cta": "قبول الدعوة",
+  "email.invite.footer": "لقد تلقيت هذا البريد الإلكتروني لأن شخصًا ما دعاك إلى مشروع في Taskwondo. إذا لم تتعرف على هذه الدعوة، يمكنك تجاهل هذا البريد الإلكتروني."
 }

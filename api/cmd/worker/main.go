@@ -152,6 +152,11 @@ func main() {
 	)
 	dispatcher.Register(notifyMemberAdded)
 
+	notifyInviteEmail := workers.NewNotificationInviteEmailTask(
+		emailSender, cfg.BaseURL, log.Logger,
+	)
+	dispatcher.Register(notifyInviteEmail)
+
 	// Register embedding tasks
 	embedIndex := workers.NewEmbedIndexTask(indexerService, systemSettingRepo, log.Logger)
 	dispatcher.Register(embedIndex)

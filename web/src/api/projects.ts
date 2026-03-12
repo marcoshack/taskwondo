@@ -153,10 +153,12 @@ export interface ProjectInvite {
   role: string
   url: string
   created_by_name: string
+  invitee_email?: string
   expires_at?: string
   max_uses: number
   use_count: number
   created_at: string
+  direct_add?: boolean
 }
 
 export interface InviteInfo {
@@ -169,6 +171,7 @@ export interface InviteInfo {
 
 export interface CreateInviteInput {
   role: string
+  email?: string
   expires_in?: string
   max_uses?: number
 }

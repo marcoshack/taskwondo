@@ -537,6 +537,7 @@ func (h *ProjectHandler) UpdateTypeWorkflow(w http.ResponseWriter, r *http.Reque
 
 type createInviteRequest struct {
 	Role      string `json:"role"`
+	Email     string `json:"email,omitempty"`
 	ExpiresIn string `json:"expires_in,omitempty"`
 	MaxUses   *int   `json:"max_uses,omitempty"`
 }
@@ -547,10 +548,12 @@ type inviteResponse struct {
 	Role          string     `json:"role"`
 	URL           string     `json:"url"`
 	CreatedByName string     `json:"created_by_name"`
+	InviteeEmail  *string    `json:"invitee_email,omitempty"`
 	ExpiresAt     *time.Time `json:"expires_at,omitempty"`
 	MaxUses       int        `json:"max_uses"`
 	UseCount      int        `json:"use_count"`
 	CreatedAt     time.Time  `json:"created_at"`
+	DirectAdd     bool       `json:"direct_add,omitempty"`
 }
 
 type inviteInfoResponse struct {
@@ -575,6 +578,7 @@ func (h *ProjectHandler) toInviteResponse(inv *model.ProjectInvite) inviteRespon
 		Role:          inv.Role,
 		URL:           fmt.Sprintf("%s/invite/%s", h.baseURL, inv.Code),
 		CreatedByName: inv.CreatedByName,
+		InviteeEmail:  inv.InviteeEmail,
 		ExpiresAt:     inv.ExpiresAt,
 		MaxUses:       inv.MaxUses,
 		UseCount:      inv.UseCount,
@@ -612,6 +616,25 @@ func (h *ProjectHandler) CreateInvite(w http.ResponseWriter, r *http.Request) {
 		}
 		t := time.Now().Add(d)
 		expiresAt = &t
+	}
+
+	// Email-based invite flow
+	if req.Email != "" {
+		result, err := h.projects.CreateEmailInvite(r.Context(), info, projectKey, req.Email, req.Role, expiresAt)
+		if err != nil {
+			handleProjectError(w, r, err, "failed to create email invite")
+			return
+		}
+		if result.DirectAdd {
+			// User existed and was added directly — return a synthetic invite response
+			writeData(w, http.StatusCreated, inviteResponse{
+				Role:      req.Role,
+				DirectAdd: true,
+			})
+			return
+		}
+		writeData(w, http.StatusCreated, h.toInviteResponse(result.Invite))
+		return
 	}
 
 	maxUses := 0

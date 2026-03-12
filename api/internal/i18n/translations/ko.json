@@ -30,5 +30,10 @@
   "email.member_added.subject": "프로젝트 {{projectName}}에 추가되었습니다",
   "email.member_added.intro": "<strong>{{addedByName}}</strong>님이 <strong>{{projectName}}</strong> 프로젝트에 <strong>{{role}}</strong>(으)로 추가했습니다.",
   "email.member_added.cta": "프로젝트 보기",
-  "email.member_added.footer": "프로젝트 멤버십 알림이 활성화되어 있어 이 이메일을 받았습니다. Taskwondo 설정에서 알림 기본 설정을 변경할 수 있습니다."
+  "email.member_added.footer": "프로젝트 멤버십 알림이 활성화되어 있어 이 이메일을 받았습니다. Taskwondo 설정에서 알림 기본 설정을 변경할 수 있습니다.",
+
+  "email.invite.subject": "프로젝트 {{projectName}}에 초대되었습니다",
+  "email.invite.intro": "<strong>{{inviterName}}</strong>님이 프로젝트 <strong>{{projectName}}</strong>에 <strong>{{role}}</strong>(으)로 참여하도록 초대했습니다.",
+  "email.invite.cta": "초대 수락",
+  "email.invite.footer": "이 이메일은 누군가가 Taskwondo 프로젝트에 초대하여 발송되었습니다. 이 초대를 인식하지 못하시면 이 이메일을 무시하셔도 됩니다."
 }

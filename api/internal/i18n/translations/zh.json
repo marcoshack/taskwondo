@@ -30,5 +30,10 @@
   "email.member_added.subject": "您已被添加到项目 {{projectName}}",
   "email.member_added.intro": "<strong>{{addedByName}}</strong> 将您添加到了项目 <strong>{{projectName}}</strong>,角色为 <strong>{{role}}</strong>。",
   "email.member_added.cta": "查看项目",
-  "email.member_added.footer": "您收到此邮件是因为您已启用了项目成员通知。您可以在 Taskwondo 设置中更改通知偏好。"
+  "email.member_added.footer": "您收到此邮件是因为您已启用了项目成员通知。您可以在 Taskwondo 设置中更改通知偏好。",
+
+  "email.invite.subject": "您已被邀请加入项目 {{projectName}}",
+  "email.invite.intro": "<strong>{{inviterName}}</strong> 邀请您以 <strong>{{role}}</strong> 身份加入项目 <strong>{{projectName}}</strong>。",
+  "email.invite.cta": "接受邀请",
+  "email.invite.footer": "您收到此邮件是因为有人邀请您加入 Taskwondo 项目。如果您不认识此邀请，可以安全地忽略此邮件。"
 }

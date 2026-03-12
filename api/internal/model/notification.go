@@ -88,6 +88,16 @@ type MemberAddedEvent struct {
 	Role        string    `json:"role"`
 }
 
+// InviteEmailEvent is published when an email invite is created for a non-existing user.
+type InviteEmailEvent struct {
+	ProjectKey   string `json:"project_key"`
+	ProjectName  string `json:"project_name"`
+	InviteeEmail string `json:"invitee_email"`
+	InviterName  string `json:"inviter_name"`
+	InviteCode   string `json:"invite_code"`
+	Role         string `json:"role"`
+}
+
 // WatcherEvent is published when a watched work item is modified.
 type WatcherEvent struct {
 	WorkItemID uuid.UUID `json:"work_item_id"`

@@ -788,6 +788,48 @@ export async function createInvite(
   return body.data;
 }
 
+export async function listInvites(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+): Promise<any[]> {
+  const res = await request.get(`${BASE_URL}/api/v1/default/projects/${projectKey}/invites`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`List invites failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function listMembers(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+): Promise<any[]> {
+  const res = await request.get(`${BASE_URL}/api/v1/default/projects/${projectKey}/members`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`List members failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function createEmailInvite(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  email: string,
+  role: string,
+): Promise<{ code?: string; url?: string; direct_add?: boolean }> {
+  const res = await request.post(`${BASE_URL}/api/v1/default/projects/${projectKey}/invites`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { role, email },
+  });
+  if (!res.ok()) throw new Error(`Create email invite failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
 // --- Watchers ---
 
 export async function toggleWatch(

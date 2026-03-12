@@ -173,6 +173,7 @@ export function useCreateInvite(projectKey: string) {
     mutationFn: (input: CreateInviteInput) => createInvite(projectKey, input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['projects', projectKey, 'invites'] })
+      qc.invalidateQueries({ queryKey: ['projects', projectKey, 'members'] })
     },
   })
 }

@@ -22,9 +22,9 @@ func NewProjectInviteRepository(db *sql.DB) *ProjectInviteRepository {
 // Create inserts a new project invite.
 func (r *ProjectInviteRepository) Create(ctx context.Context, invite *model.ProjectInvite) error {
 	_, err := r.db.ExecContext(ctx,
-		`INSERT INTO project_invites (id, project_id, code, role, created_by, expires_at, max_uses)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-		invite.ID, invite.ProjectID, invite.Code, invite.Role, invite.CreatedBy, invite.ExpiresAt, invite.MaxUses)
+		`INSERT INTO project_invites (id, project_id, code, role, created_by, invitee_email, expires_at, max_uses)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+		invite.ID, invite.ProjectID, invite.Code, invite.Role, invite.CreatedBy, invite.InviteeEmail, invite.ExpiresAt, invite.MaxUses)
 	if err != nil {
 		return fmt.Errorf("inserting project invite: %w", err)
 	}
@@ -34,7 +34,7 @@ func (r *ProjectInviteRepository) Create(ctx context.Context, invite *model.Proj
 // GetByCode returns a project invite by its unique code.
 func (r *ProjectInviteRepository) GetByCode(ctx context.Context, code string) (*model.ProjectInvite, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, project_id, code, role, created_by, expires_at, max_uses, use_count, created_at
+		`SELECT id, project_id, code, role, created_by, invitee_email, expires_at, max_uses, use_count, created_at
 		 FROM project_invites WHERE code = $1`, code)
 	return scanProjectInvite(row)
 }
@@ -42,7 +42,7 @@ func (r *ProjectInviteRepository) GetByCode(ctx context.Context, code string) (*
 // GetByID returns a project invite by ID.
 func (r *ProjectInviteRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.ProjectInvite, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, project_id, code, role, created_by, expires_at, max_uses, use_count, created_at
+		`SELECT id, project_id, code, role, created_by, invitee_email, expires_at, max_uses, use_count, created_at
 		 FROM project_invites WHERE id = $1`, id)
 	return scanProjectInvite(row)
 }
@@ -51,7 +51,7 @@ func (r *ProjectInviteRepository) GetByID(ctx context.Context, id uuid.UUID) (*m
 func (r *ProjectInviteRepository) ListByProject(ctx context.Context, projectID uuid.UUID) ([]model.ProjectInvite, error) {
 	rows, err := r.db.QueryContext(ctx,
 		`SELECT pi.id, pi.project_id, pi.code, pi.role, pi.created_by, u.display_name,
-		        pi.expires_at, pi.max_uses, pi.use_count, pi.created_at
+		        pi.invitee_email, pi.expires_at, pi.max_uses, pi.use_count, pi.created_at
 		 FROM project_invites pi
 		 JOIN users u ON u.id = pi.created_by
 		 WHERE pi.project_id = $1 ORDER BY pi.created_at DESC`, projectID)
@@ -64,12 +64,16 @@ func (r *ProjectInviteRepository) ListByProject(ctx context.Context, projectID u
 	for rows.Next() {
 		var inv model.ProjectInvite
 		var expiresAt sql.NullTime
+		var inviteeEmail sql.NullString
 		if err := rows.Scan(&inv.ID, &inv.ProjectID, &inv.Code, &inv.Role, &inv.CreatedBy, &inv.CreatedByName,
-			&expiresAt, &inv.MaxUses, &inv.UseCount, &inv.CreatedAt); err != nil {
+			&inviteeEmail, &expiresAt, &inv.MaxUses, &inv.UseCount, &inv.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scanning project invite row: %w", err)
 		}
 		if expiresAt.Valid {
 			inv.ExpiresAt = &expiresAt.Time
+		}
+		if inviteeEmail.Valid {
+			inv.InviteeEmail = &inviteeEmail.String
 		}
 		invites = append(invites, inv)
 	}
@@ -125,8 +129,9 @@ func (r *ProjectInviteRepository) DeleteByProject(ctx context.Context, projectID
 func scanProjectInvite(row *sql.Row) (*model.ProjectInvite, error) {
 	var inv model.ProjectInvite
 	var expiresAt sql.NullTime
+	var inviteeEmail sql.NullString
 	err := row.Scan(&inv.ID, &inv.ProjectID, &inv.Code, &inv.Role, &inv.CreatedBy,
-		&expiresAt, &inv.MaxUses, &inv.UseCount, &inv.CreatedAt)
+		&inviteeEmail, &expiresAt, &inv.MaxUses, &inv.UseCount, &inv.CreatedAt)
 	if err == sql.ErrNoRows {
 		return nil, model.ErrNotFound
 	}
@@ -135,6 +140,9 @@ func scanProjectInvite(row *sql.Row) (*model.ProjectInvite, error) {
 	}
 	if expiresAt.Valid {
 		inv.ExpiresAt = &expiresAt.Time
+	}
+	if inviteeEmail.Valid {
+		inv.InviteeEmail = &inviteeEmail.String
 	}
 	return &inv, nil
 }

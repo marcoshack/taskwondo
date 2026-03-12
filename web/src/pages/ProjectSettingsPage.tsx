@@ -95,6 +95,9 @@ export function ProjectSettingsPage() {
   const [newMemberRole, setNewMemberRole] = useState('member')
   const [memberError, setMemberError] = useState('')
   const [removeTarget, setRemoveTarget] = useState<{ userId: string; name: string } | null>(null)
+  const [emailInput, setEmailInput] = useState('')
+  const [showEmailInviteModal, setShowEmailInviteModal] = useState(false)
+  const [emailInviteRole, setEmailInviteRole] = useState('member')
   const [complexityInput, setComplexityInput] = useState<string | null>(null)
   const [complexityError, setComplexityError] = useState('')
 
@@ -227,6 +230,31 @@ export function ProjectSettingsPage() {
         onError: (err) => {
           const axiosErr = err as AxiosError<{ error?: { message?: string } }>
           setMemberError(axiosErr.response?.data?.error?.message ?? t('projects.settings.addMemberError'))
+        },
+      },
+    )
+  }
+
+  function handleEmailInvite() {
+    if (!emailInput.trim()) return
+    setMemberError('')
+    setShowEmailInviteModal(false)
+
+    createInviteMutation.mutate(
+      { role: emailInviteRole, email: emailInput.trim() },
+      {
+        onSuccess: (result) => {
+          setEmailInput('')
+          setEmailInviteRole('member')
+          if (result.direct_add) {
+            showSaved('addMember')
+          } else {
+            showSaved('emailInvite')
+          }
+        },
+        onError: (err) => {
+          const axiosErr = err as AxiosError<{ error?: { message?: string } }>
+          setMemberError(axiosErr.response?.data?.error?.message ?? t('projects.settings.emailInviteError'))
         },
       },
     )
@@ -374,6 +402,39 @@ export function ProjectSettingsPage() {
               {addMemberMutation.isPending ? t('common.saving') : t('common.add')}
             </Button>
             {saved.addMember && (
+              <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
+            )}
+          </div>
+          <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500">
+            <div className="flex-1 border-t border-gray-200 dark:border-gray-700" />
+            <span>{t('common.or')}</span>
+            <div className="flex-1 border-t border-gray-200 dark:border-gray-700" />
+          </div>
+          <div className="flex gap-2 items-end">
+            <div className="flex-1 min-w-0">
+              <Input
+                placeholder={t('projects.settings.emailInvitePlaceholder')}
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+                type="email"
+              />
+            </div>
+            <select
+              className="shrink-0 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              value={emailInviteRole}
+              onChange={(e) => setEmailInviteRole(e.target.value)}
+            >
+              {ROLE_OPTIONS.map((role) => (
+                <option key={role} value={role}>{t(`projects.settings.roles.${role}`)}</option>
+              ))}
+            </select>
+            <Button
+              disabled={!emailInput.trim() || createInviteMutation.isPending}
+              onClick={() => setShowEmailInviteModal(true)}
+            >
+              {createInviteMutation.isPending ? t('common.saving') : t('projects.settings.emailInviteButton')}
+            </Button>
+            {saved.emailInvite && (
               <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
             )}
           </div>
@@ -562,6 +623,11 @@ export function ProjectSettingsPage() {
                       <Badge color={ROLE_BADGE_COLORS[invite.role] ?? 'gray'}>
                         {t(`projects.settings.roles.${invite.role}`)}
                       </Badge>
+                      {invite.invitee_email && (
+                        <span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[160px]" title={invite.invitee_email}>
+                          {invite.invitee_email}
+                        </span>
+                      )}
                       {isExpired && (
                         <Badge color="gray">{t('projects.settings.inviteExpired')}</Badge>
                       )}
@@ -811,6 +877,28 @@ export function ProjectSettingsPage() {
             }}
           >
             {deleteInviteMutation.isPending ? t('common.deleting') : t('common.delete')}
+          </Button>
+        </div>
+      </Modal>
+
+      {/* Email invite confirmation modal */}
+      <Modal open={showEmailInviteModal} onClose={() => setShowEmailInviteModal(false)} title={t('projects.settings.emailInviteConfirmTitle')}>
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+          <Trans
+            i18nKey="projects.settings.emailInviteConfirmBody"
+            values={{ email: emailInput, role: t(`projects.settings.roles.${emailInviteRole}`) }}
+            components={{ bold: <strong /> }}
+          />
+        </p>
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={() => setShowEmailInviteModal(false)}>
+            {t('common.cancel')}
+          </Button>
+          <Button
+            disabled={createInviteMutation.isPending}
+            onClick={handleEmailInvite}
+          >
+            {createInviteMutation.isPending ? t('common.saving') : t('projects.settings.emailInviteSend')}
           </Button>
         </div>
       </Modal>

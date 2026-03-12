@@ -2385,3 +2385,114 @@ func TestGetInviteInfo_ExpiredAndFull(t *testing.T) {
 		t.Fatal("expected full to be true")
 	}
 }
+
+// --- Email Invite Tests ---
+
+func TestCreateEmailInvite_ExistingUser_DirectAdd(t *testing.T) {
+	s := newTestProjectSetup()
+	owner := userAuthInfo()
+	ctx := context.Background()
+
+	_, err := s.svc.Create(ctx, owner, "Test", "TT", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a user that "exists"
+	existingUser := &model.User{
+		ID:          uuid.New(),
+		Email:       "existing@test.com",
+		DisplayName: "Existing User",
+	}
+	s.userRepo.Create(ctx, existingUser)
+
+	result, err := s.svc.CreateEmailInvite(ctx, owner, "TT", "existing@test.com", model.ProjectRoleMember, nil)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if !result.DirectAdd {
+		t.Fatal("expected DirectAdd to be true")
+	}
+	if result.Member == nil {
+		t.Fatal("expected Member to be set")
+	}
+	if result.Member.UserID != existingUser.ID {
+		t.Fatalf("expected member user ID %s, got %s", existingUser.ID, result.Member.UserID)
+	}
+	if result.Invite != nil {
+		t.Fatal("expected Invite to be nil")
+	}
+}
+
+func TestCreateEmailInvite_NonExistingUser_CreatesInvite(t *testing.T) {
+	s := newTestProjectSetup()
+	owner := userAuthInfo()
+	ctx := context.Background()
+
+	_, err := s.svc.Create(ctx, owner, "Test", "TT", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := s.svc.CreateEmailInvite(ctx, owner, "TT", "newuser@test.com", model.ProjectRoleMember, nil)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if result.DirectAdd {
+		t.Fatal("expected DirectAdd to be false")
+	}
+	if result.Invite == nil {
+		t.Fatal("expected Invite to be set")
+	}
+	if result.Invite.InviteeEmail == nil || *result.Invite.InviteeEmail != "newuser@test.com" {
+		t.Fatalf("expected invitee_email 'newuser@test.com', got %v", result.Invite.InviteeEmail)
+	}
+	if result.Invite.MaxUses != 1 {
+		t.Fatalf("expected max_uses 1, got %d", result.Invite.MaxUses)
+	}
+}
+
+func TestCreateEmailInvite_AlreadyMember_Error(t *testing.T) {
+	s := newTestProjectSetup()
+	owner := userAuthInfo()
+	ctx := context.Background()
+
+	project, err := s.svc.Create(ctx, owner, "Test", "TT", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	existingUser := &model.User{
+		ID:          uuid.New(),
+		Email:       "member@test.com",
+		DisplayName: "Already Member",
+	}
+	s.userRepo.Create(ctx, existingUser)
+
+	// Add them as a member
+	s.memberRepo.Add(ctx, &model.ProjectMember{
+		ID: uuid.New(), ProjectID: project.ID,
+		UserID: existingUser.ID, Role: model.ProjectRoleMember,
+	})
+
+	_, err = s.svc.CreateEmailInvite(ctx, owner, "TT", "member@test.com", model.ProjectRoleMember, nil)
+	if !errors.Is(err, model.ErrAlreadyExists) {
+		t.Fatalf("expected ErrAlreadyExists, got %v", err)
+	}
+}
+
+func TestCreateEmailInvite_OwnerRoleDenied(t *testing.T) {
+	s := newTestProjectSetup()
+	owner := userAuthInfo()
+	ctx := context.Background()
+
+	_, err := s.svc.Create(ctx, owner, "Test", "TT", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = s.svc.CreateEmailInvite(ctx, owner, "TT", "anyone@test.com", model.ProjectRoleOwner, nil)
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation for owner role, got %v", err)
+	}
+}

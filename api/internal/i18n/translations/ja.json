@@ -30,5 +30,10 @@
   "email.member_added.subject": "プロジェクト {{projectName}} に追加されました",
   "email.member_added.intro": "<strong>{{addedByName}}</strong> があなたをプロジェクト <strong>{{projectName}}</strong> に <strong>{{role}}</strong> として追加しました。",
   "email.member_added.cta": "プロジェクトを表示",
-  "email.member_added.footer": "このメールは、プロジェクトメンバーシップ通知が有効になっているために送信されました。通知設定はTaskwondoの設定で変更できます。"
+  "email.member_added.footer": "このメールは、プロジェクトメンバーシップ通知が有効になっているために送信されました。通知設定はTaskwondoの設定で変更できます。",
+
+  "email.invite.subject": "プロジェクト{{projectName}}に招待されました",
+  "email.invite.intro": "<strong>{{inviterName}}</strong>があなたをプロジェクト<strong>{{projectName}}</strong>に<strong>{{role}}</strong>として参加するよう招待しました。",
+  "email.invite.cta": "招待を承諾",
+  "email.invite.footer": "このメールは、Taskwondoプロジェクトに招待されたために送信されました。この招待に心当たりがない場合は、このメールを無視してください。"
 }

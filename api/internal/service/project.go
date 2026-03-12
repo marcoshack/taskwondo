@@ -949,6 +949,130 @@ func (s *ProjectService) CreateInvite(ctx context.Context, info *model.AuthInfo,
 	return invite, nil
 }
 
+// CreateEmailInviteResult contains the result of an email-based invite attempt.
+type CreateEmailInviteResult struct {
+	Invite      *model.ProjectInvite  // Non-nil when an invite was created (user doesn't exist)
+	Member      *model.ProjectMember  // Non-nil when user was added directly (user exists)
+	DirectAdd   bool                  // True if user already existed and was added directly
+}
+
+// CreateEmailInvite handles an email-based invite. If the user exists, adds them directly;
+// otherwise creates a personal invite and sends an email notification.
+func (s *ProjectService) CreateEmailInvite(ctx context.Context, info *model.AuthInfo, projectKey, email, role string, expiresAt *time.Time) (*CreateEmailInviteResult, error) {
+	project, err := s.projects.GetByKey(ctx, projectKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.requireRole(ctx, info, project.ID, model.ProjectRoleOwner, model.ProjectRoleAdmin); err != nil {
+		return nil, err
+	}
+
+	if !isValidInviteRole(role) {
+		return nil, fmt.Errorf("invalid invite role %q (owner not allowed): %w", role, model.ErrValidation)
+	}
+
+	// Only owners can invite as owner (shouldn't reach here due to isValidInviteRole, but be safe)
+	if role == model.ProjectRoleOwner {
+		if err := s.requireRole(ctx, info, project.ID, model.ProjectRoleOwner); err != nil {
+			return nil, model.ErrForbidden
+		}
+	}
+
+	// Check if the user already exists
+	existingUser, err := s.users.GetByEmail(ctx, email)
+	if err != nil && err != model.ErrNotFound {
+		return nil, fmt.Errorf("looking up user by email: %w", err)
+	}
+
+	if existingUser != nil {
+		// User exists — add them directly
+		existing, err := s.members.GetByProjectAndUser(ctx, project.ID, existingUser.ID)
+		if err == nil && existing != nil {
+			return nil, fmt.Errorf("user is already a member of this project: %w", model.ErrAlreadyExists)
+		}
+		if err != nil && err != model.ErrNotFound {
+			return nil, fmt.Errorf("checking membership: %w", err)
+		}
+
+		member := &model.ProjectMember{
+			ID:        uuid.New(),
+			ProjectID: project.ID,
+			UserID:    existingUser.ID,
+			Role:      role,
+		}
+		if err := s.members.Add(ctx, member); err != nil {
+			return nil, fmt.Errorf("adding member: %w", err)
+		}
+
+		log.Ctx(ctx).Info().
+			Str("project_key", projectKey).
+			Str("email", email).
+			Str("role", role).
+			Msg("user added directly via email invite (existing user)")
+
+		// Publish member-added notification (reuse existing flow)
+		s.publishMemberAdded(ctx, project, existingUser.ID, info.UserID, role)
+
+		return &CreateEmailInviteResult{Member: member, DirectAdd: true}, nil
+	}
+
+	// User doesn't exist — create a personal invite and send email
+	code, err := generateInviteCode()
+	if err != nil {
+		return nil, fmt.Errorf("generating invite code: %w", err)
+	}
+
+	invite := &model.ProjectInvite{
+		ID:           uuid.New(),
+		ProjectID:    project.ID,
+		Code:         code,
+		Role:         role,
+		CreatedBy:    info.UserID,
+		InviteeEmail: &email,
+		ExpiresAt:    expiresAt,
+		MaxUses:      1,
+	}
+
+	if err := s.invites.Create(ctx, invite); err != nil {
+		return nil, fmt.Errorf("creating invite: %w", err)
+	}
+
+	log.Ctx(ctx).Info().
+		Str("project_key", projectKey).
+		Str("invite_code", code).
+		Str("invitee_email", email).
+		Str("role", role).
+		Msg("email invite created for non-existing user")
+
+	// Publish invite email notification
+	s.publishInviteEmail(ctx, project, info, email, code, role)
+
+	return &CreateEmailInviteResult{Invite: invite}, nil
+}
+
+func (s *ProjectService) publishInviteEmail(ctx context.Context, project *model.Project, info *model.AuthInfo, email, code, role string) {
+	if s.publisher == nil {
+		return
+	}
+	inviter, err := s.users.GetByID(ctx, info.UserID)
+	inviterName := "A team member"
+	if err == nil {
+		inviterName = inviter.DisplayName
+	}
+	evt := model.InviteEmailEvent{
+		ProjectKey:   project.Key,
+		ProjectName:  project.Name,
+		InviteeEmail: email,
+		InviterName:  inviterName,
+		InviteCode:   code,
+		Role:         role,
+	}
+	if err := s.publisher.Publish("notification.invite_email", evt); err != nil {
+		log.Ctx(context.Background()).Warn().Err(err).Msg("failed to publish invite email notification")
+	}
+}
+
 // ListInvites returns all invites for a project. Requires owner or admin role.
 func (s *ProjectService) ListInvites(ctx context.Context, info *model.AuthInfo, projectKey string) ([]model.ProjectInvite, error) {
 	project, err := s.projects.GetByKey(ctx, projectKey)

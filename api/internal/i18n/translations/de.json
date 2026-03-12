@@ -30,5 +30,10 @@
   "email.member_added.subject": "Sie wurden zum Projekt {{projectName}} hinzugefügt",
   "email.member_added.intro": "<strong>{{addedByName}}</strong> hat Sie zum Projekt <strong>{{projectName}}</strong> als <strong>{{role}}</strong> hinzugefügt.",
   "email.member_added.cta": "Projekt ansehen",
-  "email.member_added.footer": "Sie haben diese E-Mail erhalten, weil Sie Projektmitgliedschaftsbenachrichtigungen aktiviert haben. Sie können Ihre Benachrichtigungseinstellungen in den Taskwondo-Einstellungen ändern."
+  "email.member_added.footer": "Sie haben diese E-Mail erhalten, weil Sie Projektmitgliedschaftsbenachrichtigungen aktiviert haben. Sie können Ihre Benachrichtigungseinstellungen in den Taskwondo-Einstellungen ändern.",
+
+  "email.invite.subject": "Sie wurden zum Projekt {{projectName}} eingeladen",
+  "email.invite.intro": "<strong>{{inviterName}}</strong> hat Sie eingeladen, dem Projekt <strong>{{projectName}}</strong> als <strong>{{role}}</strong> beizutreten.",
+  "email.invite.cta": "Einladung annehmen",
+  "email.invite.footer": "Sie haben diese E-Mail erhalten, weil jemand Sie zu einem Taskwondo-Projekt eingeladen hat. Wenn Sie diese Einladung nicht kennen, können Sie diese E-Mail ignorieren."
 }

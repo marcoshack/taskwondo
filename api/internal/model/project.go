@@ -95,6 +95,7 @@ type ProjectInvite struct {
 	Role          string     `json:"role"`
 	CreatedBy     uuid.UUID  `json:"created_by"`
 	CreatedByName string     `json:"created_by_name"`
+	InviteeEmail  *string    `json:"invitee_email,omitempty"`
 	ExpiresAt     *time.Time `json:"expires_at,omitempty"`
 	MaxUses       int        `json:"max_uses"`
 	UseCount      int        `json:"use_count"`
