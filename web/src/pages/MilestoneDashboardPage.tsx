@@ -515,18 +515,22 @@ function WorkItemsTable({
         </div>
       ) : (
         <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden divide-y divide-gray-200 dark:divide-gray-700 text-sm">
-          {visibleItems.map((item) => (
-            <WorkItemRow
-              key={item.id}
-              item={item}
-              member={item.assignee_id ? memberMap.get(item.assignee_id) ?? null : null}
-              projectKey={projectKey}
-              milestoneId={milestoneId}
-              isActive={item.item_number === activeItemNumber}
-              onClick={handleItemClick}
-              statuses={statuses}
-            />
-          ))}
+          {visibleItems.map((item) => {
+            const cat = statuses?.find((s) => s.name === item.status)?.category
+            return (
+              <WorkItemRow
+                key={item.id}
+                item={item}
+                member={item.assignee_id ? memberMap.get(item.assignee_id) ?? null : null}
+                projectKey={projectKey}
+                milestoneId={milestoneId}
+                isActive={item.item_number === activeItemNumber}
+                isCompleted={cat === 'done' || cat === 'cancelled'}
+                onClick={handleItemClick}
+                statuses={statuses}
+              />
+            )
+          })}
           {(hasHiddenItems || hasMore) && (
             <div className="border-t border-gray-200 dark:border-gray-700 p-2 text-center">
               {hasHiddenItems && !expanded ? (
@@ -560,6 +564,7 @@ function WorkItemRow({
   projectKey,
   milestoneId,
   isActive,
+  isCompleted,
   onClick,
   statuses,
 }: {
@@ -568,6 +573,7 @@ function WorkItemRow({
   projectKey: string
   milestoneId: string
   isActive?: boolean
+  isCompleted?: boolean
   onClick?: (itemNumber: number) => void
   statuses?: import('@/api/workflows').WorkflowStatus[]
 }) {
@@ -591,7 +597,7 @@ function WorkItemRow({
           to={p(`/projects/${projectKey}/items/${item.item_number}`)}
           {...linkState}
           onClick={() => onClick?.(item.item_number)}
-          className="text-xs text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 font-mono"
+          className={`text-xs font-mono ${isCompleted ? 'text-gray-400 dark:text-gray-500' : 'text-gray-500 dark:text-gray-400'} hover:text-indigo-600 dark:hover:text-indigo-400`}
         >
           {item.display_id}
         </Link>
@@ -601,15 +607,15 @@ function WorkItemRow({
           to={p(`/projects/${projectKey}/items/${item.item_number}`)}
           {...linkState}
           onClick={() => onClick?.(item.item_number)}
-          className="text-gray-900 dark:text-gray-100 hover:text-indigo-600 dark:hover:text-indigo-400 whitespace-nowrap sm:truncate sm:block"
+          className={`hover:text-indigo-600 dark:hover:text-indigo-400 whitespace-nowrap sm:truncate sm:block ${isCompleted ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'}`}
         >
           {item.title}
         </Link>
       </div>
-      <div className="px-2 py-2 shrink-0">
+      <div className={`px-2 py-2 shrink-0 ${isCompleted ? 'opacity-40' : ''}`}>
         <TypeBadge type={item.type} />
       </div>
-      <div className="px-2 py-2 shrink-0">
+      <div className={`px-2 py-2 shrink-0 ${isCompleted ? 'opacity-40' : ''}`}>
         <PriorityBadge priority={item.priority} />
       </div>
       <div className="px-2 py-2 shrink-0">

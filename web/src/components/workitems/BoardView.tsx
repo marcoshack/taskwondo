@@ -192,6 +192,7 @@ export function BoardView({ projectKey, items, statuses, transitionsMap, onItemC
                     statuses={statuses}
                     isDragging={draggedItem?.itemNumber === item.item_number}
                     readOnly={readOnly}
+                    isCompleted={status.category === 'done' || status.category === 'cancelled'}
                     onClick={() => onItemClick(item)}
                     onStatusChange={(newStatus) => {
                       updateMutation.mutate({ itemNumber: item.item_number, input: { status: newStatus } })
@@ -219,6 +220,7 @@ function BoardCard({
   statuses,
   isDragging,
   readOnly,
+  isCompleted,
   onClick,
   onStatusChange,
   onDragStart,
@@ -229,6 +231,7 @@ function BoardCard({
   statuses: WorkflowStatus[]
   isDragging?: boolean
   readOnly?: boolean
+  isCompleted?: boolean
   onClick: () => void
   onStatusChange: (status: string) => void
   onDragStart: () => void
@@ -251,9 +254,9 @@ function BoardCard({
       onDragEnd={onDragEnd}
     >
       <div className="flex items-center gap-1.5 mb-1">
-        <span className="text-xs font-bold font-mono text-gray-600 dark:text-gray-400">{item.display_id}</span>
-        <TypeBadge type={item.type} />
-        <PriorityBadge priority={item.priority} />
+        <span className={`text-xs font-bold font-mono ${isCompleted ? 'text-gray-400 dark:text-gray-500' : 'text-gray-600 dark:text-gray-400'}`}>{item.display_id}</span>
+        <span className={isCompleted ? 'opacity-40' : ''}><TypeBadge type={item.type} /></span>
+        <span className={isCompleted ? 'opacity-40' : ''}><PriorityBadge priority={item.priority} /></span>
         {allowed.length > 0 && !readOnly && (
           <div className="relative ml-auto">
             <Tooltip content={t('workitems.view.moveTo')}>
@@ -287,11 +290,11 @@ function BoardCard({
           </div>
         )}
       </div>
-      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 line-clamp-2">{item.title}</p>
+      <p className={`text-sm font-medium line-clamp-2 ${isCompleted ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'}`}>{item.title}</p>
       {item.description && (
-        <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5">{item.description}</p>
+        <p className={`text-xs line-clamp-1 mt-0.5 ${isCompleted ? 'text-gray-300 dark:text-gray-600' : 'text-gray-500 dark:text-gray-400'}`}>{item.description}</p>
       )}
-      {item.sla && (
+      {!isCompleted && item.sla && (
         <div className="mt-1.5">
           <SLAIndicator sla={item.sla} compact />
         </div>

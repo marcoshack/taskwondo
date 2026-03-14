@@ -29,6 +29,12 @@ import { useWatchedItems, useWatchedItemIDs } from '@/hooks/useWorkItems'
 import { useProjectWorkflow, useAvailableStatuses } from '@/hooks/useWorkflows'
 import { useMilestones } from '@/hooks/useMilestones'
 import { listWatchedItems, type WorkItem, type WorkItemFilter } from '@/api/workitems'
+import type { WorkflowStatus } from '@/api/workflows'
+
+function isItemCompleted(status: string, statuses: WorkflowStatus[]): boolean {
+  const category = statuses.find((s) => s.name === status)?.category
+  return category === 'done' || category === 'cancelled'
+}
 
 function getDescriptionPreview(description: string): string {
   const line = description.split('\n').find(l => l.trim() !== '')
@@ -256,14 +262,20 @@ export default function WatchlistPage() {
       header: t('workitems.table.id'),
       className: 'w-[102px]',
       sortKey: 'item_number',
-      render: (row) => <span className="font-mono text-gray-500 dark:text-gray-400">{row.display_id}</span>,
+      render: (row) => {
+        const done = isItemCompleted(row.status, allStatuses ?? statuses)
+        return <span className={`font-mono ${done ? 'text-gray-400 dark:text-gray-500' : 'text-gray-500 dark:text-gray-400'}`}>{row.display_id}</span>
+      },
     },
     {
       key: 'type',
       header: t('workitems.table.type'),
       className: 'w-20',
       sortKey: 'type',
-      render: (row) => <TypeBadge type={row.type} />,
+      render: (row) => {
+        const done = isItemCompleted(row.status, allStatuses ?? statuses)
+        return <span className={done ? 'opacity-40' : ''}><TypeBadge type={row.type} /></span>
+      },
     },
     {
       key: 'title',
@@ -271,26 +283,29 @@ export default function WatchlistPage() {
       className: 'lg:!pr-2',
       resizable: false,
       sortKey: 'title',
-      render: (row) => (
-        <div className="flex items-center gap-1 min-w-0">
-          <Tooltip content={row.title} className="relative block min-w-0 flex-1">
-            <span className={`truncate block ${row.description ? 'text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'}`}>
-              <span className="font-medium text-gray-900 dark:text-gray-100">{row.title}</span>
-              {row.description && (
-                <span className="font-normal text-xs"> – {getDescriptionPreview(row.description)}</span>
-              )}
+      render: (row) => {
+        const done = isItemCompleted(row.status, allStatuses ?? statuses)
+        return (
+          <div className="flex items-center gap-1 min-w-0">
+            <Tooltip content={row.title} className="relative block min-w-0 flex-1">
+              <span className={`truncate block ${!done && row.description ? 'text-gray-400 dark:text-gray-500' : ''}`}>
+                <span className={done ? 'line-through text-gray-400 dark:text-gray-500' : 'font-medium text-gray-900 dark:text-gray-100'}>{row.title}</span>
+                {row.description && !done && (
+                  <span className="font-normal text-xs"> – {getDescriptionPreview(row.description)}</span>
+                )}
+              </span>
+            </Tooltip>
+            <span className="shrink-0 ml-auto flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+              <span className={`${watchedItemIdSet.has(row.id) ? 'opacity-100' : 'lg:opacity-0 lg:group-hover:opacity-100'} transition-opacity`}>
+                <WatchButton projectKey={row.project_key} itemNumber={row.item_number} isWatching={watchedItemIdSet.has(row.id)} />
+              </span>
+              <span className={`${inboxByWorkItemId.get(row.id) ? 'opacity-100' : 'lg:opacity-0 lg:group-hover:opacity-100'} transition-opacity`}>
+                <InboxButton workItemId={row.id} inboxItemId={inboxByWorkItemId.get(row.id)} />
+              </span>
             </span>
-          </Tooltip>
-          <span className="shrink-0 ml-auto flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-            <span className={`${watchedItemIdSet.has(row.id) ? 'opacity-100' : 'lg:opacity-0 lg:group-hover:opacity-100'} transition-opacity`}>
-              <WatchButton projectKey={row.project_key} itemNumber={row.item_number} isWatching={watchedItemIdSet.has(row.id)} />
-            </span>
-            <span className={`${inboxByWorkItemId.get(row.id) ? 'opacity-100' : 'lg:opacity-0 lg:group-hover:opacity-100'} transition-opacity`}>
-              <InboxButton workItemId={row.id} inboxItemId={inboxByWorkItemId.get(row.id)} />
-            </span>
-          </span>
-        </div>
-      ),
+          </div>
+        )
+      },
     },
     {
       key: 'status',
@@ -304,21 +319,30 @@ export default function WatchlistPage() {
       header: t('workitems.table.priority'),
       className: 'w-28',
       sortKey: 'priority',
-      render: (row) => <PriorityBadge priority={row.priority} />,
+      render: (row) => {
+        const done = isItemCompleted(row.status, allStatuses ?? statuses)
+        return <span className={done ? 'opacity-40' : ''}><PriorityBadge priority={row.priority} /></span>
+      },
     },
     {
       key: 'sla',
       header: t('sla.columnHeader'),
       className: 'w-[110px]',
       sortKey: 'sla_target_at',
-      render: (row) => <SLAIndicator sla={row.sla} />,
+      render: (row) => {
+        const done = isItemCompleted(row.status, allStatuses ?? statuses)
+        return <span className={done ? 'opacity-40' : ''}><SLAIndicator sla={row.sla} /></span>
+      },
     },
     {
       key: 'updated',
       header: t('workitems.table.updated'),
       className: 'w-[130px]',
       sortKey: 'updated_at',
-      render: (row) => <span className="text-gray-500 dark:text-gray-400">{new Date(row.updated_at).toLocaleDateString()}</span>,
+      render: (row) => {
+        const done = isItemCompleted(row.status, allStatuses ?? statuses)
+        return <span className={done ? 'text-gray-300 dark:text-gray-600' : 'text-gray-500 dark:text-gray-400'}>{new Date(row.updated_at).toLocaleDateString()}</span>
+      },
     },
   ]
 
@@ -502,6 +526,7 @@ export default function WatchlistPage() {
                   assigneeName={assigneeName}
                   inboxItemId={inboxByWorkItemId.get(item.id)}
                   isWatching={watchedItemIdSet.has(item.id)}
+                  isCompleted={isItemCompleted(item.status, allStatuses ?? statuses)}
                   onClick={() => { sessionStorage.setItem(activeRowStorageKey, item.id); navigate(itemUrl(item), { state: { from: 'watchlist' } }) }}
                 />
               )
