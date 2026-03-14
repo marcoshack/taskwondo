@@ -21,6 +21,7 @@ import (
 	"github.com/marcoshack/taskwondo/internal/database"
 	"github.com/marcoshack/taskwondo/internal/email"
 	"github.com/marcoshack/taskwondo/internal/handler"
+	"github.com/marcoshack/taskwondo/internal/metrics"
 	"github.com/marcoshack/taskwondo/internal/middleware"
 	"github.com/marcoshack/taskwondo/internal/model"
 	"github.com/marcoshack/taskwondo/internal/repository"
@@ -57,6 +58,9 @@ func main() {
 	defer db.Close()
 
 	log.Info().Msg("connected to database")
+
+	// Register DB connection pool metrics collector
+	metrics.RegisterCollector(metrics.NewDBCollector(db))
 
 	// Run migrations
 	if err := database.Migrate(ctx, db); err != nil {
@@ -279,6 +283,8 @@ func main() {
 	search := handler.NewSearchHandler(searchService)
 	namespaces := handler.NewNamespaceHandler(namespaceService)
 
+	metricsHandler := handler.NewMetricsHandler()
+
 	// Set up router
 	r := chi.NewRouter()
 
@@ -289,10 +295,14 @@ func main() {
 	r.Use(middleware.CORS(cfg.BaseURL))
 	r.Use(middleware.SecurityHeaders)
 	r.Use(middleware.BodyLimit(1 << 20)) // 1MB limit for non-multipart requests
+	r.Use(middleware.Metrics)
 
 	// Health checks (unauthenticated)
 	r.Get("/healthz", health.Healthz)
 	r.Get("/readyz", health.Readyz)
+
+	// Prometheus metrics (authenticated via system API key)
+	r.With(middleware.Auth(authService)).Get("/metrics", metricsHandler.ServeHTTP)
 
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
