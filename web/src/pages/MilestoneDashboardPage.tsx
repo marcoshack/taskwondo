@@ -21,6 +21,7 @@ import type { Milestone, UpdateMilestoneInput } from '@/api/milestones'
 import type { WorkItem } from '@/api/workitems'
 import type { ProjectMember } from '@/api/projects'
 import type { AxiosError } from 'axios'
+import { usePreference } from '@/hooks/usePreferences'
 
 // Color maps matching badge components
 const typeBarColors: Record<string, string> = {
@@ -469,6 +470,10 @@ function WorkItemsTable({
   const restoredRef = useRef(false)
   const activeRowStorageKey = `taskwondo_activeRow_milestone_${milestoneId}`
 
+  // Strikethrough completed items preference (default: enabled)
+  const { data: strikethroughPref } = usePreference<boolean>('strikethrough_completed')
+  const strikethroughEnabled = strikethroughPref ?? true
+
   const visibleItems = expanded ? items : items.slice(0, ITEMS_PREVIEW_LIMIT)
   const hasHiddenItems = items.length > ITEMS_PREVIEW_LIMIT
 
@@ -525,7 +530,7 @@ function WorkItemsTable({
                 projectKey={projectKey}
                 milestoneId={milestoneId}
                 isActive={item.item_number === activeItemNumber}
-                isCompleted={cat === 'done' || cat === 'cancelled'}
+                isCompleted={strikethroughEnabled && (cat === 'done' || cat === 'cancelled')}
                 onClick={handleItemClick}
                 statuses={statuses}
               />

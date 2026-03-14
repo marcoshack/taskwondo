@@ -197,4 +197,27 @@ test.describe('Done effect on work item lists', () => {
     // Open item title should NOT have line-through
     await expect(mobileOpenTitle).not.toHaveCSS('text-decoration-line', 'line-through');
   });
+
+  test('strikethrough preference disables done effect when turned off', async ({ request, testUser, testProject, page }) => {
+    const doneItem = await api.createWorkItem(request, testUser.token, testProject.key, {
+      title: 'Pref disabled done item',
+      type: 'task',
+    });
+    await completeWorkItem(request, testUser.token, testProject.key, doneItem.item_number);
+
+    // Set view state to show all statuses including done
+    await showAllStatuses(request, testUser.token, testProject.key);
+
+    // Disable strikethrough preference
+    await api.setPreference(request, testUser.token, 'strikethrough_completed', false);
+
+    await page.goto(`/d/projects/${testProject.key}/items`);
+    await waitForTable(page);
+
+    const doneTitle = page.locator('table').getByText('Pref disabled done item');
+    await expect(doneTitle).toBeVisible({ timeout: 10000 });
+
+    // Done item should NOT have line-through when preference is disabled
+    await expect(doneTitle).not.toHaveCSS('text-decoration-line', 'line-through');
+  });
 });

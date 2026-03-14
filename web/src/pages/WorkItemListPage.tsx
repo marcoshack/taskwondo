@@ -169,6 +169,10 @@ export function WorkItemListPage() {
   // Show dates preference (global, persisted)
   const { data: showDatesPref } = usePreference<boolean>('showDates')
   const showDates = showDatesPref ?? true
+
+  // Strikethrough completed items preference (default: enabled)
+  const { data: strikethroughPref } = usePreference<boolean>('strikethrough_completed')
+  const strikethroughEnabled = strikethroughPref ?? true
   const setPreferenceMutation = useSetPreference()
 
   // Compute default open statuses from ALL workflows (exclude done/cancelled)
@@ -620,7 +624,7 @@ export function WorkItemListPage() {
       className: 'w-[102px]',
       sortKey: 'item_number',
       render: (row) => {
-        const done = isItemCompleted(row.status, allStatuses ?? statuses)
+        const done = strikethroughEnabled && isItemCompleted(row.status, allStatuses ?? statuses)
         return <span className={`font-mono ${done ? 'text-gray-400 dark:text-gray-500' : 'text-gray-500 dark:text-gray-400'}`}>{row.display_id}</span>
       },
     },
@@ -630,7 +634,7 @@ export function WorkItemListPage() {
       className: 'w-20',
       sortKey: 'type',
       render: (row) => {
-        const done = isItemCompleted(row.status, allStatuses ?? statuses)
+        const done = strikethroughEnabled && isItemCompleted(row.status, allStatuses ?? statuses)
         return <span className={done ? 'opacity-40' : ''}><TypeBadge type={row.type} /></span>
       },
     },
@@ -641,7 +645,7 @@ export function WorkItemListPage() {
       resizable: false,
       sortKey: 'title',
       render: (row) => {
-        const done = isItemCompleted(row.status, allStatuses ?? statuses)
+        const done = strikethroughEnabled && isItemCompleted(row.status, allStatuses ?? statuses)
         return (
           <div className="flex items-center gap-1 min-w-0">
             <Tooltip content={row.title} className="relative block min-w-0 flex-1">
@@ -677,7 +681,7 @@ export function WorkItemListPage() {
       className: 'w-28',
       sortKey: 'priority',
       render: (row) => {
-        const done = isItemCompleted(row.status, allStatuses ?? statuses)
+        const done = strikethroughEnabled && isItemCompleted(row.status, allStatuses ?? statuses)
         return <span className={done ? 'opacity-40' : ''}><PriorityBadge priority={row.priority} /></span>
       },
     },
@@ -687,7 +691,7 @@ export function WorkItemListPage() {
       className: 'w-[110px]',
       sortKey: 'sla_target_at',
       render: (row) => {
-        const done = isItemCompleted(row.status, allStatuses ?? statuses)
+        const done = strikethroughEnabled && isItemCompleted(row.status, allStatuses ?? statuses)
         return <span className={done ? 'opacity-40' : ''}><SLAIndicator sla={row.sla} /></span>
       },
     },
@@ -697,7 +701,7 @@ export function WorkItemListPage() {
       className: 'w-[130px]',
       sortKey: 'updated_at',
       render: (row) => {
-        const done = isItemCompleted(row.status, allStatuses ?? statuses)
+        const done = strikethroughEnabled && isItemCompleted(row.status, allStatuses ?? statuses)
         return <span className={done ? 'text-gray-300 dark:text-gray-600' : 'text-gray-500 dark:text-gray-400'}>{new Date(row.updated_at).toLocaleDateString()}</span>
       },
     },
@@ -896,7 +900,7 @@ export function WorkItemListPage() {
                     assigneeName={assigneeName}
                     inboxItemId={inboxByWorkItemId.get(item.id)}
                     isWatching={watchedItemIdSet.has(item.id)}
-                    isCompleted={isItemCompleted(item.status, allStatuses ?? statuses)}
+                    isCompleted={strikethroughEnabled && isItemCompleted(item.status, allStatuses ?? statuses)}
                     onClick={() => {
                       sessionStorage.setItem(activeRowStorageKey, String(item.item_number))
                       sessionStorage.setItem(filterStorageKey, currentParamsString())
@@ -931,6 +935,7 @@ export function WorkItemListPage() {
           statuses={statuses}
           transitionsMap={transitionsMap}
           readOnly={readOnly}
+          strikethroughCompleted={strikethroughEnabled}
           onItemClick={(item) => {
             sessionStorage.setItem(filterStorageKey, currentParamsString())
             navigate(p(`/projects/${projectKey}/items/${item.item_number}`))

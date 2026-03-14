@@ -276,6 +276,8 @@ function InboxListPage() {
   const [searchFocused, setSearchFocused] = useState(false)
   const debouncedSearch = useDebounce(searchInput, 500)
   const { data: projectFilterPref } = usePreference<string[]>('inbox_project_filter')
+  const { data: strikethroughPref } = usePreference<boolean>('strikethrough_completed')
+  const strikethroughEnabled = strikethroughPref ?? true
   const [selectedProjects, setSelectedProjectsRaw] = useState<string[]>([])
   const [projectFilterInit, setProjectFilterInit] = useState(false)
   useEffect(() => {
@@ -828,7 +830,7 @@ function InboxListPage() {
                   <InboxRow
                     key={item.id}
                     item={item}
-                    isCompleted={item.status_category === 'done' || item.status_category === 'cancelled'}
+                    isCompleted={strikethroughEnabled && (item.status_category === 'done' || item.status_category === 'cancelled')}
                     isFirst={index === 0}
                     isLast={index === allItems.length - 1}
                     isActive={index === activeRow}
@@ -852,7 +854,7 @@ function InboxListPage() {
               <InboxCard
                 key={item.id}
                 item={item}
-                isCompleted={item.status_category === 'done' || item.status_category === 'cancelled'}
+                isCompleted={strikethroughEnabled && (item.status_category === 'done' || item.status_category === 'cancelled')}
                 isFirst={index === 0}
                 isLast={index === allItems.length - 1}
                 isActive={index === activeRow}

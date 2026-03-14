@@ -23,9 +23,10 @@ interface BoardViewProps {
   transitionsMap?: Record<string, WorkflowTransition[]>
   onItemClick: (item: WorkItem) => void
   readOnly?: boolean
+  strikethroughCompleted?: boolean
 }
 
-export function BoardView({ projectKey, items, statuses, transitionsMap, onItemClick, readOnly = false }: BoardViewProps) {
+export function BoardView({ projectKey, items, statuses, transitionsMap, onItemClick, readOnly = false, strikethroughCompleted = true }: BoardViewProps) {
   const { t } = useTranslation()
   const updateMutation = useUpdateWorkItem(projectKey)
   const [draggedItem, setDraggedItem] = useState<DraggedItem | null>(null)
@@ -192,7 +193,7 @@ export function BoardView({ projectKey, items, statuses, transitionsMap, onItemC
                     statuses={statuses}
                     isDragging={draggedItem?.itemNumber === item.item_number}
                     readOnly={readOnly}
-                    isCompleted={status.category === 'done' || status.category === 'cancelled'}
+                    isCompleted={strikethroughCompleted && (status.category === 'done' || status.category === 'cancelled')}
                     onClick={() => onItemClick(item)}
                     onStatusChange={(newStatus) => {
                       updateMutation.mutate({ itemNumber: item.item_number, input: { status: newStatus } })

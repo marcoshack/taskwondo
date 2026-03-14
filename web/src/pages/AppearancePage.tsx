@@ -1,12 +1,19 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Check } from 'lucide-react'
 import { useTheme, type Theme, type FontSize } from '@/contexts/ThemeContext'
 import { useLayout, type Layout } from '@/contexts/LayoutContext'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { usePreference, useSetPreference } from '@/hooks/usePreferences'
 export function AppearancePage() {
   const { t } = useTranslation()
   const { theme, setTheme, fontSize, setFontSize } = useTheme()
   const { layout, setLayout } = useLayout()
   const { language, setLanguage, availableLanguages } = useLanguage()
+  const { data: strikethroughPref } = usePreference<boolean>('strikethrough_completed')
+  const setPreferenceMutation = useSetPreference()
+  const [savedId, setSavedId] = useState<string | null>(null)
+  const strikethroughEnabled = strikethroughPref ?? true
 
   const themes: { value: Theme; label: string; description: string }[] = [
     { value: 'light', label: t('preferences.themes.light'), description: t('preferences.themes.lightDesc') },
@@ -161,6 +168,45 @@ export function AppearancePage() {
                 <p className="text-xs text-gray-500 dark:text-gray-400">{lang.label}</p>
               </button>
             ))}
+          </div>
+        </div>
+
+        <div>
+          <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
+            {t('preferences.completedItems')}
+          </h2>
+          <div className="rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-3">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={strikethroughEnabled}
+                onChange={() => {
+                  setPreferenceMutation.mutate(
+                    { key: 'strikethrough_completed', value: !strikethroughEnabled },
+                    {
+                      onSuccess: () => {
+                        setSavedId('strikethrough')
+                        setTimeout(() => setSavedId(null), 2000)
+                      },
+                    },
+                  )
+                }}
+                className="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800"
+              />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    {t('preferences.strikethroughCompleted')}
+                  </span>
+                  {savedId === 'strikethrough' && (
+                    <Check className="h-4 w-4 text-green-500" />
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {t('preferences.strikethroughCompletedDesc')}
+                </p>
+              </div>
+            </label>
           </div>
         </div>
 

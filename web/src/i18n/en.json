@@ -517,6 +517,10 @@
   "preferences.layouts.expanded": "Expanded",
   "preferences.layouts.expandedDesc": "Content uses the full viewport width",
 
+  "preferences.completedItems": "Completed Items",
+  "preferences.strikethroughCompleted": "Strikethrough completed and cancelled items",
+  "preferences.strikethroughCompletedDesc": "Show a line through the title of done and cancelled work items in lists, boards, and cards.",
+
   "preferences.apiKeys": "API Keys",
   "preferences.apiKeys.manage": "Manage API Keys",
   "preferences.apiKeys.description": "API keys allow programmatic access to the API on your behalf.",
