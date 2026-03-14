@@ -46,14 +46,23 @@ export default defineConfig({
     },
     {
       name: 'chromium',
-      testIgnore: [/tests\/admin\//, /\.setup\.ts$/],
+      testIgnore: [/tests\/admin\//, /\.setup\.ts$/, /namespace/],
       use: { ...devices['Desktop Chrome'] },
       dependencies: ['setup', 'chromium-setup'],
     },
     {
+      // Namespace tests toggle the global namespaces_enabled setting, so they
+      // must run without full parallelism to avoid racing on shared state.
+      name: 'namespace',
+      testMatch: /namespace/,
+      use: { ...devices['Desktop Chrome'] },
+      dependencies: ['setup', 'chromium-setup'],
+      fullyParallel: false,
+    },
+    {
       name: 'cleanup',
       testMatch: /cleanup\.teardown\.ts/,
-      dependencies: ['chromium'],
+      dependencies: ['chromium', 'namespace'],
     },
   ],
 });
