@@ -453,6 +453,163 @@ func (h *AuthHandler) DeleteAPIKey(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// System API Key handlers
+
+type createSystemAPIKeyRequest struct {
+	Name        string   `json:"name"`
+	Permissions []string `json:"permissions"`
+	ExpiresAt   *string  `json:"expires_at,omitempty"`
+}
+
+type systemAPIKeyResponse struct {
+	ID          uuid.UUID  `json:"id"`
+	Name        string     `json:"name"`
+	KeyPrefix   string     `json:"key_prefix"`
+	Permissions []string   `json:"permissions"`
+	CreatedBy   *uuid.UUID `json:"created_by,omitempty"`
+	LastUsedAt  *time.Time `json:"last_used_at,omitempty"`
+	ExpiresAt   *time.Time `json:"expires_at,omitempty"`
+	CreatedAt   time.Time  `json:"created_at"`
+}
+
+func toSystemAPIKeyResponse(k *model.APIKey) systemAPIKeyResponse {
+	return systemAPIKeyResponse{
+		ID:          k.ID,
+		Name:        k.Name,
+		KeyPrefix:   k.KeyPrefix,
+		Permissions: k.Permissions,
+		CreatedBy:   k.CreatedBy,
+		LastUsedAt:  k.LastUsedAt,
+		ExpiresAt:   k.ExpiresAt,
+		CreatedAt:   k.CreatedAt,
+	}
+}
+
+// ListSystemAPIKeys returns all system API keys. Admin-only (enforced at router level).
+func (h *AuthHandler) ListSystemAPIKeys(w http.ResponseWriter, r *http.Request) {
+	keys, err := h.auth.ListSystemAPIKeys(r.Context())
+	if err != nil {
+		log.Ctx(r.Context()).Error().Err(err).Msg("failed to list system api keys")
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		return
+	}
+
+	resp := make([]systemAPIKeyResponse, len(keys))
+	for i := range keys {
+		resp[i] = toSystemAPIKeyResponse(&keys[i])
+	}
+
+	writeData(w, http.StatusOK, resp)
+}
+
+// CreateSystemAPIKey creates a new system API key. Admin-only (enforced at router level).
+func (h *AuthHandler) CreateSystemAPIKey(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+
+	var req createSystemAPIKeyRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		return
+	}
+
+	if req.Name == "" {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "name is required")
+		return
+	}
+
+	var expiresAt *time.Time
+	if req.ExpiresAt != nil {
+		t, err := time.Parse(time.RFC3339, *req.ExpiresAt)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "expires_at must be in RFC3339 format")
+			return
+		}
+		if t.Before(time.Now()) {
+			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "expires_at must be in the future")
+			return
+		}
+		expiresAt = &t
+	}
+
+	if req.Permissions == nil {
+		req.Permissions = []string{}
+	}
+
+	apiKey, fullKey, err := h.auth.CreateSystemAPIKey(r.Context(), info.UserID, req.Name, req.Permissions, expiresAt)
+	if err != nil {
+		if errors.Is(err, model.ErrValidation) {
+			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+			return
+		}
+		log.Ctx(r.Context()).Error().Err(err).Msg("failed to create system api key")
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		return
+	}
+
+	writeData(w, http.StatusCreated, map[string]interface{}{
+		"id":          apiKey.ID,
+		"name":        apiKey.Name,
+		"key":         fullKey,
+		"key_prefix":  apiKey.KeyPrefix,
+		"permissions": apiKey.Permissions,
+		"created_by":  apiKey.CreatedBy,
+		"expires_at":  apiKey.ExpiresAt,
+		"created_at":  apiKey.CreatedAt,
+	})
+}
+
+// RenameSystemAPIKey updates the display name of a system API key. Admin-only (enforced at router level).
+func (h *AuthHandler) RenameSystemAPIKey(w http.ResponseWriter, r *http.Request) {
+	keyID, err := uuid.Parse(chi.URLParam(r, "keyId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid key ID")
+		return
+	}
+
+	var req renameAPIKeyRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		return
+	}
+
+	if err := h.auth.RenameSystemAPIKey(r.Context(), keyID, req.Name); err != nil {
+		if errors.Is(err, model.ErrValidation) {
+			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+			return
+		}
+		if errors.Is(err, model.ErrNotFound) {
+			writeError(w, http.StatusNotFound, "NOT_FOUND", "system api key not found")
+			return
+		}
+		log.Ctx(r.Context()).Error().Err(err).Msg("failed to rename system api key")
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// DeleteSystemAPIKey deletes a system API key by ID. Admin-only (enforced at router level).
+func (h *AuthHandler) DeleteSystemAPIKey(w http.ResponseWriter, r *http.Request) {
+	keyID, err := uuid.Parse(chi.URLParam(r, "keyId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid key ID")
+		return
+	}
+
+	if err := h.auth.DeleteSystemAPIKey(r.Context(), keyID); err != nil {
+		if errors.Is(err, model.ErrNotFound) {
+			writeError(w, http.StatusNotFound, "NOT_FOUND", "system api key not found")
+			return
+		}
+		log.Ctx(r.Context()).Error().Err(err).Msg("failed to delete system api key")
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // Registration handlers
 
 type registerRequest struct {

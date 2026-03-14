@@ -113,6 +113,45 @@ export async function deleteAPIKey(id: string) {
   await api.delete(`/user/api-keys/${id}`)
 }
 
+// System API keys (admin)
+
+export interface SystemAPIKey {
+  id: string
+  name: string
+  key_prefix: string
+  permissions: string[]
+  created_by?: string
+  last_used_at?: string
+  expires_at?: string
+  created_at: string
+}
+
+export interface CreatedSystemAPIKey extends SystemAPIKey {
+  key: string
+}
+
+export async function createSystemAPIKey(name: string, permissions: string[], expiresAt?: string) {
+  const res = await api.post<{ data: CreatedSystemAPIKey }>('/admin/api-keys', {
+    name,
+    permissions,
+    expires_at: expiresAt,
+  })
+  return res.data.data
+}
+
+export async function listSystemAPIKeys() {
+  const res = await api.get<{ data: SystemAPIKey[] }>('/admin/api-keys')
+  return res.data.data
+}
+
+export async function renameSystemAPIKey(id: string, name: string) {
+  await api.patch(`/admin/api-keys/${id}`, { name })
+}
+
+export async function deleteSystemAPIKey(id: string) {
+  await api.delete(`/admin/api-keys/${id}`)
+}
+
 // Registration
 
 export async function register(email: string, displayName: string, inviteCode?: string) {

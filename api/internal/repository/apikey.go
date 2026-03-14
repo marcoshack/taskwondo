@@ -20,13 +20,13 @@ func NewAPIKeyRepository(db *sql.DB) *APIKeyRepository {
 	return &APIKeyRepository{db: db}
 }
 
-// Create inserts a new API key.
+// Create inserts a new API key (user or system).
 func (r *APIKeyRepository) Create(ctx context.Context, key *model.APIKey) error {
 	_, err := r.db.ExecContext(ctx,
-		`INSERT INTO api_keys (id, user_id, name, key_hash, key_prefix, permissions, expires_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-		key.ID, key.UserID, key.Name, key.KeyHash, key.KeyPrefix,
-		pq.Array(key.Permissions), key.ExpiresAt)
+		`INSERT INTO api_keys (id, user_id, type, name, key_hash, key_prefix, permissions, project_id, created_by, expires_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+		key.ID, key.UserID, key.Type, key.Name, key.KeyHash, key.KeyPrefix,
+		pq.Array(key.Permissions), key.ProjectID, key.CreatedBy, key.ExpiresAt)
 	if err != nil {
 		return fmt.Errorf("inserting api key: %w", err)
 	}
@@ -36,15 +36,20 @@ func (r *APIKeyRepository) Create(ctx context.Context, key *model.APIKey) error 
 // GetByKeyHash returns an API key by its SHA-256 hash.
 func (r *APIKeyRepository) GetByKeyHash(ctx context.Context, keyHash string) (*model.APIKey, error) {
 	var k model.APIKey
+	var userID uuid.NullUUID
+	var projectID uuid.NullUUID
+	var createdBy uuid.NullUUID
 	var lastUsedAt sql.NullTime
 	var expiresAt sql.NullTime
 	var permissions pq.StringArray
+	var keyType sql.NullString
 
 	err := r.db.QueryRowContext(ctx,
-		`SELECT id, user_id, name, key_hash, key_prefix, permissions, last_used_at, expires_at, created_at
+		`SELECT id, user_id, type, name, key_hash, key_prefix, permissions,
+		        project_id, created_by, last_used_at, expires_at, created_at
 		 FROM api_keys WHERE key_hash = $1`, keyHash).
-		Scan(&k.ID, &k.UserID, &k.Name, &k.KeyHash, &k.KeyPrefix,
-			&permissions, &lastUsedAt, &expiresAt, &k.CreatedAt)
+		Scan(&k.ID, &userID, &keyType, &k.Name, &k.KeyHash, &k.KeyPrefix,
+			&permissions, &projectID, &createdBy, &lastUsedAt, &expiresAt, &k.CreatedAt)
 
 	if err == sql.ErrNoRows {
 		return nil, model.ErrNotFound
@@ -54,6 +59,20 @@ func (r *APIKeyRepository) GetByKeyHash(ctx context.Context, keyHash string) (*m
 	}
 
 	k.Permissions = []string(permissions)
+	if userID.Valid {
+		k.UserID = &userID.UUID
+	}
+	if keyType.Valid {
+		k.Type = keyType.String
+	} else {
+		k.Type = model.KeyTypeUser
+	}
+	if projectID.Valid {
+		k.ProjectID = &projectID.UUID
+	}
+	if createdBy.Valid {
+		k.CreatedBy = &createdBy.UUID
+	}
 	if lastUsedAt.Valid {
 		k.LastUsedAt = &lastUsedAt.Time
 	}
@@ -64,29 +83,66 @@ func (r *APIKeyRepository) GetByKeyHash(ctx context.Context, keyHash string) (*m
 	return &k, nil
 }
 
-// ListByUserID returns all API keys for a user.
+// ListByUserID returns all user API keys for a user.
 func (r *APIKeyRepository) ListByUserID(ctx context.Context, userID uuid.UUID) ([]model.APIKey, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, user_id, name, key_hash, key_prefix, permissions, last_used_at, expires_at, created_at
-		 FROM api_keys WHERE user_id = $1 ORDER BY created_at DESC`, userID)
+		`SELECT id, user_id, type, name, key_hash, key_prefix, permissions,
+		        project_id, created_by, last_used_at, expires_at, created_at
+		 FROM api_keys WHERE user_id = $1 AND type = 'user' ORDER BY created_at DESC`, userID)
 	if err != nil {
 		return nil, fmt.Errorf("querying api keys: %w", err)
 	}
 	defer rows.Close()
 
+	return r.scanKeys(rows)
+}
+
+// ListByType returns all API keys of a given type.
+func (r *APIKeyRepository) ListByType(ctx context.Context, keyType string) ([]model.APIKey, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT id, user_id, type, name, key_hash, key_prefix, permissions,
+		        project_id, created_by, last_used_at, expires_at, created_at
+		 FROM api_keys WHERE type = $1 ORDER BY created_at DESC`, keyType)
+	if err != nil {
+		return nil, fmt.Errorf("querying api keys by type: %w", err)
+	}
+	defer rows.Close()
+
+	return r.scanKeys(rows)
+}
+
+func (r *APIKeyRepository) scanKeys(rows *sql.Rows) ([]model.APIKey, error) {
 	var keys []model.APIKey
 	for rows.Next() {
 		var k model.APIKey
+		var userID uuid.NullUUID
+		var projectID uuid.NullUUID
+		var createdBy uuid.NullUUID
 		var lastUsedAt sql.NullTime
 		var expiresAt sql.NullTime
 		var permissions pq.StringArray
+		var keyType sql.NullString
 
-		if err := rows.Scan(&k.ID, &k.UserID, &k.Name, &k.KeyHash, &k.KeyPrefix,
-			&permissions, &lastUsedAt, &expiresAt, &k.CreatedAt); err != nil {
+		if err := rows.Scan(&k.ID, &userID, &keyType, &k.Name, &k.KeyHash, &k.KeyPrefix,
+			&permissions, &projectID, &createdBy, &lastUsedAt, &expiresAt, &k.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scanning api key row: %w", err)
 		}
 
 		k.Permissions = []string(permissions)
+		if userID.Valid {
+			k.UserID = &userID.UUID
+		}
+		if keyType.Valid {
+			k.Type = keyType.String
+		} else {
+			k.Type = model.KeyTypeUser
+		}
+		if projectID.Valid {
+			k.ProjectID = &projectID.UUID
+		}
+		if createdBy.Valid {
+			k.CreatedBy = &createdBy.UUID
+		}
 		if lastUsedAt.Valid {
 			k.LastUsedAt = &lastUsedAt.Time
 		}
@@ -125,6 +181,44 @@ func (r *APIKeyRepository) UpdateName(ctx context.Context, id, userID uuid.UUID,
 		`UPDATE api_keys SET name = $1 WHERE id = $2 AND user_id = $3`, name, id, userID)
 	if err != nil {
 		return fmt.Errorf("updating api key name: %w", err)
+	}
+
+	n, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("checking rows affected: %w", err)
+	}
+	if n == 0 {
+		return model.ErrNotFound
+	}
+
+	return nil
+}
+
+// UpdateNameByID updates the name of an API key (not scoped to user, for system keys).
+func (r *APIKeyRepository) UpdateNameByID(ctx context.Context, id uuid.UUID, name string) error {
+	result, err := r.db.ExecContext(ctx,
+		`UPDATE api_keys SET name = $1 WHERE id = $2`, name, id)
+	if err != nil {
+		return fmt.Errorf("updating api key name: %w", err)
+	}
+
+	n, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("checking rows affected: %w", err)
+	}
+	if n == 0 {
+		return model.ErrNotFound
+	}
+
+	return nil
+}
+
+// DeleteByID removes an API key by ID (not scoped to user, for system keys).
+func (r *APIKeyRepository) DeleteByID(ctx context.Context, id uuid.UUID) error {
+	result, err := r.db.ExecContext(ctx,
+		`DELETE FROM api_keys WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("deleting api key: %w", err)
 	}
 
 	n, err := result.RowsAffected()

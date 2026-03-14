@@ -1,0 +1,6 @@
+ALTER TABLE work_item_events DROP COLUMN IF EXISTS actor_type;
+DROP INDEX IF EXISTS idx_api_keys_type;
+ALTER TABLE api_keys DROP COLUMN IF EXISTS created_by;
+ALTER TABLE api_keys DROP COLUMN IF EXISTS project_id;
+ALTER TABLE api_keys DROP COLUMN IF EXISTS type;
+ALTER TABLE api_keys ALTER COLUMN user_id SET NOT NULL;

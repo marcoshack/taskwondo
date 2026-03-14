@@ -7,8 +7,9 @@ import {
   Users,
   Route,
   Plug,
-  KeyRound,
+  Lock,
   ToggleRight,
+  Key,
   PanelLeftClose,
   PanelLeftOpen,
 } from 'lucide-react'
@@ -25,7 +26,8 @@ export function SystemSettingsSidebar() {
     { to: 'users', label: t('admin.sidebar.users'), icon: Users, end: false },
     { to: 'workflows', label: t('admin.sidebar.workflows'), icon: Route, end: false },
     { to: 'integrations', label: t('admin.sidebar.integrations'), icon: Plug, end: false },
-    { to: 'authentication', label: t('admin.sidebar.authentication'), icon: KeyRound, end: false },
+    { to: 'authentication', label: t('admin.sidebar.authentication'), icon: Lock, end: false },
+    { to: 'api-keys', label: t('admin.sidebar.apiKeys'), icon: Key, end: false },
     { to: 'features', label: t('admin.sidebar.features'), icon: ToggleRight, end: false },
   ]
 

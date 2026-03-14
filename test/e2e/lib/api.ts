@@ -1097,6 +1097,62 @@ export async function disableNamespaces(
   await setSystemSetting(request, adminToken, 'namespaces_enabled', false);
 }
 
+// --- System API Keys ---
+
+export async function createSystemAPIKey(
+  request: APIRequestContext,
+  adminToken: string,
+  name: string,
+  permissions: string[],
+  expiresAt?: string,
+) {
+  const body: Record<string, unknown> = { name, permissions }
+  if (expiresAt) body.expires_at = expiresAt
+  const res = await request.post(`${BASE_URL}/api/v1/admin/api-keys`, {
+    headers: { Authorization: `Bearer ${adminToken}` },
+    data: body,
+  })
+  if (!res.ok()) throw new Error(`createSystemAPIKey failed: ${res.status()}`)
+  const json = await res.json()
+  return json.data
+}
+
+export async function listSystemAPIKeys(
+  request: APIRequestContext,
+  adminToken: string,
+) {
+  const res = await request.get(`${BASE_URL}/api/v1/admin/api-keys`, {
+    headers: { Authorization: `Bearer ${adminToken}` },
+  })
+  if (!res.ok()) throw new Error(`listSystemAPIKeys failed: ${res.status()}`)
+  const json = await res.json()
+  return json.data
+}
+
+export async function renameSystemAPIKey(
+  request: APIRequestContext,
+  adminToken: string,
+  keyId: string,
+  name: string,
+) {
+  const res = await request.patch(`${BASE_URL}/api/v1/admin/api-keys/${keyId}`, {
+    headers: { Authorization: `Bearer ${adminToken}` },
+    data: { name },
+  })
+  if (!res.ok()) throw new Error(`renameSystemAPIKey failed: ${res.status()}`)
+}
+
+export async function deleteSystemAPIKey(
+  request: APIRequestContext,
+  adminToken: string,
+  keyId: string,
+) {
+  const res = await request.delete(`${BASE_URL}/api/v1/admin/api-keys/${keyId}`, {
+    headers: { Authorization: `Bearer ${adminToken}` },
+  })
+  if (!res.ok()) throw new Error(`deleteSystemAPIKey failed: ${res.status()}`)
+}
+
 // --- Attachments ---
 
 export async function uploadAttachment(

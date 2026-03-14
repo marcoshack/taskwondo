@@ -513,6 +513,12 @@ func main() {
 			// Admin routes (requires admin role)
 			r.Route("/admin", func(r chi.Router) {
 				r.Use(middleware.RequireAdmin)
+				r.Route("/api-keys", func(r chi.Router) {
+					r.Get("/", auth.ListSystemAPIKeys)
+					r.Post("/", auth.CreateSystemAPIKey)
+					r.Patch("/{keyId}", auth.RenameSystemAPIKey)
+					r.Delete("/{keyId}", auth.DeleteSystemAPIKey)
+				})
 				r.Route("/workflows", func(r chi.Router) {
 					r.Get("/", workflows.List)
 					r.Get("/statuses", workflows.ListSystemStatuses)

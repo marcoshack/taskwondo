@@ -61,11 +61,18 @@ type WorkItem struct {
 	DeletedAt       *time.Time             `json:"-"`
 }
 
+// Actor type constants for work item events.
+const (
+	ActorTypeUser      = "user"
+	ActorTypeSystemKey = "system_key"
+)
+
 // WorkItemEvent records a state change on a work item (audit trail).
 type WorkItemEvent struct {
 	ID         uuid.UUID              `json:"id"`
 	WorkItemID uuid.UUID              `json:"work_item_id"`
 	ActorID    *uuid.UUID             `json:"actor_id,omitempty"`
+	ActorType  string                 `json:"actor_type"`
 	EventType  string                 `json:"event_type"`
 	FieldName  *string                `json:"field_name,omitempty"`
 	OldValue   *string                `json:"old_value,omitempty"`

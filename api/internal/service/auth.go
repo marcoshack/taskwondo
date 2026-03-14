@@ -48,8 +48,11 @@ type APIKeyRepository interface {
 	Create(ctx context.Context, key *model.APIKey) error
 	GetByKeyHash(ctx context.Context, keyHash string) (*model.APIKey, error)
 	ListByUserID(ctx context.Context, userID uuid.UUID) ([]model.APIKey, error)
+	ListByType(ctx context.Context, keyType string) ([]model.APIKey, error)
 	Delete(ctx context.Context, id, userID uuid.UUID) error
+	DeleteByID(ctx context.Context, id uuid.UUID) error
 	UpdateName(ctx context.Context, id, userID uuid.UUID, name string) error
+	UpdateNameByID(ctx context.Context, id uuid.UUID, name string) error
 	UpdateLastUsed(ctx context.Context, id uuid.UUID) error
 }
 
@@ -288,7 +291,7 @@ func (s *AuthService) ValidateJWT(tokenString string) (*model.AuthInfo, error) {
 	}, nil
 }
 
-// ValidateAPIKey validates an API key and returns auth info.
+// ValidateAPIKey validates a user API key and returns auth info.
 func (s *AuthService) ValidateAPIKey(ctx context.Context, key string) (*model.AuthInfo, error) {
 	keyHash := HashAPIKey(key)
 
@@ -301,7 +304,11 @@ func (s *AuthService) ValidateAPIKey(ctx context.Context, key string) (*model.Au
 		return nil, model.ErrUnauthorized
 	}
 
-	user, err := s.users.GetByID(ctx, apiKey.UserID)
+	if apiKey.UserID == nil {
+		return nil, model.ErrUnauthorized
+	}
+
+	user, err := s.users.GetByID(ctx, *apiKey.UserID)
 	if err != nil {
 		return nil, model.ErrUnauthorized
 	}
@@ -319,10 +326,50 @@ func (s *AuthService) ValidateAPIKey(ctx context.Context, key string) (*model.Au
 		Email:       user.Email,
 		GlobalRole:  user.GlobalRole,
 		Permissions: apiKey.Permissions,
+		KeyType:     model.KeyTypeUser,
+		KeyID:       apiKey.ID,
+		KeyName:     apiKey.Name,
 	}, nil
 }
 
-// CreateAPIKey generates a new API key for a user.
+// ValidateSystemAPIKey validates a system API key and returns auth info.
+func (s *AuthService) ValidateSystemAPIKey(ctx context.Context, key string) (*model.AuthInfo, error) {
+	keyHash := HashAPIKey(key)
+
+	apiKey, err := s.apiKeys.GetByKeyHash(ctx, keyHash)
+	if err != nil {
+		return nil, model.ErrUnauthorized
+	}
+
+	if apiKey.Type != model.KeyTypeSystem {
+		return nil, model.ErrUnauthorized
+	}
+
+	if apiKey.ExpiresAt != nil && apiKey.ExpiresAt.Before(time.Now()) {
+		return nil, model.ErrUnauthorized
+	}
+
+	if err := s.apiKeys.UpdateLastUsed(ctx, apiKey.ID); err != nil {
+		log.Ctx(ctx).Warn().Err(err).Str("api_key_id", apiKey.ID.String()).Msg("failed to update system api key last used")
+	}
+
+	info := &model.AuthInfo{
+		Permissions: apiKey.Permissions,
+		KeyType:     model.KeyTypeSystem,
+		KeyID:       apiKey.ID,
+		KeyName:     apiKey.Name,
+	}
+
+	// Use the admin who created the key as the acting user for operations
+	// that require a user context (e.g. reporter_id on work items).
+	if apiKey.CreatedBy != nil {
+		info.UserID = *apiKey.CreatedBy
+	}
+
+	return info, nil
+}
+
+// CreateAPIKey generates a new user API key.
 func (s *AuthService) CreateAPIKey(ctx context.Context, userID uuid.UUID, name string, permissions []string, expiresAt *time.Time) (*model.APIKey, string, error) {
 	for _, p := range permissions {
 		if !model.ValidPermissions[p] {
@@ -341,7 +388,8 @@ func (s *AuthService) CreateAPIKey(ctx context.Context, userID uuid.UUID, name s
 
 	apiKey := &model.APIKey{
 		ID:          uuid.New(),
-		UserID:      userID,
+		UserID:      &userID,
+		Type:        model.KeyTypeUser,
 		Name:        name,
 		KeyHash:     keyHash,
 		KeyPrefix:   keyPrefix,
@@ -354,6 +402,80 @@ func (s *AuthService) CreateAPIKey(ctx context.Context, userID uuid.UUID, name s
 	}
 
 	return apiKey, fullKey, nil
+}
+
+// CreateSystemAPIKey generates a new system API key. Only admins can create these.
+func (s *AuthService) CreateSystemAPIKey(ctx context.Context, createdBy uuid.UUID, name string, permissions []string, expiresAt *time.Time) (*model.APIKey, string, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return nil, "", fmt.Errorf("%w: name is required", model.ErrValidation)
+	}
+	if len(name) > 100 {
+		return nil, "", fmt.Errorf("%w: name must be 100 characters or fewer", model.ErrValidation)
+	}
+	if len(permissions) == 0 {
+		return nil, "", fmt.Errorf("%w: at least one permission is required for system keys", model.ErrValidation)
+	}
+	for _, p := range permissions {
+		parts := strings.SplitN(p, ":", 2)
+		if len(parts) != 2 {
+			return nil, "", fmt.Errorf("%w: invalid system permission format: %s (expected resource:access)", model.ErrValidation, p)
+		}
+		if !model.ValidSystemResources[parts[0]] {
+			return nil, "", fmt.Errorf("%w: invalid resource: %s", model.ErrValidation, parts[0])
+		}
+		if !model.ValidSystemAccess[parts[1]] {
+			return nil, "", fmt.Errorf("%w: invalid access level: %s (must be r, w, or rw)", model.ErrValidation, parts[1])
+		}
+	}
+
+	raw := make([]byte, 32)
+	if _, err := rand.Read(raw); err != nil {
+		return nil, "", fmt.Errorf("generating random bytes: %w", err)
+	}
+
+	fullKey := "twks_" + hex.EncodeToString(raw)
+	keyPrefix := fullKey[:9] // "twks_" + 4 hex chars
+	keyHash := HashAPIKey(fullKey)
+
+	apiKey := &model.APIKey{
+		ID:          uuid.New(),
+		Type:        model.KeyTypeSystem,
+		Name:        name,
+		KeyHash:     keyHash,
+		KeyPrefix:   keyPrefix,
+		Permissions: permissions,
+		CreatedBy:   &createdBy,
+		ExpiresAt:   expiresAt,
+	}
+
+	if err := s.apiKeys.Create(ctx, apiKey); err != nil {
+		return nil, "", fmt.Errorf("creating system api key: %w", err)
+	}
+
+	return apiKey, fullKey, nil
+}
+
+// ListSystemAPIKeys returns all system API keys.
+func (s *AuthService) ListSystemAPIKeys(ctx context.Context) ([]model.APIKey, error) {
+	return s.apiKeys.ListByType(ctx, model.KeyTypeSystem)
+}
+
+// RenameSystemAPIKey updates the display name of a system API key.
+func (s *AuthService) RenameSystemAPIKey(ctx context.Context, id uuid.UUID, name string) error {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return fmt.Errorf("%w: name is required", model.ErrValidation)
+	}
+	if len(name) > 100 {
+		return fmt.Errorf("%w: name must be 100 characters or fewer", model.ErrValidation)
+	}
+	return s.apiKeys.UpdateNameByID(ctx, id, name)
+}
+
+// DeleteSystemAPIKey deletes a system API key by ID.
+func (s *AuthService) DeleteSystemAPIKey(ctx context.Context, id uuid.UUID) error {
+	return s.apiKeys.DeleteByID(ctx, id)
 }
 
 // ListAPIKeys returns all API keys for a user.

@@ -382,7 +382,7 @@ func (s *WorkItemService) Create(ctx context.Context, info *model.AuthInfo, proj
 	}
 
 	// Record "created" event
-	s.recordEvent(ctx, item.ID, &info.UserID, "created", nil, nil, nil)
+	s.recordEvent(ctx, item.ID, info, "created", nil, nil, nil)
 
 	// Initialize SLA elapsed tracking for the initial status
 	if err := s.sla.InitElapsedOnCreate(ctx, item.ID, item.Status, time.Now()); err != nil {
@@ -508,7 +508,7 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 		if strings.TrimSpace(*input.Title) == "" {
 			return nil, fmt.Errorf("title cannot be empty: %w", model.ErrValidation)
 		}
-		s.recordFieldChange(ctx, item.ID, &info.UserID, "title", item.Title, *input.Title)
+		s.recordFieldChange(ctx, item.ID, info, "title", item.Title, *input.Title)
 		watcherChanges = append(watcherChanges, fieldChange{"title", item.Title, *input.Title})
 		item.Title = *input.Title
 	}
@@ -519,7 +519,7 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 			oldDesc = *item.Description
 		}
 		if *input.Description != oldDesc {
-			s.recordFieldChange(ctx, item.ID, &info.UserID, "description", oldDesc, *input.Description)
+			s.recordFieldChange(ctx, item.ID, info, "description", oldDesc, *input.Description)
 			watcherChanges = append(watcherChanges, fieldChange{"description", oldDesc, *input.Description})
 			item.Description = input.Description
 		}
@@ -557,7 +557,7 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 					Str("new_status", initialStatus.Name).
 					Str("new_type", *input.Type).
 					Msg("auto-resetting status to initial for new workflow")
-				s.recordFieldChange(ctx, item.ID, &info.UserID, "status", item.Status, initialStatus.Name)
+				s.recordFieldChange(ctx, item.ID, info, "status", item.Status, initialStatus.Name)
 				// Manage resolved_at based on status category change
 				newCategory, _ := s.workflows.GetStatusCategory(ctx, newWfID, initialStatus.Name)
 				oldCategory, _ := s.workflows.GetStatusCategory(ctx, newWfID, item.Status)
@@ -574,7 +574,7 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 			}
 		}
 
-		s.recordFieldChange(ctx, item.ID, &info.UserID, "type", item.Type, *input.Type)
+		s.recordFieldChange(ctx, item.ID, info, "type", item.Type, *input.Type)
 		watcherChanges = append(watcherChanges, fieldChange{"type", item.Type, *input.Type})
 		item.Type = *input.Type
 		typeChanged = true
@@ -620,7 +620,7 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 			log.Ctx(ctx).Warn().Err(err).Msg("failed to upsert SLA elapsed on enter")
 		}
 
-		s.recordFieldChange(ctx, item.ID, &info.UserID, "status", item.Status, *input.Status)
+		s.recordFieldChange(ctx, item.ID, info, "status", item.Status, *input.Status)
 		watcherChanges = append(watcherChanges, fieldChange{"status", item.Status, *input.Status})
 		statusOld = item.Status
 		statusNew = *input.Status
@@ -650,14 +650,14 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 		if !isValidPriority(*input.Priority) {
 			return nil, fmt.Errorf("invalid priority %q: %w", *input.Priority, model.ErrValidation)
 		}
-		s.recordFieldChange(ctx, item.ID, &info.UserID, "priority", item.Priority, *input.Priority)
+		s.recordFieldChange(ctx, item.ID, info, "priority", item.Priority, *input.Priority)
 		watcherChanges = append(watcherChanges, fieldChange{"priority", item.Priority, *input.Priority})
 		item.Priority = *input.Priority
 	}
 
 	if input.ClearAssignee {
 		if item.AssigneeID != nil {
-			s.recordEvent(ctx, item.ID, &info.UserID, "unassigned", strPtr("assignee_id"), strPtr(item.AssigneeID.String()), nil)
+			s.recordEvent(ctx, item.ID, info, "unassigned", strPtr("assignee_id"), strPtr(item.AssigneeID.String()), nil)
 			watcherChanges = append(watcherChanges, fieldChange{"assignee", item.AssigneeID.String(), ""})
 			item.AssigneeID = nil
 		}
@@ -676,7 +676,7 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 			if member.Role == model.ProjectRoleViewer {
 				return nil, fmt.Errorf("viewers cannot be assigned to work items: %w", model.ErrValidation)
 			}
-			s.recordEvent(ctx, item.ID, &info.UserID, "assigned", strPtr("assignee_id"), strPtr(oldAssignee), strPtr(newAssignee))
+			s.recordEvent(ctx, item.ID, info, "assigned", strPtr("assignee_id"), strPtr(oldAssignee), strPtr(newAssignee))
 			watcherChanges = append(watcherChanges, fieldChange{"assignee", oldAssignee, newAssignee})
 			item.AssigneeID = input.AssigneeID
 			s.publishAssignment(ctx, project.Key, item, info.UserID)
@@ -687,7 +687,7 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 		oldLabels := strings.Join(item.Labels, ",")
 		newLabels := strings.Join(*input.Labels, ",")
 		if oldLabels != newLabels {
-			s.recordFieldChange(ctx, item.ID, &info.UserID, "labels", oldLabels, newLabels)
+			s.recordFieldChange(ctx, item.ID, info, "labels", oldLabels, newLabels)
 			watcherChanges = append(watcherChanges, fieldChange{"labels", oldLabels, newLabels})
 			item.Labels = *input.Labels
 		}
@@ -695,7 +695,7 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 
 	if input.ClearComplexity {
 		if item.Complexity != nil {
-			s.recordEvent(ctx, item.ID, &info.UserID, "complexity_cleared", strPtr("complexity"), strPtr(strconv.Itoa(*item.Complexity)), nil)
+			s.recordEvent(ctx, item.ID, info, "complexity_cleared", strPtr("complexity"), strPtr(strconv.Itoa(*item.Complexity)), nil)
 			item.Complexity = nil
 		}
 	} else if input.Complexity != nil {
@@ -708,7 +708,7 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 			if err := validateComplexity(*input.Complexity, project.AllowedComplexityValues); err != nil {
 				return nil, err
 			}
-			s.recordFieldChange(ctx, item.ID, &info.UserID, "complexity", oldVal, newVal)
+			s.recordFieldChange(ctx, item.ID, info, "complexity", oldVal, newVal)
 			item.Complexity = input.Complexity
 		}
 	}
@@ -717,13 +717,13 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 		if !isValidVisibility(*input.Visibility) {
 			return nil, fmt.Errorf("invalid visibility %q: %w", *input.Visibility, model.ErrValidation)
 		}
-		s.recordFieldChange(ctx, item.ID, &info.UserID, "visibility", item.Visibility, *input.Visibility)
+		s.recordFieldChange(ctx, item.ID, info, "visibility", item.Visibility, *input.Visibility)
 		item.Visibility = *input.Visibility
 	}
 
 	if input.ClearDueDate {
 		if item.DueDate != nil {
-			s.recordEvent(ctx, item.ID, &info.UserID, "due_date_cleared", strPtr("due_date"), strPtr(item.DueDate.Format(time.DateOnly)), nil)
+			s.recordEvent(ctx, item.ID, info, "due_date_cleared", strPtr("due_date"), strPtr(item.DueDate.Format(time.DateOnly)), nil)
 			watcherChanges = append(watcherChanges, fieldChange{"due_date", item.DueDate.Format(time.DateOnly), ""})
 			item.DueDate = nil
 		}
@@ -734,7 +734,7 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 		}
 		newDueDate := input.DueDate.Format(time.DateOnly)
 		if oldDueDate != newDueDate {
-			s.recordEvent(ctx, item.ID, &info.UserID, "due_date_set", strPtr("due_date"), strPtr(oldDueDate), strPtr(newDueDate))
+			s.recordEvent(ctx, item.ID, info, "due_date_set", strPtr("due_date"), strPtr(oldDueDate), strPtr(newDueDate))
 			watcherChanges = append(watcherChanges, fieldChange{"due_date", oldDueDate, newDueDate})
 			item.DueDate = input.DueDate
 		}
@@ -790,7 +790,7 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 
 	if input.ClearEstimate {
 		if item.EstimatedSeconds != nil {
-			s.recordEvent(ctx, item.ID, &info.UserID, "estimate_cleared", strPtr("estimated_seconds"), strPtr(strconv.Itoa(*item.EstimatedSeconds)), nil)
+			s.recordEvent(ctx, item.ID, info, "estimate_cleared", strPtr("estimated_seconds"), strPtr(strconv.Itoa(*item.EstimatedSeconds)), nil)
 			item.EstimatedSeconds = nil
 		}
 	} else if input.EstimatedSeconds != nil {
@@ -803,7 +803,7 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 		}
 		newVal := strconv.Itoa(*input.EstimatedSeconds)
 		if oldVal != newVal {
-			s.recordEvent(ctx, item.ID, &info.UserID, "estimate_set", strPtr("estimated_seconds"), strPtr(oldVal), strPtr(newVal))
+			s.recordEvent(ctx, item.ID, info, "estimate_set", strPtr("estimated_seconds"), strPtr(oldVal), strPtr(newVal))
 			item.EstimatedSeconds = input.EstimatedSeconds
 		}
 	}
@@ -905,7 +905,7 @@ func (s *WorkItemService) CreateComment(ctx context.Context, info *model.AuthInf
 	}
 
 	// Record "comment_added" event
-	s.recordEventWithMetadata(ctx, item.ID, &info.UserID, "comment_added", input.Visibility, map[string]interface{}{
+	s.recordEventWithMetadata(ctx, item.ID, info, "comment_added", input.Visibility, map[string]interface{}{
 		"comment_id": comment.ID.String(),
 		"preview":    input.Body,
 	})
@@ -983,7 +983,7 @@ func (s *WorkItemService) UpdateComment(ctx context.Context, info *model.AuthInf
 	}
 
 	// Record "comment_updated" event
-	s.recordEventWithMetadata(ctx, item.ID, &info.UserID, "comment_updated", comment.Visibility, map[string]interface{}{
+	s.recordEventWithMetadata(ctx, item.ID, info, "comment_updated", comment.Visibility, map[string]interface{}{
 		"comment_id":  commentID.String(),
 		"old_preview": oldBody,
 		"preview":     body,
@@ -1028,7 +1028,7 @@ func (s *WorkItemService) DeleteComment(ctx context.Context, info *model.AuthInf
 		return fmt.Errorf("deleting comment: %w", err)
 	}
 
-	s.recordEventWithMetadata(ctx, item.ID, &info.UserID, "comment_deleted", model.VisibilityInternal, map[string]interface{}{
+	s.recordEventWithMetadata(ctx, item.ID, info, "comment_deleted", model.VisibilityInternal, map[string]interface{}{
 		"comment_id": commentID.String(),
 	})
 
@@ -1098,7 +1098,7 @@ func (s *WorkItemService) CreateRelation(ctx context.Context, info *model.AuthIn
 	sourceDisplayID := fmt.Sprintf("%s-%d", projectKey, itemNumber)
 	targetDisplayID := fmt.Sprintf("%s-%d", targetKey, targetItem.ItemNumber)
 
-	s.recordEventWithMetadata(ctx, sourceItem.ID, &info.UserID, "relation_added", model.VisibilityInternal, map[string]interface{}{
+	s.recordEventWithMetadata(ctx, sourceItem.ID, info, "relation_added", model.VisibilityInternal, map[string]interface{}{
 		"relation_id":   relation.ID.String(),
 		"relation_type": input.RelationType,
 		"target":        targetDisplayID,
@@ -1185,7 +1185,7 @@ func (s *WorkItemService) DeleteRelation(ctx context.Context, info *model.AuthIn
 		return fmt.Errorf("deleting relation: %w", err)
 	}
 
-	s.recordEventWithMetadata(ctx, item.ID, &info.UserID, "relation_removed", model.VisibilityInternal, map[string]interface{}{
+	s.recordEventWithMetadata(ctx, item.ID, info, "relation_removed", model.VisibilityInternal, map[string]interface{}{
 		"relation_id":   relationID.String(),
 		"relation_type": relation.RelationType,
 	})
@@ -1247,7 +1247,7 @@ func (s *WorkItemService) UploadAttachment(ctx context.Context, info *model.Auth
 		return nil, fmt.Errorf("creating attachment record: %w", err)
 	}
 
-	s.recordEventWithMetadata(ctx, item.ID, &info.UserID, "attachment_added", model.VisibilityInternal, map[string]interface{}{
+	s.recordEventWithMetadata(ctx, item.ID, info, "attachment_added", model.VisibilityInternal, map[string]interface{}{
 		"attachment_id": attachmentID.String(),
 		"filename":      input.Filename,
 		"size_bytes":    input.Size,
@@ -1355,7 +1355,7 @@ func (s *WorkItemService) DeleteAttachment(ctx context.Context, info *model.Auth
 		return fmt.Errorf("deleting attachment: %w", err)
 	}
 
-	s.recordEventWithMetadata(ctx, item.ID, &info.UserID, "attachment_removed", model.VisibilityInternal, map[string]interface{}{
+	s.recordEventWithMetadata(ctx, item.ID, info, "attachment_removed", model.VisibilityInternal, map[string]interface{}{
 		"attachment_id": attachmentID.String(),
 		"filename":      attachment.Filename,
 	})
@@ -1434,6 +1434,9 @@ func (s *WorkItemService) requireMembership(ctx context.Context, info *model.Aut
 	if info.GlobalRole == model.RoleAdmin {
 		return nil
 	}
+	if info.IsSystemKey() {
+		return nil
+	}
 	_, err := s.members.GetByProjectAndUser(ctx, projectID, info.UserID)
 	if err != nil {
 		if err == model.ErrNotFound {
@@ -1446,6 +1449,9 @@ func (s *WorkItemService) requireMembership(ctx context.Context, info *model.Aut
 
 func (s *WorkItemService) requireRole(ctx context.Context, info *model.AuthInfo, projectID uuid.UUID, allowedRoles ...string) error {
 	if info.GlobalRole == model.RoleAdmin {
+		return nil
+	}
+	if info.IsSystemKey() {
 		return nil
 	}
 	member, err := s.members.GetByProjectAndUser(ctx, projectID, info.UserID)
@@ -1461,6 +1467,19 @@ func (s *WorkItemService) requireRole(ctx context.Context, info *model.AuthInfo,
 		}
 	}
 	return model.ErrForbidden
+}
+
+// eventActorFromAuthInfo returns actor fields for a WorkItemEvent based on the auth info.
+// System keys get ActorType "system_key" with key metadata; regular users get ActorType "user" with their UserID.
+func eventActorFromAuthInfo(info *model.AuthInfo) (actorID *uuid.UUID, actorType string, metadata map[string]interface{}) {
+	if info.IsSystemKey() {
+		return nil, model.ActorTypeSystemKey, map[string]interface{}{
+			"key_id":   info.KeyID.String(),
+			"key_name": info.KeyName,
+		}
+	}
+	uid := info.UserID
+	return &uid, model.ActorTypeUser, nil
 }
 
 // --- Time entry methods ---
@@ -1507,7 +1526,7 @@ func (s *WorkItemService) LogTime(ctx context.Context, info *model.AuthInfo, pro
 		return nil, fmt.Errorf("creating time entry: %w", err)
 	}
 
-	s.recordEventWithMetadata(ctx, item.ID, &info.UserID, "time_logged", model.VisibilityInternal, map[string]interface{}{
+	s.recordEventWithMetadata(ctx, item.ID, info, "time_logged", model.VisibilityInternal, map[string]interface{}{
 		"time_entry_id":    entry.ID.String(),
 		"duration_seconds": input.DurationSeconds,
 	})
@@ -1605,7 +1624,7 @@ func (s *WorkItemService) UpdateTimeEntry(ctx context.Context, info *model.AuthI
 		return nil, fmt.Errorf("updating time entry: %w", err)
 	}
 
-	s.recordEventWithMetadata(ctx, item.ID, &info.UserID, "time_entry_updated", model.VisibilityInternal, map[string]interface{}{
+	s.recordEventWithMetadata(ctx, item.ID, info, "time_entry_updated", model.VisibilityInternal, map[string]interface{}{
 		"time_entry_id": entryID.String(),
 	})
 
@@ -1649,7 +1668,7 @@ func (s *WorkItemService) DeleteTimeEntry(ctx context.Context, info *model.AuthI
 		return fmt.Errorf("deleting time entry: %w", err)
 	}
 
-	s.recordEventWithMetadata(ctx, item.ID, &info.UserID, "time_entry_deleted", model.VisibilityInternal, map[string]interface{}{
+	s.recordEventWithMetadata(ctx, item.ID, info, "time_entry_deleted", model.VisibilityInternal, map[string]interface{}{
 		"time_entry_id": entryID.String(),
 	})
 
@@ -1658,16 +1677,22 @@ func (s *WorkItemService) DeleteTimeEntry(ctx context.Context, info *model.AuthI
 
 // --- Event recording helpers ---
 
-func (s *WorkItemService) recordEvent(ctx context.Context, workItemID uuid.UUID, actorID *uuid.UUID, eventType string, fieldName, oldValue, newValue *string) {
+func (s *WorkItemService) recordEvent(ctx context.Context, workItemID uuid.UUID, info *model.AuthInfo, eventType string, fieldName, oldValue, newValue *string) {
+	actorID, actorType, actorMeta := eventActorFromAuthInfo(info)
+	md := map[string]interface{}{}
+	for k, v := range actorMeta {
+		md[k] = v
+	}
 	event := &model.WorkItemEvent{
 		ID:         uuid.Must(uuid.NewV7()),
 		WorkItemID: workItemID,
 		ActorID:    actorID,
+		ActorType:  actorType,
 		EventType:  eventType,
 		FieldName:  fieldName,
 		OldValue:   oldValue,
 		NewValue:   newValue,
-		Metadata:   map[string]interface{}{},
+		Metadata:   md,
 		Visibility: model.VisibilityInternal,
 	}
 	if err := s.events.Create(ctx, event); err != nil {
@@ -1678,11 +1703,16 @@ func (s *WorkItemService) recordEvent(ctx context.Context, workItemID uuid.UUID,
 	}
 }
 
-func (s *WorkItemService) recordEventWithMetadata(ctx context.Context, workItemID uuid.UUID, actorID *uuid.UUID, eventType, visibility string, metadata map[string]interface{}) {
+func (s *WorkItemService) recordEventWithMetadata(ctx context.Context, workItemID uuid.UUID, info *model.AuthInfo, eventType, visibility string, metadata map[string]interface{}) {
+	actorID, actorType, actorMeta := eventActorFromAuthInfo(info)
+	for k, v := range actorMeta {
+		metadata[k] = v
+	}
 	event := &model.WorkItemEvent{
 		ID:         uuid.Must(uuid.NewV7()),
 		WorkItemID: workItemID,
 		ActorID:    actorID,
+		ActorType:  actorType,
 		EventType:  eventType,
 		Metadata:   metadata,
 		Visibility: visibility,
@@ -1695,7 +1725,7 @@ func (s *WorkItemService) recordEventWithMetadata(ctx context.Context, workItemI
 	}
 }
 
-func (s *WorkItemService) recordFieldChange(ctx context.Context, workItemID uuid.UUID, actorID *uuid.UUID, fieldName, oldValue, newValue string) {
+func (s *WorkItemService) recordFieldChange(ctx context.Context, workItemID uuid.UUID, info *model.AuthInfo, fieldName, oldValue, newValue string) {
 	eventType := fieldName + "_updated"
 	switch fieldName {
 	case "status":
@@ -1703,7 +1733,7 @@ func (s *WorkItemService) recordFieldChange(ctx context.Context, workItemID uuid
 	case "priority":
 		eventType = "priority_changed"
 	}
-	s.recordEvent(ctx, workItemID, actorID, eventType, &fieldName, &oldValue, &newValue)
+	s.recordEvent(ctx, workItemID, info, eventType, &fieldName, &oldValue, &newValue)
 }
 
 // publishWatcherNotification publishes a watcher notification event (best-effort).
@@ -1954,7 +1984,7 @@ func (s *WorkItemService) AddWatcher(ctx context.Context, info *model.AuthInfo, 
 		return nil, fmt.Errorf("adding watcher: %w", err)
 	}
 
-	s.recordEventWithMetadata(ctx, item.ID, &info.UserID, "watcher_added", model.VisibilityInternal, map[string]interface{}{
+	s.recordEventWithMetadata(ctx, item.ID, info, "watcher_added", model.VisibilityInternal, map[string]interface{}{
 		"watcher_user_id": targetUserID.String(),
 	})
 
@@ -1990,7 +2020,7 @@ func (s *WorkItemService) RemoveWatcher(ctx context.Context, info *model.AuthInf
 		return fmt.Errorf("removing watcher: %w", err)
 	}
 
-	s.recordEventWithMetadata(ctx, item.ID, &info.UserID, "watcher_removed", model.VisibilityInternal, map[string]interface{}{
+	s.recordEventWithMetadata(ctx, item.ID, info, "watcher_removed", model.VisibilityInternal, map[string]interface{}{
 		"watcher_user_id": targetUserID.String(),
 	})
 
@@ -2094,7 +2124,7 @@ func (s *WorkItemService) ToggleWatch(ctx context.Context, info *model.AuthInfo,
 		if err := s.watchers.Delete(ctx, item.ID, info.UserID); err != nil {
 			return false, fmt.Errorf("removing watch: %w", err)
 		}
-		s.recordEventWithMetadata(ctx, item.ID, &info.UserID, "watcher_removed", model.VisibilityInternal, map[string]interface{}{
+		s.recordEventWithMetadata(ctx, item.ID, info, "watcher_removed", model.VisibilityInternal, map[string]interface{}{
 			"watcher_user_id": info.UserID.String(),
 		})
 		return false, nil
@@ -2109,7 +2139,7 @@ func (s *WorkItemService) ToggleWatch(ctx context.Context, info *model.AuthInfo,
 	if err := s.watchers.Create(ctx, watcher); err != nil {
 		return false, fmt.Errorf("adding watch: %w", err)
 	}
-	s.recordEventWithMetadata(ctx, item.ID, &info.UserID, "watcher_added", model.VisibilityInternal, map[string]interface{}{
+	s.recordEventWithMetadata(ctx, item.ID, info, "watcher_added", model.VisibilityInternal, map[string]interface{}{
 		"watcher_user_id": info.UserID.String(),
 	})
 	return true, nil

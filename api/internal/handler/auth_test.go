@@ -118,7 +118,9 @@ func newMockAPIKeyRepo() *mockAPIKeyRepo {
 
 func (m *mockAPIKeyRepo) Create(_ context.Context, key *model.APIKey) error {
 	m.keys[key.KeyHash] = key
-	m.byUser[key.UserID] = append(m.byUser[key.UserID], *key)
+	if key.UserID != nil {
+		m.byUser[*key.UserID] = append(m.byUser[*key.UserID], *key)
+	}
 	m.byID[key.ID] = key
 	return nil
 }
@@ -135,9 +137,19 @@ func (m *mockAPIKeyRepo) ListByUserID(_ context.Context, userID uuid.UUID) ([]mo
 	return m.byUser[userID], nil
 }
 
+func (m *mockAPIKeyRepo) ListByType(_ context.Context, keyType string) ([]model.APIKey, error) {
+	var result []model.APIKey
+	for _, k := range m.byID {
+		if k.Type == keyType {
+			result = append(result, *k)
+		}
+	}
+	return result, nil
+}
+
 func (m *mockAPIKeyRepo) Delete(_ context.Context, id, userID uuid.UUID) error {
 	k, ok := m.byID[id]
-	if !ok || k.UserID != userID {
+	if !ok || k.UserID == nil || *k.UserID != userID {
 		return model.ErrNotFound
 	}
 	delete(m.keys, k.KeyHash)
@@ -152,9 +164,28 @@ func (m *mockAPIKeyRepo) Delete(_ context.Context, id, userID uuid.UUID) error {
 	return nil
 }
 
+func (m *mockAPIKeyRepo) DeleteByID(_ context.Context, id uuid.UUID) error {
+	k, ok := m.byID[id]
+	if !ok {
+		return model.ErrNotFound
+	}
+	delete(m.keys, k.KeyHash)
+	delete(m.byID, id)
+	return nil
+}
+
 func (m *mockAPIKeyRepo) UpdateName(_ context.Context, id, userID uuid.UUID, name string) error {
 	k, ok := m.byID[id]
-	if !ok || k.UserID != userID {
+	if !ok || k.UserID == nil || *k.UserID != userID {
+		return model.ErrNotFound
+	}
+	k.Name = name
+	return nil
+}
+
+func (m *mockAPIKeyRepo) UpdateNameByID(_ context.Context, id uuid.UUID, name string) error {
+	k, ok := m.byID[id]
+	if !ok {
 		return model.ErrNotFound
 	}
 	k.Name = name
@@ -979,6 +1010,286 @@ func TestGetUserAvatarHandler_NotFound(t *testing.T) {
 
 	if w.Code != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+// --- System API Key handler tests ---
+
+func TestAuthHandler_CreateSystemAPIKey(t *testing.T) {
+	h, authSvc, token := testSetup(t)
+	info, _ := authSvc.ValidateJWT(token)
+
+	body := `{"name":"CI Pipeline","permissions":["metrics:r"]}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/api-keys", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), info))
+	w := httptest.NewRecorder()
+
+	h.CreateSystemAPIKey(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data := resp["data"].(map[string]interface{})
+	if data["key"] == nil || data["key"] == "" {
+		t.Fatal("expected full key in create response")
+	}
+	key := data["key"].(string)
+	if !strings.HasPrefix(key, "twks_") {
+		t.Fatalf("expected key to start with 'twks_', got %s", key[:5])
+	}
+	if data["name"] != "CI Pipeline" {
+		t.Fatalf("expected name 'CI Pipeline', got %v", data["name"])
+	}
+	if data["created_by"] == nil {
+		t.Fatal("expected created_by in response")
+	}
+}
+
+func TestAuthHandler_CreateSystemAPIKey_MissingName(t *testing.T) {
+	h, authSvc, token := testSetup(t)
+	info, _ := authSvc.ValidateJWT(token)
+
+	body := `{"permissions":["metrics:r"]}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/api-keys", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), info))
+	w := httptest.NewRecorder()
+
+	h.CreateSystemAPIKey(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestAuthHandler_CreateSystemAPIKey_InvalidPermission(t *testing.T) {
+	h, authSvc, token := testSetup(t)
+	info, _ := authSvc.ValidateJWT(token)
+
+	body := `{"name":"Bad Key","permissions":["badresource:x"]}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/api-keys", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), info))
+	w := httptest.NewRecorder()
+
+	h.CreateSystemAPIKey(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for invalid permission, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestAuthHandler_CreateSystemAPIKey_EmptyPermissions(t *testing.T) {
+	h, authSvc, token := testSetup(t)
+	info, _ := authSvc.ValidateJWT(token)
+
+	body := `{"name":"No Perms","permissions":[]}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/api-keys", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), info))
+	w := httptest.NewRecorder()
+
+	h.CreateSystemAPIKey(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for empty permissions, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestAuthHandler_ListSystemAPIKeys(t *testing.T) {
+	h, authSvc, token := testSetup(t)
+	info, _ := authSvc.ValidateJWT(token)
+
+	// Create two system keys
+	authSvc.CreateSystemAPIKey(context.Background(), info.UserID, "Key A", []string{"metrics:r"}, nil)
+	authSvc.CreateSystemAPIKey(context.Background(), info.UserID, "Key B", []string{"items:rw"}, nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/api-keys", nil)
+	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), info))
+	w := httptest.NewRecorder()
+
+	h.ListSystemAPIKeys(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	keys := resp["data"].([]interface{})
+	if len(keys) != 2 {
+		t.Fatalf("expected 2 system keys, got %d", len(keys))
+	}
+}
+
+func TestAuthHandler_ListSystemAPIKeys_Empty(t *testing.T) {
+	h, authSvc, token := testSetup(t)
+	info, _ := authSvc.ValidateJWT(token)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/api-keys", nil)
+	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), info))
+	w := httptest.NewRecorder()
+
+	h.ListSystemAPIKeys(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	keys := resp["data"].([]interface{})
+	if len(keys) != 0 {
+		t.Fatalf("expected 0 system keys, got %d", len(keys))
+	}
+}
+
+func TestAuthHandler_RenameSystemAPIKey(t *testing.T) {
+	h, authSvc, token := testSetup(t)
+	info, _ := authSvc.ValidateJWT(token)
+
+	apiKey, _, _ := authSvc.CreateSystemAPIKey(context.Background(), info.UserID, "Old Name", []string{"metrics:r"}, nil)
+
+	body := `{"name":"New System Name"}`
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/admin/api-keys/"+apiKey.ID.String(), bytes.NewBufferString(body))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("keyId", apiKey.ID.String())
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	h.RenameSystemAPIKey(w, req)
+
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("expected 204, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestAuthHandler_RenameSystemAPIKey_EmptyName(t *testing.T) {
+	h, authSvc, token := testSetup(t)
+	info, _ := authSvc.ValidateJWT(token)
+
+	apiKey, _, _ := authSvc.CreateSystemAPIKey(context.Background(), info.UserID, "Some Key", []string{"metrics:r"}, nil)
+
+	body := `{"name":""}`
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/admin/api-keys/"+apiKey.ID.String(), bytes.NewBufferString(body))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("keyId", apiKey.ID.String())
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	h.RenameSystemAPIKey(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestAuthHandler_RenameSystemAPIKey_NotFound(t *testing.T) {
+	h, authSvc, token := testSetup(t)
+	info, _ := authSvc.ValidateJWT(token)
+
+	fakeID := uuid.New()
+	body := `{"name":"New Name"}`
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/admin/api-keys/"+fakeID.String(), bytes.NewBufferString(body))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("keyId", fakeID.String())
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	h.RenameSystemAPIKey(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestAuthHandler_RenameSystemAPIKey_InvalidKeyID(t *testing.T) {
+	h, authSvc, token := testSetup(t)
+	info, _ := authSvc.ValidateJWT(token)
+
+	body := `{"name":"New Name"}`
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/admin/api-keys/not-a-uuid", bytes.NewBufferString(body))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("keyId", "not-a-uuid")
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	h.RenameSystemAPIKey(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestAuthHandler_DeleteSystemAPIKey(t *testing.T) {
+	h, authSvc, token := testSetup(t)
+	info, _ := authSvc.ValidateJWT(token)
+
+	apiKey, _, _ := authSvc.CreateSystemAPIKey(context.Background(), info.UserID, "To Delete", []string{"metrics:r"}, nil)
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/admin/api-keys/"+apiKey.ID.String(), nil)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("keyId", apiKey.ID.String())
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	h.DeleteSystemAPIKey(w, req)
+
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("expected 204, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestAuthHandler_DeleteSystemAPIKey_NotFound(t *testing.T) {
+	h, authSvc, token := testSetup(t)
+	info, _ := authSvc.ValidateJWT(token)
+
+	fakeID := uuid.New()
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/admin/api-keys/"+fakeID.String(), nil)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("keyId", fakeID.String())
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	h.DeleteSystemAPIKey(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestAuthHandler_DeleteSystemAPIKey_InvalidKeyID(t *testing.T) {
+	h, authSvc, token := testSetup(t)
+	info, _ := authSvc.ValidateJWT(token)
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/admin/api-keys/not-a-uuid", nil)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("keyId", "not-a-uuid")
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	h.DeleteSystemAPIKey(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
 	}
 }
 

@@ -28,12 +28,17 @@ func (r *WorkItemEventRepository) Create(ctx context.Context, event *model.WorkI
 		return fmt.Errorf("marshaling event metadata: %w", err)
 	}
 
+	actorType := event.ActorType
+	if actorType == "" {
+		actorType = model.ActorTypeUser
+	}
+
 	_, err = r.db.ExecContext(ctx,
 		`INSERT INTO work_item_events (
-			id, work_item_id, actor_id, event_type, field_name,
+			id, work_item_id, actor_id, actor_type, event_type, field_name,
 			old_value, new_value, metadata, visibility
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-		event.ID, event.WorkItemID, event.ActorID, event.EventType, event.FieldName,
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+		event.ID, event.WorkItemID, event.ActorID, actorType, event.EventType, event.FieldName,
 		event.OldValue, event.NewValue, metadataJSON, event.Visibility)
 	if err != nil {
 		return fmt.Errorf("inserting work item event: %w", err)
@@ -45,7 +50,7 @@ func (r *WorkItemEventRepository) Create(ctx context.Context, event *model.WorkI
 // ListByWorkItem returns all events for a given work item, ordered by creation time.
 func (r *WorkItemEventRepository) ListByWorkItem(ctx context.Context, workItemID uuid.UUID) ([]model.WorkItemEvent, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, work_item_id, actor_id, event_type, field_name,
+		`SELECT id, work_item_id, actor_id, actor_type, event_type, field_name,
 		        old_value, new_value, metadata, visibility, created_at
 		 FROM work_item_events
 		 WHERE work_item_id = $1
@@ -67,7 +72,7 @@ func (r *WorkItemEventRepository) ListByWorkItem(ctx context.Context, workItemID
 		)
 
 		if err := rows.Scan(
-			&event.ID, &event.WorkItemID, &actorID, &event.EventType, &fieldName,
+			&event.ID, &event.WorkItemID, &actorID, &event.ActorType, &event.EventType, &fieldName,
 			&oldValue, &newValue, &metadataRaw, &event.Visibility, &event.CreatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scanning work item event: %w", err)
@@ -99,12 +104,15 @@ func (r *WorkItemEventRepository) ListByWorkItem(ctx context.Context, workItemID
 
 // ListByWorkItemFiltered returns events for a work item with optional visibility filter,
 // enriched with actor display names via a LEFT JOIN to users.
+// For system_key actors, the key name is extracted from event metadata.
 func (r *WorkItemEventRepository) ListByWorkItemFiltered(ctx context.Context, workItemID uuid.UUID, visibility string) ([]model.WorkItemEventWithActor, error) {
-	query := `SELECT e.id, e.work_item_id, e.actor_id, e.event_type, e.field_name,
+	query := `SELECT e.id, e.work_item_id, e.actor_id, e.actor_type, e.event_type, e.field_name,
 		        e.old_value, e.new_value, e.metadata, e.visibility, e.created_at,
-		        u.display_name
+		        CASE WHEN e.actor_type = 'system_key' THEN e.metadata->>'key_name'
+		             ELSE u.display_name
+		        END AS display_name
 		 FROM work_item_events e
-		 LEFT JOIN users u ON e.actor_id = u.id
+		 LEFT JOIN users u ON e.actor_id = u.id AND e.actor_type = 'user'
 		 WHERE e.work_item_id = $1`
 	args := []interface{}{workItemID}
 
@@ -134,7 +142,7 @@ func (r *WorkItemEventRepository) ListByWorkItemFiltered(ctx context.Context, wo
 		)
 
 		if err := rows.Scan(
-			&event.ID, &event.WorkItemID, &actorID, &event.EventType, &fieldName,
+			&event.ID, &event.WorkItemID, &actorID, &event.ActorType, &event.EventType, &fieldName,
 			&oldValue, &newValue, &metadataRaw, &event.Visibility, &event.CreatedAt,
 			&displayName,
 		); err != nil {

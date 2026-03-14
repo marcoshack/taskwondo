@@ -120,7 +120,9 @@ func newMockAPIKeyRepo() *mockAPIKeyRepo {
 
 func (m *mockAPIKeyRepo) Create(_ context.Context, key *model.APIKey) error {
 	m.keys[key.KeyHash] = key
-	m.byUser[key.UserID] = append(m.byUser[key.UserID], *key)
+	if key.UserID != nil {
+		m.byUser[*key.UserID] = append(m.byUser[*key.UserID], *key)
+	}
 	m.byID[key.ID] = key
 	return nil
 }
@@ -137,9 +139,19 @@ func (m *mockAPIKeyRepo) ListByUserID(_ context.Context, userID uuid.UUID) ([]mo
 	return m.byUser[userID], nil
 }
 
+func (m *mockAPIKeyRepo) ListByType(_ context.Context, keyType string) ([]model.APIKey, error) {
+	var result []model.APIKey
+	for _, k := range m.byID {
+		if k.Type == keyType {
+			result = append(result, *k)
+		}
+	}
+	return result, nil
+}
+
 func (m *mockAPIKeyRepo) Delete(_ context.Context, id, userID uuid.UUID) error {
 	k, ok := m.byID[id]
-	if !ok || k.UserID != userID {
+	if !ok || k.UserID == nil || *k.UserID != userID {
 		return model.ErrNotFound
 	}
 	delete(m.keys, k.KeyHash)
@@ -154,9 +166,28 @@ func (m *mockAPIKeyRepo) Delete(_ context.Context, id, userID uuid.UUID) error {
 	return nil
 }
 
+func (m *mockAPIKeyRepo) DeleteByID(_ context.Context, id uuid.UUID) error {
+	k, ok := m.byID[id]
+	if !ok {
+		return model.ErrNotFound
+	}
+	delete(m.keys, k.KeyHash)
+	delete(m.byID, id)
+	return nil
+}
+
 func (m *mockAPIKeyRepo) UpdateName(_ context.Context, id, userID uuid.UUID, name string) error {
 	k, ok := m.byID[id]
-	if !ok || k.UserID != userID {
+	if !ok || k.UserID == nil || *k.UserID != userID {
+		return model.ErrNotFound
+	}
+	k.Name = name
+	return nil
+}
+
+func (m *mockAPIKeyRepo) UpdateNameByID(_ context.Context, id uuid.UUID, name string) error {
+	k, ok := m.byID[id]
+	if !ok {
 		return model.ErrNotFound
 	}
 	k.Name = name
@@ -1875,3 +1906,330 @@ func TestDeleteAvatar_NoAvatar(t *testing.T) {
 }
 
 // mockStorage is defined in workitem_test.go (same package)
+
+// --- System API Key tests ---
+
+func TestAuthService_CreateSystemAPIKey_Success(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	admin := createTestUser(t, userRepo, "admin@test.com", "password123", model.RoleAdmin)
+
+	apiKey, fullKey, err := svc.CreateSystemAPIKey(context.Background(), admin.ID, "Metrics Reader", []string{"metrics:r"}, nil)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if !strings.HasPrefix(fullKey, "twks_") {
+		t.Fatalf("expected key to start with 'twks_', got %s", fullKey[:5])
+	}
+	if apiKey.Type != model.KeyTypeSystem {
+		t.Fatalf("expected type 'system', got %s", apiKey.Type)
+	}
+	if apiKey.CreatedBy == nil || *apiKey.CreatedBy != admin.ID {
+		t.Fatalf("expected created_by to be %s", admin.ID)
+	}
+	if apiKey.Name != "Metrics Reader" {
+		t.Fatalf("expected name 'Metrics Reader', got %s", apiKey.Name)
+	}
+	if len(apiKey.Permissions) != 1 || apiKey.Permissions[0] != "metrics:r" {
+		t.Fatalf("expected permissions [metrics:r], got %v", apiKey.Permissions)
+	}
+	if apiKey.KeyPrefix != fullKey[:9] {
+		t.Fatalf("expected key_prefix %s, got %s", fullKey[:9], apiKey.KeyPrefix)
+	}
+}
+
+func TestAuthService_CreateSystemAPIKey_EmptyPermissions(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	admin := createTestUser(t, userRepo, "admin@test.com", "password123", model.RoleAdmin)
+
+	_, _, err := svc.CreateSystemAPIKey(context.Background(), admin.ID, "No Perms", []string{}, nil)
+	if err == nil {
+		t.Fatal("expected error for empty permissions")
+	}
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation, got %v", err)
+	}
+}
+
+func TestAuthService_CreateSystemAPIKey_InvalidFormat(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	admin := createTestUser(t, userRepo, "admin@test.com", "password123", model.RoleAdmin)
+
+	// Missing colon separator
+	_, _, err := svc.CreateSystemAPIKey(context.Background(), admin.ID, "Bad Key", []string{"metricsread"}, nil)
+	if err == nil {
+		t.Fatal("expected error for invalid permission format")
+	}
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation, got %v", err)
+	}
+	if !strings.Contains(err.Error(), "resource:access") {
+		t.Fatalf("expected error about resource:access format, got: %s", err.Error())
+	}
+}
+
+func TestAuthService_CreateSystemAPIKey_InvalidResource(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	admin := createTestUser(t, userRepo, "admin@test.com", "password123", model.RoleAdmin)
+
+	_, _, err := svc.CreateSystemAPIKey(context.Background(), admin.ID, "Bad Key", []string{"unknown:r"}, nil)
+	if err == nil {
+		t.Fatal("expected error for invalid resource")
+	}
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation, got %v", err)
+	}
+	if !strings.Contains(err.Error(), "invalid resource") {
+		t.Fatalf("expected 'invalid resource' in error, got: %s", err.Error())
+	}
+}
+
+func TestAuthService_CreateSystemAPIKey_InvalidAccess(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	admin := createTestUser(t, userRepo, "admin@test.com", "password123", model.RoleAdmin)
+
+	_, _, err := svc.CreateSystemAPIKey(context.Background(), admin.ID, "Bad Key", []string{"metrics:x"}, nil)
+	if err == nil {
+		t.Fatal("expected error for invalid access level")
+	}
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation, got %v", err)
+	}
+	if !strings.Contains(err.Error(), "invalid access level") {
+		t.Fatalf("expected 'invalid access level' in error, got: %s", err.Error())
+	}
+}
+
+func TestAuthService_CreateSystemAPIKey_EmptyName(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	admin := createTestUser(t, userRepo, "admin@test.com", "password123", model.RoleAdmin)
+
+	_, _, err := svc.CreateSystemAPIKey(context.Background(), admin.ID, "", []string{"metrics:r"}, nil)
+	if err == nil {
+		t.Fatal("expected error for empty name")
+	}
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation, got %v", err)
+	}
+}
+
+func TestAuthService_CreateSystemAPIKey_NameTooLong(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	admin := createTestUser(t, userRepo, "admin@test.com", "password123", model.RoleAdmin)
+
+	longName := strings.Repeat("a", 101)
+	_, _, err := svc.CreateSystemAPIKey(context.Background(), admin.ID, longName, []string{"metrics:r"}, nil)
+	if err == nil {
+		t.Fatal("expected error for name too long")
+	}
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation, got %v", err)
+	}
+}
+
+func TestAuthService_ValidateSystemAPIKey_Success(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	admin := createTestUser(t, userRepo, "admin@test.com", "password123", model.RoleAdmin)
+
+	_, fullKey, err := svc.CreateSystemAPIKey(context.Background(), admin.ID, "Test System Key", []string{"metrics:r", "items:rw"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	info, err := svc.ValidateSystemAPIKey(context.Background(), fullKey)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if info.KeyType != model.KeyTypeSystem {
+		t.Fatalf("expected KeyType 'system', got %s", info.KeyType)
+	}
+	if len(info.Permissions) != 2 {
+		t.Fatalf("expected 2 permissions, got %d", len(info.Permissions))
+	}
+	if info.KeyName != "Test System Key" {
+		t.Fatalf("expected KeyName 'Test System Key', got %s", info.KeyName)
+	}
+}
+
+func TestAuthService_ValidateSystemAPIKey_Expired(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	admin := createTestUser(t, userRepo, "admin@test.com", "password123", model.RoleAdmin)
+
+	expired := time.Now().Add(-1 * time.Hour)
+	_, fullKey, err := svc.CreateSystemAPIKey(context.Background(), admin.ID, "Expired Key", []string{"metrics:r"}, &expired)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = svc.ValidateSystemAPIKey(context.Background(), fullKey)
+	if err != model.ErrUnauthorized {
+		t.Fatalf("expected ErrUnauthorized, got %v", err)
+	}
+}
+
+func TestAuthService_ValidateSystemAPIKey_InvalidKey(t *testing.T) {
+	svc, _, _ := newTestAuthService()
+
+	_, err := svc.ValidateSystemAPIKey(context.Background(), "twks_nonexistent_key")
+	if err != model.ErrUnauthorized {
+		t.Fatalf("expected ErrUnauthorized, got %v", err)
+	}
+}
+
+func TestAuthService_ValidateSystemAPIKey_RejectsUserKey(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	user := createTestUser(t, userRepo, "user@test.com", "password123", model.RoleUser)
+
+	// Create a user key and try to validate it as a system key
+	_, fullKey, err := svc.CreateAPIKey(context.Background(), user.ID, "User Key", []string{"read"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = svc.ValidateSystemAPIKey(context.Background(), fullKey)
+	if err != model.ErrUnauthorized {
+		t.Fatalf("expected ErrUnauthorized for user key validated as system key, got %v", err)
+	}
+}
+
+func TestAuthService_ListSystemAPIKeys(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	admin := createTestUser(t, userRepo, "admin@test.com", "password123", model.RoleAdmin)
+	user := createTestUser(t, userRepo, "user@test.com", "password123", model.RoleUser)
+
+	// Create system keys
+	svc.CreateSystemAPIKey(context.Background(), admin.ID, "System Key 1", []string{"metrics:r"}, nil)
+	svc.CreateSystemAPIKey(context.Background(), admin.ID, "System Key 2", []string{"items:rw"}, nil)
+
+	// Create a user key (should NOT appear in system list)
+	svc.CreateAPIKey(context.Background(), user.ID, "User Key", []string{"read"}, nil)
+
+	keys, err := svc.ListSystemAPIKeys(context.Background())
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(keys) != 2 {
+		t.Fatalf("expected 2 system keys, got %d", len(keys))
+	}
+	for _, k := range keys {
+		if k.Type != model.KeyTypeSystem {
+			t.Fatalf("expected all keys to be system type, got %s", k.Type)
+		}
+	}
+}
+
+func TestAuthService_RenameSystemAPIKey_Success(t *testing.T) {
+	svc, userRepo, apiKeyRepo := newTestAuthService()
+	admin := createTestUser(t, userRepo, "admin@test.com", "password123", model.RoleAdmin)
+
+	apiKey, _, err := svc.CreateSystemAPIKey(context.Background(), admin.ID, "Old Name", []string{"metrics:r"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = svc.RenameSystemAPIKey(context.Background(), apiKey.ID, "New Name")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	// Verify the name was updated in the repo
+	updated := apiKeyRepo.byID[apiKey.ID]
+	if updated.Name != "New Name" {
+		t.Fatalf("expected name 'New Name', got %s", updated.Name)
+	}
+}
+
+func TestAuthService_RenameSystemAPIKey_EmptyName(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	admin := createTestUser(t, userRepo, "admin@test.com", "password123", model.RoleAdmin)
+
+	apiKey, _, _ := svc.CreateSystemAPIKey(context.Background(), admin.ID, "Some Key", []string{"metrics:r"}, nil)
+
+	err := svc.RenameSystemAPIKey(context.Background(), apiKey.ID, "")
+	if err == nil {
+		t.Fatal("expected validation error for empty name")
+	}
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation, got %v", err)
+	}
+}
+
+func TestAuthService_RenameSystemAPIKey_NameTooLong(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	admin := createTestUser(t, userRepo, "admin@test.com", "password123", model.RoleAdmin)
+
+	apiKey, _, _ := svc.CreateSystemAPIKey(context.Background(), admin.ID, "Some Key", []string{"metrics:r"}, nil)
+
+	longName := strings.Repeat("b", 101)
+	err := svc.RenameSystemAPIKey(context.Background(), apiKey.ID, longName)
+	if err == nil {
+		t.Fatal("expected validation error for name too long")
+	}
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation, got %v", err)
+	}
+}
+
+func TestAuthService_RenameSystemAPIKey_NotFound(t *testing.T) {
+	svc, _, _ := newTestAuthService()
+
+	err := svc.RenameSystemAPIKey(context.Background(), uuid.New(), "New Name")
+	if !errors.Is(err, model.ErrNotFound) {
+		t.Fatalf("expected ErrNotFound, got %v", err)
+	}
+}
+
+func TestAuthService_DeleteSystemAPIKey_Success(t *testing.T) {
+	svc, userRepo, apiKeyRepo := newTestAuthService()
+	admin := createTestUser(t, userRepo, "admin@test.com", "password123", model.RoleAdmin)
+
+	apiKey, _, err := svc.CreateSystemAPIKey(context.Background(), admin.ID, "To Delete", []string{"metrics:r"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = svc.DeleteSystemAPIKey(context.Background(), apiKey.ID)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	// Verify the key is gone
+	if _, ok := apiKeyRepo.byID[apiKey.ID]; ok {
+		t.Fatal("expected key to be deleted from repo")
+	}
+}
+
+func TestAuthService_DeleteSystemAPIKey_NotFound(t *testing.T) {
+	svc, _, _ := newTestAuthService()
+
+	err := svc.DeleteSystemAPIKey(context.Background(), uuid.New())
+	if !errors.Is(err, model.ErrNotFound) {
+		t.Fatalf("expected ErrNotFound, got %v", err)
+	}
+}
+
+func TestAuthService_CreateSystemAPIKey_MultiplePermissions(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	admin := createTestUser(t, userRepo, "admin@test.com", "password123", model.RoleAdmin)
+
+	apiKey, _, err := svc.CreateSystemAPIKey(context.Background(), admin.ID, "Full Access", []string{"metrics:rw", "items:r"}, nil)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(apiKey.Permissions) != 2 {
+		t.Fatalf("expected 2 permissions, got %d", len(apiKey.Permissions))
+	}
+}
+
+func TestAuthService_CreateSystemAPIKey_WithExpiration(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	admin := createTestUser(t, userRepo, "admin@test.com", "password123", model.RoleAdmin)
+
+	future := time.Now().Add(30 * 24 * time.Hour)
+	apiKey, _, err := svc.CreateSystemAPIKey(context.Background(), admin.ID, "Expiring Key", []string{"metrics:r"}, &future)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if apiKey.ExpiresAt == nil {
+		t.Fatal("expected expiry to be set")
+	}
+}
