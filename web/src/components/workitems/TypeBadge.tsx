@@ -10,10 +10,10 @@ const typeColors = {
   epic: 'green',
 } as const
 
-export function TypeBadge({ type }: { type: string }) {
+export function TypeBadge({ type, className }: { type: string; className?: string }) {
   const { t } = useTranslation()
   const color = typeColors[type as keyof typeof typeColors] ?? 'gray'
   const key = `workitems.types.${type}`
   const translated = t(key)
-  return <Tooltip content={t('workitems.form.type')}><Badge color={color}>{translated === key ? type : translated}</Badge></Tooltip>
+  return <Tooltip content={t('workitems.form.type')}><span className={className}><Badge color={color}>{translated === key ? type : translated}</Badge></span></Tooltip>
 }

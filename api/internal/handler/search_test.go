@@ -206,6 +206,65 @@ func TestSearchHandler_SSE_FTSOnly(t *testing.T) {
 	}
 }
 
+func TestSearchHandler_JSON_StatusFields(t *testing.T) {
+	itemID := uuid.New()
+	projectID := uuid.New()
+	num := 10
+	results := []model.SearchResult{
+		{
+			EntityType:     "work_item",
+			EntityID:       itemID,
+			ProjectID:      &projectID,
+			Score:          0,
+			Content:        "[task] Completed task",
+			ProjectKey:     "TF",
+			ItemNumber:     &num,
+			Status:         "done",
+			StatusCategory: "done",
+		},
+	}
+	h := newTestSearchHandler(results, false)
+	r := chi.NewRouter()
+	r.Get("/search", h.Search)
+
+	req := httptest.NewRequest(http.MethodGet, "/search?q=completed", nil)
+	req.Header.Set("Accept", "application/json")
+	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), &model.AuthInfo{
+		UserID:     uuid.New(),
+		GlobalRole: model.RoleUser,
+	}))
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp struct {
+		Data struct {
+			FTS struct {
+				Results []struct {
+					Status         string `json:"status"`
+					StatusCategory string `json:"status_category"`
+				} `json:"results"`
+			} `json:"fts"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decoding response: %v", err)
+	}
+	if len(resp.Data.FTS.Results) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(resp.Data.FTS.Results))
+	}
+	if resp.Data.FTS.Results[0].Status != "done" {
+		t.Errorf("expected status 'done', got %q", resp.Data.FTS.Results[0].Status)
+	}
+	if resp.Data.FTS.Results[0].StatusCategory != "done" {
+		t.Errorf("expected status_category 'done', got %q", resp.Data.FTS.Results[0].StatusCategory)
+	}
+}
+
 type sseEvent struct {
 	name string
 	data string

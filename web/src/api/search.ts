@@ -11,6 +11,8 @@ export interface SearchResult {
   project_key?: string
   item_number?: number
   namespace_slug?: string
+  status?: string
+  status_category?: string
 }
 
 export interface FTSSection {

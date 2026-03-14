@@ -19,6 +19,7 @@ import { Modal } from '@/components/ui/Modal'
 import { TypeBadge } from '@/components/workitems/TypeBadge'
 import { useSearch } from '@/hooks/useSearch'
 import { useDebounce } from '@/hooks/useDebounce'
+import { usePreference } from '@/hooks/usePreferences'
 import type { SearchResult } from '@/api/search'
 
 const ENTITY_TYPE_ORDER = [
@@ -109,6 +110,9 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
   const [limit, setLimit] = useState(20)
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
+
+  const { data: strikethroughPref } = usePreference<boolean>('strikethrough_completed')
+  const strikethroughEnabled = strikethroughPref ?? true
 
   const debouncedQuery = useDebounce(query, 400)
   const {
@@ -233,6 +237,8 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
             const globalIndex = allFlat.indexOf(result)
             const parsed = parseSnippet(result)
             const ItemIcon = entityIcon(result.entity_type)
+            const isCompleted = strikethroughEnabled && result.entity_type === 'work_item' &&
+              (result.status_category === 'done' || result.status_category === 'cancelled')
             return (
               <button
                 key={`${result.entity_type}-${result.entity_id}`}
@@ -245,11 +251,22 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
                     : 'hover:bg-gray-100 dark:hover:bg-gray-700'
                 }`}
               >
-                {parsed.type && <TypeBadge type={parsed.type} />}
+                {parsed.type && <TypeBadge type={parsed.type} className={isCompleted ? 'opacity-40' : ''} />}
+                {result.entity_type === 'work_item' && result.project_key && result.item_number != null && (
+                  <span className={`text-xs shrink-0 ${
+                    isCompleted ? 'text-gray-400 dark:text-gray-500' : 'text-gray-500 dark:text-gray-400'
+                  }`}>
+                    {result.project_key}-{result.item_number}
+                  </span>
+                )}
                 {(result.entity_type === 'comment' || result.entity_type === 'attachment') && (
                   <ItemIcon className="h-3.5 w-3.5 text-gray-400 shrink-0" />
                 )}
-                <span className="text-gray-900 dark:text-gray-100 truncate flex-1">
+                <span className={`truncate flex-1 ${
+                  isCompleted
+                    ? 'line-through text-gray-400 dark:text-gray-500'
+                    : 'text-gray-900 dark:text-gray-100'
+                }`}>
                   {parsed.text}
                 </span>
                 {showScores && result.score > 0 && (

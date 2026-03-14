@@ -546,12 +546,16 @@ func (r *WorkItemRepository) SearchFTS(ctx context.Context, query string, projec
 		`SELECT w.id, w.project_id, w.item_number, w.display_id, w.type, w.title,
 		        p.key AS project_key,
 		        COALESCE(n.slug, 'default') AS namespace_slug,
+		        w.status,
+		        COALESCE(ws.category, '') AS status_category,
 		        ts_rank(w.search_vector, plainto_tsquery('english', $%d)) +
 		        ts_rank(w.search_vector, plainto_tsquery('simple', $%d)) +
 		        CASE WHEN UPPER(w.display_id) = UPPER($%d) THEN 1000 ELSE 0 END AS rank
 		 FROM work_items w
 		 JOIN projects p ON p.id = w.project_id
 		 LEFT JOIN namespaces n ON n.id = p.namespace_id
+		 LEFT JOIN project_type_workflows ptw ON ptw.project_id = p.id AND ptw.work_item_type = w.type
+		 LEFT JOIN workflow_statuses ws ON ws.workflow_id = COALESCE(ptw.workflow_id, p.default_workflow_id) AND ws.name = w.status
 		 %s
 		 ORDER BY rank DESC, w.updated_at DESC
 		 LIMIT $%d`,
@@ -566,28 +570,32 @@ func (r *WorkItemRepository) SearchFTS(ctx context.Context, query string, projec
 	var results []model.SearchResult
 	for rows.Next() {
 		var (
-			id            uuid.UUID
-			projectID     uuid.UUID
-			itemNumber    int
-			displayID     string
-			itemType      string
-			title         string
-			projectKey    string
-			namespaceSlug string
-			rank          float64
+			id             uuid.UUID
+			projectID      uuid.UUID
+			itemNumber     int
+			displayID      string
+			itemType       string
+			title          string
+			projectKey     string
+			namespaceSlug  string
+			status         string
+			statusCategory string
+			rank           float64
 		)
-		if err := rows.Scan(&id, &projectID, &itemNumber, &displayID, &itemType, &title, &projectKey, &namespaceSlug, &rank); err != nil {
+		if err := rows.Scan(&id, &projectID, &itemNumber, &displayID, &itemType, &title, &projectKey, &namespaceSlug, &status, &statusCategory, &rank); err != nil {
 			return nil, fmt.Errorf("scanning fts result: %w", err)
 		}
 		results = append(results, model.SearchResult{
-			EntityType:    model.EntityTypeWorkItem,
-			EntityID:      id,
-			ProjectID:     &projectID,
-			Score:         0, // FTS results don't have similarity scores
-			Content:       fmt.Sprintf("[%s] %s", itemType, title),
-			ProjectKey:    projectKey,
-			ItemNumber:    &itemNumber,
-			NamespaceSlug: namespaceSlug,
+			EntityType:     model.EntityTypeWorkItem,
+			EntityID:       id,
+			ProjectID:      &projectID,
+			Score:          0, // FTS results don't have similarity scores
+			Content:        fmt.Sprintf("[%s] %s", itemType, title),
+			ProjectKey:     projectKey,
+			ItemNumber:     &itemNumber,
+			NamespaceSlug:  namespaceSlug,
+			Status:         status,
+			StatusCategory: statusCategory,
 		})
 	}
 	return results, rows.Err()

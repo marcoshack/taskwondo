@@ -100,11 +100,15 @@ func (r *EmbeddingRepository) SearchByVector(ctx context.Context, vector []float
 		        1 - (e.embedding <=> $%d::vector) AS score, e.content,
 		        p.key AS project_key,
 		        COALESCE(w.item_number, cw.item_number, aw.item_number) AS item_number,
-		        COALESCE(n.slug, 'default') AS namespace_slug
+		        COALESCE(n.slug, 'default') AS namespace_slug,
+		        COALESCE(w.status, '') AS status,
+		        COALESCE(ws.category, '') AS status_category
 		 FROM embeddings e
 		 LEFT JOIN projects p ON p.id = e.project_id
 		 LEFT JOIN namespaces n ON n.id = p.namespace_id
 		 LEFT JOIN work_items w ON w.id = e.entity_id AND e.entity_type = 'work_item'
+		 LEFT JOIN project_type_workflows ptw ON ptw.project_id = p.id AND ptw.work_item_type = w.type AND e.entity_type = 'work_item'
+		 LEFT JOIN workflow_statuses ws ON ws.workflow_id = COALESCE(ptw.workflow_id, p.default_workflow_id) AND ws.name = w.status AND e.entity_type = 'work_item'
 		 LEFT JOIN comments c ON c.id = e.entity_id AND e.entity_type = 'comment'
 		 LEFT JOIN work_items cw ON cw.id = c.work_item_id
 		 LEFT JOIN attachments a ON a.id = e.entity_id AND e.entity_type = 'attachment'
@@ -126,7 +130,8 @@ func (r *EmbeddingRepository) SearchByVector(ctx context.Context, vector []float
 		var projectKey sql.NullString
 		var itemNumber sql.NullInt64
 		var namespaceSlug sql.NullString
-		if err := rows.Scan(&sr.EntityType, &sr.EntityID, &sr.ProjectID, &sr.Score, &sr.Content, &projectKey, &itemNumber, &namespaceSlug); err != nil {
+		var status, statusCategory string
+		if err := rows.Scan(&sr.EntityType, &sr.EntityID, &sr.ProjectID, &sr.Score, &sr.Content, &projectKey, &itemNumber, &namespaceSlug, &status, &statusCategory); err != nil {
 			return nil, fmt.Errorf("scanning search result: %w", err)
 		}
 		if projectKey.Valid {
@@ -139,6 +144,8 @@ func (r *EmbeddingRepository) SearchByVector(ctx context.Context, vector []float
 		if namespaceSlug.Valid {
 			sr.NamespaceSlug = namespaceSlug.String
 		}
+		sr.Status = status
+		sr.StatusCategory = statusCategory
 		results = append(results, sr)
 	}
 	return results, rows.Err()

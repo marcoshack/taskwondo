@@ -524,6 +524,37 @@ export async function deleteWorkflow(
   }
 }
 
+export async function createWorkflow(
+  request: APIRequestContext,
+  adminToken: string,
+  input: CreateWorkflowInput,
+): Promise<{ id: string; name: string }> {
+  const res = await request.post(`${BASE_URL}/api/v1/admin/workflows`, {
+    headers: { Authorization: `Bearer ${adminToken}` },
+    data: input,
+  });
+  if (!res.ok()) throw new Error(`Create workflow failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function setProjectTypeWorkflow(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  workItemType: string,
+  workflowId: string,
+): Promise<void> {
+  const res = await request.put(
+    `${BASE_URL}/api/v1/default/projects/${projectKey}/type-workflows/${workItemType}`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { workflow_id: workflowId },
+    },
+  );
+  if (!res.ok()) throw new Error(`Set type workflow failed (${res.status()}): ${await res.text()}`);
+}
+
 // --- Preferences ---
 
 export async function setPreference(

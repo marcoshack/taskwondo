@@ -139,6 +139,50 @@ func TestSearchService_SearchFTS(t *testing.T) {
 	}
 }
 
+func TestSearchService_FTSStatusFields(t *testing.T) {
+	projectID := uuid.New()
+	itemID := uuid.New()
+	num := 7
+
+	svc := NewSearchService(
+		&EmbeddingService{},
+		&mockSearchEmbedding{},
+		&mockSearchWorkItems{
+			results: []model.SearchResult{
+				{
+					EntityType:     "work_item",
+					EntityID:       itemID,
+					ProjectID:      &projectID,
+					Content:        "[task] Done item",
+					ProjectKey:     "TF",
+					ItemNumber:     &num,
+					Status:         "done",
+					StatusCategory: "done",
+				},
+			},
+		},
+		&mockSearchProjects{
+			projects: []model.Project{{ID: projectID}},
+		},
+		&mockSearchSettings{settings: map[string]*model.SystemSetting{}},
+	)
+
+	info := &model.AuthInfo{UserID: uuid.New()}
+	results, err := svc.SearchFTS(context.Background(), info, &model.SearchFilter{Query: "done item", Limit: 20})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(results))
+	}
+	if results[0].Status != "done" {
+		t.Errorf("expected status 'done', got %q", results[0].Status)
+	}
+	if results[0].StatusCategory != "done" {
+		t.Errorf("expected status_category 'done', got %q", results[0].StatusCategory)
+	}
+}
+
 func TestSearchService_ProjectIDFiltering(t *testing.T) {
 	allowedProject := uuid.New()
 	disallowedProject := uuid.New()
