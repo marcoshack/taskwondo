@@ -59,8 +59,9 @@ func main() {
 
 	log.Info().Msg("connected to database")
 
-	// Register DB connection pool metrics collector
+	// Register metrics collectors
 	metrics.RegisterCollector(metrics.NewDBCollector(db))
+	metrics.RegisterCollector(metrics.NewResourceCollector(db))
 
 	// Run migrations
 	if err := database.Migrate(ctx, db); err != nil {

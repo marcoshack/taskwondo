@@ -57,6 +57,12 @@ test.describe('Prometheus Metrics — API', () => {
     expect(body).toContain('taskwondo_db_connections_wait_total');
     expect(body).toContain('taskwondo_db_connections_wait_duration_seconds_total');
 
+    // Should contain resource count metrics
+    expect(body).toContain('taskwondo_users_total');
+    expect(body).toContain('taskwondo_namespaces_total');
+    expect(body).toContain('taskwondo_projects_total');
+    expect(body).toContain('taskwondo_milestones_total');
+
     // Content type should be Prometheus-compatible
     const contentType = res.headers()['content-type'] || '';
     expect(contentType).toContain('text/plain');
@@ -87,6 +93,84 @@ test.describe('Prometheus Metrics — API', () => {
 
     // Should contain taskwondo_http_requests_total with status labels
     expect(body).toContain('taskwondo_http_requests_total');
+
+    // Cleanup
+    await api.deleteSystemAPIKey(request, adminToken, created.id);
+  });
+});
+
+// ─── Resource Metrics Tests ──────────────────────────────────────────────────
+
+test.describe('Prometheus Metrics — Resource Counts', () => {
+  test('metrics include resource count gauges', async ({ request }) => {
+    const adminToken = getAdminToken();
+    const keyName = `e2e-res-metrics-${randomUUID().slice(0, 8)}`;
+
+    // Create a system API key with metrics:r permission
+    const created = await api.createSystemAPIKey(request, adminToken, keyName, ['metrics:r']);
+    const systemKey = created.key;
+
+    // Fetch metrics — the E2E environment always has at least 1 user, 1 namespace, etc.
+    const res = await request.get(`${BASE_URL}/metrics`, {
+      headers: { Authorization: `Bearer ${systemKey}` },
+    });
+    expect(res.status()).toBe(200);
+
+    const body = await res.text();
+
+    // Resource count gauges should be present
+    expect(body).toContain('taskwondo_users_total');
+    expect(body).toContain('taskwondo_namespaces_total');
+    expect(body).toContain('taskwondo_projects_total');
+    expect(body).toContain('taskwondo_milestones_total');
+
+    // Users gauge should be >= 1 (at least the admin user)
+    const usersMatch = body.match(/^taskwondo_users_total\s+(\d+)/m);
+    expect(usersMatch).not.toBeNull();
+    expect(Number(usersMatch![1])).toBeGreaterThanOrEqual(1);
+
+    // Namespaces gauge should be >= 1 (at least the default namespace)
+    const nsMatch = body.match(/^taskwondo_namespaces_total\s+(\d+)/m);
+    expect(nsMatch).not.toBeNull();
+    expect(Number(nsMatch![1])).toBeGreaterThanOrEqual(1);
+
+    // Cleanup
+    await api.deleteSystemAPIKey(request, adminToken, created.id);
+  });
+
+  test('work_items_total includes status_category and type labels', async ({ request }) => {
+    const adminToken = getAdminToken();
+    const suffix = randomUUID().slice(0, 4).toUpperCase();
+    const projectKey = `M${suffix}`;
+
+    // Create a project and a work item to ensure at least one data point
+    const project = await api.createProject(request, adminToken, projectKey, `Metrics Test ${suffix}`);
+
+    await api.createWorkItem(request, adminToken, project.key, {
+      title: 'Metrics test item',
+      type: 'task',
+    });
+
+    // Create system API key for metrics
+    const keyName = `e2e-wi-metrics-${randomUUID().slice(0, 8)}`;
+    const created = await api.createSystemAPIKey(request, adminToken, keyName, ['metrics:r']);
+    const systemKey = created.key;
+
+    // Fetch metrics
+    const res = await request.get(`${BASE_URL}/metrics`, {
+      headers: { Authorization: `Bearer ${systemKey}` },
+    });
+    expect(res.status()).toBe(200);
+
+    const body = await res.text();
+
+    // Should have HELP/TYPE declarations for work_items_total
+    expect(body).toContain('taskwondo_work_items_total');
+
+    // Should have at least one line with status_category and type labels
+    // Format: taskwondo_work_items_total{status_category="todo",type="task"} N
+    const wiMatch = body.match(/^taskwondo_work_items_total\{status_category="[^"]+",type="[^"]+"\}\s+\d+/m);
+    expect(wiMatch).not.toBeNull();
 
     // Cleanup
     await api.deleteSystemAPIKey(request, adminToken, created.id);
