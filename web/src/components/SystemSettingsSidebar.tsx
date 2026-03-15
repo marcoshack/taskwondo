@@ -25,9 +25,9 @@ export function SystemSettingsSidebar() {
     { to: 'general', label: t('admin.sidebar.general'), icon: Settings, end: false },
     { to: 'users', label: t('admin.sidebar.users'), icon: Users, end: false },
     { to: 'workflows', label: t('admin.sidebar.workflows'), icon: Route, end: false },
-    { to: 'integrations', label: t('admin.sidebar.integrations'), icon: Plug, end: false },
     { to: 'authentication', label: t('admin.sidebar.authentication'), icon: Lock, end: false },
     { to: 'api-keys', label: t('admin.sidebar.apiKeys'), icon: Key, end: false },
+    { to: 'integrations', label: t('admin.sidebar.integrations'), icon: Plug, end: false },
     { to: 'features', label: t('admin.sidebar.features'), icon: ToggleRight, end: false },
   ]
 
