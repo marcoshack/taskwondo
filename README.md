@@ -1,6 +1,6 @@
 # Taskwondo — Self-Hosted Task & Project Management [![CI](https://github.com/marcoshack/taskwondo/actions/workflows/ci.yml/badge.svg)](https://github.com/marcoshack/taskwondo/actions/workflows/ci.yml)
 
-A self-hosted, open-source project management and issue tracking platform. Kanban boards, customizable workflows, milestones, file attachments, SLA tracking, and 9 languages — all included out of the box. Deploy with a single Docker Compose command. No paid tiers, no strings attached. Your backlog doesn't stand a chance! 🥋
+A self-hosted, open-source project management and issue tracking platform. Namespaces, kanban boards, customizable workflows, semantic search, email notifications, AI integration via MCP, and 9 languages — all included out of the box. Deploy with a single Docker Compose command. No paid tiers, no strings attached. Your backlog doesn't stand a chance! 🥋
 
 ## Screenshots
 
@@ -25,22 +25,70 @@ See [more screenshots](docs/overview.md) for a full walkthrough of features.
 
 ## Features
 
+### Projects & Organization
+
+- **Namespaces** for multi-tenant workspaces with icons, colors, and role-based membership
 - **Projects** with role-based membership (owner, admin, member) and unique keys (e.g. `PROJ`)
-- **Work items** — tasks, bugs, tickets, feedback, and epics with per-project sequential numbering (`PROJ-1`, `PROJ-2`)
-- **Kanban board** with drag-and-drop status changes, or list view with sortable columns
-- **Customizable workflows** — define statuses, transitions, and per-type workflow mappings
-- **Milestones** with progress tracking and due dates
+- **Milestones** with progress tracking, due dates, and stats dashboard
 - **Queues** for organizing incoming work (support, alerts, feedback)
-- **Comments** with markdown, edit history, and paste-to-upload images
-- **Relations** — blocks, relates to, duplicates — with cross-project support
-- **File attachments** with preview modal and inline images
-- **Full-text search** across titles and descriptions
-- **SLA tracking** with business hours, timezone support, and deadline indicators
+
+### Work Items
+
+- **Tasks, bugs, tickets, feedback, and epics** with per-project sequential numbering (`PROJ-1`, `PROJ-2`)
+- **Parent/child hierarchy** with child progress tracking
+- **Complexity estimation** (story points) with per-project configurable values
+- **Time tracking** with descriptions per entry
+
+### Views & Search
+
+- **Kanban board** with drag-and-drop status changes, or list view with sortable columns
+- **Global search** (Ctrl+K) with semantic search (pgvector + Ollama) and full-text fallback
+- **Personal Inbox** with reordering, project filter, and auto-refresh
+- **Watchlist** page for tracked items with list and board views
+- **Milestone dashboard** with status breakdown and progress visualization
 - **Activity timeline** with field change diffs
-- **API keys** (`twk_` prefix) for programmatic access
-- **9 languages** — English, Portuguese, Spanish, French, German, Japanese, Chinese, Korean, Arabic (RTL)
-- **Dark mode**, configurable font size, keyboard shortcuts, responsive mobile layout
+- **Activity graph** with custom time range selector
+
+### Collaboration
+
+- **Comments** with markdown, edit history, and paste-to-upload images
+- **@ mentions** for referencing projects and work items
+- **Relations** — blocks, relates to, duplicates — with cross-project support
+- **Watchers** with change notifications
+- **Email notifications** in the user's preferred language
+- **Email-based project invites** with invite codes
+
+### Files & Content
+
+- **File attachments** with preview modal and inline images
+- **Copy as Markdown** for work item summaries
 - **Data export/import** for backup and restore
+
+### Workflows
+
+- **Customizable workflows** — define statuses, transitions, and per-type workflow mappings
+- **SLA tracking** with business hours, timezone support, and deadline indicators
+
+### Authentication & Security
+
+- **JWT + API keys** (`twk_` prefix) for programmatic access
+- **OAuth login** — Discord, Google, GitHub, Microsoft
+- **System API keys** with per-resource permissions and expiration
+- **Email verification** with invite code support
+- **Rate limiting** on authentication endpoints
+
+### Integrations & Monitoring
+
+- **MCP server** (50+ tools) for AI/LLM integration
+- **Prometheus metrics** endpoint with resource count gauges
+
+### Customization & UI
+
+- **9 languages** — English, Portuguese, Spanish, French, German, Japanese, Chinese, Korean, Arabic (RTL)
+- **Dark mode**, configurable font size, expanded/centered layout modes
+- **Configurable brand name** in system settings
+- **Keyboard shortcuts**, responsive mobile layout
+- **Strikethrough styling** for completed items
 
 ## Tech Stack
 
