@@ -169,10 +169,14 @@ type CreateAttachmentInput struct {
 // RelationWithDisplay is a relation enriched with display IDs and titles.
 type RelationWithDisplay struct {
 	model.WorkItemRelation
-	SourceDisplayID string
-	SourceTitle     string
-	TargetDisplayID string
-	TargetTitle     string
+	SourceDisplayID      string
+	SourceTitle          string
+	SourceStatus         string
+	SourceStatusCategory string
+	TargetDisplayID      string
+	TargetTitle          string
+	TargetStatus         string
+	TargetStatusCategory string
 }
 
 // WorkItemService handles work item business logic and authorization.
@@ -1110,12 +1114,25 @@ func (s *WorkItemService) CreateRelation(ctx context.Context, info *model.AuthIn
 		return nil, fmt.Errorf("fetching created relation: %w", err)
 	}
 
+	sourceCategory := ""
+	if wfID, err := s.resolveWorkflowID(ctx, project.ID, sourceItem.Type, project.DefaultWorkflowID); err == nil {
+		sourceCategory, _ = s.workflows.GetStatusCategory(ctx, wfID, sourceItem.Status)
+	}
+	targetCategory := ""
+	if wfID, err := s.resolveWorkflowID(ctx, targetProject.ID, targetItem.Type, targetProject.DefaultWorkflowID); err == nil {
+		targetCategory, _ = s.workflows.GetStatusCategory(ctx, wfID, targetItem.Status)
+	}
+
 	return &RelationWithDisplay{
-		WorkItemRelation: *fetched,
-		SourceDisplayID:  sourceDisplayID,
-		SourceTitle:      sourceItem.Title,
-		TargetDisplayID:  targetDisplayID,
-		TargetTitle:      targetItem.Title,
+		WorkItemRelation:     *fetched,
+		SourceDisplayID:      sourceDisplayID,
+		SourceTitle:          sourceItem.Title,
+		SourceStatus:         sourceItem.Status,
+		SourceStatusCategory: sourceCategory,
+		TargetDisplayID:      targetDisplayID,
+		TargetTitle:          targetItem.Title,
+		TargetStatus:         targetItem.Status,
+		TargetStatusCategory: targetCategory,
 	}, nil
 }
 
@@ -1143,11 +1160,15 @@ func (s *WorkItemService) ListRelations(ctx context.Context, info *model.AuthInf
 	result := make([]RelationWithDisplay, len(relations))
 	for i, rel := range relations {
 		result[i] = RelationWithDisplay{
-			WorkItemRelation: rel.WorkItemRelation,
-			SourceDisplayID:  fmt.Sprintf("%s-%d", rel.SourceProjectKey, rel.SourceItemNumber),
-			SourceTitle:      rel.SourceTitle,
-			TargetDisplayID:  fmt.Sprintf("%s-%d", rel.TargetProjectKey, rel.TargetItemNumber),
-			TargetTitle:      rel.TargetTitle,
+			WorkItemRelation:     rel.WorkItemRelation,
+			SourceDisplayID:      fmt.Sprintf("%s-%d", rel.SourceProjectKey, rel.SourceItemNumber),
+			SourceTitle:          rel.SourceTitle,
+			SourceStatus:         rel.SourceStatus,
+			SourceStatusCategory: rel.SourceStatusCategory,
+			TargetDisplayID:      fmt.Sprintf("%s-%d", rel.TargetProjectKey, rel.TargetItemNumber),
+			TargetTitle:          rel.TargetTitle,
+			TargetStatus:         rel.TargetStatus,
+			TargetStatusCategory: rel.TargetStatusCategory,
 		}
 	}
 

@@ -427,6 +427,9 @@
   "relations.types.child_of": "child of",
   "relations.types.duplicated_by": "duplicated by",
   "relations.types.causes": "causes",
+  "relations.children": "Children",
+  "relations.childrenProgress": "{{completed}}/{{total}} completed",
+  "relations.otherRelations": "Other Relations",
 
   "attachments.noAttachments": "No attachments yet.",
   "attachments.uploadFailed": "Upload failed. Please try again.",

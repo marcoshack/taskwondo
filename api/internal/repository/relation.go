@@ -80,13 +80,17 @@ func (r *WorkItemRelationRepository) ListByWorkItem(ctx context.Context, workIte
 func (r *WorkItemRelationRepository) ListByWorkItemWithDetails(ctx context.Context, workItemID uuid.UUID) ([]model.WorkItemRelationWithDetails, error) {
 	rows, err := r.db.QueryContext(ctx,
 		`SELECT r.id, r.source_id, r.target_id, r.relation_type, r.created_by, r.created_at,
-		        sp.key, sw.item_number, sw.title,
-		        tp.key, tw.item_number, tw.title
+		        sp.key, sw.item_number, sw.title, sw.status, COALESCE(sws.category, ''),
+		        tp.key, tw.item_number, tw.title, tw.status, COALESCE(tws.category, '')
 		 FROM work_item_relations r
 		 JOIN work_items sw ON sw.id = r.source_id
 		 JOIN projects sp ON sp.id = sw.project_id
+		 LEFT JOIN project_type_workflows sptw ON sptw.project_id = sp.id AND sptw.work_item_type = sw.type
+		 LEFT JOIN workflow_statuses sws ON sws.workflow_id = COALESCE(sptw.workflow_id, sp.default_workflow_id) AND sws.name = sw.status
 		 JOIN work_items tw ON tw.id = r.target_id
 		 JOIN projects tp ON tp.id = tw.project_id
+		 LEFT JOIN project_type_workflows tptw ON tptw.project_id = tp.id AND tptw.work_item_type = tw.type
+		 LEFT JOIN workflow_statuses tws ON tws.workflow_id = COALESCE(tptw.workflow_id, tp.default_workflow_id) AND tws.name = tw.status
 		 WHERE r.source_id = $1 OR r.target_id = $1
 		 ORDER BY r.created_at ASC`, workItemID)
 	if err != nil {
@@ -101,7 +105,9 @@ func (r *WorkItemRelationRepository) ListByWorkItemWithDetails(ctx context.Conte
 			&rel.ID, &rel.SourceID, &rel.TargetID, &rel.RelationType,
 			&rel.CreatedBy, &rel.CreatedAt,
 			&rel.SourceProjectKey, &rel.SourceItemNumber, &rel.SourceTitle,
+			&rel.SourceStatus, &rel.SourceStatusCategory,
 			&rel.TargetProjectKey, &rel.TargetItemNumber, &rel.TargetTitle,
+			&rel.TargetStatus, &rel.TargetStatusCategory,
 		); err != nil {
 			return nil, fmt.Errorf("scanning relation with details: %w", err)
 		}

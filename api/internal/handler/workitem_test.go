@@ -1699,6 +1699,21 @@ func TestListRelations_Handler_Success(t *testing.T) {
 	if len(data) != 1 {
 		t.Fatalf("expected 1 relation, got %d", len(data))
 	}
+
+	// Verify status fields are present in the response
+	rel := data[0].(map[string]interface{})
+	if _, ok := rel["source_status"]; !ok {
+		t.Error("expected source_status field in relation response")
+	}
+	if _, ok := rel["source_status_category"]; !ok {
+		t.Error("expected source_status_category field in relation response")
+	}
+	if _, ok := rel["target_status"]; !ok {
+		t.Error("expected target_status field in relation response")
+	}
+	if _, ok := rel["target_status_category"]; !ok {
+		t.Error("expected target_status_category field in relation response")
+	}
 }
 
 func TestDeleteRelation_Handler_Success(t *testing.T) {

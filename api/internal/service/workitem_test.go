@@ -454,10 +454,11 @@ func (m *mockCommentRepo) Delete(_ context.Context, id uuid.UUID) error {
 
 type mockRelationRepo struct {
 	relations map[uuid.UUID]*model.WorkItemRelation
+	itemRepo  *mockWorkItemRepo
 }
 
-func newMockRelationRepo() *mockRelationRepo {
-	return &mockRelationRepo{relations: make(map[uuid.UUID]*model.WorkItemRelation)}
+func newMockRelationRepo(itemRepo *mockWorkItemRepo) *mockRelationRepo {
+	return &mockRelationRepo{relations: make(map[uuid.UUID]*model.WorkItemRelation), itemRepo: itemRepo}
 }
 
 func (m *mockRelationRepo) Create(_ context.Context, rel *model.WorkItemRelation) error {
@@ -494,7 +495,26 @@ func (m *mockRelationRepo) ListByWorkItemWithDetails(_ context.Context, workItem
 	var result []model.WorkItemRelationWithDetails
 	for _, rel := range m.relations {
 		if rel.SourceID == workItemID || rel.TargetID == workItemID {
-			result = append(result, model.WorkItemRelationWithDetails{WorkItemRelation: *rel})
+			d := model.WorkItemRelationWithDetails{WorkItemRelation: *rel}
+			if m.itemRepo != nil {
+				if src, ok := m.itemRepo.items[rel.SourceID]; ok {
+					d.SourceItemNumber = src.ItemNumber
+					d.SourceTitle = src.Title
+					d.SourceStatus = src.Status
+					if key, ok2 := m.itemRepo.projectKeys[src.ProjectID]; ok2 {
+						d.SourceProjectKey = key
+					}
+				}
+				if tgt, ok := m.itemRepo.items[rel.TargetID]; ok {
+					d.TargetItemNumber = tgt.ItemNumber
+					d.TargetTitle = tgt.Title
+					d.TargetStatus = tgt.Status
+					if key, ok2 := m.itemRepo.projectKeys[tgt.ProjectID]; ok2 {
+						d.TargetProjectKey = key
+					}
+				}
+			}
+			result = append(result, d)
 		}
 	}
 	return result, nil
@@ -938,7 +958,7 @@ func newTestWorkItemSetup() *testWorkItemSetup {
 	itemRepo := newMockWorkItemRepo()
 	eventRepo := newMockWorkItemEventRepo()
 	commentRepo := newMockCommentRepo()
-	relationRepo := newMockRelationRepo()
+	relationRepo := newMockRelationRepo(itemRepo)
 	projectRepo := newMockProjectRepo()
 	memberRepo := newMockProjectMemberRepo()
 	workflowRepo := newMockWorkflowRepo()
@@ -1858,6 +1878,55 @@ func TestListRelations_Success(t *testing.T) {
 	}
 	if len(relations) != 1 {
 		t.Fatalf("expected 1 relation, got %d", len(relations))
+	}
+}
+
+func TestListRelations_IncludesStatusFields(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	project := setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleMember)
+
+	// Populate projectKeys so the mock relation repo can resolve display IDs
+	s.itemRepo.projectKeys[project.ID] = project.Key
+
+	item1, err := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+	item2, err := s.svc.Create(context.Background(), info, "TEST", validCreateInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = s.svc.CreateRelation(context.Background(), info, "TEST", item1.ItemNumber, CreateRelationInput{
+		TargetDisplayID: fmt.Sprintf("TEST-%d", item2.ItemNumber),
+		RelationType:    model.RelationParentOf,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	relations, err := s.svc.ListRelations(context.Background(), info, "TEST", item1.ItemNumber)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(relations) != 1 {
+		t.Fatalf("expected 1 relation, got %d", len(relations))
+	}
+
+	rel := relations[0]
+	// Verify status fields are populated from the mock
+	if rel.SourceStatus == "" {
+		t.Error("expected SourceStatus to be populated")
+	}
+	if rel.TargetStatus == "" {
+		t.Error("expected TargetStatus to be populated")
+	}
+	if rel.SourceDisplayID != fmt.Sprintf("TEST-%d", item1.ItemNumber) {
+		t.Errorf("expected SourceDisplayID TEST-%d, got %s", item1.ItemNumber, rel.SourceDisplayID)
+	}
+	if rel.TargetDisplayID != fmt.Sprintf("TEST-%d", item2.ItemNumber) {
+		t.Errorf("expected TargetDisplayID TEST-%d, got %s", item2.ItemNumber, rel.TargetDisplayID)
 	}
 }
 

@@ -684,26 +684,34 @@ type createRelationRequest struct {
 }
 
 type relationResponse struct {
-	ID              uuid.UUID `json:"id"`
-	SourceDisplayID string    `json:"source_display_id"`
-	SourceTitle     string    `json:"source_title"`
-	TargetDisplayID string    `json:"target_display_id"`
-	TargetTitle     string    `json:"target_title"`
-	RelationType    string    `json:"relation_type"`
-	CreatedBy       uuid.UUID `json:"created_by"`
-	CreatedAt       time.Time `json:"created_at"`
+	ID                   uuid.UUID `json:"id"`
+	SourceDisplayID      string    `json:"source_display_id"`
+	SourceTitle          string    `json:"source_title"`
+	SourceStatus         string    `json:"source_status"`
+	SourceStatusCategory string    `json:"source_status_category"`
+	TargetDisplayID      string    `json:"target_display_id"`
+	TargetTitle          string    `json:"target_title"`
+	TargetStatus         string    `json:"target_status"`
+	TargetStatusCategory string    `json:"target_status_category"`
+	RelationType         string    `json:"relation_type"`
+	CreatedBy            uuid.UUID `json:"created_by"`
+	CreatedAt            time.Time `json:"created_at"`
 }
 
 func toRelationResponse(r *service.RelationWithDisplay) relationResponse {
 	return relationResponse{
-		ID:              r.ID,
-		SourceDisplayID: r.SourceDisplayID,
-		SourceTitle:     r.SourceTitle,
-		TargetDisplayID: r.TargetDisplayID,
-		TargetTitle:     r.TargetTitle,
-		RelationType:    r.RelationType,
-		CreatedBy:       r.CreatedBy,
-		CreatedAt:       r.CreatedAt,
+		ID:                   r.ID,
+		SourceDisplayID:      r.SourceDisplayID,
+		SourceTitle:          r.SourceTitle,
+		SourceStatus:         r.SourceStatus,
+		SourceStatusCategory: r.SourceStatusCategory,
+		TargetDisplayID:      r.TargetDisplayID,
+		TargetTitle:          r.TargetTitle,
+		TargetStatus:         r.TargetStatus,
+		TargetStatusCategory: r.TargetStatusCategory,
+		RelationType:         r.RelationType,
+		CreatedBy:            r.CreatedBy,
+		CreatedAt:            r.CreatedAt,
 	}
 }
 

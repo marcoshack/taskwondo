@@ -19,12 +19,16 @@ type WorkItemRelation struct {
 // WorkItemRelationWithDetails is a relation enriched with display info from JOINed work items and projects.
 type WorkItemRelationWithDetails struct {
 	WorkItemRelation
-	SourceProjectKey string
-	SourceItemNumber int
-	SourceTitle      string
-	TargetProjectKey string
-	TargetItemNumber int
-	TargetTitle      string
+	SourceProjectKey      string
+	SourceItemNumber      int
+	SourceTitle           string
+	SourceStatus          string
+	SourceStatusCategory  string
+	TargetProjectKey      string
+	TargetItemNumber      int
+	TargetTitle           string
+	TargetStatus          string
+	TargetStatusCategory  string
 }
 
 // Relation type constants.

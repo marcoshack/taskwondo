@@ -4,7 +4,7 @@ import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
 import { ConfirmCheck } from '@/components/ui/ConfirmCheck'
 import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { Trans, useTranslation } from 'react-i18next'
-import { useWorkItem, useUpdateWorkItem, useDeleteWorkItem, useUploadAttachment, useAttachments } from '@/hooks/useWorkItems'
+import { useWorkItem, useUpdateWorkItem, useDeleteWorkItem, useUploadAttachment, useAttachments, useRelations } from '@/hooks/useWorkItems'
 import { useProject, useMembers, useTypeWorkflows } from '@/hooks/useProjects'
 import { useProjectWorkflow, useProjectWorkflows } from '@/hooks/useWorkflows'
 import { useMilestones } from '@/hooks/useMilestones'
@@ -54,6 +54,7 @@ export function WorkItemDetailPage() {
   const { data: item, isLoading } = useWorkItem(projectKey ?? '', itemNumber)
   const { statuses, transitionsMap } = useProjectWorkflow(projectKey ?? '', item?.type)
   const { data: project } = useProject(projectKey ?? '')
+  const { data: relations } = useRelations(projectKey ?? '', itemNumber)
   const { data: members } = useMembers(projectKey ?? '')
   const { data: typeWorkflows } = useTypeWorkflows(projectKey ?? '')
   const { data: allWorkflows } = useProjectWorkflows(projectKey ?? '')
@@ -83,6 +84,23 @@ export function WorkItemDetailPage() {
   const currentUserRole = members?.find((m) => m.user_id === user?.id)?.role ?? (user?.global_role === 'admin' ? 'owner' : null)
   const canEdit = user?.global_role === 'admin' || (currentUserRole != null && currentUserRole !== 'viewer')
   const readOnly = !canEdit
+
+  const currentDisplayId = projectKey && itemNumber ? `${projectKey}-${itemNumber}` : ''
+  const childrenRelations = useMemo(() => {
+    if (!relations) return []
+    return relations.filter((r) => {
+      const isSource = r.source_display_id === currentDisplayId
+      return (isSource && r.relation_type === 'parent_of') || (!isSource && r.relation_type === 'child_of')
+    })
+  }, [relations, currentDisplayId])
+  const childrenTotal = childrenRelations.length
+  const childrenCompleted = useMemo(() => {
+    return childrenRelations.filter((r) => {
+      const isSource = r.source_display_id === currentDisplayId
+      const category = isSource ? r.target_status_category : r.source_status_category
+      return category === 'done' || category === 'cancelled'
+    }).length
+  }, [childrenRelations, currentDisplayId])
 
   const [searchParams, setSearchParams] = useSearchParams()
   const initialTab = searchParams.get('tab') as Tab | null
@@ -387,6 +405,19 @@ export function WorkItemDetailPage() {
                 <InboxButton workItemId={item.id} inboxItemId={inboxItemId} className="p-1" />
                 <WatchButton projectKey={projectKey ?? ''} itemNumber={itemNumber} isWatching={isWatching} className="p-1" />
               </span>
+              {childrenTotal > 0 && (
+                <span className="hidden lg:inline-flex items-center gap-2 ml-auto">
+                  <span className="text-xs text-gray-400 dark:text-gray-500">
+                    {t('relations.childrenProgress', { completed: childrenCompleted, total: childrenTotal })}
+                  </span>
+                  <span className="inline-block w-24 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                    <span
+                      className="block h-full rounded-full bg-green-500 dark:bg-green-400 transition-all duration-300"
+                      style={{ width: `${(childrenCompleted / childrenTotal) * 100}%` }}
+                    />
+                  </span>
+                </span>
+              )}
             </div>
 
             {/* Mobile metadata line */}
@@ -406,6 +437,17 @@ export function WorkItemDetailPage() {
                 {formatRelativeTime(item.updated_at)}
               </span>
               {item.sla && <SLAIndicator sla={item.sla} />}
+              {childrenTotal > 0 && (
+                <span className="inline-flex items-center gap-2">
+                  <span>{t('relations.childrenProgress', { completed: childrenCompleted, total: childrenTotal })}</span>
+                  <span className="inline-block w-16 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                    <span
+                      className="block h-full rounded-full bg-green-500 dark:bg-green-400"
+                      style={{ width: `${(childrenCompleted / childrenTotal) * 100}%` }}
+                    />
+                  </span>
+                </span>
+              )}
             </div>
 
             {/* Title */}

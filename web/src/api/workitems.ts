@@ -109,8 +109,12 @@ export interface Relation {
   id: string
   source_display_id: string
   source_title: string
+  source_status: string
+  source_status_category: string
   target_display_id: string
   target_title: string
+  target_status: string
+  target_status_category: string
   relation_type: string
   created_by: string
   created_at: string
