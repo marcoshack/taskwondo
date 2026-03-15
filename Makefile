@@ -1,4 +1,4 @@
-.PHONY: build push help setup dev dev-db dev-api dev-web dev-worker up down logs logs-api migrate migrate-new test test-api test-web test-e2e test-e2e-dev test-e2e-report check-env release build-mcp build-mcp-windows build-mcpb build-worker
+.PHONY: build push help setup dev dev-db dev-api dev-web dev-worker up down logs logs-api migrate migrate-new test test-api test-web test-e2e test-e2e-dev test-e2e-report check-env release build-mcp build-mcp-linux build-mcp-windows build-mcpb build-worker lint-ci
 
 # Required environment variables (checked by sourcing .env)
 REQUIRED_VARS := POSTGRES_USER POSTGRES_PASSWORD MINIO_ROOT_USER MINIO_ROOT_PASSWORD JWT_SECRET DATABASE_URL STORAGE_ACCESS_KEY STORAGE_SECRET_KEY
@@ -8,7 +8,7 @@ CYAN := \033[36m
 GREEN := \033[32m
 RESET := \033[0m
 
-build: test build-worker build-mcp ## Build all Docker images, worker, and MCP server
+build: test build-worker build-mcp ## Build all Docker images, worker, MCP server, and MCPB bundle
 	@echo ""
 	@printf "$(CYAN)## Building Docker images...$(RESET)\n"
 	docker compose build
@@ -138,33 +138,33 @@ _release:
 	@echo ""
 	@printf "$(CYAN)## Building release v$(VERSION)...$(RESET)\n"
 	rm -rf build/release
-	mkdir -p build/release/taskwondo-$(VERSION)/bin build/release/taskwondo-$(VERSION)/html
+	mkdir -p build/release/taskwondo-server-$(VERSION)/bin build/release/taskwondo-server-$(VERSION)/html
 	@printf "$(CYAN)## Building API binary (Docker)...$(RESET)\n"
 	docker build -f docker/Dockerfile.api --target builder -t taskwondo-api-builder api
 	docker create --name taskwondo-api-extract taskwondo-api-builder true
-	docker cp taskwondo-api-extract:/bin/taskwondo build/release/taskwondo-$(VERSION)/bin/taskwondo-api
+	docker cp taskwondo-api-extract:/bin/taskwondo build/release/taskwondo-server-$(VERSION)/bin/taskwondo-api
 	docker rm taskwondo-api-extract
 	@printf "$(CYAN)## Building Worker binary (Docker)...$(RESET)\n"
 	docker build -f docker/Dockerfile.worker --target builder -t taskwondo-worker-builder api
 	docker create --name taskwondo-worker-extract taskwondo-worker-builder true
-	docker cp taskwondo-worker-extract:/bin/taskwondo-worker build/release/taskwondo-$(VERSION)/bin/taskwondo-worker
+	docker cp taskwondo-worker-extract:/bin/taskwondo-worker build/release/taskwondo-server-$(VERSION)/bin/taskwondo-worker
 	docker rm taskwondo-worker-extract
 	@printf "$(CYAN)## Building Web bundle (Docker)...$(RESET)\n"
 	docker build -f docker/Dockerfile.web --target builder -t taskwondo-web-builder .
 	docker create --name taskwondo-web-extract taskwondo-web-builder true
-	docker cp taskwondo-web-extract:/src/dist/. build/release/taskwondo-$(VERSION)/html/
+	docker cp taskwondo-web-extract:/src/dist/. build/release/taskwondo-server-$(VERSION)/html/
 	docker rm taskwondo-web-extract
-	cp .env.template build/release/taskwondo-$(VERSION)/.env.template
-	cp docker/nginx.conf build/release/taskwondo-$(VERSION)/nginx.conf
-	cp MANUAL_INSTALL.md build/release/taskwondo-$(VERSION)/README.md
+	cp .env.template build/release/taskwondo-server-$(VERSION)/.env.template
+	cp docker/nginx.conf build/release/taskwondo-server-$(VERSION)/nginx.conf
+	cp MANUAL_INSTALL.md build/release/taskwondo-server-$(VERSION)/README.md
 	@printf "$(CYAN)## Packaging tarball...$(RESET)\n"
-	tar -czf build/release/taskwondo-$(VERSION).tar.gz -C build/release taskwondo-$(VERSION)
+	tar -czf build/release/taskwondo-server-$(VERSION).tar.gz -C build/release taskwondo-server-$(VERSION)
 	@echo ""
 	@echo "Release artifact:"
-	@ls -lh build/release/taskwondo-$(VERSION).tar.gz
+	@ls -lh build/release/taskwondo-server-$(VERSION).tar.gz
 	@echo ""
 	@echo "Contents:"
-	@tar -tzf build/release/taskwondo-$(VERSION).tar.gz | head -20
+	@tar -tzf build/release/taskwondo-server-$(VERSION).tar.gz | head -20
 	@printf "$(GREEN)## Release v$(VERSION) built successfully$(RESET)\n"
 
 # --- Worker ---
@@ -177,7 +177,9 @@ build-worker: ## Build the worker binary
 
 # --- MCP Server ---
 
-build-mcp: ## Build the MCP server binary
+build-mcp: build-mcp-linux build-mcp-windows build-mcpb ## Build all MCP artifacts (Linux + Windows + MCPB bundle)
+
+build-mcp-linux: ## Build the MCP server binary for Linux
 	@echo ""
 	@printf "$(CYAN)## Building MCP server...$(RESET)\n"
 	$(MAKE) -C mcp build
@@ -197,11 +199,46 @@ build-mcpb: build-mcp-windows ## Build the MCPB bundle for Claude Desktop (usage
 	$(MAKE) -C mcpb build VERSION=$(RELEASE_VERSION)
 	@printf "$(GREEN)## MCPB bundle built successfully$(RESET)\n"
 
+# --- CI Linting ---
+
+lint-ci: ## Lint GitHub Actions workflows and check for deprecated Node.js runtimes (non-blocking)
+	@echo ""
+	@printf "$(CYAN)## Linting GitHub Actions workflows...$(RESET)\n"
+	@docker run --rm -v "$$(pwd)/.github:/repo/.github:ro" --entrypoint sh \
+		rhysd/actionlint:latest -c "actionlint -color /repo/.github/workflows/*.yml" \
+		|| printf "\033[33m## actionlint found issues (see above)\033[0m\n"
+	@echo ""
+	@printf "$(CYAN)## Checking action Node.js runtimes...$(RESET)\n"
+	@docker run --rm -v "$$(pwd)/.github:/repo/.github:ro" alpine:3 sh -c ' \
+		apk add --quiet --no-cache curl >/dev/null 2>&1; \
+		failed=0; \
+		for wf in /repo/.github/workflows/*.yml; do \
+			for action in $$(grep "uses:" "$$wf" | sed "s/.*uses: *//" | sed "s/ .*//" | grep -v "\\./" | sort -u); do \
+				repo=$$(echo "$$action" | cut -d@ -f1); \
+				tag=$$(echo "$$action" | cut -d@ -f2); \
+				runtime=$$(curl -sf "https://raw.githubusercontent.com/$$repo/$$tag/action.yml" \
+					| grep "using:" | head -1 | sed "s/.*using: *//" | sed "s/[^a-z0-9]//g"); \
+				case "$$runtime" in \
+					node16|node20) \
+						printf "   \033[33m⚠ %-45s %s (deprecated)\033[0m\n" "$$action" "$$runtime"; \
+						failed=1 ;; \
+					*) \
+						printf "   \033[32m✓ %-45s %s\033[0m\n" "$$action" "$$runtime" ;; \
+				esac; \
+			done; \
+		done; \
+		if [ "$$failed" = "1" ]; then \
+			echo ""; \
+			printf "\033[33m## Some actions use deprecated Node.js runtimes\033[0m\n"; \
+		fi \
+	'
+	@printf "$(GREEN)## CI lint check complete$(RESET)\n"
+
 # --- Testing ---
 
 LIGHT_BLUE := \033[94m
 
-test: test-api test-web ## Run all tests (API + frontend)
+test: test-api test-web lint-ci ## Run all tests (API + frontend + CI lint)
 
 test-api: ## Run Go API tests
 	@echo ""
@@ -214,11 +251,15 @@ test-api: ## Run Go API tests
 	printf "$(LIGHT_BLUE)   %-40s %s%%$(RESET)\n" "TOTAL (avg)" "$$total"
 	@printf "$(GREEN)## Go tests passed$(RESET)\n"
 
-test-web: ## Run frontend unit tests (Vitest)
+test-web: ## Run frontend tests and build (install, Vitest, tsc + vite build)
 	@echo ""
+	@printf "$(CYAN)## Installing frontend dependencies...$(RESET)\n"
+	cd web && npm ci
 	@printf "$(CYAN)## Running frontend tests...$(RESET)\n"
 	cd web && npm test
-	@printf "$(GREEN)## Frontend tests passed$(RESET)\n"
+	@printf "$(CYAN)## Building frontend...$(RESET)\n"
+	cd web && npm run build
+	@printf "$(GREEN)## Frontend tests and build passed$(RESET)\n"
 
 test-e2e: ## Run E2E tests in isolated Docker stack (no host deps)
 	@echo ""
