@@ -123,6 +123,18 @@ sudo systemctl enable --now taskwondo
 
 For manual installation without Docker, see [MANUAL_INSTALL.md](MANUAL_INSTALL.md).
 
+## MCP Server
+
+Taskwondo includes an [MCP server](https://modelcontextprotocol.io/) with 50+ tools for AI/LLM integration — manage work items, comments, relations, attachments, time entries, inbox, milestones, and more from any MCP-compatible client.
+
+**Downloads** — available on the [Releases](https://github.com/marcoshack/taskwondo/releases) page:
+
+- `taskwondo-mcp` — MCP server binary (Linux/amd64)
+- `taskwondo-mcp.exe` — MCP server binary (Windows/amd64)
+- `taskwondo.mcpb` — MCP bundle for [Claude Desktop](https://claude.ai/download) (Windows)
+
+The MCP server connects to a running Taskwondo instance via API key. Set the `TASKWONDO_URL` and `TASKWONDO_API_KEY` environment variables, then run the binary as a stdio transport.
+
 ## Development
 
 Requires Go 1.25+, Node.js 22+, Docker.

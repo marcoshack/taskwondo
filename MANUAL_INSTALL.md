@@ -9,10 +9,14 @@ This guide covers installing Taskwondo without Docker Compose. You'll need to pr
 - S3-compatible object storage (MinIO, AWS S3, DigitalOcean Spaces, etc.)
 - Nginx (or any web server that can serve static files and reverse-proxy)
 
+## Download
+
+Download the server bundle (`taskwondo-server-*.tar.gz`) from the [Releases](https://github.com/marcoshack/taskwondo/releases) page. The [Dev Build](https://github.com/marcoshack/taskwondo/releases/tag/dev) release always has the latest build from `main`.
+
 ## Archive Contents
 
 ```
-taskwondo-<version>/
+taskwondo-server-<version>/
   bin/taskwondo-api          # API server (static Linux binary)
   bin/taskwondo-worker             # Background worker (static Linux binary)
   html/                  # Web frontend (static files)
