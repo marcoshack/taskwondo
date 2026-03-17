@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
+import { useTranslation, Trans } from 'react-i18next'
 import {
   useProjectWorkflows,
   useProjectWorkflowDetail,
@@ -10,6 +10,13 @@ import {
   useAvailableStatuses,
 } from '@/hooks/useWorkflows'
 import { useMembers, useProject, useUpdateProject, useTypeWorkflows, useUpdateTypeWorkflow } from '@/hooks/useProjects'
+import {
+  useEscalationLists,
+  useDeleteEscalationList,
+  useEscalationMappings,
+  useUpdateEscalationMapping,
+  useDeleteEscalationMapping,
+} from '@/hooks/useEscalation'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -17,9 +24,11 @@ import { TimezoneSelect } from '@/components/ui/TimezoneSelect'
 import { Modal } from '@/components/ui/Modal'
 import { Spinner } from '@/components/ui/Spinner'
 import { Badge } from '@/components/ui/Badge'
-import { Lock, Plus, Pencil, Trash2, ArrowRight, Check, Eye, Clock } from 'lucide-react'
+import { Avatar } from '@/components/ui/Avatar'
+import { Lock, Plus, Pencil, Trash2, ArrowRight, Check, Eye, Clock, ChevronDown, ChevronRight } from 'lucide-react'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { SLAConfigModal } from '@/components/SLAConfigModal'
+import { EscalationListModal } from '@/components/EscalationListModal'
 import type { WorkflowStatus } from '@/api/workflows'
 import type { AxiosError } from 'axios'
 
@@ -52,6 +61,20 @@ export function ProjectWorkflowsPage() {
   // SLA modal state
   const [slaModalType, setSlaModalType] = useState<string | null>(null)
   const [slaModalWorkflowId, setSlaModalWorkflowId] = useState<string | null>(null)
+
+  // Escalation state
+  const { data: escalationLists } = useEscalationLists(projectKey ?? '')
+  const { data: escalationMappings } = useEscalationMappings(projectKey ?? '')
+  const deleteEscalationMutation = useDeleteEscalationList(projectKey ?? '')
+  const updateEscalationMappingMutation = useUpdateEscalationMapping(projectKey ?? '')
+  const deleteEscalationMappingMutation = useDeleteEscalationMapping(projectKey ?? '')
+  const [escalationEditorOpen, setEscalationEditorOpen] = useState(false)
+  const [editingEscalationId, setEditingEscalationId] = useState<string | null>(null)
+  const [escalationDeleteTarget, setEscalationDeleteTarget] = useState<{ id: string; name: string } | null>(null)
+  const [escalationSavedId, setEscalationSavedId] = useState<string | null>(null)
+  const [escalationError, setEscalationError] = useState('')
+  const [escalationMappingError, setEscalationMappingError] = useState('')
+  const [expandedEscalationIds, setExpandedEscalationIds] = useState<Set<string>>(new Set())
 
   // Business hours state
   const [bhDays, setBhDays] = useState<number[] | null>(null)
@@ -467,6 +490,214 @@ export function ProjectWorkflowsPage() {
         </>
       )}
 
+      {/* Escalation Lists */}
+      <div>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('escalation.title')}</h2>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('escalation.description')}</p>
+          </div>
+          {canManage && (
+            <Button size="sm" onClick={() => { setEditingEscalationId(null); setEscalationEditorOpen(true) }}>
+              <Plus className="h-4 w-4 mr-1" />
+              {t('escalation.create')}
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {escalationError && <p className="text-sm text-red-600 dark:text-red-400">{escalationError}</p>}
+
+      {(!escalationLists || escalationLists.length === 0) ? (
+        <div className="border border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center">
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t('escalation.noLists')}</p>
+        </div>
+      ) : (
+        <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
+          {escalationLists.map((el) => {
+            const isExpanded = expandedEscalationIds.has(el.id)
+            return (
+              <div key={el.id} className="p-4">
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    className="flex items-center gap-2 text-left flex-1"
+                    onClick={() => {
+                      setExpandedEscalationIds((prev) => {
+                        const next = new Set(prev)
+                        if (next.has(el.id)) next.delete(el.id)
+                        else next.add(el.id)
+                        return next
+                      })
+                    }}
+                  >
+                    {isExpanded ? <ChevronDown className="h-4 w-4 text-gray-400" /> : <ChevronRight className="h-4 w-4 text-gray-400" />}
+                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{el.name}</span>
+                    <Badge color="gray">
+                      {t('escalation.levelCount', { count: el.levels.length })}
+                    </Badge>
+                  </button>
+                  <div className="flex items-center gap-1">
+                    {escalationSavedId === el.id && <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />}
+                    {canManage && (
+                      <>
+                        <Tooltip content={t('common.edit')}>
+                          <Button variant="ghost" size="sm" onClick={() => { setEditingEscalationId(el.id); setEscalationEditorOpen(true) }}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        </Tooltip>
+                        <Tooltip content={t('common.delete')}>
+                          <Button variant="ghost" size="sm" onClick={() => setEscalationDeleteTarget({ id: el.id, name: el.name })}>
+                            <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                          </Button>
+                        </Tooltip>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {isExpanded && (
+                  <div className="mt-3 ml-6 space-y-2">
+                    {el.levels
+                      .slice()
+                      .sort((a, b) => a.position - b.position)
+                      .map((lv) => (
+                        <div key={lv.id} className="flex items-center gap-3">
+                          <ThresholdBadge pct={lv.threshold_pct} />
+                          <div className="flex items-center gap-1">
+                            {lv.users.length === 0 ? (
+                              <span className="text-xs text-gray-400">{t('escalation.noUsers')}</span>
+                            ) : (
+                              lv.users.map((u) => (
+                                <Tooltip key={u.id} content={u.display_name}>
+                                  <span><Avatar name={u.display_name} size="xs" /></span>
+                                </Tooltip>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Escalation Mapping */}
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('escalation.mappingTitle')}</h2>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('escalation.mappingDescription')}</p>
+      </div>
+
+      {escalationMappingError && <p className="text-sm text-red-600 dark:text-red-400">{escalationMappingError}</p>}
+
+      <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
+        {['task', 'ticket', 'bug', 'feedback', 'epic'].map((itemType) => {
+          const mapping = escalationMappings?.find((m) => m.work_item_type === itemType)
+          return (
+            <div key={itemType} className="flex items-center justify-between p-3">
+              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                {t(`workitems.types.${itemType}`)}
+              </span>
+              <div className="flex items-center gap-2">
+                {saved[`esc:${itemType}`] && (
+                  <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
+                )}
+                <select
+                  className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                  value={mapping?.escalation_list_id ?? ''}
+                  onChange={(e) => {
+                    setEscalationMappingError('')
+                    const val = e.target.value
+                    if (!val) {
+                      deleteEscalationMappingMutation.mutate(itemType, {
+                        onSuccess: () => showSaved(`esc:${itemType}`),
+                        onError: (err) => {
+                          const axiosErr = err as AxiosError<{ error?: { message?: string } }>
+                          setEscalationMappingError(axiosErr.response?.data?.error?.message ?? t('escalation.saveError'))
+                        },
+                      })
+                    } else {
+                      updateEscalationMappingMutation.mutate(
+                        { workItemType: itemType, escalationListId: val },
+                        {
+                          onSuccess: () => showSaved(`esc:${itemType}`),
+                          onError: (err) => {
+                            const axiosErr = err as AxiosError<{ error?: { message?: string } }>
+                            setEscalationMappingError(axiosErr.response?.data?.error?.message ?? t('escalation.saveError'))
+                          },
+                        }
+                      )
+                    }
+                  }}
+                  disabled={!canManage || updateEscalationMappingMutation.isPending || deleteEscalationMappingMutation.isPending}
+                >
+                  <option value="">{t('escalation.none')}</option>
+                  {escalationLists?.map((el) => (
+                    <option key={el.id} value={el.id}>{el.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Escalation List Modal */}
+      {escalationEditorOpen && (
+        <EscalationListModal
+          open
+          onClose={() => { setEscalationEditorOpen(false); setEditingEscalationId(null) }}
+          onSave={() => {
+            if (editingEscalationId) {
+              setEscalationSavedId(editingEscalationId)
+              setTimeout(() => setEscalationSavedId(null), 2000)
+            }
+          }}
+          projectKey={projectKey ?? ''}
+          editingId={editingEscalationId}
+        />
+      )}
+
+      {/* Escalation Delete confirmation modal */}
+      <Modal open={!!escalationDeleteTarget} onClose={() => setEscalationDeleteTarget(null)} title={t('escalation.deleteConfirmTitle')}>
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
+          <Trans i18nKey="escalation.deleteConfirmBody" values={{ name: escalationDeleteTarget?.name }} components={{ bold: <strong /> }} />
+        </p>
+        {escalationDeleteTarget && escalationMappings?.some((m) => m.escalation_list_id === escalationDeleteTarget.id) && (
+          <p className="text-sm text-amber-600 dark:text-amber-400 mb-4">
+            {t('escalation.deleteWarningAssigned')}
+          </p>
+        )}
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={() => setEscalationDeleteTarget(null)}>
+            {t('common.cancel')}
+          </Button>
+          <Button
+            variant="danger"
+            disabled={deleteEscalationMutation.isPending}
+            onClick={() => {
+              if (!escalationDeleteTarget) return
+              setEscalationError('')
+              deleteEscalationMutation.mutate(escalationDeleteTarget.id, {
+                onSuccess: () => {
+                  setEscalationDeleteTarget(null)
+                },
+                onError: (err) => {
+                  const axiosErr = err as AxiosError<{ error?: { message?: string } }>
+                  setEscalationError(axiosErr.response?.data?.error?.message ?? t('escalation.deleteError'))
+                  setEscalationDeleteTarget(null)
+                },
+              })
+            }}
+          >
+            {deleteEscalationMutation.isPending ? t('common.deleting') : t('common.delete')}
+          </Button>
+        </div>
+      </Modal>
+
       {/* SLA config modal */}
       {slaModalType && slaModalWorkflowId && (() => {
         const wf = workflows?.find((w) => w.id === slaModalWorkflowId)
@@ -526,6 +757,13 @@ export function ProjectWorkflowsPage() {
       </Modal>
     </div>
   )
+}
+
+// --- Threshold Badge ---
+
+function ThresholdBadge({ pct }: { pct: number }) {
+  const color = pct <= 75 ? 'green' : pct <= 100 ? 'yellow' : 'red'
+  return <Badge color={color}>{pct}%</Badge>
 }
 
 // --- Workflow Detail Modal ---

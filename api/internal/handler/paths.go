@@ -18,6 +18,7 @@ const (
 	PathWorkflows        = "workflows"
 	PathSavedSearches    = "saved-searches"
 	PathSLATargets       = "sla-targets"
+	PathEscalationLists  = "escalation-lists"
 	PathUserSettings     = "user-settings"
 	PathStats            = "stats"
 )

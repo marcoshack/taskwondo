@@ -1176,3 +1176,86 @@ export async function uploadAttachment(
   const body = await res.json();
   return body.data;
 }
+
+// --- Escalation Lists ---
+
+export interface EscalationListInput {
+  name: string;
+  levels: { threshold_pct: number; user_ids: string[] }[];
+}
+
+export interface EscalationListResponse {
+  id: string;
+  name: string;
+  levels: { id: string; threshold_pct: number; position: number; users: { id: string; display_name: string; email: string }[] }[];
+}
+
+export async function createEscalationList(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  input: EscalationListInput,
+): Promise<EscalationListResponse> {
+  const res = await request.post(`${BASE_URL}/api/v1/default/projects/${projectKey}/escalation-lists`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: input,
+  });
+  if (!res.ok()) throw new Error(`Create escalation list failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function listEscalationLists(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+): Promise<EscalationListResponse[]> {
+  const res = await request.get(`${BASE_URL}/api/v1/default/projects/${projectKey}/escalation-lists`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`List escalation lists failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function deleteEscalationList(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  listId: string,
+): Promise<void> {
+  const res = await request.delete(`${BASE_URL}/api/v1/default/projects/${projectKey}/escalation-lists/${listId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok() && res.status() !== 404) {
+    throw new Error(`Delete escalation list failed (${res.status()}): ${await res.text()}`);
+  }
+}
+
+export async function setEscalationMapping(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  workItemType: string,
+  escalationListId: string,
+): Promise<void> {
+  const res = await request.put(`${BASE_URL}/api/v1/default/projects/${projectKey}/escalation-lists/mappings/${workItemType}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { escalation_list_id: escalationListId },
+  });
+  if (!res.ok()) throw new Error(`Set escalation mapping failed (${res.status()}): ${await res.text()}`);
+}
+
+export async function deleteEscalationMapping(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  workItemType: string,
+): Promise<void> {
+  const res = await request.delete(`${BASE_URL}/api/v1/default/projects/${projectKey}/escalation-lists/mappings/${workItemType}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok() && res.status() !== 404) {
+    throw new Error(`Delete escalation mapping failed (${res.status()}): ${await res.text()}`);
+  }
+}
