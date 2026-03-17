@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { useTranslation, Trans } from 'react-i18next'
 import {
@@ -24,8 +24,7 @@ import { TimezoneSelect } from '@/components/ui/TimezoneSelect'
 import { Modal } from '@/components/ui/Modal'
 import { Spinner } from '@/components/ui/Spinner'
 import { Badge } from '@/components/ui/Badge'
-import { Avatar } from '@/components/ui/Avatar'
-import { Lock, Plus, Pencil, Trash2, ArrowRight, Check, Eye, Clock, ChevronDown, ChevronRight } from 'lucide-react'
+import { Lock, Plus, Pencil, Trash2, ArrowRight, Check, Eye, Clock, ChevronDown, ChevronRight, ChevronLeft } from 'lucide-react'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { SLAConfigModal } from '@/components/SLAConfigModal'
 import { EscalationListModal } from '@/components/EscalationListModal'
@@ -518,10 +517,11 @@ export function ProjectWorkflowsPage() {
             const isExpanded = expandedEscalationIds.has(el.id)
             return (
               <div key={el.id} className="p-4">
-                <div className="flex items-center justify-between">
+                {/* Row 1: chevron + name (truncated) + actions */}
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    className="flex items-center gap-2 text-left flex-1"
+                    className="flex items-center gap-2 text-left flex-1 min-w-0"
                     onClick={() => {
                       setExpandedEscalationIds((prev) => {
                         const next = new Set(prev)
@@ -531,13 +531,10 @@ export function ProjectWorkflowsPage() {
                       })
                     }}
                   >
-                    {isExpanded ? <ChevronDown className="h-4 w-4 text-gray-400" /> : <ChevronRight className="h-4 w-4 text-gray-400" />}
-                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{el.name}</span>
-                    <Badge color="gray">
-                      {t('escalation.levelCount', { count: el.levels.length })}
-                    </Badge>
+                    {isExpanded ? <ChevronDown className="h-4 w-4 text-gray-400 shrink-0" /> : <ChevronRight className="h-4 w-4 text-gray-400 shrink-0" />}
+                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{el.name}</span>
                   </button>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 shrink-0">
                     {escalationSavedId === el.id && <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />}
                     {canManage && (
                       <>
@@ -555,26 +552,26 @@ export function ProjectWorkflowsPage() {
                     )}
                   </div>
                 </div>
+                {/* Row 2: level count badge */}
+                <div className="mt-1 ml-6">
+                  <Badge color="gray">
+                    {t('escalation.levelCount', { count: el.levels.length })}
+                  </Badge>
+                </div>
 
                 {isExpanded && (
                   <div className="mt-3 ml-6 space-y-2">
                     {el.levels
                       .slice()
-                      .sort((a, b) => a.position - b.position)
+                      .sort((a, b) => a.threshold_pct - b.threshold_pct)
                       .map((lv) => (
                         <div key={lv.id} className="flex items-center gap-3">
                           <ThresholdBadge pct={lv.threshold_pct} />
-                          <div className="flex items-center gap-1">
-                            {lv.users.length === 0 ? (
-                              <span className="text-xs text-gray-400">{t('escalation.noUsers')}</span>
-                            ) : (
-                              lv.users.map((u) => (
-                                <Tooltip key={u.id} content={u.display_name}>
-                                  <span><Avatar name={u.display_name} size="xs" /></span>
-                                </Tooltip>
-                              ))
-                            )}
-                          </div>
+                          {lv.users.length === 0 ? (
+                            <span className="text-xs text-gray-400">{t('escalation.noUsers')}</span>
+                          ) : (
+                            <ScrollableUserList users={lv.users} />
+                          )}
                         </div>
                       ))}
                   </div>
@@ -658,6 +655,7 @@ export function ProjectWorkflowsPage() {
           }}
           projectKey={projectKey ?? ''}
           editingId={editingEscalationId}
+          members={members ?? []}
         />
       )}
 
@@ -764,6 +762,61 @@ export function ProjectWorkflowsPage() {
 function ThresholdBadge({ pct }: { pct: number }) {
   const color = pct <= 75 ? 'green' : pct <= 100 ? 'yellow' : 'red'
   return <Badge color={color}>{pct}%</Badge>
+}
+
+function ScrollableUserList({ users }: { users: { id: string; display_name: string }[] }) {
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [canScrollLeft, setCanScrollLeft] = useState(false)
+  const [canScrollRight, setCanScrollRight] = useState(false)
+
+  const checkScroll = useCallback(() => {
+    const el = scrollRef.current
+    if (!el) return
+    setCanScrollLeft(el.scrollLeft > 0)
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1)
+  }, [])
+
+  useEffect(() => {
+    checkScroll()
+    const el = scrollRef.current
+    if (!el) return
+    const ro = new ResizeObserver(checkScroll)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [checkScroll, users])
+
+  function scroll(direction: 'left' | 'right') {
+    scrollRef.current?.scrollBy({ left: direction === 'left' ? -120 : 120, behavior: 'smooth' })
+  }
+
+  return (
+    <div className="flex items-center gap-1 min-w-0 flex-1">
+      {canScrollLeft && (
+        <button type="button" onClick={() => scroll('left')} className="shrink-0 p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          <ChevronLeft className="h-3.5 w-3.5" />
+        </button>
+      )}
+      <div
+        ref={scrollRef}
+        onScroll={checkScroll}
+        className="flex items-center gap-1.5 overflow-x-auto scrollbar-none min-w-0"
+      >
+        {users.map((u) => (
+          <span
+            key={u.id}
+            className="inline-flex items-center shrink-0 rounded-full bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-300"
+          >
+            {u.display_name}
+          </span>
+        ))}
+      </div>
+      {canScrollRight && (
+        <button type="button" onClick={() => scroll('right')} className="shrink-0 p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          <ChevronRight className="h-3.5 w-3.5" />
+        </button>
+      )}
+    </div>
+  )
 }
 
 // --- Workflow Detail Modal ---

@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { useDebounce } from '@/hooks/useDebounce'
 import { useSearchUsers } from '@/hooks/useUsers'
@@ -13,19 +14,33 @@ export function UserSearchInput({ excludeUserIds, onSelect }: UserSearchInputPro
   const { t } = useTranslation()
   const [search, setSearch] = useState('')
   const [open, setOpen] = useState(false)
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({})
   const debouncedSearch = useDebounce(search, 300)
   const { data: results, isLoading } = useSearchUsers(debouncedSearch)
   const ref = useRef<HTMLDivElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const filtered = (results ?? []).filter((u) => !excludeUserIds.includes(u.id))
 
+  const updateDropdownPosition = useCallback(() => {
+    if (!inputRef.current) return
+    const rect = inputRef.current.getBoundingClientRect()
+    setDropdownStyle({
+      position: 'fixed',
+      top: rect.bottom + 4,
+      left: rect.left,
+      width: rect.width,
+      zIndex: 60,
+    })
+  }, [])
+
   useEffect(() => {
     if (!open) return
     function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false)
-      }
+      const target = e.target as Node
+      if (ref.current?.contains(target) || dropdownRef.current?.contains(target)) return
+      setOpen(false)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
@@ -34,9 +49,10 @@ export function UserSearchInput({ excludeUserIds, onSelect }: UserSearchInputPro
   // Open dropdown when there are results
   useEffect(() => {
     if (debouncedSearch.length >= 2) {
+      updateDropdownPosition()
       setOpen(true)
     }
-  }, [debouncedSearch])
+  }, [debouncedSearch, updateDropdownPosition])
 
   function handleSelect(user: UserSearchResult) {
     onSelect(user)
@@ -52,11 +68,15 @@ export function UserSearchInput({ excludeUserIds, onSelect }: UserSearchInputPro
         placeholder={t('projects.settings.addMemberPlaceholder')}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        onFocus={() => { if (debouncedSearch.length >= 2) setOpen(true) }}
+        onFocus={() => { if (debouncedSearch.length >= 2) { updateDropdownPosition(); setOpen(true) } }}
       />
 
-      {open && search.length >= 2 && (
-        <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg">
+      {open && search.length >= 2 && createPortal(
+        <div
+          ref={dropdownRef}
+          style={dropdownStyle}
+          className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg"
+        >
           <ul className="max-h-48 overflow-auto">
             {isLoading && (
               <li className="px-3 py-2 text-sm text-gray-400 dark:text-gray-500">...</li>
@@ -79,7 +99,8 @@ export function UserSearchInput({ excludeUserIds, onSelect }: UserSearchInputPro
               </li>
             ))}
           </ul>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

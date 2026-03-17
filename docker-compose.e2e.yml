@@ -113,6 +113,7 @@ services:
       STORAGE_SECRET_KEY: "e2eminiosecret"
       STORAGE_BUCKET: "taskwondo-attachments"
       NATS_URL: "nats://nats:4222"
+      SLA_MONITOR_INTERVAL: "3s"
       LOG_LEVEL: "info"
       LOG_FORMAT: "text"
     restart: "no"

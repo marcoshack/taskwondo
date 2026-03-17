@@ -37,7 +37,7 @@ test.describe('Escalation Lists', () => {
     await page.waitForLoadState('networkidle');
 
     // The escalation list card should appear
-    const listCard = page.getByRole('button', { name: /Critical Escalation.*level/i });
+    const listCard = page.getByRole('button', { name: /Critical Escalation/ });
     await expect(listCard).toBeVisible();
 
     // Expand to see threshold badge
@@ -58,7 +58,7 @@ test.describe('Escalation Lists', () => {
     await dialog.getByRole('button', { name: 'Save' }).click();
     await expect(dialog).not.toBeVisible({ timeout: 5000 });
 
-    const updatedCard = page.getByRole('button', { name: /Updated Escalation.*level/i });
+    const updatedCard = page.getByRole('button', { name: /Updated Escalation/ });
     await expect(updatedCard).toBeVisible();
 
     // Delete via trash button
@@ -89,16 +89,16 @@ test.describe('Escalation Lists', () => {
     await dialog.getByRole('button', { name: 'Add Level' }).click();
     await dialog.locator('input[type="number"]').first().fill('50');
 
-    // Search for the helper user
+    // Search for the helper user (dropdown is portaled to document.body)
     await dialog.getByPlaceholder('Search by name or email...').fill(helper.name.slice(0, 8));
     await page.waitForTimeout(500);
-    await dialog.getByText(helper.name).first().click();
+    await page.getByText(helper.name).first().click();
 
     // Create
     await dialog.getByRole('button', { name: 'Create' }).click();
     await expect(dialog).not.toBeVisible({ timeout: 5000 });
 
-    await expect(page.getByRole('button', { name: /UI Created List.*level/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /UI Created List/ })).toBeVisible();
 
     // Cleanup
     const lists = await api.listEscalationLists(request, testUser.token, testProject.key);
@@ -174,7 +174,7 @@ test.describe('Escalation Lists', () => {
     await page.goto(`/d/projects/${testProject.key}/workflows`);
     await page.waitForLoadState('networkidle');
 
-    const listCard = page.getByRole('button', { name: /Assigned List.*level/i });
+    const listCard = page.getByRole('button', { name: /Assigned List/ });
     await expect(listCard).toBeVisible();
 
     const cardContainer = listCard.locator('xpath=ancestor::div[contains(@class,"p-4")]');

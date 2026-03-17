@@ -74,6 +74,9 @@ type Config struct {
 	WorkerDBPool   int    // DB max open conns for worker (default: 10)
 	BackfillStats  bool   // If true, backfill historical stats on startup then continue
 
+	// SLA Monitor
+	SLAMonitorInterval time.Duration // How often to scan for SLA breaches (default: 60s)
+
 	// Ollama (optional — semantic search)
 	OllamaURL   string // Ollama API URL (e.g. "http://ollama:11434"); empty = disabled
 	OllamaModel string // Embedding model name (default: "nomic-embed-text")
@@ -144,6 +147,13 @@ func Load() (*Config, error) {
 		}
 	}
 
+	slaMonitorInterval := 60 * time.Second
+	if v := os.Getenv("SLA_MONITOR_INTERVAL"); v != "" {
+		if parsed, err := time.ParseDuration(v); err == nil && parsed > 0 {
+			slaMonitorInterval = parsed
+		}
+	}
+
 	cfg := &Config{
 		DatabaseURL:         databaseURL,
 		APIPort:             envOrDefault("API_PORT", "8080"),
@@ -177,6 +187,7 @@ func Load() (*Config, error) {
 		WorkerPoolSize:      workerPoolSize,
 		WorkerDBPool:        workerDBPool,
 		BackfillStats:       envOrDefault("BACKFILL_STATS", "") == "true",
+		SLAMonitorInterval:  slaMonitorInterval,
 		OllamaURL:           envOrDefault("OLLAMA_URL", ""),
 		OllamaModel:         envOrDefault("OLLAMA_MODEL", "nomic-embed-text"),
 	}

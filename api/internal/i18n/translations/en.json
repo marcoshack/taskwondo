@@ -35,5 +35,14 @@
   "email.invite.subject": "You've been invited to project {{projectName}}",
   "email.invite.intro": "<strong>{{inviterName}}</strong> invited you to join the project <strong>{{projectName}}</strong> as a <strong>{{role}}</strong>.",
   "email.invite.cta": "Accept Invite",
-  "email.invite.footer": "You received this email because someone invited you to a Taskwondo project. If you don't recognize this invite, you can safely ignore this email."
+  "email.invite.footer": "You received this email because someone invited you to a Taskwondo project. If you don't recognize this invite, you can safely ignore this email.",
+
+  "email.sla_breach.subject": "[{{projectKey}}] SLA Warning: #{{itemNumber}} \u2014 \"{{title}}\" (Level {{level}})",
+  "email.sla_breach.intro": "A work item is approaching or has exceeded its SLA target:",
+  "email.sla_breach.sla_status": "SLA: <strong>{{percentage}}%</strong> of target time used",
+  "email.sla_breach.elapsed": "Time elapsed: <strong>{{elapsed}}</strong> of <strong>{{target}}</strong>",
+  "email.sla_breach.level": "Escalation Level: <strong>{{level}}</strong>",
+  "email.sla_breach.status": "Status: <strong>{{statusName}}</strong>",
+  "email.sla_breach.cta": "View Work Item",
+  "email.sla_breach.footer": "You received this email because you are on the escalation list for this project. You can change your notification preferences in your Taskwondo settings."
 }

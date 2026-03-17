@@ -105,7 +105,7 @@ func (t *NotificationNewItemTask) isEnabled(ctx context.Context, userID, project
 		return false // default is false (opt-in)
 	}
 
-	var prefs model.NotificationPreferences
+	prefs := model.DefaultNotificationPreferences()
 	if err := json.Unmarshal(setting.Value, &prefs); err != nil {
 		return false
 	}

@@ -22,12 +22,14 @@ type NotificationPreferences struct {
 	CommentsOnWatched         bool `json:"comments_on_watched"`
 	StatusChangesIntermediate bool `json:"status_changes_intermediate"`
 	StatusChangesFinal        bool `json:"status_changes_final"`
+	SLABreach                 bool `json:"sla_breach"`
 }
 
 // DefaultNotificationPreferences returns the default notification settings.
 func DefaultNotificationPreferences() NotificationPreferences {
 	return NotificationPreferences{
 		AssignedToMe: true,
+		SLABreach:    true,
 	}
 }
 
@@ -96,6 +98,22 @@ type InviteEmailEvent struct {
 	InviterName  string `json:"inviter_name"`
 	InviteCode   string `json:"invite_code"`
 	Role         string `json:"role"`
+}
+
+// SLABreachEvent is published when a work item crosses an SLA escalation threshold.
+type SLABreachEvent struct {
+	WorkItemID       uuid.UUID `json:"work_item_id"`
+	ProjectID        uuid.UUID `json:"project_id"`
+	ProjectKey       string    `json:"project_key"`
+	ItemNumber       int       `json:"item_number"`
+	Title            string    `json:"title"`
+	StatusName       string    `json:"status_name"`
+	SLAPercentage    int       `json:"sla_percentage"`
+	TargetSeconds    int       `json:"target_seconds"`
+	ElapsedSeconds   int       `json:"elapsed_seconds"`
+	EscalationLevel  int       `json:"escalation_level"`
+	EscalationListID uuid.UUID `json:"escalation_list_id"`
+	ThresholdPct     int       `json:"threshold_pct"`
 }
 
 // WatcherEvent is published when a watched work item is modified.

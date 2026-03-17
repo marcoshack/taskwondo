@@ -60,6 +60,11 @@ func main() {
 	queueRepo := repository.NewQueueRepository(db)
 	attachmentRepo := repository.NewAttachmentRepository(db)
 	embeddingRepo := repository.NewEmbeddingRepository(db)
+	escalationRepo := repository.NewEscalationRepository(db)
+	slaNotificationRepo := repository.NewSLANotificationRepository(db)
+	slaRepo := repository.NewSLARepository(db)
+	workflowRepo := repository.NewWorkflowRepository(db)
+	memberRepo := repository.NewProjectMemberRepository(db)
 
 	// Initialize embedding and indexer services
 	embeddingService := service.NewEmbeddingService(cfg.OllamaURL, cfg.OllamaModel)
@@ -130,8 +135,6 @@ func main() {
 	)
 	dispatcher.Register(notifyWatcher)
 
-	memberRepo := repository.NewProjectMemberRepository(db)
-
 	notifyNewItem := workers.NewNotificationNewItemTask(
 		memberRepo, userSettingRepo, emailSender, cfg.BaseURL, log.Logger,
 	)
@@ -157,6 +160,12 @@ func main() {
 	)
 	dispatcher.Register(notifyInviteEmail)
 
+	// Register SLA breach notification task
+	notifySLABreach := workers.NewNotificationSLABreachTask(
+		escalationRepo, slaNotificationRepo, userSettingRepo, emailSender, cfg.BaseURL, log.Logger,
+	)
+	dispatcher.Register(notifySLABreach)
+
 	// Register embedding tasks
 	embedIndex := workers.NewEmbedIndexTask(indexerService, systemSettingRepo, log.Logger)
 	dispatcher.Register(embedIndex)
@@ -172,6 +181,15 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to start dispatcher")
 	}
 
+	// Create event publisher for SLA monitor (publishes back to NATS for the consumer)
+	eventPublisher, err := workers.NewEventPublisher(nc, log.Logger)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to create event publisher")
+	}
+
+	// Initialize SLA service for the monitor
+	slaService := service.NewSLAService(slaRepo, projectRepo, memberRepo, workflowRepo)
+
 	// Set up periodic scheduler
 	scheduler := workers.NewScheduler(log.Logger)
 
@@ -181,6 +199,18 @@ func main() {
 		Name:     "stats.summarize",
 		Interval: 5 * time.Minute,
 		Fn:       statsSummarize.Run,
+	})
+
+	// SLA monitor: periodic scan for SLA threshold crossings
+	typeWorkflowRepo := repository.NewProjectTypeWorkflowRepository(db)
+	slaMonitor := workers.NewSLAMonitorTask(
+		projectRepo, slaService, escalationRepo, slaNotificationRepo,
+		workItemRepo, workflowRepo, typeWorkflowRepo, eventPublisher, log.Logger,
+	)
+	scheduler.Add(workers.PeriodicTask{
+		Name:     "sla.monitor",
+		Interval: cfg.SLAMonitorInterval,
+		Fn:       slaMonitor.Run,
 	})
 
 	// Run backfill if requested (before starting periodic tasks)

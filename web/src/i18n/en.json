@@ -585,6 +585,8 @@
   "preferences.notifications.statusChangesIntermediateDesc": "When a work item you are assigned to changes to an intermediate status",
   "preferences.notifications.statusChangesFinal": "Final status changes",
   "preferences.notifications.statusChangesFinalDesc": "When a work item you are assigned to is closed or cancelled",
+  "preferences.notifications.slaBreach": "SLA breach",
+  "preferences.notifications.slaBreachDesc": "Receive email notifications when work items approach or exceed SLA thresholds",
   "preferences.notifications.addedToProject": "Added to project",
   "preferences.notifications.addedToProjectDesc": "When you are added to a project",
   "preferences.notifications.comingSoon": "Coming soon",

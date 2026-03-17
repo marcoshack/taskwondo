@@ -133,7 +133,7 @@ func (t *NotificationAssignmentTask) isEnabled(ctx context.Context, userID, proj
 		return true
 	}
 
-	var prefs model.NotificationPreferences
+	prefs := model.DefaultNotificationPreferences()
 	if err := json.Unmarshal(setting.Value, &prefs); err != nil {
 		t.logger.Warn().Err(err).Msg("invalid notification preferences, using defaults")
 		return true

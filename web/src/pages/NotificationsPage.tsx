@@ -13,6 +13,7 @@ interface NotificationPreferences {
   comments_on_watched: boolean
   status_changes_intermediate: boolean
   status_changes_final: boolean
+  sla_breach: boolean
 }
 
 const defaultPreferences: NotificationPreferences = {
@@ -23,6 +24,7 @@ const defaultPreferences: NotificationPreferences = {
   comments_on_watched: false,
   status_changes_intermediate: false,
   status_changes_final: false,
+  sla_breach: true,
 }
 
 interface GlobalNotificationPreferences {
@@ -48,6 +50,7 @@ const notificationOptions: NotificationOption[] = [
   { key: 'comments_on_watched', labelKey: 'preferences.notifications.commentsOnWatched', descKey: 'preferences.notifications.commentsOnWatchedDesc', enabled: true },
   { key: 'status_changes_intermediate', labelKey: 'preferences.notifications.statusChangesIntermediate', descKey: 'preferences.notifications.statusChangesIntermediateDesc', enabled: true },
   { key: 'status_changes_final', labelKey: 'preferences.notifications.statusChangesFinal', descKey: 'preferences.notifications.statusChangesFinalDesc', enabled: true },
+  { key: 'sla_breach', labelKey: 'preferences.notifications.slaBreach', descKey: 'preferences.notifications.slaBreachDesc', enabled: true },
 ]
 
 interface GlobalNotificationOption {

@@ -80,6 +80,13 @@ type WatcherRepository interface {
 	RemoveByProjectID(ctx context.Context, projectID uuid.UUID) (int, error)
 }
 
+// SLANotificationRepository tracks which SLA breach notifications have been sent.
+type SLANotificationRepository interface {
+	RecordSent(ctx context.Context, workItemID uuid.UUID, statusName string, level, thresholdPct int) error
+	HasBeenSent(ctx context.Context, workItemID uuid.UUID, statusName string, level, thresholdPct int) (bool, error)
+	ClearForStatus(ctx context.Context, workItemID uuid.UUID, statusName string) error
+}
+
 // EventPublisher publishes async events (e.g. notifications) to a message broker.
 type EventPublisher interface {
 	Publish(subject string, data any) error
@@ -194,9 +201,10 @@ type WorkItemService struct {
 	typeWorkflows ProjectTypeWorkflowRepository
 	queues        QueueRepository
 	milestones    MilestoneRepository
-	sla           SLARepository
-	slaService    *SLAService
-	fileStorage   storage.Storage
+	sla              SLARepository
+	slaService       *SLAService
+	slaNotifications SLANotificationRepository
+	fileStorage      storage.Storage
 	maxUploadSize int64
 	publisher     EventPublisher
 	embedCache    *FeatureFlagCache
@@ -246,6 +254,12 @@ func NewWorkItemService(
 // SetPublisher configures the event publisher for async notifications.
 func (s *WorkItemService) SetPublisher(p EventPublisher) {
 	s.publisher = p
+}
+
+// SetSLANotifications configures the SLA notification repository for clearing
+// sent notifications on status transitions.
+func (s *WorkItemService) SetSLANotifications(repo SLANotificationRepository) {
+	s.slaNotifications = repo
 }
 
 // SetEmbedCache configures the feature flag cache for semantic search indexing.
@@ -622,6 +636,14 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 		}
 		if err := s.sla.UpsertElapsedOnEnter(ctx, item.ID, *input.Status, now); err != nil {
 			log.Ctx(ctx).Warn().Err(err).Msg("failed to upsert SLA elapsed on enter")
+		}
+
+		// Clear SLA notification history for the old status so that
+		// re-entering this status will re-trigger escalation notifications.
+		if s.slaNotifications != nil {
+			if err := s.slaNotifications.ClearForStatus(ctx, item.ID, item.Status); err != nil {
+				log.Ctx(ctx).Warn().Err(err).Msg("failed to clear SLA notifications for old status")
+			}
 		}
 
 		s.recordFieldChange(ctx, item.ID, info, "status", item.Status, *input.Status)

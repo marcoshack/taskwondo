@@ -1259,3 +1259,27 @@ export async function deleteEscalationMapping(
     throw new Error(`Delete escalation mapping failed (${res.status()}): ${await res.text()}`);
   }
 }
+
+// --- SLA Targets ---
+
+export interface SLATargetInput {
+  status_name: string;
+  priority: string;
+  target_seconds: number;
+  calendar_mode?: string;
+}
+
+export async function setSLATargets(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  workItemType: string,
+  workflowId: string,
+  targets: SLATargetInput[],
+): Promise<void> {
+  const res = await request.put(`${BASE_URL}/api/v1/default/projects/${projectKey}/sla-targets`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { work_item_type: workItemType, workflow_id: workflowId, targets },
+  });
+  if (!res.ok()) throw new Error(`Set SLA targets failed (${res.status()}): ${await res.text()}`);
+}

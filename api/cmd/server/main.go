@@ -238,6 +238,10 @@ func main() {
 	queueService.SetPublisher(publisher)
 	systemSettingService.SetPublisher(publisher)
 
+	// Wire SLA notification repository for clearing notifications on status transitions
+	slaNotificationRepo := repository.NewSLANotificationRepository(db)
+	workItemService.SetSLANotifications(slaNotificationRepo)
+
 	// Set up embed feature flag cache (shared across services, 60s TTL)
 	embedCache := service.NewFeatureFlagCache(model.SettingFeatureSemanticSearch, 60*time.Second, systemSettingRepo)
 	workItemService.SetEmbedCache(embedCache)

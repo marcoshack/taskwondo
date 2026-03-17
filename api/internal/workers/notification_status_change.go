@@ -99,7 +99,7 @@ func (t *NotificationStatusChangeTask) isEnabled(ctx context.Context, userID, pr
 		return false // default is false (opt-in)
 	}
 
-	var prefs model.NotificationPreferences
+	prefs := model.DefaultNotificationPreferences()
 	if err := json.Unmarshal(setting.Value, &prefs); err != nil {
 		return false
 	}
