@@ -20,13 +20,14 @@ const (
 )
 
 // SLAStatusTarget defines the maximum time a work item can stay in a given
-// status, scoped by project, work item type, and workflow.
+// status, scoped by project, work item type, workflow, and priority.
 type SLAStatusTarget struct {
 	ID            uuid.UUID `json:"id"`
 	ProjectID     uuid.UUID `json:"project_id"`
 	WorkItemType  string    `json:"work_item_type"`
 	WorkflowID    uuid.UUID `json:"workflow_id"`
 	StatusName    string    `json:"status_name"`
+	Priority      string    `json:"priority"`
 	TargetSeconds int       `json:"target_seconds"`
 	CalendarMode  string    `json:"calendar_mode"`
 	CreatedAt     time.Time `json:"created_at"`

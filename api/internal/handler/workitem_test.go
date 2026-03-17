@@ -863,9 +863,9 @@ func (m *mockSLARepo) ListTargetsByProjectAndType(_ context.Context, projectID u
 	}
 	return result, nil
 }
-func (m *mockSLARepo) GetTarget(_ context.Context, projectID uuid.UUID, workItemType string, workflowID uuid.UUID, statusName string) (*model.SLAStatusTarget, error) {
+func (m *mockSLARepo) GetTarget(_ context.Context, projectID uuid.UUID, workItemType string, workflowID uuid.UUID, statusName string, priority string) (*model.SLAStatusTarget, error) {
 	for _, t := range m.targets {
-		if t.ProjectID == projectID && t.WorkItemType == workItemType && t.WorkflowID == workflowID && t.StatusName == statusName {
+		if t.ProjectID == projectID && t.WorkItemType == workItemType && t.WorkflowID == workflowID && t.StatusName == statusName && t.Priority == priority {
 			return t, nil
 		}
 	}
@@ -1803,13 +1803,14 @@ func TestListEvents_Handler_Unauthenticated(t *testing.T) {
 
 // --- SLA enrichment tests ---
 
-func addSLATarget(s *workItemSLASetup, workItemType, statusName string, targetSeconds int) {
+func addSLATarget(s *workItemSLASetup, workItemType, statusName, priority string, targetSeconds int) {
 	s.slaRepo.targets[uuid.New()] = &model.SLAStatusTarget{
 		ID:            uuid.New(),
 		ProjectID:     s.projectID,
 		WorkItemType:  workItemType,
 		WorkflowID:    uuid.New(),
 		StatusName:    statusName,
+		Priority:      priority,
 		TargetSeconds: targetSeconds,
 		CalendarMode:  model.CalendarMode24x7,
 	}
@@ -1819,7 +1820,7 @@ func TestCreateWorkItem_SLAEnriched(t *testing.T) {
 	s := workItemTestSetupWithSLA(t)
 
 	// Set up SLA target for task+open (initial status)
-	addSLATarget(s, "task", "open", 3600)
+	addSLATarget(s, "task", "open", model.PriorityMedium, 3600)
 
 	body := `{"type":"task","title":"SLA Test","priority":"medium"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/TEST/items", bytes.NewBufferString(body))
@@ -1888,7 +1889,7 @@ func TestListWorkItems_SLAEnriched(t *testing.T) {
 	s := workItemTestSetupWithSLA(t)
 
 	// Set up SLA target for task+open
-	addSLATarget(s, "task", "open", 7200)
+	addSLATarget(s, "task", "open", model.PriorityMedium, 7200)
 
 	// Create two items
 	createTestWorkItem(t, s.handler, s.info, s.projectKey)
@@ -1933,7 +1934,7 @@ func TestListWorkItems_SLAEnriched(t *testing.T) {
 func TestGetWorkItem_SLAEnriched(t *testing.T) {
 	s := workItemTestSetupWithSLA(t)
 
-	addSLATarget(s, "task", "open", 1800)
+	addSLATarget(s, "task", "open", model.PriorityMedium, 1800)
 
 	// Create an item
 	created := createTestWorkItem(t, s.handler, s.info, s.projectKey)
@@ -1974,7 +1975,7 @@ func TestGetWorkItem_SLAEnriched(t *testing.T) {
 func TestUpdateWorkItem_SLAEnriched(t *testing.T) {
 	s := workItemTestSetupWithSLA(t)
 
-	addSLATarget(s, "task", "open", 3600)
+	addSLATarget(s, "task", "open", model.PriorityMedium, 3600)
 
 	created := createTestWorkItem(t, s.handler, s.info, s.projectKey)
 	itemNum := int(created["item_number"].(float64))
@@ -2017,7 +2018,7 @@ func TestListWorkItems_MixedSLA(t *testing.T) {
 	s := workItemTestSetupWithSLA(t)
 
 	// Only set SLA for bug type, not task
-	addSLATarget(s, "bug", "open", 3600)
+	addSLATarget(s, "bug", "open", model.PriorityHigh, 3600)
 
 	// Create a task (no SLA)
 	createTestWorkItem(t, s.handler, s.info, s.projectKey)
@@ -2075,6 +2076,108 @@ func TestListWorkItems_MixedSLA(t *testing.T) {
 	}
 	if noSLA != 1 {
 		t.Fatalf("expected 1 item without SLA, got %d", noSLA)
+	}
+}
+
+func TestListWorkItems_PerPrioritySLA(t *testing.T) {
+	s := workItemTestSetupWithSLA(t)
+
+	// Set different SLA targets for different priorities of the same type
+	addSLATarget(s, "task", "open", model.PriorityMedium, 7200) // 2h for medium
+	addSLATarget(s, "task", "open", model.PriorityHigh, 3600)   // 1h for high
+
+	// Create a medium-priority task
+	createTestWorkItem(t, s.handler, s.info, s.projectKey)
+
+	// Create a high-priority task
+	body := `{"type":"task","title":"High priority task","priority":"high"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/TEST/items", bytes.NewBufferString(body))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", s.projectKey)
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, s.info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+	s.handler.Create(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+	}
+
+	// List all items
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/default/projects/TEST/items", nil)
+	rctx = chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", s.projectKey)
+	ctx = context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, s.info)
+	req = req.WithContext(ctx)
+	w = httptest.NewRecorder()
+
+	s.handler.List(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data := resp["data"].([]interface{})
+
+	if len(data) != 2 {
+		t.Fatalf("expected 2 items, got %d", len(data))
+	}
+
+	// Both items should have SLA, but with different target_seconds
+	targets := map[float64]bool{}
+	for _, raw := range data {
+		item := raw.(map[string]interface{})
+		sla, ok := item["sla"]
+		if !ok || sla == nil {
+			t.Fatal("expected sla field on all items")
+		}
+		slaMap := sla.(map[string]interface{})
+		targets[slaMap["target_seconds"].(float64)] = true
+	}
+	if !targets[3600] || !targets[7200] {
+		t.Fatalf("expected targets 3600 and 7200, got %v", targets)
+	}
+}
+
+func TestListWorkItems_NoPrioritySLAMismatch(t *testing.T) {
+	s := workItemTestSetupWithSLA(t)
+
+	// Only set SLA for critical priority
+	addSLATarget(s, "task", "open", model.PriorityCritical, 1800)
+
+	// Create a medium-priority task — should NOT match the critical SLA target
+	createTestWorkItem(t, s.handler, s.info, s.projectKey)
+
+	// List items
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/default/projects/TEST/items", nil)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", s.projectKey)
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, s.info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	s.handler.List(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data := resp["data"].([]interface{})
+
+	if len(data) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(data))
+	}
+
+	item := data[0].(map[string]interface{})
+	sla, ok := item["sla"]
+	if ok && sla != nil {
+		t.Fatal("expected no SLA for medium-priority item when only critical SLA is configured")
 	}
 }
 

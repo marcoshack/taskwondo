@@ -15,7 +15,7 @@ import (
 type SLARepository interface {
 	ListTargetsByProject(ctx context.Context, projectID uuid.UUID) ([]model.SLAStatusTarget, error)
 	ListTargetsByProjectAndType(ctx context.Context, projectID uuid.UUID, workItemType string, workflowID uuid.UUID) ([]model.SLAStatusTarget, error)
-	GetTarget(ctx context.Context, projectID uuid.UUID, workItemType string, workflowID uuid.UUID, statusName string) (*model.SLAStatusTarget, error)
+	GetTarget(ctx context.Context, projectID uuid.UUID, workItemType string, workflowID uuid.UUID, statusName string, priority string) (*model.SLAStatusTarget, error)
 	BulkUpsertTargets(ctx context.Context, targets []model.SLAStatusTarget) ([]model.SLAStatusTarget, error)
 	DeleteTarget(ctx context.Context, id uuid.UUID) error
 	DeleteTargetsByTypeAndWorkflow(ctx context.Context, projectID uuid.UUID, workItemType string, workflowID uuid.UUID) error
@@ -37,6 +37,7 @@ type BulkUpsertSLAInput struct {
 // SLATargetInput holds the input for a single SLA target.
 type SLATargetInput struct {
 	StatusName    string
+	Priority      string
 	TargetSeconds int
 	CalendarMode  string
 }
@@ -118,6 +119,9 @@ func (s *SLAService) BulkUpsertTargets(ctx context.Context, info *model.AuthInfo
 		if t.CalendarMode == model.CalendarModeBusinessHours {
 			hasBusinessHours = true
 		}
+		if !isValidPriority(t.Priority) {
+			return nil, fmt.Errorf("invalid priority %q: %w", t.Priority, model.ErrValidation)
+		}
 		category, exists := statusCategories[t.StatusName]
 		if !exists {
 			return nil, fmt.Errorf("status %q does not exist in workflow %q: %w", t.StatusName, wf.Name, model.ErrValidation)
@@ -141,6 +145,7 @@ func (s *SLAService) BulkUpsertTargets(ctx context.Context, info *model.AuthInfo
 			WorkItemType:  input.WorkItemType,
 			WorkflowID:    input.WorkflowID,
 			StatusName:    t.StatusName,
+			Priority:      t.Priority,
 			TargetSeconds: t.TargetSeconds,
 			CalendarMode:  t.CalendarMode,
 		}
@@ -177,7 +182,7 @@ func (s *SLAService) DeleteTarget(ctx context.Context, info *model.AuthInfo, pro
 // ComputeSLAInfo computes the SLA status for a work item's current status.
 // Returns nil if no SLA target is defined for the item's current status.
 func (s *SLAService) ComputeSLAInfo(ctx context.Context, item *model.WorkItem, workflowID uuid.UUID, businessHours *model.BusinessHoursConfig) *model.SLAInfo {
-	target, err := s.sla.GetTarget(ctx, item.ProjectID, item.Type, workflowID, item.Status)
+	target, err := s.sla.GetTarget(ctx, item.ProjectID, item.Type, workflowID, item.Status, item.Priority)
 	if err != nil {
 		return nil // No SLA target for this status
 	}
@@ -236,16 +241,17 @@ func (s *SLAService) ComputeSLAInfoBatch(ctx context.Context, items []model.Work
 		return result
 	}
 
-	// Build lookup: (type, workflowID, status) → target
+	// Build lookup: (type, workflowID, status, priority) → target
 	type targetKey struct {
 		workItemType string
 		workflowID   uuid.UUID
 		statusName   string
+		priority     string
 	}
 	targetMap := make(map[targetKey]*model.SLAStatusTarget, len(targets))
 	for i := range targets {
 		t := &targets[i]
-		targetMap[targetKey{t.WorkItemType, t.WorkflowID, t.StatusName}] = t
+		targetMap[targetKey{t.WorkItemType, t.WorkflowID, t.StatusName, t.Priority}] = t
 	}
 
 	// Batch load elapsed records
@@ -271,12 +277,12 @@ func (s *SLAService) ComputeSLAInfoBatch(ctx context.Context, items []model.Work
 
 	now := time.Now()
 	for _, item := range items {
-		// Find matching target for this item's type + status
-		// (targets contain workflow_id, but we match on type+status since a project
+		// Find matching target for this item's type + status + priority
+		// (targets contain workflow_id, but we match on type+status+priority since a project
 		// typically maps one workflow per type)
 		var matchedTarget *model.SLAStatusTarget
 		for k, t := range targetMap {
-			if k.workItemType == item.Type && k.statusName == item.Status {
+			if k.workItemType == item.Type && k.statusName == item.Status && k.priority == item.Priority {
 				matchedTarget = t
 				break
 			}
@@ -481,7 +487,7 @@ func AddBusinessSeconds(from time.Time, seconds int, config model.BusinessHoursC
 // ComputeSLATargetAt computes the absolute deadline for a work item's current
 // SLA target. Returns nil if no SLA target exists for the item's current status.
 func (s *SLAService) ComputeSLATargetAt(ctx context.Context, item *model.WorkItem, workflowID uuid.UUID, businessHours *model.BusinessHoursConfig) *time.Time {
-	target, err := s.sla.GetTarget(ctx, item.ProjectID, item.Type, workflowID, item.Status)
+	target, err := s.sla.GetTarget(ctx, item.ProjectID, item.Type, workflowID, item.Status, item.Priority)
 	if err != nil {
 		return nil
 	}

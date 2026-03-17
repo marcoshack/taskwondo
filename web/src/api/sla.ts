@@ -7,6 +7,7 @@ export interface SLATarget {
   work_item_type: string
   workflow_id: string
   status_name: string
+  priority: string
   target_seconds: number
   calendar_mode: '24x7' | 'business_hours'
   created_at: string
@@ -15,6 +16,7 @@ export interface SLATarget {
 
 export interface SLATargetInput {
   status_name: string
+  priority: string
   target_seconds: number
   calendar_mode: string
 }

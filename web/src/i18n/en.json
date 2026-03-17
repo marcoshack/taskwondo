@@ -959,6 +959,9 @@
   "sla.overdue": "{{duration}} overdue",
   "sla.filter": "SLA Status",
   "sla.requiresBusinessHours": "configure business hours first",
+  "sla.setPerPriority": "Set SLA per priority",
+  "sla.perPriorityHint": "Configure different SLA targets for each priority level. Expand a priority section to customize its durations.",
+  "sla.overwriteWarning": "Per-priority values were different. Showing Critical priority values. Saving will apply these values to all priorities.",
 
   "businessHours.title": "Business Hours",
   "businessHours.description": "Define business hours for SLA calculations using business_hours calendar mode.",

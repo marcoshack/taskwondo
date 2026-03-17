@@ -50,9 +50,9 @@ func (m *inMemorySLARepo) ListTargetsByProjectAndType(_ context.Context, project
 	return result, nil
 }
 
-func (m *inMemorySLARepo) GetTarget(_ context.Context, projectID uuid.UUID, workItemType string, workflowID uuid.UUID, statusName string) (*model.SLAStatusTarget, error) {
+func (m *inMemorySLARepo) GetTarget(_ context.Context, projectID uuid.UUID, workItemType string, workflowID uuid.UUID, statusName string, priority string) (*model.SLAStatusTarget, error) {
 	for _, t := range m.targets {
-		if t.ProjectID == projectID && t.WorkItemType == workItemType && t.WorkflowID == workflowID && t.StatusName == statusName {
+		if t.ProjectID == projectID && t.WorkItemType == workItemType && t.WorkflowID == workflowID && t.StatusName == statusName && t.Priority == priority {
 			return t, nil
 		}
 	}
@@ -159,8 +159,8 @@ func TestSLAHandler_BulkUpsert(t *testing.T) {
 		"work_item_type": "task",
 		"workflow_id":    wf.ID.String(),
 		"targets": []map[string]interface{}{
-			{"status_name": "Open", "target_seconds": 3600, "calendar_mode": "24x7"},
-			{"status_name": "In Progress", "target_seconds": 7200, "calendar_mode": "business_hours"},
+			{"status_name": "Open", "priority": "medium", "target_seconds": 3600, "calendar_mode": "24x7"},
+			{"status_name": "In Progress", "priority": "medium", "target_seconds": 7200, "calendar_mode": "business_hours"},
 		},
 	})
 
@@ -195,7 +195,7 @@ func TestSLAHandler_List(t *testing.T) {
 		"work_item_type": "task",
 		"workflow_id":    wf.ID.String(),
 		"targets": []map[string]interface{}{
-			{"status_name": "Open", "target_seconds": 3600, "calendar_mode": "24x7"},
+			{"status_name": "Open", "priority": "medium", "target_seconds": 3600, "calendar_mode": "24x7"},
 		},
 	})
 
@@ -242,7 +242,7 @@ func TestSLAHandler_Delete(t *testing.T) {
 		"work_item_type": "task",
 		"workflow_id":    wf.ID.String(),
 		"targets": []map[string]interface{}{
-			{"status_name": "Open", "target_seconds": 3600, "calendar_mode": "24x7"},
+			{"status_name": "Open", "priority": "medium", "target_seconds": 3600, "calendar_mode": "24x7"},
 		},
 	})
 
@@ -284,7 +284,7 @@ func TestSLAHandler_BulkUpsert_TerminalStatus(t *testing.T) {
 		"work_item_type": "task",
 		"workflow_id":    wf.ID.String(),
 		"targets": []map[string]interface{}{
-			{"status_name": "Done", "target_seconds": 3600, "calendar_mode": "24x7"},
+			{"status_name": "Done", "priority": "medium", "target_seconds": 3600, "calendar_mode": "24x7"},
 		},
 	})
 
@@ -310,7 +310,7 @@ func TestSLAHandler_BulkUpsert_Unauthorized(t *testing.T) {
 		"work_item_type": "task",
 		"workflow_id":    wf.ID.String(),
 		"targets": []map[string]interface{}{
-			{"status_name": "Open", "target_seconds": 3600, "calendar_mode": "24x7"},
+			{"status_name": "Open", "priority": "medium", "target_seconds": 3600, "calendar_mode": "24x7"},
 		},
 	})
 
@@ -371,7 +371,7 @@ func TestSLAHandler_BulkUpsert_BusinessHoursWithoutProjectConfig(t *testing.T) {
 		"work_item_type": "task",
 		"workflow_id":    wf.ID.String(),
 		"targets": []map[string]interface{}{
-			{"status_name": "Open", "target_seconds": 3600, "calendar_mode": "business_hours"},
+			{"status_name": "Open", "priority": "medium", "target_seconds": 3600, "calendar_mode": "business_hours"},
 		},
 	})
 
@@ -397,7 +397,7 @@ func TestSLAHandler_BulkUpsert_InvalidWorkflowID(t *testing.T) {
 		"work_item_type": "task",
 		"workflow_id":    "not-a-uuid",
 		"targets": []map[string]interface{}{
-			{"status_name": "Open", "target_seconds": 3600, "calendar_mode": "24x7"},
+			{"status_name": "Open", "priority": "medium", "target_seconds": 3600, "calendar_mode": "24x7"},
 		},
 	})
 
@@ -413,5 +413,80 @@ func TestSLAHandler_BulkUpsert_InvalidWorkflowID(t *testing.T) {
 
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestSLAHandler_BulkUpsert_MissingPriority(t *testing.T) {
+	h, info, projectKey, wf := slaTestSetup(t)
+
+	body, _ := json.Marshal(map[string]interface{}{
+		"work_item_type": "task",
+		"workflow_id":    wf.ID.String(),
+		"targets": []map[string]interface{}{
+			{"status_name": "Open", "target_seconds": 3600, "calendar_mode": "24x7"},
+		},
+	})
+
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/default/projects/"+projectKey+"/sla-targets", bytes.NewBuffer(body))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", projectKey)
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	h.BulkUpsert(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for missing priority, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestSLAHandler_BulkUpsert_PerPriority(t *testing.T) {
+	h, info, projectKey, wf := slaTestSetup(t)
+
+	body, _ := json.Marshal(map[string]interface{}{
+		"work_item_type": "task",
+		"workflow_id":    wf.ID.String(),
+		"targets": []map[string]interface{}{
+			{"status_name": "Open", "priority": "critical", "target_seconds": 1800, "calendar_mode": "24x7"},
+			{"status_name": "Open", "priority": "high", "target_seconds": 3600, "calendar_mode": "24x7"},
+			{"status_name": "Open", "priority": "medium", "target_seconds": 7200, "calendar_mode": "24x7"},
+			{"status_name": "Open", "priority": "low", "target_seconds": 14400, "calendar_mode": "24x7"},
+		},
+	})
+
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/default/projects/"+projectKey+"/sla-targets", bytes.NewBuffer(body))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", projectKey)
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	h.BulkUpsert(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]json.RawMessage
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	var data []map[string]interface{}
+	json.Unmarshal(resp["data"], &data)
+	if len(data) != 4 {
+		t.Fatalf("expected 4 targets (one per priority), got %d", len(data))
+	}
+
+	// Verify each priority has the correct target
+	priorities := make(map[string]float64)
+	for _, d := range data {
+		priorities[d["priority"].(string)] = d["target_seconds"].(float64)
+	}
+	if priorities["critical"] != 1800 {
+		t.Fatalf("expected critical=1800, got %v", priorities["critical"])
+	}
+	if priorities["low"] != 14400 {
+		t.Fatalf("expected low=14400, got %v", priorities["low"])
 	}
 }

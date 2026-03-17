@@ -34,6 +34,7 @@ type bulkUpsertSLARequest struct {
 
 type slaTargetInput struct {
 	StatusName    string `json:"status_name"`
+	Priority      string `json:"priority"`
 	TargetSeconds int    `json:"target_seconds"`
 	CalendarMode  string `json:"calendar_mode"`
 }
@@ -45,6 +46,7 @@ type slaTargetResponse struct {
 	WorkItemType  string    `json:"work_item_type"`
 	WorkflowID    uuid.UUID `json:"workflow_id"`
 	StatusName    string    `json:"status_name"`
+	Priority      string    `json:"priority"`
 	TargetSeconds int       `json:"target_seconds"`
 	CalendarMode  string    `json:"calendar_mode"`
 	CreatedAt     time.Time `json:"created_at"`
@@ -57,6 +59,7 @@ func toSLATargetResponse(t *model.SLAStatusTarget) slaTargetResponse {
 		WorkItemType:  t.WorkItemType,
 		WorkflowID:    t.WorkflowID,
 		StatusName:    t.StatusName,
+		Priority:      t.Priority,
 		TargetSeconds: t.TargetSeconds,
 		CalendarMode:  t.CalendarMode,
 		CreatedAt:     t.CreatedAt,
@@ -124,8 +127,13 @@ func (h *SLAHandler) BulkUpsert(w http.ResponseWriter, r *http.Request) {
 		if calendarMode == "" {
 			calendarMode = model.CalendarMode24x7
 		}
+		if t.Priority == "" {
+			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "priority is required for each target")
+			return
+		}
 		slaTargets[i] = service.SLATargetInput{
 			StatusName:    t.StatusName,
+			Priority:      t.Priority,
 			TargetSeconds: t.TargetSeconds,
 			CalendarMode:  calendarMode,
 		}

@@ -355,7 +355,7 @@ func (s *WorkItemService) Create(ctx context.Context, info *model.AuthInfo, proj
 			initialStatus = status.Name
 		}
 		// Compute SLA deadline for the initial status (elapsed is 0 for new items)
-		if target, err := s.sla.GetTarget(ctx, project.ID, input.Type, wfID, initialStatus); err == nil {
+		if target, err := s.sla.GetTarget(ctx, project.ID, input.Type, wfID, initialStatus, input.Priority); err == nil {
 			slaTargetAt = ComputeSLATargetAtSimple(target.TargetSeconds, target.CalendarMode, project.BusinessHours)
 		}
 	}
@@ -650,6 +650,7 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 		}
 	}
 
+	priorityChanged := false
 	if input.Priority != nil && *input.Priority != item.Priority {
 		if !isValidPriority(*input.Priority) {
 			return nil, fmt.Errorf("invalid priority %q: %w", *input.Priority, model.ErrValidation)
@@ -657,6 +658,16 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 		s.recordFieldChange(ctx, item.ID, info, "priority", item.Priority, *input.Priority)
 		watcherChanges = append(watcherChanges, fieldChange{"priority", item.Priority, *input.Priority})
 		item.Priority = *input.Priority
+		priorityChanged = true
+	}
+
+	// If priority changed (but status didn't), recompute SLA (different priority may have different SLA target)
+	if priorityChanged && (input.Status == nil || *input.Status == item.Status) {
+		if s.slaService != nil {
+			if wfID, err := s.resolveWorkflowID(ctx, project.ID, item.Type, project.DefaultWorkflowID); err == nil {
+				item.SLATargetAt = s.slaService.ComputeSLATargetAt(ctx, item, wfID, project.BusinessHours)
+			}
+		}
 	}
 
 	if input.ClearAssignee {
@@ -1896,7 +1907,7 @@ func (s *WorkItemService) accumulateElapsedOnLeave(ctx context.Context, project 
 	if s.slaService != nil {
 		wfID, err := s.resolveWorkflowID(ctx, project.ID, item.Type, project.DefaultWorkflowID)
 		if err == nil {
-			target, err := s.sla.GetTarget(ctx, project.ID, item.Type, wfID, item.Status)
+			target, err := s.sla.GetTarget(ctx, project.ID, item.Type, wfID, item.Status, item.Priority)
 			if err == nil && target.CalendarMode == model.CalendarModeBusinessHours && project.BusinessHours != nil {
 				// Compute business-aware elapsed seconds
 				elapsed, err := s.sla.GetElapsed(ctx, item.ID, item.Status)

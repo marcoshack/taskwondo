@@ -733,7 +733,7 @@ func (m *mockSLARepo) ListTargetsByProject(_ context.Context, _ uuid.UUID) ([]mo
 func (m *mockSLARepo) ListTargetsByProjectAndType(_ context.Context, _ uuid.UUID, _ string, _ uuid.UUID) ([]model.SLAStatusTarget, error) {
 	return nil, nil
 }
-func (m *mockSLARepo) GetTarget(_ context.Context, _ uuid.UUID, _ string, _ uuid.UUID, _ string) (*model.SLAStatusTarget, error) {
+func (m *mockSLARepo) GetTarget(_ context.Context, _ uuid.UUID, _ string, _ uuid.UUID, _ string, _ string) (*model.SLAStatusTarget, error) {
 	return nil, model.ErrNotFound
 }
 func (m *mockSLARepo) BulkUpsertTargets(_ context.Context, targets []model.SLAStatusTarget) ([]model.SLAStatusTarget, error) {

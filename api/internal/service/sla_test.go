@@ -48,9 +48,9 @@ func (m *inMemorySLARepo) ListTargetsByProjectAndType(_ context.Context, project
 	return result, nil
 }
 
-func (m *inMemorySLARepo) GetTarget(_ context.Context, projectID uuid.UUID, workItemType string, workflowID uuid.UUID, statusName string) (*model.SLAStatusTarget, error) {
+func (m *inMemorySLARepo) GetTarget(_ context.Context, projectID uuid.UUID, workItemType string, workflowID uuid.UUID, statusName string, priority string) (*model.SLAStatusTarget, error) {
 	for _, t := range m.targets {
-		if t.ProjectID == projectID && t.WorkItemType == workItemType && t.WorkflowID == workflowID && t.StatusName == statusName {
+		if t.ProjectID == projectID && t.WorkItemType == workItemType && t.WorkflowID == workflowID && t.StatusName == statusName && t.Priority == priority {
 			return t, nil
 		}
 	}
@@ -218,6 +218,7 @@ func TestListTargets_Success(t *testing.T) {
 		WorkItemType:  model.WorkItemTypeTask,
 		WorkflowID:    uuid.New(),
 		StatusName:    "Open",
+		Priority:      model.PriorityMedium,
 		TargetSeconds: 3600,
 		CalendarMode:  model.CalendarMode24x7,
 	}
@@ -261,8 +262,8 @@ func TestBulkUpsertTargets_Success(t *testing.T) {
 		WorkItemType: model.WorkItemTypeTask,
 		WorkflowID:   wf.ID,
 		Targets: []SLATargetInput{
-			{StatusName: "Open", TargetSeconds: 3600, CalendarMode: model.CalendarMode24x7},
-			{StatusName: "In Progress", TargetSeconds: 7200, CalendarMode: model.CalendarModeBusinessHours},
+			{StatusName: "Open", Priority: model.PriorityMedium, TargetSeconds: 3600, CalendarMode: model.CalendarMode24x7},
+			{StatusName: "In Progress", Priority: model.PriorityMedium, TargetSeconds: 7200, CalendarMode: model.CalendarModeBusinessHours},
 		},
 	}
 
@@ -288,7 +289,7 @@ func TestBulkUpsertTargets_MemberForbidden(t *testing.T) {
 		WorkItemType: model.WorkItemTypeTask,
 		WorkflowID:   wf.ID,
 		Targets: []SLATargetInput{
-			{StatusName: "Open", TargetSeconds: 3600, CalendarMode: model.CalendarMode24x7},
+			{StatusName: "Open", Priority: model.PriorityMedium, TargetSeconds: 3600, CalendarMode: model.CalendarMode24x7},
 		},
 	}
 
@@ -307,7 +308,7 @@ func TestBulkUpsertTargets_InvalidType(t *testing.T) {
 		WorkItemType: "invalid_type",
 		WorkflowID:   uuid.New(),
 		Targets: []SLATargetInput{
-			{StatusName: "Open", TargetSeconds: 3600, CalendarMode: model.CalendarMode24x7},
+			{StatusName: "Open", Priority: model.PriorityMedium, TargetSeconds: 3600, CalendarMode: model.CalendarMode24x7},
 		},
 	}
 
@@ -327,7 +328,7 @@ func TestBulkUpsertTargets_TerminalStatusRejected(t *testing.T) {
 		WorkItemType: model.WorkItemTypeTask,
 		WorkflowID:   wf.ID,
 		Targets: []SLATargetInput{
-			{StatusName: "Done", TargetSeconds: 3600, CalendarMode: model.CalendarMode24x7},
+			{StatusName: "Done", Priority: model.PriorityMedium, TargetSeconds: 3600, CalendarMode: model.CalendarMode24x7},
 		},
 	}
 
@@ -347,7 +348,7 @@ func TestBulkUpsertTargets_CancelledStatusRejected(t *testing.T) {
 		WorkItemType: model.WorkItemTypeTask,
 		WorkflowID:   wf.ID,
 		Targets: []SLATargetInput{
-			{StatusName: "Cancelled", TargetSeconds: 3600, CalendarMode: model.CalendarMode24x7},
+			{StatusName: "Cancelled", Priority: model.PriorityMedium, TargetSeconds: 3600, CalendarMode: model.CalendarMode24x7},
 		},
 	}
 
@@ -367,7 +368,7 @@ func TestBulkUpsertTargets_InvalidCalendarMode(t *testing.T) {
 		WorkItemType: model.WorkItemTypeTask,
 		WorkflowID:   wf.ID,
 		Targets: []SLATargetInput{
-			{StatusName: "Open", TargetSeconds: 3600, CalendarMode: "invalid"},
+			{StatusName: "Open", Priority: model.PriorityMedium, TargetSeconds: 3600, CalendarMode: "invalid"},
 		},
 	}
 
@@ -387,7 +388,7 @@ func TestBulkUpsertTargets_NegativeTargetSeconds(t *testing.T) {
 		WorkItemType: model.WorkItemTypeTask,
 		WorkflowID:   wf.ID,
 		Targets: []SLATargetInput{
-			{StatusName: "Open", TargetSeconds: -1, CalendarMode: model.CalendarMode24x7},
+			{StatusName: "Open", Priority: model.PriorityMedium, TargetSeconds: -1, CalendarMode: model.CalendarMode24x7},
 		},
 	}
 
@@ -407,7 +408,7 @@ func TestBulkUpsertTargets_StatusNotInWorkflow(t *testing.T) {
 		WorkItemType: model.WorkItemTypeTask,
 		WorkflowID:   wf.ID,
 		Targets: []SLATargetInput{
-			{StatusName: "NonExistent", TargetSeconds: 3600, CalendarMode: model.CalendarMode24x7},
+			{StatusName: "NonExistent", Priority: model.PriorityMedium, TargetSeconds: 3600, CalendarMode: model.CalendarMode24x7},
 		},
 	}
 
@@ -430,6 +431,7 @@ func TestDeleteTarget_Success(t *testing.T) {
 		ProjectID:     uuid.New(),
 		WorkItemType:  model.WorkItemTypeTask,
 		StatusName:    "Open",
+		Priority:      model.PriorityMedium,
 		TargetSeconds: 3600,
 		CalendarMode:  model.CalendarMode24x7,
 	}
@@ -471,6 +473,7 @@ func TestComputeSLAInfo_OnTrack(t *testing.T) {
 		WorkItemType:  model.WorkItemTypeTask,
 		WorkflowID:    workflowID,
 		StatusName:    "Open",
+		Priority:      model.PriorityMedium,
 		TargetSeconds: 3600,
 		CalendarMode:  model.CalendarMode24x7,
 	}
@@ -490,6 +493,7 @@ func TestComputeSLAInfo_OnTrack(t *testing.T) {
 		ProjectID: projectID,
 		Type:      model.WorkItemTypeTask,
 		Status:    "Open",
+		Priority:  model.PriorityMedium,
 	}
 
 	info := svc.ComputeSLAInfo(context.Background(), item, workflowID, nil)
@@ -518,6 +522,7 @@ func TestComputeSLAInfo_Warning(t *testing.T) {
 		WorkItemType:  model.WorkItemTypeTask,
 		WorkflowID:    workflowID,
 		StatusName:    "Open",
+		Priority:      model.PriorityMedium,
 		TargetSeconds: 3600,
 		CalendarMode:  model.CalendarMode24x7,
 	}
@@ -537,6 +542,7 @@ func TestComputeSLAInfo_Warning(t *testing.T) {
 		ProjectID: projectID,
 		Type:      model.WorkItemTypeTask,
 		Status:    "Open",
+		Priority:  model.PriorityMedium,
 	}
 
 	info := svc.ComputeSLAInfo(context.Background(), item, workflowID, nil)
@@ -562,6 +568,7 @@ func TestComputeSLAInfo_Breached(t *testing.T) {
 		WorkItemType:  model.WorkItemTypeTask,
 		WorkflowID:    workflowID,
 		StatusName:    "Open",
+		Priority:      model.PriorityMedium,
 		TargetSeconds: 3600,
 		CalendarMode:  model.CalendarMode24x7,
 	}
@@ -581,6 +588,7 @@ func TestComputeSLAInfo_Breached(t *testing.T) {
 		ProjectID: projectID,
 		Type:      model.WorkItemTypeTask,
 		Status:    "Open",
+		Priority:  model.PriorityMedium,
 	}
 
 	info := svc.ComputeSLAInfo(context.Background(), item, workflowID, nil)
@@ -603,6 +611,7 @@ func TestComputeSLAInfo_NoTarget(t *testing.T) {
 		ProjectID: uuid.New(),
 		Type:      model.WorkItemTypeTask,
 		Status:    "Open",
+		Priority:  model.PriorityMedium,
 	}
 
 	info := svc.ComputeSLAInfo(context.Background(), item, uuid.New(), nil)
@@ -730,13 +739,14 @@ func TestComputeSLAInfoBatch_MultipleItems(t *testing.T) {
 	itemID1 := uuid.New()
 	itemID2 := uuid.New()
 
-	// Set up target for task+Open
+	// Set up target for task+Open+medium
 	slaRepo.targets[uuid.New()] = &model.SLAStatusTarget{
 		ID:            uuid.New(),
 		ProjectID:     projectID,
 		WorkItemType:  model.WorkItemTypeTask,
 		WorkflowID:    workflowID,
 		StatusName:    "Open",
+		Priority:      model.PriorityMedium,
 		TargetSeconds: 3600,
 		CalendarMode:  model.CalendarMode24x7,
 	}
@@ -761,8 +771,8 @@ func TestComputeSLAInfoBatch_MultipleItems(t *testing.T) {
 	}
 
 	items := []model.WorkItem{
-		{ID: itemID1, ProjectID: projectID, Type: model.WorkItemTypeTask, Status: "Open"},
-		{ID: itemID2, ProjectID: projectID, Type: model.WorkItemTypeTask, Status: "Open"},
+		{ID: itemID1, ProjectID: projectID, Type: model.WorkItemTypeTask, Status: "Open", Priority: model.PriorityMedium},
+		{ID: itemID2, ProjectID: projectID, Type: model.WorkItemTypeTask, Status: "Open", Priority: model.PriorityMedium},
 	}
 
 	result := svc.ComputeSLAInfoBatch(context.Background(), items, projectID, nil)
@@ -803,6 +813,7 @@ func TestComputeSLAForItems_Success(t *testing.T) {
 		WorkItemType:  model.WorkItemTypeTask,
 		WorkflowID:    workflowID,
 		StatusName:    "Open",
+		Priority:      model.PriorityMedium,
 		TargetSeconds: 3600,
 		CalendarMode:  model.CalendarMode24x7,
 	}
@@ -816,7 +827,7 @@ func TestComputeSLAForItems_Success(t *testing.T) {
 	}
 
 	items := []model.WorkItem{
-		{ID: itemID, ProjectID: project.ID, Type: model.WorkItemTypeTask, Status: "Open"},
+		{ID: itemID, ProjectID: project.ID, Type: model.WorkItemTypeTask, Status: "Open", Priority: model.PriorityMedium},
 	}
 
 	result := svc.ComputeSLAForItems(context.Background(), "TEST", items)
@@ -839,7 +850,7 @@ func TestComputeSLAForItems_ProjectNotFound(t *testing.T) {
 	svc, _, _, _, _ := newTestSLAService()
 
 	items := []model.WorkItem{
-		{ID: uuid.New(), ProjectID: uuid.New(), Type: model.WorkItemTypeTask, Status: "Open"},
+		{ID: uuid.New(), ProjectID: uuid.New(), Type: model.WorkItemTypeTask, Status: "Open", Priority: model.PriorityMedium},
 	}
 
 	result := svc.ComputeSLAForItems(context.Background(), "NONEXISTENT", items)
@@ -864,7 +875,7 @@ func TestComputeSLAForItems_NoTargets(t *testing.T) {
 	projectRepo.Create(context.Background(), project)
 
 	items := []model.WorkItem{
-		{ID: uuid.New(), ProjectID: project.ID, Type: model.WorkItemTypeTask, Status: "Open"},
+		{ID: uuid.New(), ProjectID: project.ID, Type: model.WorkItemTypeTask, Status: "Open", Priority: model.PriorityMedium},
 	}
 
 	result := svc.ComputeSLAForItems(context.Background(), "TEST", items)
@@ -894,6 +905,7 @@ func TestComputeSLAForItems_WithBusinessHours(t *testing.T) {
 		WorkItemType:  model.WorkItemTypeTicket,
 		WorkflowID:    workflowID,
 		StatusName:    "new",
+		Priority:      model.PriorityMedium,
 		TargetSeconds: 28800, // 8h
 		CalendarMode:  model.CalendarModeBusinessHours,
 	}
@@ -907,7 +919,7 @@ func TestComputeSLAForItems_WithBusinessHours(t *testing.T) {
 	}
 
 	items := []model.WorkItem{
-		{ID: itemID, ProjectID: project.ID, Type: model.WorkItemTypeTicket, Status: "new"},
+		{ID: itemID, ProjectID: project.ID, Type: model.WorkItemTypeTicket, Status: "new", Priority: model.PriorityMedium},
 	}
 
 	result := svc.ComputeSLAForItems(context.Background(), "TEST", items)
@@ -937,6 +949,7 @@ func TestComputeSLAForItems_MultipleItemsMixedTypes(t *testing.T) {
 		WorkItemType:  model.WorkItemTypeTask,
 		WorkflowID:    workflowID,
 		StatusName:    "Open",
+		Priority:      model.PriorityMedium,
 		TargetSeconds: 3600,
 		CalendarMode:  model.CalendarMode24x7,
 	}
@@ -950,8 +963,8 @@ func TestComputeSLAForItems_MultipleItemsMixedTypes(t *testing.T) {
 	}
 
 	items := []model.WorkItem{
-		{ID: taskID, ProjectID: project.ID, Type: model.WorkItemTypeTask, Status: "Open"},
-		{ID: bugID, ProjectID: project.ID, Type: model.WorkItemTypeBug, Status: "Open"},
+		{ID: taskID, ProjectID: project.ID, Type: model.WorkItemTypeTask, Status: "Open", Priority: model.PriorityMedium},
+		{ID: bugID, ProjectID: project.ID, Type: model.WorkItemTypeBug, Status: "Open", Priority: model.PriorityMedium},
 	}
 
 	result := svc.ComputeSLAForItems(context.Background(), "TEST", items)
@@ -960,6 +973,103 @@ func TestComputeSLAForItems_MultipleItemsMixedTypes(t *testing.T) {
 	}
 	if result[bugID] != nil {
 		t.Fatal("expected nil SLA info for bug (no target)")
+	}
+}
+
+func TestComputeSLAForItems_PerPriorityTargets(t *testing.T) {
+	svc, slaRepo, projectRepo, _, _ := newTestSLAService()
+
+	project := &model.Project{ID: uuid.New(), Name: "Test", Key: "TEST"}
+	projectRepo.Create(context.Background(), project)
+
+	workflowID := uuid.New()
+	criticalID := uuid.New()
+	mediumID := uuid.New()
+
+	// Different SLA targets for different priorities
+	slaRepo.targets[uuid.New()] = &model.SLAStatusTarget{
+		ID:            uuid.New(),
+		ProjectID:     project.ID,
+		WorkItemType:  model.WorkItemTypeTask,
+		WorkflowID:    workflowID,
+		StatusName:    "Open",
+		Priority:      model.PriorityCritical,
+		TargetSeconds: 1800, // 30 min for critical
+		CalendarMode:  model.CalendarMode24x7,
+	}
+	slaRepo.targets[uuid.New()] = &model.SLAStatusTarget{
+		ID:            uuid.New(),
+		ProjectID:     project.ID,
+		WorkItemType:  model.WorkItemTypeTask,
+		WorkflowID:    workflowID,
+		StatusName:    "Open",
+		Priority:      model.PriorityMedium,
+		TargetSeconds: 7200, // 2h for medium
+		CalendarMode:  model.CalendarMode24x7,
+	}
+
+	tenMinAgo := time.Now().Add(-10 * time.Minute)
+	slaRepo.elapsed[elapsedKey(criticalID, "Open")] = &model.SLAElapsed{
+		WorkItemID:     criticalID,
+		StatusName:     "Open",
+		ElapsedSeconds: 0,
+		LastEnteredAt:  &tenMinAgo,
+	}
+	slaRepo.elapsed[elapsedKey(mediumID, "Open")] = &model.SLAElapsed{
+		WorkItemID:     mediumID,
+		StatusName:     "Open",
+		ElapsedSeconds: 0,
+		LastEnteredAt:  &tenMinAgo,
+	}
+
+	items := []model.WorkItem{
+		{ID: criticalID, ProjectID: project.ID, Type: model.WorkItemTypeTask, Status: "Open", Priority: model.PriorityCritical},
+		{ID: mediumID, ProjectID: project.ID, Type: model.WorkItemTypeTask, Status: "Open", Priority: model.PriorityMedium},
+	}
+
+	result := svc.ComputeSLAForItems(context.Background(), "TEST", items)
+	if result[criticalID] == nil {
+		t.Fatal("expected SLA info for critical item")
+	}
+	if result[mediumID] == nil {
+		t.Fatal("expected SLA info for medium item")
+	}
+	if result[criticalID].TargetSeconds != 1800 {
+		t.Fatalf("expected critical target 1800, got %d", result[criticalID].TargetSeconds)
+	}
+	if result[mediumID].TargetSeconds != 7200 {
+		t.Fatalf("expected medium target 7200, got %d", result[mediumID].TargetSeconds)
+	}
+}
+
+func TestComputeSLAForItems_PriorityMismatchNoMatch(t *testing.T) {
+	svc, slaRepo, projectRepo, _, _ := newTestSLAService()
+
+	project := &model.Project{ID: uuid.New(), Name: "Test", Key: "TEST"}
+	projectRepo.Create(context.Background(), project)
+
+	workflowID := uuid.New()
+	itemID := uuid.New()
+
+	// Only critical priority target exists
+	slaRepo.targets[uuid.New()] = &model.SLAStatusTarget{
+		ID:            uuid.New(),
+		ProjectID:     project.ID,
+		WorkItemType:  model.WorkItemTypeTask,
+		WorkflowID:    workflowID,
+		StatusName:    "Open",
+		Priority:      model.PriorityCritical,
+		TargetSeconds: 1800,
+		CalendarMode:  model.CalendarMode24x7,
+	}
+
+	items := []model.WorkItem{
+		{ID: itemID, ProjectID: project.ID, Type: model.WorkItemTypeTask, Status: "Open", Priority: model.PriorityLow},
+	}
+
+	result := svc.ComputeSLAForItems(context.Background(), "TEST", items)
+	if result[itemID] != nil {
+		t.Fatal("expected no SLA match for low-priority item when only critical target exists")
 	}
 }
 
@@ -1079,6 +1189,7 @@ func TestComputeSLATargetAt_24x7(t *testing.T) {
 		WorkItemType:  "task",
 		WorkflowID:    wfID,
 		StatusName:    "Open",
+		Priority:      model.PriorityMedium,
 		TargetSeconds: 3600,
 		CalendarMode:  model.CalendarMode24x7,
 	}
@@ -1098,6 +1209,7 @@ func TestComputeSLATargetAt_24x7(t *testing.T) {
 		ProjectID: projectID,
 		Type:      "task",
 		Status:    "Open",
+		Priority:  model.PriorityMedium,
 	}
 
 	result := svc.ComputeSLATargetAt(context.Background(), item, wfID, nil)
@@ -1124,6 +1236,7 @@ func TestComputeSLATargetAt_NoTarget(t *testing.T) {
 		ProjectID: uuid.New(),
 		Type:      "task",
 		Status:    "Open",
+		Priority:  model.PriorityMedium,
 	}
 
 	result := svc.ComputeSLATargetAt(context.Background(), item, uuid.New(), nil)
@@ -1149,6 +1262,7 @@ func TestComputeSLATargetAt_Breached(t *testing.T) {
 		WorkItemType:  "task",
 		WorkflowID:    wfID,
 		StatusName:    "Open",
+		Priority:      model.PriorityMedium,
 		TargetSeconds: 3600,
 		CalendarMode:  model.CalendarMode24x7,
 	}
@@ -1166,6 +1280,7 @@ func TestComputeSLATargetAt_Breached(t *testing.T) {
 		ProjectID: projectID,
 		Type:      "task",
 		Status:    "Open",
+		Priority:  model.PriorityMedium,
 	}
 
 	result := svc.ComputeSLATargetAt(context.Background(), item, wfID, nil)
@@ -1222,7 +1337,7 @@ func TestBulkUpsertTargets_BusinessHoursRequiresProjectConfig(t *testing.T) {
 		WorkItemType: model.WorkItemTypeTicket,
 		WorkflowID:   wf.ID,
 		Targets: []SLATargetInput{
-			{StatusName: "Open", TargetSeconds: 1800, CalendarMode: model.CalendarModeBusinessHours},
+			{StatusName: "Open", Priority: model.PriorityMedium, TargetSeconds: 1800, CalendarMode: model.CalendarModeBusinessHours},
 		},
 	}
 
@@ -1245,7 +1360,7 @@ func TestBulkUpsertTargets_BusinessHoursAllowedWithProjectConfig(t *testing.T) {
 		WorkItemType: model.WorkItemTypeTicket,
 		WorkflowID:   wf.ID,
 		Targets: []SLATargetInput{
-			{StatusName: "Open", TargetSeconds: 1800, CalendarMode: model.CalendarModeBusinessHours},
+			{StatusName: "Open", Priority: model.PriorityMedium, TargetSeconds: 1800, CalendarMode: model.CalendarModeBusinessHours},
 		},
 	}
 
@@ -1272,7 +1387,7 @@ func TestBulkUpsertTargets_24x7AllowedWithoutProjectConfig(t *testing.T) {
 		WorkItemType: model.WorkItemTypeTicket,
 		WorkflowID:   wf.ID,
 		Targets: []SLATargetInput{
-			{StatusName: "Open", TargetSeconds: 3600, CalendarMode: model.CalendarMode24x7},
+			{StatusName: "Open", Priority: model.PriorityMedium, TargetSeconds: 3600, CalendarMode: model.CalendarMode24x7},
 		},
 	}
 
@@ -1296,8 +1411,8 @@ func TestBulkUpsertTargets_MixedModesRequiresProjectConfig(t *testing.T) {
 		WorkItemType: model.WorkItemTypeTicket,
 		WorkflowID:   wf.ID,
 		Targets: []SLATargetInput{
-			{StatusName: "Open", TargetSeconds: 3600, CalendarMode: model.CalendarMode24x7},
-			{StatusName: "In Progress", TargetSeconds: 7200, CalendarMode: model.CalendarModeBusinessHours},
+			{StatusName: "Open", Priority: model.PriorityMedium, TargetSeconds: 3600, CalendarMode: model.CalendarMode24x7},
+			{StatusName: "In Progress", Priority: model.PriorityMedium, TargetSeconds: 7200, CalendarMode: model.CalendarModeBusinessHours},
 		},
 	}
 

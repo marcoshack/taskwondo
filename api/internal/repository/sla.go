@@ -23,9 +23,9 @@ func NewSLARepository(db *sql.DB) *SLARepository {
 // ListTargetsByProject returns all SLA targets for a project.
 func (r *SLARepository) ListTargetsByProject(ctx context.Context, projectID uuid.UUID) ([]model.SLAStatusTarget, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, project_id, work_item_type, workflow_id, status_name, target_seconds, calendar_mode, created_at, updated_at
+		`SELECT id, project_id, work_item_type, workflow_id, status_name, priority, target_seconds, calendar_mode, created_at, updated_at
 		 FROM sla_status_targets WHERE project_id = $1
-		 ORDER BY work_item_type, status_name`, projectID)
+		 ORDER BY work_item_type, status_name, priority`, projectID)
 	if err != nil {
 		return nil, fmt.Errorf("querying SLA targets: %w", err)
 	}
@@ -35,7 +35,7 @@ func (r *SLARepository) ListTargetsByProject(ctx context.Context, projectID uuid
 	for rows.Next() {
 		var t model.SLAStatusTarget
 		if err := rows.Scan(&t.ID, &t.ProjectID, &t.WorkItemType, &t.WorkflowID,
-			&t.StatusName, &t.TargetSeconds, &t.CalendarMode, &t.CreatedAt, &t.UpdatedAt); err != nil {
+			&t.StatusName, &t.Priority, &t.TargetSeconds, &t.CalendarMode, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("scanning SLA target: %w", err)
 		}
 		targets = append(targets, t)
@@ -46,9 +46,9 @@ func (r *SLARepository) ListTargetsByProject(ctx context.Context, projectID uuid
 // ListTargetsByProjectAndType returns SLA targets for a specific type+workflow in a project.
 func (r *SLARepository) ListTargetsByProjectAndType(ctx context.Context, projectID uuid.UUID, workItemType string, workflowID uuid.UUID) ([]model.SLAStatusTarget, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, project_id, work_item_type, workflow_id, status_name, target_seconds, calendar_mode, created_at, updated_at
+		`SELECT id, project_id, work_item_type, workflow_id, status_name, priority, target_seconds, calendar_mode, created_at, updated_at
 		 FROM sla_status_targets WHERE project_id = $1 AND work_item_type = $2 AND workflow_id = $3
-		 ORDER BY status_name`, projectID, workItemType, workflowID)
+		 ORDER BY status_name, priority`, projectID, workItemType, workflowID)
 	if err != nil {
 		return nil, fmt.Errorf("querying SLA targets by type: %w", err)
 	}
@@ -58,7 +58,7 @@ func (r *SLARepository) ListTargetsByProjectAndType(ctx context.Context, project
 	for rows.Next() {
 		var t model.SLAStatusTarget
 		if err := rows.Scan(&t.ID, &t.ProjectID, &t.WorkItemType, &t.WorkflowID,
-			&t.StatusName, &t.TargetSeconds, &t.CalendarMode, &t.CreatedAt, &t.UpdatedAt); err != nil {
+			&t.StatusName, &t.Priority, &t.TargetSeconds, &t.CalendarMode, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("scanning SLA target: %w", err)
 		}
 		targets = append(targets, t)
@@ -66,15 +66,15 @@ func (r *SLARepository) ListTargetsByProjectAndType(ctx context.Context, project
 	return targets, rows.Err()
 }
 
-// GetTarget returns a single SLA target by its composite key.
-func (r *SLARepository) GetTarget(ctx context.Context, projectID uuid.UUID, workItemType string, workflowID uuid.UUID, statusName string) (*model.SLAStatusTarget, error) {
+// GetTarget returns a single SLA target by its composite key (including priority).
+func (r *SLARepository) GetTarget(ctx context.Context, projectID uuid.UUID, workItemType string, workflowID uuid.UUID, statusName string, priority string) (*model.SLAStatusTarget, error) {
 	var t model.SLAStatusTarget
 	err := r.db.QueryRowContext(ctx,
-		`SELECT id, project_id, work_item_type, workflow_id, status_name, target_seconds, calendar_mode, created_at, updated_at
-		 FROM sla_status_targets WHERE project_id = $1 AND work_item_type = $2 AND workflow_id = $3 AND status_name = $4`,
-		projectID, workItemType, workflowID, statusName).Scan(
+		`SELECT id, project_id, work_item_type, workflow_id, status_name, priority, target_seconds, calendar_mode, created_at, updated_at
+		 FROM sla_status_targets WHERE project_id = $1 AND work_item_type = $2 AND workflow_id = $3 AND status_name = $4 AND priority = $5`,
+		projectID, workItemType, workflowID, statusName, priority).Scan(
 		&t.ID, &t.ProjectID, &t.WorkItemType, &t.WorkflowID,
-		&t.StatusName, &t.TargetSeconds, &t.CalendarMode, &t.CreatedAt, &t.UpdatedAt)
+		&t.StatusName, &t.Priority, &t.TargetSeconds, &t.CalendarMode, &t.CreatedAt, &t.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, model.ErrNotFound
 	}
@@ -95,12 +95,12 @@ func (r *SLARepository) BulkUpsertTargets(ctx context.Context, targets []model.S
 	result := make([]model.SLAStatusTarget, len(targets))
 	for i, t := range targets {
 		err := tx.QueryRowContext(ctx,
-			`INSERT INTO sla_status_targets (id, project_id, work_item_type, workflow_id, status_name, target_seconds, calendar_mode)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7)
-			 ON CONFLICT (project_id, work_item_type, workflow_id, status_name)
+			`INSERT INTO sla_status_targets (id, project_id, work_item_type, workflow_id, status_name, priority, target_seconds, calendar_mode)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+			 ON CONFLICT (project_id, work_item_type, workflow_id, status_name, priority)
 			 DO UPDATE SET target_seconds = EXCLUDED.target_seconds, calendar_mode = EXCLUDED.calendar_mode, updated_at = now()
 			 RETURNING id, created_at, updated_at`,
-			t.ID, t.ProjectID, t.WorkItemType, t.WorkflowID, t.StatusName, t.TargetSeconds, t.CalendarMode).
+			t.ID, t.ProjectID, t.WorkItemType, t.WorkflowID, t.StatusName, t.Priority, t.TargetSeconds, t.CalendarMode).
 			Scan(&result[i].ID, &result[i].CreatedAt, &result[i].UpdatedAt)
 		if err != nil {
 			return nil, fmt.Errorf("upserting SLA target: %w", err)
@@ -109,6 +109,7 @@ func (r *SLARepository) BulkUpsertTargets(ctx context.Context, targets []model.S
 		result[i].WorkItemType = t.WorkItemType
 		result[i].WorkflowID = t.WorkflowID
 		result[i].StatusName = t.StatusName
+		result[i].Priority = t.Priority
 		result[i].TargetSeconds = t.TargetSeconds
 		result[i].CalendarMode = t.CalendarMode
 	}
