@@ -10,9 +10,9 @@ test.describe('Activity Graph Range Selector', () => {
     await page.goto(`/d/projects/${testProject.key}`);
 
     // Verify preset buttons are visible
-    const btn24h = page.getByRole('button', { name: '24h' });
-    const btn3d = page.getByRole('button', { name: '3d' });
-    const btn7d = page.getByRole('button', { name: '7d' });
+    const btn24h = page.getByRole('button', { name: '24h', exact: true });
+    const btn3d = page.getByRole('button', { name: '3d', exact: true });
+    const btn7d = page.getByRole('button', { name: '7d', exact: true });
 
     await expect(btn24h).toBeVisible();
     await expect(btn3d).toBeVisible();
@@ -58,7 +58,7 @@ test.describe('Activity Graph Range Selector', () => {
     await page.waitForTimeout(1000);
 
     // Preset buttons should not have active style when custom is active
-    const btn7d = page.getByRole('button', { name: '7d' });
+    const btn7d = page.getByRole('button', { name: '7d', exact: true });
     await expect(btn7d).not.toHaveClass(/bg-indigo/);
 
     await attach(page, testInfo, '02-custom-14d-active');
@@ -76,7 +76,7 @@ test.describe('Activity Graph Range Selector', () => {
     await page.waitForTimeout(500);
 
     // Click a preset — it should become active
-    const btn7d = page.getByRole('button', { name: '7d' });
+    const btn7d = page.getByRole('button', { name: '7d', exact: true });
     await btn7d.click();
     await expect(btn7d).toHaveClass(/bg-indigo/);
 
@@ -88,8 +88,8 @@ test.describe('Activity Graph Range Selector', () => {
     await page.waitForLoadState('networkidle');
 
     // Default should be 7d
-    const btn7d = page.getByRole('button', { name: '7d' });
-    const btn24h = page.getByRole('button', { name: '24h' });
+    const btn7d = page.getByRole('button', { name: '7d', exact: true });
+    const btn24h = page.getByRole('button', { name: '24h', exact: true });
     await expect(btn7d).toHaveClass(/bg-indigo/);
 
     // Select 24h
@@ -124,7 +124,7 @@ test.describe('Activity Graph Range Selector', () => {
     await page.waitForTimeout(500);
 
     // Preset buttons should not have active style
-    const btn7d = page.getByRole('button', { name: '7d' });
+    const btn7d = page.getByRole('button', { name: '7d', exact: true });
     await expect(btn7d).not.toHaveClass(/bg-indigo/);
     await attach(page, testInfo, '01-custom-14d');
 

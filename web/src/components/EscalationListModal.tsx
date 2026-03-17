@@ -200,10 +200,12 @@ export function EscalationListModal({ open, onClose, onSave, projectKey, editing
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               {t('escalation.levels')}
             </label>
-            <Button variant="ghost" size="sm" onClick={addLevel}>
-              <Plus className="h-3.5 w-3.5 mr-1" />
-              {t('escalation.addLevel')}
-            </Button>
+            {levels.length > 0 && (
+              <Button variant="ghost" size="sm" onClick={addLevel}>
+                <Plus className="h-3.5 w-3.5 mr-1" />
+                {t('escalation.addLevel')}
+              </Button>
+            )}
           </div>
 
           {levels.length === 0 ? (
