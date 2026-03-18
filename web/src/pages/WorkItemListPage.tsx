@@ -709,34 +709,34 @@ export function WorkItemListPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex items-center gap-4">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 shrink-0">
           <span className="lg:hidden">{t('workitems.titleShort')}</span>
           <span className="hidden lg:inline">{t('workitems.title')}</span>
         </h2>
-        <div className="flex items-center gap-2">
-          <div className="hidden lg:block flex-1 min-w-0 max-w-md">
+        <div className="grid grid-cols-2 rounded-md shadow-sm shrink-0">
+          <button
+            className={`flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium rounded-l-md border ${
+              viewMode === 'list' ? 'bg-indigo-50 text-indigo-700 border-indigo-300 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-700' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700'
+            }`}
+            onClick={() => handleViewChange('list')}
+          >
+            <LayoutList className="h-4 w-4" />
+            {t('workitems.view.list')}
+          </button>
+          <button
+            className={`flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium rounded-r-md border-t border-r border-b ${
+              viewMode === 'board' ? 'bg-indigo-50 text-indigo-700 border-indigo-300 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-700' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700'
+            }`}
+            onClick={() => handleViewChange('board')}
+          >
+            <LayoutGrid className="h-4 w-4" />
+            {t('workitems.view.board')}
+          </button>
+        </div>
+        <div className="flex items-center gap-2 flex-1 justify-end">
+          <div className="hidden lg:block flex-1 min-w-0 max-w-lg">
             <WorkItemSearchBar search={search} onSearchChange={handleSearchChange} />
-          </div>
-          <div className="inline-flex rounded-md shadow-sm">
-            <button
-              className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-l-md border ${
-                viewMode === 'list' ? 'bg-indigo-50 text-indigo-700 border-indigo-300 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-700' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700'
-              }`}
-              onClick={() => handleViewChange('list')}
-            >
-              <LayoutList className="h-4 w-4" />
-              {t('workitems.view.list')}
-            </button>
-            <button
-              className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-r-md border-t border-r border-b ${
-                viewMode === 'board' ? 'bg-indigo-50 text-indigo-700 border-indigo-300 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-700' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700'
-              }`}
-              onClick={() => handleViewChange('board')}
-            >
-              <LayoutGrid className="h-4 w-4" />
-              {t('workitems.view.board')}
-            </button>
           </div>
           {!readOnly && (
             <Button onClick={() => setShowCreate(true)} className="border border-transparent">

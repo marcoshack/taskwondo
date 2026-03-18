@@ -337,9 +337,10 @@ export function useWatchedItemIDs(projectKey?: string) {
   })
 }
 
-export function useWatchedItems(projectKeys: string[], filter: WIF = {}) {
+export function useWatchedItems(projectKeys: string[], filter: WIF = {}, refetchInterval?: number) {
   return useQuery({
     queryKey: ['watchedItems', 'list', projectKeys, filter],
     queryFn: () => listWatchedItems(projectKeys, filter),
+    refetchInterval: refetchInterval || undefined,
   })
 }

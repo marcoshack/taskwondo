@@ -941,8 +941,8 @@ test.describe('Inbox', () => {
     const table = page.getByRole('table');
     await expect(table.getByText('Alpha search focus test')).toBeVisible({ timeout: 10000 });
 
-    // Focus the search input (desktop) and type slowly with pauses to simulate real typing
-    const searchInput = page.locator('.hidden.lg\\:flex').getByPlaceholder(/search/i);
+    // Focus the search input (desktop) — it's in the title row
+    const searchInput = page.locator('.hidden.lg\\:block').getByPlaceholder(/search/i);
     await searchInput.click();
     await expect(searchInput).toBeFocused();
 
@@ -1141,9 +1141,8 @@ test.describe('Inbox', () => {
     const mobileSearchRow = page.locator('.flex.lg\\:hidden').first();
     await expect(mobileSearchRow.getByRole('button', { name: 'Refresh', exact: true })).toBeVisible();
 
-    // Clear completed button should be in the header area (near the New button)
-    const header = page.locator('.flex.items-center.justify-between').first();
-    const clearBtn = header.getByRole('button', { name: /clear completed/i });
+    // Clear completed button should be in the mobile search row
+    const clearBtn = mobileSearchRow.getByRole('button', { name: /clear completed/i });
     await expect(clearBtn).toBeVisible();
   });
 

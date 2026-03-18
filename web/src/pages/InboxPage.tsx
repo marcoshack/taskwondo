@@ -574,9 +574,9 @@ function InboxListPage() {
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
+      {/* Header: title + search + actions */}
+      <div className="flex items-center justify-between gap-4 mb-4">
+        <div className="flex items-center gap-3 min-w-0 shrink lg:shrink-0">
           <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('inbox.title')}</h1>
           {data && (
             <span className="text-sm text-gray-500 dark:text-gray-400">
@@ -584,46 +584,31 @@ function InboxListPage() {
             </span>
           )}
         </div>
-        <div className="flex items-center gap-3">
-          {/* Desktop: auto-hide toggle */}
-          <Tooltip content={t('inbox.autoRemoveDescription')}>
-            <label className="hidden lg:flex items-center gap-2 cursor-pointer select-none">
-              <span className="text-sm text-gray-600 dark:text-gray-400">{t('inbox.autoRemove')}</span>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={autoRemove}
-                onClick={() => setPreferenceMutation.mutate({ key: 'inbox_auto_remove', value: !autoRemove })}
-                className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors ${
-                  autoRemove ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-600'
-                }`}
-              >
-                <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow ring-0 transition-transform ${
-                  autoRemove ? 'translate-x-4' : 'translate-x-0'
-                }`} />
-              </button>
-            </label>
-          </Tooltip>
-          {/* Clear completed (left of New) */}
-          <Tooltip content={completedItems.length > 0 ? `${t('inbox.clearCompleted')} (${completedItems.length})` : t('inbox.noCompletedItems')}>
-            <button
-              onClick={() => clearCompletedMutation.mutate()}
-              disabled={clearCompletedMutation.isPending || completedItems.length === 0}
-              className={`relative p-2 rounded-lg border border-gray-300 dark:border-gray-600 transition-colors ${
-                completedItems.length === 0
-                  ? 'opacity-40 cursor-not-allowed text-gray-400 dark:text-gray-500'
-                  : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-300'
-              }`}
-              aria-label={t('inbox.clearCompleted')}
-            >
-              <BrushCleaning className="h-5 w-5" />
-              {completedItems.length > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
-                  {completedItems.length}
-                </span>
+        <div className="flex items-center gap-2 flex-1 justify-end">
+          {/* Desktop: search bar (same position as Watchlist/WorkItems) */}
+          <div className="hidden lg:block flex-1 min-w-0 max-w-lg">
+            <div className="relative">
+              <Input
+                ref={searchRef}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder={t('inbox.searchPlaceholder')}
+                className="pr-8"
+                onFocus={() => setSearchFocused(true)}
+                onBlur={() => setSearchFocused(false)}
+                onKeyDown={(e) => { if (e.key === 'Escape') searchRef.current?.blur() }}
+              />
+              {searchInput && (
+                <button
+                  onClick={() => { setSearchInput(''); searchRef.current?.focus() }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  aria-label={t('common.clear')}
+                >
+                  <X className="h-4 w-4" />
+                </button>
               )}
-            </button>
-          </Tooltip>
+            </div>
+          </div>
           {/* New Item button */}
           <Button onClick={() => setShowCreate(true)} className="border border-transparent">
             <span className="lg:hidden">{t('workitems.newShort')}</span>
@@ -655,32 +640,10 @@ function InboxListPage() {
         </div>
       </Modal>
 
-      {/* Desktop: Search + project filter + icons */}
+      {/* Desktop: Project filter + actions row */}
       <div className="hidden lg:flex items-center gap-2 mb-4">
-        <div className="relative flex-1 min-w-0">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            ref={searchRef}
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder={t('inbox.searchPlaceholder')}
-            className="pl-10 pr-8"
-            onFocus={() => setSearchFocused(true)}
-            onBlur={() => setSearchFocused(false)}
-            onKeyDown={(e) => { if (e.key === 'Escape') searchRef.current?.blur() }}
-          />
-          {searchInput && (
-            <button
-              onClick={() => { setSearchInput(''); searchRef.current?.focus() }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-              aria-label={t('common.clear')}
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-        {/* Desktop: Project filter */}
-        <div className="shrink-0 w-[200px]">
+        {/* Project filter (max-width capped) */}
+        <div className="shrink-0 w-[200px] max-w-[280px]">
           <MultiSelect
             options={projectOptions}
             selected={selectedProjects}
@@ -690,6 +653,46 @@ function InboxListPage() {
             dropdownWidthClass="right-0 min-w-[280px]"
           />
         </div>
+        <div className="flex-1" />
+        {/* Auto-hide toggle */}
+        <Tooltip content={t('inbox.autoRemoveDescription')}>
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <span className="text-sm text-gray-600 dark:text-gray-400">{t('inbox.autoRemove')}</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={autoRemove}
+              onClick={() => setPreferenceMutation.mutate({ key: 'inbox_auto_remove', value: !autoRemove })}
+              className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors ${
+                autoRemove ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-600'
+              }`}
+            >
+              <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow ring-0 transition-transform ${
+                autoRemove ? 'translate-x-4' : 'translate-x-0'
+              }`} />
+            </button>
+          </label>
+        </Tooltip>
+        {/* Clear completed */}
+        <Tooltip content={completedItems.length > 0 ? `${t('inbox.clearCompleted')} (${completedItems.length})` : t('inbox.noCompletedItems')}>
+          <button
+            onClick={() => clearCompletedMutation.mutate()}
+            disabled={clearCompletedMutation.isPending || completedItems.length === 0}
+            className={`relative p-2 rounded-lg border border-gray-300 dark:border-gray-600 transition-colors ${
+              completedItems.length === 0
+                ? 'opacity-40 cursor-not-allowed text-gray-400 dark:text-gray-500'
+                : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-300'
+            }`}
+            aria-label={t('inbox.clearCompleted')}
+          >
+            <BrushCleaning className="h-5 w-5" />
+            {completedItems.length > 0 && (
+              <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                {completedItems.length}
+              </span>
+            )}
+          </button>
+        </Tooltip>
         {/* Refresh / auto-refresh */}
         <RefreshButton
           interval={refreshInterval}
@@ -739,6 +742,24 @@ function InboxListPage() {
           {selectedProjects.length > 0 && (
             <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-600 text-[10px] font-bold text-white">
               {selectedProjects.length}
+            </span>
+          )}
+        </button>
+        {/* Mobile: Clear completed */}
+        <button
+          onClick={() => clearCompletedMutation.mutate()}
+          disabled={clearCompletedMutation.isPending || completedItems.length === 0}
+          className={`relative shrink-0 p-2 rounded-lg border border-gray-300 dark:border-gray-600 transition-colors ${
+            completedItems.length === 0
+              ? 'opacity-40 cursor-not-allowed text-gray-400 dark:text-gray-500'
+              : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-300'
+          }`}
+          aria-label={t('inbox.clearCompleted')}
+        >
+          <BrushCleaning className="h-5 w-5" />
+          {completedItems.length > 0 && (
+            <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+              {completedItems.length}
             </span>
           )}
         </button>

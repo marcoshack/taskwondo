@@ -488,9 +488,9 @@ test.describe('Watchers', () => {
     await expect(page.getByText('Watchlist search beta')).not.toBeVisible({ timeout: 5000 });
   });
 
-  test('watchlist page view mode toggle switches between list and board', async ({ request, testUser, testProject, page }) => {
+  test('watchlist page shows list view with table', async ({ request, testUser, testProject, page }) => {
     const item = await api.createWorkItem(request, testUser.token, testProject.key, {
-      title: 'Watchlist view toggle item',
+      title: 'Watchlist list view item',
       type: 'task',
     });
     await api.toggleWatch(request, testUser.token, testProject.key, item.item_number);
@@ -498,29 +498,12 @@ test.describe('Watchers', () => {
     await page.goto('/user/watchlist');
     await page.waitForLoadState('networkidle');
 
-    // Verify list view is active by default (table should be present)
-    await expect(page.getByText('Watchlist view toggle item').first()).toBeVisible({ timeout: 10000 });
+    // Verify list view shows the item in a table
+    await expect(page.getByText('Watchlist list view item').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('table')).toBeVisible();
 
-    // Find and click the Board view toggle button
-    const boardBtn = page.getByRole('button', { name: /board/i });
-    await expect(boardBtn).toBeVisible({ timeout: 5000 });
-    await boardBtn.click();
-
-    // Wait for board columns to render (statuses load via chained API calls)
-    await page.waitForFunction(() => {
-      const el = document.querySelector('[class*="overflow-x-auto"]');
-      return el && el.children.length > 0;
-    }, null, { timeout: 15000 });
-
-    // Board view should still show the item
-    await expect(page.getByText('Watchlist view toggle item').first()).toBeVisible({ timeout: 10000 });
-
-    // Switch back to list
-    const listBtn = page.getByRole('button', { name: /list/i });
-    await listBtn.click();
-
-    // Item should still be visible in list view
-    await expect(page.getByText('Watchlist view toggle item').first()).toBeVisible({ timeout: 10000 });
+    // No board toggle should exist
+    await expect(page.getByRole('button', { name: /board/i })).not.toBeVisible({ timeout: 1000 });
   });
 
   test('watchlist page column sorting works', async ({ request, testUser, testProject, page }) => {
@@ -704,15 +687,18 @@ test.describe('Watchers', () => {
     // Clear any saved preferences first
     await api.setPreference(request, testUser.token, 'watchlistFilters', {});
 
+    // Set a project filter preference to verify persistence
+    await api.setPreference(request, testUser.token, 'watchlistFilters', {
+      projects: [testProject.key],
+      sort: 'updated_at',
+      order: 'asc',
+    });
+
     await page.goto('/user/watchlist');
     await page.waitForLoadState('networkidle');
-    await expect(page.getByText('Persist filter test item').first()).toBeVisible({ timeout: 10000 });
 
-    // Switch to board view to change a persisted preference
-    const boardBtn = page.getByRole('button', { name: /board/i });
-    await expect(boardBtn).toBeVisible({ timeout: 5000 });
-    await boardBtn.click();
-    await page.waitForTimeout(1000);
+    // Wait for preferences to load and apply
+    await expect(page.getByText('Persist filter test item').first()).toBeVisible({ timeout: 10000 });
 
     // Navigate away (to inbox)
     await page.goto('/user/inbox');
@@ -724,10 +710,7 @@ test.describe('Watchers', () => {
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000);
 
-    // Verify board view is still active (the board button should have the active style)
-    const boardBtnAfter = page.getByRole('button', { name: /board/i });
-    await expect(boardBtnAfter).toBeVisible({ timeout: 5000 });
-    // Board button should have the indigo active style
-    await expect(boardBtnAfter).toHaveClass(/bg-indigo/, { timeout: 5000 });
+    // Item should still be visible — preferences persisted
+    await expect(page.getByText('Persist filter test item').first()).toBeVisible({ timeout: 10000 });
   });
 });

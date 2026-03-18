@@ -34,11 +34,13 @@ interface WorkItemFiltersProps {
   savedSearchMobileButton?: ReactNode
   leadingContent?: ReactNode
   leadingContentMobileButton?: ReactNode
+  trailingContent?: ReactNode
+  trailingContentMobileButton?: ReactNode
 }
 
 const closedCategories = new Set(['done', 'cancelled'])
 
-export function WorkItemFilters({ filter, onFilterChange, statuses, milestones = [], members = [], search, onSearchChange, sort, order, onSort, onOrderChange, showDates, onShowDatesChange, onSave, onClearFilters, hasUnsavedChanges, hasActiveSearch, savedSearchSelector, savedSearchMobileButton, leadingContent, leadingContentMobileButton }: WorkItemFiltersProps) {
+export function WorkItemFilters({ filter, onFilterChange, statuses, milestones = [], members = [], search, onSearchChange, sort, order, onSort, onOrderChange, showDates, onShowDatesChange, onSave, onClearFilters, hasUnsavedChanges, hasActiveSearch, savedSearchSelector, savedSearchMobileButton, leadingContent, leadingContentMobileButton, trailingContent, trailingContentMobileButton }: WorkItemFiltersProps) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const [filtersOpen, setFiltersOpen] = useState(false)
@@ -126,22 +128,22 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
           <div className="flex-1 min-w-0">{leadingContent}</div>
         )}
         {savedSearchSelector && (
-          <div className="shrink-0 w-48">{savedSearchSelector}</div>
+          <div className="flex-1 min-w-0">{savedSearchSelector}</div>
         )}
-        <div className={leadingContent ? 'shrink-0 w-[200px]' : 'flex-1 min-w-0'}>
+        <div className="flex-1 min-w-0">
           <MultiSelect options={typeOptions} selected={filter.type ?? []} onChange={(v) => setArray('type', v)} placeholder={t('workitems.filters.allTypes')} />
         </div>
-        <div className={leadingContent ? 'shrink-0 w-[200px]' : 'flex-1 min-w-0'}>
+        <div className="flex-1 min-w-0">
           <MultiSelect options={priorityOptions} selected={filter.priority ?? []} onChange={(v) => setArray('priority', v)} placeholder={t('workitems.filters.allPriorities')} />
         </div>
-        <div className={leadingContent ? 'shrink-0 w-[200px]' : 'flex-1 min-w-0'}>
+        <div className="flex-1 min-w-0">
           <MultiSelect options={statusOptions} selected={filter.status ?? []} onChange={(v) => setArray('status', v)} placeholder={t('workitems.filters.allStatuses')} groupActions={statusGroupActions} />
         </div>
-        <div className={leadingContent ? 'shrink-0 w-[200px]' : 'flex-1 min-w-0'}>
+        <div className="flex-1 min-w-0">
           <MultiSelect options={assigneeOptions} selected={filter.assignee ?? []} onChange={(v) => setArray('assignee', v)} placeholder={t('workitems.filters.allAssignees')} searchable />
         </div>
         {milestones.length > 0 && (
-          <div className={leadingContent ? 'shrink-0 w-[200px]' : 'flex-1 min-w-0'}>
+          <div className="flex-1 min-w-0">
             <MultiSelect options={milestoneOptions} selected={filter.milestone ?? []} onChange={(v) => setArray('milestone', v)} placeholder={t('workitems.filters.allMilestones')} />
           </div>
         )}
@@ -169,6 +171,9 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
               <Eraser className="h-4 w-4" />
             </button>
           </Tooltip>
+        )}
+        {trailingContent && (
+          <div className="shrink-0">{trailingContent}</div>
         )}
       </div>
 
@@ -231,6 +236,9 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
           >
             <Settings className="h-5 w-5" />
           </button>
+        )}
+        {trailingContentMobileButton && (
+          <div className="shrink-0">{trailingContentMobileButton}</div>
         )}
       </div>
 

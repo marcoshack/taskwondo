@@ -1,7 +1,8 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { X, Search, Bookmark, LayoutList, LayoutGrid, FolderKanban, Eraser } from 'lucide-react'
+import { X, Search, Bookmark, FolderKanban, Eraser } from 'lucide-react'
+import { RefreshButton, type RefreshInterval } from '@/components/ui/RefreshButton'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
@@ -10,7 +11,7 @@ import { PriorityBadge } from '@/components/workitems/PriorityBadge'
 import { TypeBadge } from '@/components/workitems/TypeBadge'
 import { StatusBadge } from '@/components/workitems/StatusBadge'
 import { WorkItemFilters } from '@/components/workitems/WorkItemFilters'
-import { BoardView } from '@/components/workitems/BoardView'
+import { CreateWorkItemModal } from '@/components/workitems/CreateWorkItemModal'
 import { InboxButton } from '@/components/workitems/InboxButton'
 import { WatchButton } from '@/components/workitems/WatchButton'
 import { WorkItemMobileCard } from '@/components/workitems/WorkItemMobileCard'
@@ -41,8 +42,6 @@ function getDescriptionPreview(description: string): string {
   if (!line) return ''
   return line.trim().replace(/^#+\s+/, '').replace(/[*_~`[\]]/g, '')
 }
-
-type WatchlistViewMode = 'list' | 'board'
 
 function WatchlistSearchBar({ search, onSearchChange }: { search: string; onSearchChange: (v: string) => void }) {
   const { t } = useTranslation()
@@ -89,7 +88,7 @@ export default function WatchlistPage() {
     filter?: WorkItemFilter
     sort?: string
     order?: 'asc' | 'desc'
-    viewMode?: WatchlistViewMode
+    viewMode?: string
   }
   const { data: savedPrefs } = usePreference<WatchlistPrefs>('watchlistFilters')
   const [prefsLoaded, setPrefsLoaded] = useState(false)
@@ -97,14 +96,21 @@ export default function WatchlistPage() {
   const [filter, setFilter] = useState<WorkItemFilter>({})
   const [sort, setSort] = useState('created_at')
   const [order, setOrder] = useState<'asc' | 'desc'>('desc')
-  const [viewMode, setViewMode] = useState<WatchlistViewMode>('list')
   const [search, setSearch] = useState('')
+  const [showCreate, setShowCreate] = useState(false)
   const [activeRow, setActiveRow] = useState(-1)
   const activeRowStorageKey = 'taskwondo_activeRow_watchlist'
   const restoredRef = useRef(false)
   const [projectModalOpen, setProjectModalOpen] = useState(false)
   const [projectSearch, setProjectSearch] = useState('')
   const debouncedSearch = useDebounce(search, 300)
+
+  // Refresh interval (shared preference with Inbox)
+  const { data: refreshIntervalPref } = usePreference<number>('inbox_refresh_interval')
+  const [refreshInterval, setRefreshInterval] = useState<RefreshInterval>(0)
+  useEffect(() => {
+    if (refreshIntervalPref != null) setRefreshInterval(refreshIntervalPref as RefreshInterval)
+  }, [refreshIntervalPref])
 
   // Load saved preferences once
   useEffect(() => {
@@ -114,7 +120,6 @@ export default function WatchlistPage() {
       if (savedPrefs.filter) setFilter(savedPrefs.filter)
       if (savedPrefs.sort) setSort(savedPrefs.sort)
       if (savedPrefs.order) setOrder(savedPrefs.order)
-      if (savedPrefs.viewMode) setViewMode(savedPrefs.viewMode)
     }
     setPrefsLoaded(true)
   }, [savedPrefs, prefsLoaded])
@@ -126,10 +131,9 @@ export default function WatchlistPage() {
       filter,
       sort,
       order,
-      viewMode,
     }
     setPreferenceMutation.mutate({ key: 'watchlistFilters', value: { ...current, ...updates } })
-  }, [selectedProjects, filter, sort, order, viewMode, setPreferenceMutation])
+  }, [selectedProjects, filter, sort, order, setPreferenceMutation])
 
   function handleProjectsChange(keys: string[]) {
     setSelectedProjects(keys)
@@ -145,7 +149,7 @@ export default function WatchlistPage() {
   const isSingleProject = selectedProjects.length === 1
 
   // Project-scoped data
-  const { statuses, transitionsMap } = useProjectWorkflow(primaryProject)
+  const { statuses } = useProjectWorkflow(primaryProject)
   const { data: allStatuses } = useAvailableStatuses(primaryProject)
   const { data: members } = useMembers(primaryProject)
   const { data: milestones } = useMilestones(primaryProject)
@@ -162,10 +166,10 @@ export default function WatchlistPage() {
     q: debouncedSearch || undefined,
     sort,
     order,
-    limit: viewMode === 'board' ? 200 : 50,
-  }), [filter, debouncedSearch, viewMode, sort, order])
+    limit: 50,
+  }), [filter, debouncedSearch, sort, order])
 
-  const { data: result, isLoading } = useWatchedItems(selectedProjects, activeFilter)
+  const { data: result, isLoading, refetch, isFetching } = useWatchedItems(selectedProjects, activeFilter, refreshInterval)
   const items = result?.data ?? []
 
   // Pagination
@@ -212,8 +216,8 @@ export default function WatchlistPage() {
   }, [allItems])
 
   // Keyboard navigation
-  useKeyboardShortcut([{ key: 'ArrowDown' }, { key: 'j' }], () => setActiveRow((prev) => Math.min(prev + 1, allItems.length - 1)), viewMode === 'list')
-  useKeyboardShortcut([{ key: 'ArrowUp' }, { key: 'k' }], () => setActiveRow((prev) => Math.max(prev - 1, 0)), viewMode === 'list')
+  useKeyboardShortcut([{ key: 'ArrowDown' }, { key: 'j' }], () => setActiveRow((prev) => Math.min(prev + 1, allItems.length - 1)))
+  useKeyboardShortcut([{ key: 'ArrowUp' }, { key: 'k' }], () => setActiveRow((prev) => Math.max(prev - 1, 0)))
   useKeyboardShortcut([{ key: 'Enter' }, { key: 'o' }], () => {
     if (activeRow >= 0 && activeRow < allItems.length) {
       const item = allItems[activeRow]
@@ -230,11 +234,6 @@ export default function WatchlistPage() {
 
   function handleSearchChange(q: string) {
     setSearch(q)
-  }
-
-  function handleViewChange(v: WatchlistViewMode) {
-    setViewMode(v)
-    savePrefs({ viewMode: v })
   }
 
   function handleSort(sortKey: string) {
@@ -254,10 +253,9 @@ export default function WatchlistPage() {
     const f: WorkItemFilter = {}
     setFilter(f)
     setSearch('')
-    setViewMode('list')
     setSort('created_at')
     setOrder('desc')
-    setPreferenceMutation.mutate({ key: 'watchlistFilters', value: { projects: [], filter: f, sort: 'created_at', order: 'desc', viewMode: 'list' } })
+    setPreferenceMutation.mutate({ key: 'watchlistFilters', value: { projects: [], filter: f, sort: 'created_at', order: 'desc' } })
   }
 
   const columns: Column<WorkItem>[] = [
@@ -364,30 +362,14 @@ export default function WatchlistPage() {
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          <div className="hidden lg:block flex-1 min-w-0 max-w-md">
+        <div className="flex items-center gap-2 flex-1 justify-end">
+          <div className="hidden lg:block flex-1 min-w-0 max-w-lg">
             <WatchlistSearchBar search={search} onSearchChange={handleSearchChange} />
           </div>
-          <div className="inline-flex rounded-md shadow-sm">
-            <button
-              className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-l-md border ${
-                viewMode === 'list' ? 'bg-indigo-50 text-indigo-700 border-indigo-300 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-700' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700'
-              }`}
-              onClick={() => handleViewChange('list')}
-            >
-              <LayoutList className="h-4 w-4" />
-              {t('workitems.view.list')}
-            </button>
-            <button
-              className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-r-md border-t border-r border-b ${
-                viewMode === 'board' ? 'bg-indigo-50 text-indigo-700 border-indigo-300 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-700' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700'
-              }`}
-              onClick={() => handleViewChange('board')}
-            >
-              <LayoutGrid className="h-4 w-4" />
-              {t('workitems.view.board')}
-            </button>
-          </div>
+          <Button onClick={() => setShowCreate(true)} className="border border-transparent">
+            <span className="lg:hidden">{t('workitems.newShort')}</span>
+            <span className="hidden lg:inline">{t('workitems.new')}</span>
+          </Button>
         </div>
       </div>
 
@@ -406,6 +388,28 @@ export default function WatchlistPage() {
         showDates={showDates}
         onShowDatesChange={(v) => setPreferenceMutation.mutate({ key: 'showDates', value: v })}
         onClearFilters={handleClearFilters}
+        trailingContent={
+          <RefreshButton
+            interval={refreshInterval}
+            onIntervalChange={(val) => {
+              setRefreshInterval(val)
+              setPreferenceMutation.mutate({ key: 'inbox_refresh_interval', value: val })
+            }}
+            onRefresh={() => refetch()}
+            isRefreshing={isFetching}
+          />
+        }
+        trailingContentMobileButton={
+          <RefreshButton
+            interval={refreshInterval}
+            onIntervalChange={(val) => {
+              setRefreshInterval(val)
+              setPreferenceMutation.mutate({ key: 'inbox_refresh_interval', value: val })
+            }}
+            onRefresh={() => refetch()}
+            isRefreshing={isFetching}
+          />
+        }
         leadingContent={
           <MultiSelect
             options={projectOptions}
@@ -495,7 +499,7 @@ export default function WatchlistPage() {
           <p className="text-lg font-medium">{t('watchlist.empty')}</p>
           <p className="text-sm mt-1">{t('watchlist.emptyHint')}</p>
         </div>
-      ) : viewMode === 'list' ? (
+      ) : (
         <>
           {/* Desktop: table view */}
           <div className="hidden lg:block border dark:border-gray-700 rounded-lg overflow-hidden">
@@ -553,17 +557,12 @@ export default function WatchlistPage() {
             </div>
           )}
         </>
-      ) : (
-        <BoardView
-          projectKey={primaryProject}
-          items={allItems}
-          statuses={statuses}
-          transitionsMap={transitionsMap}
-          readOnly
-          strikethroughCompleted={strikethroughEnabled}
-          onItemClick={(item) => { sessionStorage.setItem(activeRowStorageKey, item.id); navigate(itemUrl(item), { state: { from: 'watchlist' } }) }}
-        />
       )}
+
+      <CreateWorkItemModal
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+      />
     </div>
   )
 }

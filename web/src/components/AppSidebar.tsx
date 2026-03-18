@@ -87,8 +87,8 @@ export function AppSidebar({ projectKey, mobileOnly }: AppSidebarProps) {
 
   const userNavItems: NavItem[] = [
     { to: '/user/inbox', label: t('user.sidebar.inbox'), icon: Inbox, end: true, badge: inboxCount && inboxCount > 0 ? inboxCount : undefined },
-    { to: '/user/feed', label: t('user.sidebar.feed'), icon: Rss, end: false },
     { to: '/user/watchlist', label: t('user.sidebar.watchlist'), icon: Bookmark, end: false },
+    { to: '/user/feed', label: t('user.sidebar.feed'), icon: Rss, end: false },
   ]
 
   const projectBase = activeProjectKey ? p(`/projects/${activeProjectKey}`) : ''
