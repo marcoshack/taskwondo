@@ -538,6 +538,19 @@ export async function createWorkflow(
   return body.data;
 }
 
+export async function listProjectWorkflows(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+): Promise<{ id: string; name: string; is_default: boolean }[]> {
+  const res = await request.get(`${BASE_URL}/api/v1/default/projects/${projectKey}/workflows`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`List project workflows failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
 export async function setProjectTypeWorkflow(
   request: APIRequestContext,
   token: string,

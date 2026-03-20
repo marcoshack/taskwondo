@@ -113,9 +113,9 @@ export function MilestonesPage() {
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('milestones.description')}</p>
         </div>
         {canManage && (
-          <Button size="sm" onClick={() => openEditor()}>
-            <Plus className="h-4 w-4 mr-1" />
-            {t('milestones.create')}
+          <Button onClick={() => openEditor()} className="border border-transparent">
+            <span className="sm:hidden">{t('workitems.newShort')}</span>
+            <span className="hidden sm:inline">{t('milestones.create')}</span>
           </Button>
         )}
       </div>

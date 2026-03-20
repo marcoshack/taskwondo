@@ -163,6 +163,116 @@ test.describe('Escalation Lists', () => {
     await page.keyboard.press('Escape');
   });
 
+  test('unmapped warning shows when list is not assigned to any type', async ({ page, request, testUser, testProject }) => {
+    const helper = await createHelperUser(request, testUser.token, testProject.key);
+    const list = await api.createEscalationList(request, testUser.token, testProject.key, {
+      name: 'Unmapped List',
+      levels: [{ threshold_pct: 80, user_ids: [helper.id] }],
+    });
+
+    await page.goto(`/d/projects/${testProject.key}/workflows`);
+    await page.waitForLoadState('networkidle');
+
+    // Warning should be visible for unmapped list
+    const warningText = page.getByText("SLA notifications won't trigger", { exact: false });
+    await expect(warningText).toBeVisible();
+
+    // Assign the list to a type — warning should disappear
+    await page.getByText('Escalation Mapping').scrollIntoViewIfNeeded();
+    const taskSelect = page.locator('select').filter({ hasText: 'None' }).first();
+    await taskSelect.selectOption(list.id);
+    await expect(page.locator('.text-green-500').first()).toBeVisible({ timeout: 5000 });
+    await expect(warningText).not.toBeVisible({ timeout: 5000 });
+
+    // Remove the mapping — warning should reappear
+    await taskSelect.selectOption('');
+    await expect(warningText).toBeVisible({ timeout: 5000 });
+
+    // Cleanup
+    await api.deleteEscalationMapping(request, testUser.token, testProject.key, 'task').catch(() => {});
+    await api.deleteEscalationList(request, testUser.token, testProject.key, list.id);
+  });
+
+  test('section titles: Workflow Mapping and Escalation Mapping and SLA', async ({ page, testProject }) => {
+    await page.goto(`/d/projects/${testProject.key}/workflows`);
+    await page.waitForLoadState('networkidle');
+
+    // "Workflow Mapping" heading (renamed from "Mapping and SLA")
+    await expect(page.getByText('Workflow Mapping', { exact: true })).toBeVisible();
+
+    // "Escalation Mapping and SLA" heading (renamed from "Escalation Mapping")
+    await expect(page.getByText('Escalation Mapping and SLA', { exact: true })).toBeVisible();
+  });
+
+  test('SLA clock button in Escalation Mapping section opens SLA config', async ({ page, request, testUser, testProject }) => {
+    const helper = await createHelperUser(request, testUser.token, testProject.key);
+    const list = await api.createEscalationList(request, testUser.token, testProject.key, {
+      name: 'SLA Button Test',
+      levels: [{ threshold_pct: 80, user_ids: [helper.id] }],
+    });
+
+    await page.goto(`/d/projects/${testProject.key}/workflows`);
+    await page.waitForLoadState('networkidle');
+
+    // Scroll to escalation mapping section and find the clock button on the first row
+    await page.getByText('Escalation Mapping and SLA').scrollIntoViewIfNeeded();
+
+    // The clock button should exist in the escalation mapping card rows
+    const escalationSection = page.getByText('Escalation Mapping and SLA').locator('xpath=ancestor::div[1]/following-sibling::div[1]').first();
+
+    // Click the first clock button (task row)
+    const clockButton = escalationSection.locator('button').filter({ has: page.locator('svg') }).last();
+    await clockButton.click();
+
+    // SLA config modal should open
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible({ timeout: 5000 });
+    await expect(dialog.getByText('SLA Targets for', { exact: false })).toBeVisible();
+
+    await page.keyboard.press('Escape');
+    await expect(dialog).not.toBeVisible({ timeout: 5000 });
+
+    // Cleanup
+    await api.deleteEscalationList(request, testUser.token, testProject.key, list.id);
+  });
+
+  test('no-SLA warning shows when escalation mapped but no SLA targets configured', async ({ page, request, testUser, testProject }) => {
+    const helper = await createHelperUser(request, testUser.token, testProject.key);
+    const list = await api.createEscalationList(request, testUser.token, testProject.key, {
+      name: 'No SLA Warning Test',
+      levels: [{ threshold_pct: 80, user_ids: [helper.id] }],
+    });
+
+    // Assign escalation list to 'task' type without SLA targets
+    await api.setEscalationMapping(request, testUser.token, testProject.key, 'task', list.id);
+
+    await page.goto(`/d/projects/${testProject.key}/workflows`);
+    await page.waitForLoadState('networkidle');
+
+    await page.getByText('Escalation Mapping and SLA').scrollIntoViewIfNeeded();
+
+    // Warning should be visible for mapped type without SLA targets
+    const noSlaWarning = page.getByText("breach detection won't trigger", { exact: false }).first();
+    await expect(noSlaWarning).toBeVisible();
+
+    // Now configure SLA targets via API to make warning disappear
+    const workflows = await api.listProjectWorkflows(request, testUser.token, testProject.key);
+    const defaultWf = workflows.find((w) => w.is_default) ?? workflows[0];
+    await api.setSLATargets(request, testUser.token, testProject.key, 'task', defaultWf.id, [
+      { status_name: 'open', priority: 'medium', target_seconds: 3600 },
+    ]);
+
+    // Reload to pick up the new SLA targets
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    await page.getByText('Escalation Mapping and SLA').scrollIntoViewIfNeeded();
+    await expect(page.getByText("breach detection won't trigger", { exact: false }).first()).not.toBeVisible({ timeout: 5000 });
+
+    // Cleanup
+    await api.deleteEscalationMapping(request, testUser.token, testProject.key, 'task').catch(() => {});
+    await api.deleteEscalationList(request, testUser.token, testProject.key, list.id);
+  });
+
   test('delete warning shows for assigned lists', async ({ page, request, testUser, testProject }) => {
     const helper = await createHelperUser(request, testUser.token, testProject.key);
     const list = await api.createEscalationList(request, testUser.token, testProject.key, {

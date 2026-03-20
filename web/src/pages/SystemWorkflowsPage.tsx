@@ -88,9 +88,9 @@ export function SystemWorkflowsPage() {
           <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
             {t('workflows.definitionsTitle')}
           </h3>
-          <Button size="sm" onClick={() => openEditor()}>
-            <Plus className="h-4 w-4 mr-1" />
-            {t('workflows.create')}
+          <Button onClick={() => openEditor()} className="border border-transparent">
+            <span className="sm:hidden">{t('workitems.newShort')}</span>
+            <span className="hidden sm:inline">{t('workflows.create')}</span>
           </Button>
         </div>
       </div>

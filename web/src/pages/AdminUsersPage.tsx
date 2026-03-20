@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
-import { Check, ChevronDown, ChevronRight, Copy, KeyRound, Plus, Save, Trash2 } from 'lucide-react'
+import { Check, ChevronDown, ChevronRight, Copy, KeyRound, Save, Trash2 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAdminUsers, useUpdateUser, useCreateUser, useResetUserPassword, useUserProjects, useAddUserToProject, useUpdateUserProjectRole, useRemoveUserFromProject } from '@/hooks/useAdmin'
 import { usePreference, useSetPreference } from '@/hooks/usePreferences'
@@ -339,8 +339,7 @@ export function AdminUsersPage() {
             placeholder={t('admin.users.title')}
             className="w-44"
           />
-          <Button size="sm" onClick={() => setCreateModalOpen(true)}>
-            <Plus className="h-4 w-4 mr-1" />
+          <Button onClick={() => setCreateModalOpen(true)} className="border border-transparent">
             {t('admin.users.createUser')}
           </Button>
         </div>

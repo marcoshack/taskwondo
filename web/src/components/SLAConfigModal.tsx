@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
 import { Tooltip } from '@/components/ui/Tooltip'
+import { ScrollableRow } from '@/components/ui/ScrollableRow'
 import { useSLATargets, useBulkUpsertSLATargets } from '@/hooks/useSLA'
 import { parseDuration, formatDuration } from '@/utils/duration'
 import type { Workflow, WorkflowStatus } from '@/api/workflows'
@@ -216,7 +216,7 @@ export function SLAConfigModal({ open, onClose, onSave, projectKey, workItemType
     return (
       <div className="space-y-2">
         {/* Header */}
-        <div className="grid grid-cols-[1fr_150px_130px] gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+        <div className="grid grid-cols-[1fr_4.5rem_4.5rem] sm:grid-cols-[1fr_150px_150px] gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
           <span>{t('sla.status')}</span>
           <span>{t('sla.duration')}</span>
           <span>{t('sla.calendarMode')}</span>
@@ -228,18 +228,22 @@ export function SLAConfigModal({ open, onClose, onSave, projectKey, workItemType
           return (
             <Tooltip key={row.name} content={terminal ? t('sla.terminalStatusTooltip') : undefined} className="relative block">
               <div
-                className={`grid grid-cols-[1fr_150px_130px] gap-2 items-center ${terminal ? 'opacity-50' : ''}`}
+                className={`grid grid-cols-[1fr_4.5rem_4.5rem] sm:grid-cols-[1fr_150px_150px] gap-2 items-center ${terminal ? 'opacity-50' : ''}`}
               >
-                <span className="text-sm text-gray-900 dark:text-gray-100">{row.displayName}</span>
-                <Input
+                <ScrollableRow className="min-w-0 sm:hidden" gradientFrom="from-white dark:from-gray-800">
+                  <span className="text-xs text-gray-900 dark:text-gray-100 whitespace-nowrap">{row.displayName}</span>
+                </ScrollableRow>
+                <span className="hidden sm:block text-xs text-gray-900 dark:text-gray-100">{row.displayName}</span>
+                <input
+                  type="text"
                   value={row.duration}
                   onChange={(e) => onUpdate(index, 'duration', e.target.value)}
                   placeholder={t('sla.durationPlaceholder')}
                   disabled={terminal || readOnly}
-                  className="text-sm"
+                  className="w-[4.5rem] sm:w-auto min-w-0 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1.5 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <select
-                  className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-[4.5rem] sm:w-auto truncate rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1.5 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   value={row.calendarMode}
                   onChange={(e) => onUpdate(index, 'calendarMode', e.target.value)}
                   disabled={terminal || readOnly}
@@ -258,7 +262,7 @@ export function SLAConfigModal({ open, onClose, onSave, projectKey, workItemType
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={t('sla.titleForType', { type: t(`workitems.types.${workItemType}`) })}>
+    <Modal open={open} onClose={onClose} title={t('sla.titleForType', { type: t(`workitems.types.${workItemType}`) })} className="!max-w-2xl">
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
         {t('sla.description')} {t('sla.blankHint')}
       </p>
