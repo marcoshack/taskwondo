@@ -28,8 +28,9 @@ import { StatusBadge } from '@/components/workitems/StatusBadge'
 import { PriorityBadge } from '@/components/workitems/PriorityBadge'
 import { CopyButton } from '@/components/ui/CopyButton'
 import { SLAIndicator } from '@/components/SLAIndicator'
+import { ScrollableRow } from '@/components/ui/ScrollableRow'
 import { useAuth } from '@/contexts/AuthContext'
-import { Settings2, User, Calendar, CalendarPlus, History, Lock, Unlock, Globe } from 'lucide-react'
+import { Settings2, User, Calendar, CalendarPlus, History, Lock, Unlock, Globe, Target } from 'lucide-react'
 import { InboxButton } from '@/components/workitems/InboxButton'
 import { WatchButton } from '@/components/workitems/WatchButton'
 import { WatcherList } from '@/components/workitems/WatcherList'
@@ -421,24 +422,30 @@ export function WorkItemDetailPage() {
             </div>
 
             {/* Mobile metadata line */}
-            <div className="lg:hidden flex items-center gap-3 text-xs text-gray-400 dark:text-gray-500 mb-2 flex-wrap">
-              <span className="inline-flex items-center gap-1">
+            <ScrollableRow className="lg:hidden mb-2" contentClassName="gap-3 text-xs text-gray-400 dark:text-gray-500">
+              <span className="inline-flex items-center gap-1 shrink-0">
                 <User className="h-3.5 w-3.5" />
                 {item.assignee_id
                   ? members?.find(m => m.user_id === item.assignee_id)?.display_name ?? t('userPicker.unassigned')
                   : t('userPicker.unassigned')}
               </span>
-              <span className="inline-flex items-center gap-1">
+              {item.milestone_id && (
+                <span className="inline-flex items-center gap-1 shrink-0">
+                  <Target className="h-3.5 w-3.5" />
+                  {milestones?.find(m => m.id === item.milestone_id)?.name ?? ''}
+                </span>
+              )}
+              <span className="inline-flex items-center gap-1 shrink-0">
                 <CalendarPlus className="h-3.5 w-3.5" />
                 {formatRelativeTime(item.created_at)}
               </span>
-              <span className="inline-flex items-center gap-1">
+              <span className="inline-flex items-center gap-1 shrink-0">
                 <History className="h-3.5 w-3.5" />
                 {formatRelativeTime(item.updated_at)}
               </span>
               {item.sla && <SLAIndicator sla={item.sla} />}
               {childrenTotal > 0 && (
-                <span className="inline-flex items-center gap-2">
+                <span className="inline-flex items-center gap-2 shrink-0">
                   <span>{t('relations.childrenProgress', { completed: childrenCompleted, total: childrenTotal })}</span>
                   <span className="inline-block w-16 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
                     <span
@@ -448,7 +455,7 @@ export function WorkItemDetailPage() {
                   </span>
                 </span>
               )}
-            </div>
+            </ScrollableRow>
 
             {/* Title */}
             {!readOnly && editingTitle ? (
