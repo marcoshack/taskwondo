@@ -216,7 +216,7 @@ func adminTestSetup(t *testing.T) (*AdminHandler, *mockAdminUserRepo, *mockAdmin
 	userRepo := newMockAdminUserRepo()
 	projectRepo := newMockAdminProjectRepo()
 	memberRepo := newMockAdminMemberRepo()
-	adminSvc := service.NewAdminService(userRepo, projectRepo, memberRepo)
+	adminSvc := service.NewAdminService(userRepo, projectRepo, memberRepo, nil)
 	h := NewAdminHandler(adminSvc)
 	return h, userRepo, projectRepo, memberRepo
 }
@@ -633,5 +633,252 @@ func TestResetUserPassword_Handler_404(t *testing.T) {
 
 	if w.Code != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+// --- Mock inspection repo ---
+
+type mockAdminInspectionRepo struct {
+	projects   *model.AdminProjectList
+	namespaces *model.AdminNamespaceList
+	err        error
+}
+
+func (m *mockAdminInspectionRepo) ListProjects(_ context.Context, search, cursor string, limit int) (*model.AdminProjectList, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	return m.projects, nil
+}
+
+func (m *mockAdminInspectionRepo) ListNamespaces(_ context.Context, search, cursor string, limit int) (*model.AdminNamespaceList, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	return m.namespaces, nil
+}
+
+func adminTestSetupWithInspection(t *testing.T) (*AdminHandler, *mockAdminInspectionRepo) {
+	t.Helper()
+	userRepo := newMockAdminUserRepo()
+	projectRepo := newMockAdminProjectRepo()
+	memberRepo := newMockAdminMemberRepo()
+	inspectionRepo := &mockAdminInspectionRepo{}
+	adminSvc := service.NewAdminService(userRepo, projectRepo, memberRepo, inspectionRepo)
+	h := NewAdminHandler(adminSvc)
+	return h, inspectionRepo
+}
+
+// --- Inspection handler tests ---
+
+func TestAdminListAllProjects(t *testing.T) {
+	h, inspectionRepo := adminTestSetupWithInspection(t)
+
+	inspectionRepo.projects = &model.AdminProjectList{
+		Items: []model.AdminProject{
+			{
+				ID:               uuid.New(),
+				Key:              "PROJ1",
+				Name:             "Project One",
+				NamespaceSlug:    "default",
+				OwnerDisplayName: "Alice",
+				OwnerEmail:       "alice@test.com",
+				MemberCount:      3,
+				ItemCount:        10,
+				StorageBytes:     1024,
+				CreatedAt:        time.Now(),
+			},
+			{
+				ID:               uuid.New(),
+				Key:              "PROJ2",
+				Name:             "Project Two",
+				NamespaceSlug:    "default",
+				OwnerDisplayName: "Bob",
+				OwnerEmail:       "bob@test.com",
+				MemberCount:      1,
+				ItemCount:        5,
+				StorageBytes:     0,
+				CreatedAt:        time.Now(),
+			},
+		},
+		Cursor:  "",
+		HasMore: false,
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/projects", nil)
+	req = req.WithContext(adminCtx(uuid.New()))
+	w := httptest.NewRecorder()
+
+	h.ListAllProjects(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data, ok := resp["data"].([]interface{})
+	if !ok {
+		t.Fatal("expected data array in response")
+	}
+	if len(data) != 2 {
+		t.Fatalf("expected 2 projects, got %d", len(data))
+	}
+
+	meta, ok := resp["meta"].(map[string]interface{})
+	if !ok {
+		t.Fatal("expected meta object in response")
+	}
+	if meta["has_more"] != false {
+		t.Fatalf("expected has_more false, got %v", meta["has_more"])
+	}
+
+	first := data[0].(map[string]interface{})
+	if first["key"] != "PROJ1" {
+		t.Fatalf("expected first project key PROJ1, got %v", first["key"])
+	}
+}
+
+func TestAdminListAllProjects_Search(t *testing.T) {
+	h, inspectionRepo := adminTestSetupWithInspection(t)
+
+	inspectionRepo.projects = &model.AdminProjectList{
+		Items: []model.AdminProject{
+			{
+				ID:            uuid.New(),
+				Key:           "SRCH",
+				Name:          "Searchable Project",
+				NamespaceSlug: "default",
+				MemberCount:   1,
+				CreatedAt:     time.Now(),
+			},
+		},
+		Cursor:  "",
+		HasMore: false,
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/projects?search=searchable", nil)
+	req = req.WithContext(adminCtx(uuid.New()))
+	w := httptest.NewRecorder()
+
+	h.ListAllProjects(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data := resp["data"].([]interface{})
+	if len(data) != 1 {
+		t.Fatalf("expected 1 project, got %d", len(data))
+	}
+}
+
+func TestAdminListAllProjects_InvalidLimit(t *testing.T) {
+	h, _ := adminTestSetupWithInspection(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/projects?limit=abc", nil)
+	req = req.WithContext(adminCtx(uuid.New()))
+	w := httptest.NewRecorder()
+
+	h.ListAllProjects(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestAdminListAllNamespaces(t *testing.T) {
+	h, inspectionRepo := adminTestSetupWithInspection(t)
+
+	inspectionRepo.namespaces = &model.AdminNamespaceList{
+		Items: []model.AdminNamespace{
+			{
+				ID:           uuid.New(),
+				Slug:         "default",
+				DisplayName:  "Default",
+				IsDefault:    true,
+				ProjectCount: 5,
+				MemberCount:  10,
+				StorageBytes: 2048,
+				CreatedAt:    time.Now(),
+			},
+			{
+				ID:           uuid.New(),
+				Slug:         "team-a",
+				DisplayName:  "Team A",
+				IsDefault:    false,
+				ProjectCount: 2,
+				MemberCount:  3,
+				StorageBytes: 512,
+				CreatedAt:    time.Now(),
+			},
+		},
+		Cursor:  "",
+		HasMore: false,
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/namespaces", nil)
+	req = req.WithContext(adminCtx(uuid.New()))
+	w := httptest.NewRecorder()
+
+	h.ListAllNamespaces(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data, ok := resp["data"].([]interface{})
+	if !ok {
+		t.Fatal("expected data array in response")
+	}
+	if len(data) != 2 {
+		t.Fatalf("expected 2 namespaces, got %d", len(data))
+	}
+
+	meta, ok := resp["meta"].(map[string]interface{})
+	if !ok {
+		t.Fatal("expected meta object in response")
+	}
+	if meta["has_more"] != false {
+		t.Fatalf("expected has_more false, got %v", meta["has_more"])
+	}
+
+	first := data[0].(map[string]interface{})
+	if first["slug"] != "default" {
+		t.Fatalf("expected first namespace slug default, got %v", first["slug"])
+	}
+}
+
+func TestAdminListAllNamespaces_Empty(t *testing.T) {
+	h, inspectionRepo := adminTestSetupWithInspection(t)
+
+	inspectionRepo.namespaces = &model.AdminNamespaceList{
+		Items:   []model.AdminNamespace{},
+		Cursor:  "",
+		HasMore: false,
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/namespaces", nil)
+	req = req.WithContext(adminCtx(uuid.New()))
+	w := httptest.NewRecorder()
+
+	h.ListAllNamespaces(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data, ok := resp["data"].([]interface{})
+	if !ok {
+		t.Fatal("expected data array in response")
+	}
+	if len(data) != 0 {
+		t.Fatalf("expected 0 namespaces, got %d", len(data))
 	}
 }

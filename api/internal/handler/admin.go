@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -348,4 +349,68 @@ func (h *AdminHandler) RemoveUserFromProject(w http.ResponseWriter, r *http.Requ
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// ListAllProjects handles GET /api/v1/admin/projects.
+func (h *AdminHandler) ListAllProjects(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	search := q.Get("search")
+	cursor := q.Get("cursor")
+
+	limit := 20
+	if v := q.Get("limit"); v != "" {
+		parsed, err := strconv.Atoi(v)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid limit parameter")
+			return
+		}
+		limit = parsed
+	}
+
+	result, err := h.admin.ListAllProjects(r.Context(), search, cursor, limit)
+	if err != nil {
+		log.Ctx(r.Context()).Error().Err(err).Msg("failed to list admin projects")
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"data": result.Items,
+		"meta": map[string]interface{}{
+			"cursor":   result.Cursor,
+			"has_more": result.HasMore,
+		},
+	})
+}
+
+// ListAllNamespaces handles GET /api/v1/admin/namespaces.
+func (h *AdminHandler) ListAllNamespaces(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	search := q.Get("search")
+	cursor := q.Get("cursor")
+
+	limit := 20
+	if v := q.Get("limit"); v != "" {
+		parsed, err := strconv.Atoi(v)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid limit parameter")
+			return
+		}
+		limit = parsed
+	}
+
+	result, err := h.admin.ListAllNamespaces(r.Context(), search, cursor, limit)
+	if err != nil {
+		log.Ctx(r.Context()).Error().Err(err).Msg("failed to list admin namespaces")
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"data": result.Items,
+		"meta": map[string]interface{}{
+			"cursor":   result.Cursor,
+			"has_more": result.HasMore,
+		},
+	})
 }

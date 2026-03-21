@@ -1,5 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { listUsers, updateUser, listUserProjects, addUserToProject, updateUserProjectRole, removeUserFromProject, createUser, resetUserPassword } from '@/api/admin'
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
+import { listUsers, updateUser, listUserProjects, addUserToProject, updateUserProjectRole, removeUserFromProject, createUser, resetUserPassword, listAdminProjects, listAdminNamespaces } from '@/api/admin'
 import type { CreateUserInput } from '@/api/admin'
 
 export function useAdminUsers() {
@@ -72,5 +72,23 @@ export function useCreateUser() {
 export function useResetUserPassword() {
   return useMutation({
     mutationFn: (userId: string) => resetUserPassword(userId),
+  })
+}
+
+export function useAdminProjects(search: string) {
+  return useInfiniteQuery({
+    queryKey: ['admin', 'projects', search],
+    queryFn: ({ pageParam }) => listAdminProjects({ search: search || undefined, cursor: pageParam || undefined }),
+    initialPageParam: '',
+    getNextPageParam: (lastPage) => lastPage.meta.has_more ? lastPage.meta.cursor : undefined,
+  })
+}
+
+export function useAdminNamespaces(search: string) {
+  return useInfiniteQuery({
+    queryKey: ['admin', 'namespaces', search],
+    queryFn: ({ pageParam }) => listAdminNamespaces({ search: search || undefined, cursor: pageParam || undefined }),
+    initialPageParam: '',
+    getNextPageParam: (lastPage) => lastPage.meta.has_more ? lastPage.meta.cursor : undefined,
   })
 }

@@ -153,7 +153,8 @@ func main() {
 	userSettingService := service.NewUserSettingService(userSettingRepo, projectRepo, projectMemberRepo)
 	systemSettingService := service.NewSystemSettingService(systemSettingRepo)
 	namespaceService := service.NewNamespaceService(namespaceRepo, namespaceMemberRepo, projectRepo, userRepo, systemSettingRepo, userSettingRepo)
-	adminService := service.NewAdminService(userRepo, projectRepo, projectMemberRepo)
+	adminRepo := repository.NewAdminRepository(db)
+	adminService := service.NewAdminService(userRepo, projectRepo, projectMemberRepo, adminRepo)
 	statsService := service.NewStatsService(statsRepo, projectRepo, projectMemberRepo)
 
 	// Initialize embedding and search services
@@ -574,6 +575,8 @@ func main() {
 						})
 					})
 				})
+				r.Get("/projects", admin.ListAllProjects)
+				r.Get("/namespaces", admin.ListAllNamespaces)
 				r.Route("/settings", func(r chi.Router) {
 					r.Get("/", systemSettings.List)
 					r.Route("/smtp_config", func(r chi.Router) {

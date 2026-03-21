@@ -75,3 +75,48 @@ export async function resetUserPassword(userId: string): Promise<ResetPasswordRe
   const res = await api.post<{ data: ResetPasswordResponse }>(`/admin/users/${userId}/reset-password`)
   return res.data.data
 }
+
+// Admin Projects & Namespaces
+
+export interface AdminProject {
+  id: string
+  key: string
+  name: string
+  namespace_slug: string
+  namespace_display_name: string
+  owner_display_name: string
+  owner_email: string
+  member_count: number
+  item_count: number
+  storage_bytes: number
+  created_at: string
+}
+
+export interface AdminNamespace {
+  id: string
+  slug: string
+  display_name: string
+  is_default: boolean
+  project_count: number
+  member_count: number
+  storage_bytes: number
+  created_at: string
+}
+
+export interface PaginatedResponse<T> {
+  data: T[]
+  meta: {
+    cursor: string
+    has_more: boolean
+  }
+}
+
+export async function listAdminProjects(params: { search?: string; cursor?: string; limit?: number }): Promise<PaginatedResponse<AdminProject>> {
+  const res = await api.get<PaginatedResponse<AdminProject>>('/admin/projects', { params })
+  return res.data
+}
+
+export async function listAdminNamespaces(params: { search?: string; cursor?: string; limit?: number }): Promise<PaginatedResponse<AdminNamespace>> {
+  const res = await api.get<PaginatedResponse<AdminNamespace>>('/admin/namespaces', { params })
+  return res.data
+}

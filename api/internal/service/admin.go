@@ -43,16 +43,23 @@ type AdminMemberRepository interface {
 	Remove(ctx context.Context, projectID, userID uuid.UUID) error
 }
 
+// AdminInspectionRepository defines admin inspection queries for projects and namespaces.
+type AdminInspectionRepository interface {
+	ListProjects(ctx context.Context, search string, cursor string, limit int) (*model.AdminProjectList, error)
+	ListNamespaces(ctx context.Context, search string, cursor string, limit int) (*model.AdminNamespaceList, error)
+}
+
 // AdminService handles admin-only business logic.
 type AdminService struct {
-	users    AdminUserRepository
-	projects AdminProjectRepository
-	members  AdminMemberRepository
+	users      AdminUserRepository
+	projects   AdminProjectRepository
+	members    AdminMemberRepository
+	inspection AdminInspectionRepository
 }
 
 // NewAdminService creates a new AdminService.
-func NewAdminService(users AdminUserRepository, projects AdminProjectRepository, members AdminMemberRepository) *AdminService {
-	return &AdminService{users: users, projects: projects, members: members}
+func NewAdminService(users AdminUserRepository, projects AdminProjectRepository, members AdminMemberRepository, inspection AdminInspectionRepository) *AdminService {
+	return &AdminService{users: users, projects: projects, members: members, inspection: inspection}
 }
 
 // ListUsers returns all users in the system.
@@ -295,6 +302,28 @@ func (s *AdminService) ResetUserPassword(ctx context.Context, userID uuid.UUID) 
 	}
 
 	return password, nil
+}
+
+// ListAllProjects returns a paginated list of all projects for admin inspection.
+func (s *AdminService) ListAllProjects(ctx context.Context, search, cursor string, limit int) (*model.AdminProjectList, error) {
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	return s.inspection.ListProjects(ctx, search, cursor, limit)
+}
+
+// ListAllNamespaces returns a paginated list of all namespaces for admin inspection.
+func (s *AdminService) ListAllNamespaces(ctx context.Context, search, cursor string, limit int) (*model.AdminNamespaceList, error) {
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	return s.inspection.ListNamespaces(ctx, search, cursor, limit)
 }
 
 func generateTemporaryPassword() (string, error) {

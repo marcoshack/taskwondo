@@ -1,6 +1,6 @@
 import { NavLink, Routes, Route, Navigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Settings, Users, Route as RouteIcon, Plug, Lock, ToggleRight, Key } from 'lucide-react'
+import { Settings, Users, Route as RouteIcon, Plug, Lock, ToggleRight, Key, FolderOpen } from 'lucide-react'
 import { useSidebar } from '@/contexts/SidebarContext'
 import { useLayout } from '@/contexts/LayoutContext'
 import { useNavigationGuard } from '@/contexts/NavigationGuardContext'
@@ -12,6 +12,7 @@ import { SystemIntegrationsPage } from './SystemIntegrationsPage'
 import { SystemAuthenticationPage } from './SystemAuthenticationPage'
 import { SystemFeaturesPage } from './SystemFeaturesPage'
 import { SystemAPIKeysPage } from './SystemAPIKeysPage'
+import { SystemProjectsPage } from './SystemProjectsPage'
 
 export function SystemSettingsPage() {
   const { t } = useTranslation()
@@ -22,6 +23,7 @@ export function SystemSettingsPage() {
   const navItems = [
     { to: 'general', label: t('admin.sidebar.general'), icon: Settings },
     { to: 'users', label: t('admin.sidebar.users'), icon: Users },
+    { to: 'project-overview', label: t('admin.sidebar.projects'), icon: FolderOpen },
     { to: 'workflows', label: t('admin.sidebar.workflows'), icon: RouteIcon },
     { to: 'integrations', label: t('admin.sidebar.integrations'), icon: Plug },
     { to: 'authentication', label: t('admin.sidebar.authentication'), icon: Lock },
@@ -64,6 +66,7 @@ export function SystemSettingsPage() {
             <Route index element={<Navigate to="general" replace />} />
             <Route path="general" element={<SystemGeneralPage />} />
             <Route path="users" element={<AdminUsersPage />} />
+            <Route path="project-overview" element={<SystemProjectsPage />} />
             <Route path="workflows" element={<SystemWorkflowsPage />} />
             <Route path="integrations" element={<SystemIntegrationsPage />} />
             <Route path="authentication" element={<SystemAuthenticationPage />} />

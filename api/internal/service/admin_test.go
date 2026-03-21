@@ -239,7 +239,7 @@ func newTestAdminService() (*AdminService, *mockAdminUserRepo, *mockAdminProject
 	userRepo := newMockAdminUserRepo()
 	projectRepo := newMockAdminProjectRepo()
 	memberRepo := newMockAdminMemberRepo()
-	svc := NewAdminService(userRepo, projectRepo, memberRepo)
+	svc := NewAdminService(userRepo, projectRepo, memberRepo, nil)
 	return svc, userRepo, projectRepo, memberRepo
 }
 
