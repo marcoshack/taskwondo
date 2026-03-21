@@ -1367,6 +1367,17 @@ func (m *mockEmailVerificationRepo) DeleteByEmail(_ context.Context, email strin
 	return nil
 }
 
+func (m *mockEmailVerificationRepo) DeleteExpired(_ context.Context) (int64, error) {
+	var count int64
+	for k, t := range m.tokens {
+		if t.ExpiresAt.Before(time.Now()) {
+			delete(m.tokens, k)
+			count++
+		}
+	}
+	return count, nil
+}
+
 type mockSettingsReader struct {
 	settings map[string]*model.SystemSetting
 }

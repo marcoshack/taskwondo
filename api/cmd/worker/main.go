@@ -190,6 +190,9 @@ func main() {
 	// Initialize SLA service for the monitor
 	slaService := service.NewSLAService(slaRepo, projectRepo, memberRepo, workflowRepo)
 
+	// Initialize email verification repo for token cleanup
+	emailVerifRepo := repository.NewEmailVerificationRepository(db)
+
 	// Set up periodic scheduler
 	scheduler := workers.NewScheduler(log.Logger)
 
@@ -211,6 +214,14 @@ func main() {
 		Name:     "sla.monitor",
 		Interval: cfg.SLAMonitorInterval,
 		Fn:       slaMonitor.Run,
+	})
+
+	// Token cleanup: purge expired email verification tokens
+	tokenCleanup := workers.NewTokenCleanupTask(emailVerifRepo, log.Logger)
+	scheduler.Add(workers.PeriodicTask{
+		Name:     "token.cleanup",
+		Interval: cfg.TokenCleanupInterval,
+		Fn:       tokenCleanup.Run,
 	})
 
 	// Run backfill if requested (before starting periodic tasks)

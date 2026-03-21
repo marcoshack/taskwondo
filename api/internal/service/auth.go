@@ -70,6 +70,7 @@ type EmailVerificationRepo interface {
 	GetByTokenHash(ctx context.Context, tokenHash string) (*model.EmailVerificationToken, error)
 	DeleteByTokenHash(ctx context.Context, tokenHash string) error
 	DeleteByEmail(ctx context.Context, email string) error
+	DeleteExpired(ctx context.Context) (int64, error)
 }
 
 // AuthSettingsReader loads system settings by key for auth decisions.

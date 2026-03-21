@@ -75,3 +75,14 @@ func (r *EmailVerificationRepository) DeleteByEmail(ctx context.Context, email s
 	}
 	return nil
 }
+
+// DeleteExpired removes all tokens that have passed their expiration time.
+// Returns the number of tokens deleted.
+func (r *EmailVerificationRepository) DeleteExpired(ctx context.Context) (int64, error) {
+	result, err := r.db.ExecContext(ctx,
+		`DELETE FROM email_verification_tokens WHERE expires_at < now()`)
+	if err != nil {
+		return 0, fmt.Errorf("deleting expired email verification tokens: %w", err)
+	}
+	return result.RowsAffected()
+}

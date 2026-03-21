@@ -77,6 +77,9 @@ type Config struct {
 	// SLA Monitor
 	SLAMonitorInterval time.Duration // How often to scan for SLA breaches (default: 60s)
 
+	// Token cleanup
+	TokenCleanupInterval time.Duration // How often to purge expired verification tokens (default: 1h)
+
 	// Ollama (optional — semantic search)
 	OllamaURL   string // Ollama API URL (e.g. "http://ollama:11434"); empty = disabled
 	OllamaModel string // Embedding model name (default: "nomic-embed-text")
@@ -154,6 +157,13 @@ func Load() (*Config, error) {
 		}
 	}
 
+	tokenCleanupInterval := 1 * time.Hour
+	if v := os.Getenv("TOKEN_CLEANUP_INTERVAL"); v != "" {
+		if parsed, err := time.ParseDuration(v); err == nil && parsed > 0 {
+			tokenCleanupInterval = parsed
+		}
+	}
+
 	cfg := &Config{
 		DatabaseURL:         databaseURL,
 		APIPort:             envOrDefault("API_PORT", "8080"),
@@ -187,7 +197,8 @@ func Load() (*Config, error) {
 		WorkerPoolSize:      workerPoolSize,
 		WorkerDBPool:        workerDBPool,
 		BackfillStats:       envOrDefault("BACKFILL_STATS", "") == "true",
-		SLAMonitorInterval:  slaMonitorInterval,
+		SLAMonitorInterval:   slaMonitorInterval,
+		TokenCleanupInterval: tokenCleanupInterval,
 		OllamaURL:           envOrDefault("OLLAMA_URL", ""),
 		OllamaModel:         envOrDefault("OLLAMA_MODEL", "nomic-embed-text"),
 	}
