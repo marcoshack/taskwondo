@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
@@ -44,6 +45,11 @@ func slaNotifKey(workItemID uuid.UUID, statusName string, level, thresholdPct in
 
 func (m *mockSLANotifRepo) HasBeenSent(_ context.Context, workItemID uuid.UUID, statusName string, level, thresholdPct int) (bool, error) {
 	return m.sent[slaNotifKey(workItemID, statusName, level, thresholdPct)], nil
+}
+
+func (m *mockSLANotifRepo) RecordSent(_ context.Context, workItemID uuid.UUID, statusName string, level, thresholdPct int) error {
+	m.sent[slaNotifKey(workItemID, statusName, level, thresholdPct)] = true
+	return nil
 }
 
 type mockSLAItemRepo struct {
@@ -604,6 +610,300 @@ func TestSLAMonitor_Run_SkipsItemsWithNoEscalationList(t *testing.T) {
 
 	if len(publisher.published) != 0 {
 		t.Fatalf("expected 0 published events (type mismatch), got %d", len(publisher.published))
+	}
+}
+
+func TestSLAMonitor_Run_SkipsRetroactiveNotifications(t *testing.T) {
+	projectID := uuid.New()
+	workflowID := uuid.New()
+	escListID := uuid.New()
+	workItemID := uuid.New()
+
+	wfStatuses := []model.WorkflowStatus{
+		{Name: "Open", Category: model.CategoryTodo},
+		{Name: "Done", Category: model.CategoryDone},
+	}
+
+	publisher := &mockSLAPublisher{}
+
+	// Simulate an item with 850% SLA (8.5 days elapsed on a 1-day target),
+	// and an escalation list created only 1 day ago. The threshold was already
+	// crossed long before the list was created — should NOT fire.
+	task := NewSLAMonitorTask(
+		&mockSLAProjectRepo{projects: []model.Project{
+			{ID: projectID, Key: "TP", DefaultWorkflowID: &workflowID},
+		}},
+		&mockSLAInfoComputer{info: map[uuid.UUID]*model.SLAInfo{
+			workItemID: {
+				TargetSeconds:  86400, // 1 day
+				ElapsedSeconds: 734400, // 8.5 days
+				Percentage:     850,
+				Status:         model.SLAStatusBreached,
+			},
+		}},
+		&mockSLAEscalationRepo{
+			lists: map[uuid.UUID][]model.EscalationList{
+				projectID: {{
+					ID:        escListID,
+					ProjectID: projectID,
+					CreatedAt: time.Now().Add(-24 * time.Hour), // created 1 day ago
+					Levels: []model.EscalationLevel{
+						{ThresholdPct: 75, Position: 0},
+						{ThresholdPct: 100, Position: 1},
+					},
+				}},
+			},
+			mappings: map[uuid.UUID][]model.TypeEscalationMapping{
+				projectID: {{ProjectID: projectID, WorkItemType: "ticket", EscalationListID: escListID}},
+			},
+		},
+		&mockSLANotifRepo{sent: map[string]bool{}},
+		&mockSLAItemRepo{items: map[uuid.UUID]*model.WorkItemList{
+			projectID: {
+				Items: []model.WorkItem{{
+					ID: workItemID, ProjectID: projectID, ItemNumber: 135,
+					Title: "Old breached item", Type: "ticket", Status: "Open", Priority: "medium",
+				}},
+			},
+		}},
+		&mockSLAWorkflowRepo{statuses: map[uuid.UUID][]model.WorkflowStatus{workflowID: wfStatuses}},
+		&mockSLATypeWorkflowRepo{mappings: map[uuid.UUID][]model.ProjectTypeWorkflow{}},
+		publisher,
+		zerolog.Nop(),
+	)
+
+	if err := task.Run(context.Background()); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(publisher.published) != 0 {
+		t.Fatalf("expected 0 published events (retroactive breach), got %d", len(publisher.published))
+	}
+}
+
+func TestSLAMonitor_Run_AllowsNewBreachAfterListCreation(t *testing.T) {
+	projectID := uuid.New()
+	workflowID := uuid.New()
+	escListID := uuid.New()
+	workItemID := uuid.New()
+
+	wfStatuses := []model.WorkflowStatus{
+		{Name: "Open", Category: model.CategoryTodo},
+		{Name: "Done", Category: model.CategoryDone},
+	}
+
+	publisher := &mockSLAPublisher{}
+
+	// Escalation list created 2 hours ago, item has 50 minutes elapsed on a 1-hour
+	// target (83%). The item crossed the threshold AFTER the list was created.
+	task := NewSLAMonitorTask(
+		&mockSLAProjectRepo{projects: []model.Project{
+			{ID: projectID, Key: "TP", DefaultWorkflowID: &workflowID},
+		}},
+		&mockSLAInfoComputer{info: map[uuid.UUID]*model.SLAInfo{
+			workItemID: {
+				TargetSeconds:  3600, // 1 hour
+				ElapsedSeconds: 3000, // 50 minutes
+				Percentage:     83,
+				Status:         model.SLAStatusWarning,
+			},
+		}},
+		&mockSLAEscalationRepo{
+			lists: map[uuid.UUID][]model.EscalationList{
+				projectID: {{
+					ID:        escListID,
+					ProjectID: projectID,
+					CreatedAt: time.Now().Add(-2 * time.Hour), // created 2 hours ago
+					Levels: []model.EscalationLevel{
+						{ThresholdPct: 75, Position: 0},
+					},
+				}},
+			},
+			mappings: map[uuid.UUID][]model.TypeEscalationMapping{
+				projectID: {{ProjectID: projectID, WorkItemType: "ticket", EscalationListID: escListID}},
+			},
+		},
+		&mockSLANotifRepo{sent: map[string]bool{}},
+		&mockSLAItemRepo{items: map[uuid.UUID]*model.WorkItemList{
+			projectID: {
+				Items: []model.WorkItem{{
+					ID: workItemID, ProjectID: projectID, ItemNumber: 1,
+					Title: "New breach", Type: "ticket", Status: "Open", Priority: "medium",
+				}},
+			},
+		}},
+		&mockSLAWorkflowRepo{statuses: map[uuid.UUID][]model.WorkflowStatus{workflowID: wfStatuses}},
+		&mockSLATypeWorkflowRepo{mappings: map[uuid.UUID][]model.ProjectTypeWorkflow{}},
+		publisher,
+		zerolog.Nop(),
+	)
+
+	if err := task.Run(context.Background()); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(publisher.published) != 1 {
+		t.Fatalf("expected 1 published event (new breach after list creation), got %d", len(publisher.published))
+	}
+}
+
+func TestSLAMonitor_Run_RecordsSentAfterPublish(t *testing.T) {
+	projectID := uuid.New()
+	workflowID := uuid.New()
+	escListID := uuid.New()
+	workItemID := uuid.New()
+
+	wfStatuses := []model.WorkflowStatus{
+		{Name: "Open", Category: model.CategoryTodo},
+		{Name: "Done", Category: model.CategoryDone},
+	}
+
+	publisher := &mockSLAPublisher{}
+	notifRepo := &mockSLANotifRepo{sent: map[string]bool{}}
+
+	task := NewSLAMonitorTask(
+		&mockSLAProjectRepo{projects: []model.Project{
+			{ID: projectID, Key: "TP", DefaultWorkflowID: &workflowID},
+		}},
+		&mockSLAInfoComputer{info: map[uuid.UUID]*model.SLAInfo{
+			workItemID: {
+				TargetSeconds:  3600,
+				ElapsedSeconds: 3000,
+				Percentage:     83,
+				Status:         model.SLAStatusWarning,
+			},
+		}},
+		&mockSLAEscalationRepo{
+			lists: map[uuid.UUID][]model.EscalationList{
+				projectID: {{
+					ID:        escListID,
+					ProjectID: projectID,
+					CreatedAt: time.Now().Add(-2 * time.Hour),
+					Levels: []model.EscalationLevel{
+						{ThresholdPct: 75, Position: 0},
+					},
+				}},
+			},
+			mappings: map[uuid.UUID][]model.TypeEscalationMapping{
+				projectID: {{ProjectID: projectID, WorkItemType: "ticket", EscalationListID: escListID}},
+			},
+		},
+		notifRepo,
+		&mockSLAItemRepo{items: map[uuid.UUID]*model.WorkItemList{
+			projectID: {
+				Items: []model.WorkItem{{
+					ID: workItemID, ProjectID: projectID, ItemNumber: 1,
+					Title: "Test", Type: "ticket", Status: "Open", Priority: "medium",
+				}},
+			},
+		}},
+		&mockSLAWorkflowRepo{statuses: map[uuid.UUID][]model.WorkflowStatus{workflowID: wfStatuses}},
+		&mockSLATypeWorkflowRepo{mappings: map[uuid.UUID][]model.ProjectTypeWorkflow{}},
+		publisher,
+		zerolog.Nop(),
+	)
+
+	if err := task.Run(context.Background()); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Verify the notification was published
+	if len(publisher.published) != 1 {
+		t.Fatalf("expected 1 published event, got %d", len(publisher.published))
+	}
+
+	// Verify RecordSent was called in the monitor (preventing duplicates on next scan)
+	key := slaNotifKey(workItemID, "Open", 1, 75)
+	if !notifRepo.sent[key] {
+		t.Error("expected RecordSent to be called in monitor after publishing, but it was not")
+	}
+
+	// Run again — should NOT publish a second event (deduplication via RecordSent)
+	if err := task.Run(context.Background()); err != nil {
+		t.Fatalf("unexpected error on second run: %v", err)
+	}
+
+	if len(publisher.published) != 1 {
+		t.Fatalf("expected still 1 published event after second run (dedup), got %d", len(publisher.published))
+	}
+}
+
+func TestSLAMonitor_Run_RetroactivePartialSkip(t *testing.T) {
+	projectID := uuid.New()
+	workflowID := uuid.New()
+	escListID := uuid.New()
+	workItemID := uuid.New()
+
+	wfStatuses := []model.WorkflowStatus{
+		{Name: "Open", Category: model.CategoryTodo},
+		{Name: "Done", Category: model.CategoryDone},
+	}
+
+	publisher := &mockSLAPublisher{}
+
+	// Item at 110% with a 1-hour target. List created 30 minutes ago.
+	// At list creation: elapsedAtCreation = 3960 - 1800 = 2160, pctAtCreation = 60%
+	// Level 1 (50% threshold): 60% >= 50% → retroactive, skip
+	// Level 2 (100% threshold): 60% < 100% → new breach, fire
+	task := NewSLAMonitorTask(
+		&mockSLAProjectRepo{projects: []model.Project{
+			{ID: projectID, Key: "TP", DefaultWorkflowID: &workflowID},
+		}},
+		&mockSLAInfoComputer{info: map[uuid.UUID]*model.SLAInfo{
+			workItemID: {
+				TargetSeconds:  3600,
+				ElapsedSeconds: 3960, // 110%
+				Percentage:     110,
+				Status:         model.SLAStatusBreached,
+			},
+		}},
+		&mockSLAEscalationRepo{
+			lists: map[uuid.UUID][]model.EscalationList{
+				projectID: {{
+					ID:        escListID,
+					ProjectID: projectID,
+					CreatedAt: time.Now().Add(-30 * time.Minute),
+					Levels: []model.EscalationLevel{
+						{ThresholdPct: 50, Position: 0},
+						{ThresholdPct: 100, Position: 1},
+					},
+				}},
+			},
+			mappings: map[uuid.UUID][]model.TypeEscalationMapping{
+				projectID: {{ProjectID: projectID, WorkItemType: "ticket", EscalationListID: escListID}},
+			},
+		},
+		&mockSLANotifRepo{sent: map[string]bool{}},
+		&mockSLAItemRepo{items: map[uuid.UUID]*model.WorkItemList{
+			projectID: {
+				Items: []model.WorkItem{{
+					ID: workItemID, ProjectID: projectID, ItemNumber: 1,
+					Title: "Partial retroactive", Type: "ticket", Status: "Open", Priority: "medium",
+				}},
+			},
+		}},
+		&mockSLAWorkflowRepo{statuses: map[uuid.UUID][]model.WorkflowStatus{workflowID: wfStatuses}},
+		&mockSLATypeWorkflowRepo{mappings: map[uuid.UUID][]model.ProjectTypeWorkflow{}},
+		publisher,
+		zerolog.Nop(),
+	)
+
+	if err := task.Run(context.Background()); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Only level 2 (100% threshold) should fire — level 1 (50%) was retroactive
+	if len(publisher.published) != 1 {
+		t.Fatalf("expected 1 published event (only non-retroactive threshold), got %d", len(publisher.published))
+	}
+
+	var evt model.SLABreachEvent
+	json.Unmarshal(publisher.published[0].data, &evt)
+	if evt.ThresholdPct != 100 {
+		t.Errorf("expected threshold 100 (non-retroactive), got %d", evt.ThresholdPct)
+	}
+	if evt.EscalationLevel != 2 {
+		t.Errorf("expected escalation level 2, got %d", evt.EscalationLevel)
 	}
 }
 

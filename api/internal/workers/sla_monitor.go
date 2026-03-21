@@ -25,6 +25,7 @@ type slaEscalationRepository interface {
 // slaNotificationRepository tracks which notifications have been sent.
 type slaNotificationRepository interface {
 	HasBeenSent(ctx context.Context, workItemID uuid.UUID, statusName string, level, thresholdPct int) (bool, error)
+	RecordSent(ctx context.Context, workItemID uuid.UUID, statusName string, level, thresholdPct int) error
 }
 
 // slaWorkItemRepository loads active work items for SLA checking.
@@ -185,6 +186,25 @@ func (t *SLAMonitorTask) scanProject(ctx context.Context, project *model.Project
 
 			escalationLevel := levelIdx + 1
 
+			// Skip retroactive notifications: if the threshold was already
+			// crossed before the escalation list was created, this is a
+			// pre-existing breach that should not trigger a notification.
+			if !escList.CreatedAt.IsZero() && slaInfo.TargetSeconds > 0 {
+				secondsSinceListCreated := int(time.Since(escList.CreatedAt).Seconds())
+				elapsedAtListCreation := slaInfo.ElapsedSeconds - secondsSinceListCreated
+				if elapsedAtListCreation > 0 {
+					pctAtListCreation := (elapsedAtListCreation * 100) / slaInfo.TargetSeconds
+					if pctAtListCreation >= level.ThresholdPct {
+						t.logger.Debug().
+							Str("work_item_id", item.ID.String()).
+							Int("threshold_pct", level.ThresholdPct).
+							Int("pct_at_list_creation", pctAtListCreation).
+							Msg("skipping retroactive SLA notification")
+						continue
+					}
+				}
+			}
+
 			// Check if already sent
 			sent, err := t.notifications.HasBeenSent(ctx, item.ID, item.Status, escalationLevel, level.ThresholdPct)
 			if err != nil {
@@ -219,6 +239,15 @@ func (t *SLAMonitorTask) scanProject(ctx context.Context, project *model.Project
 					Int("threshold_pct", level.ThresholdPct).
 					Msg("failed to publish SLA breach event")
 				continue
+			}
+
+			// Record sent immediately to prevent duplicates from subsequent
+			// scans that may run before the notification sender processes the event.
+			if err := t.notifications.RecordSent(ctx, item.ID, item.Status, escalationLevel, level.ThresholdPct); err != nil {
+				t.logger.Warn().Err(err).
+					Str("work_item_id", item.ID.String()).
+					Int("threshold_pct", level.ThresholdPct).
+					Msg("failed to record SLA notification sent in monitor")
 			}
 
 			published++
