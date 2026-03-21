@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 
@@ -284,7 +285,7 @@ func newTestNamespaceService() (*NamespaceService, *mockNamespaceRepo, *mockName
 	projectRepo := newMockNamespaceProjectRepo()
 	userRepo := newMockNamespaceUserRepo()
 	settingsRepo := newMockNamespaceSystemSettingsRepo()
-	svc := NewNamespaceService(nsRepo, memberRepo, projectRepo, userRepo, settingsRepo)
+	svc := NewNamespaceService(nsRepo, memberRepo, projectRepo, userRepo, settingsRepo, nil)
 	return svc, nsRepo, memberRepo, projectRepo, userRepo
 }
 
@@ -483,7 +484,7 @@ func newTestNamespaceServiceWithSettings() (*NamespaceService, *mockNamespaceRep
 	projectRepo := newMockNamespaceProjectRepo()
 	userRepo := newMockNamespaceUserRepo()
 	settingsRepo := newMockNamespaceSystemSettingsRepo()
-	svc := NewNamespaceService(nsRepo, memberRepo, projectRepo, userRepo, settingsRepo)
+	svc := NewNamespaceService(nsRepo, memberRepo, projectRepo, userRepo, settingsRepo, nil)
 	return svc, nsRepo, memberRepo, projectRepo, userRepo, settingsRepo
 }
 
@@ -702,7 +703,7 @@ func TestDeleteNamespace_NotEmptyDenied(t *testing.T) {
 	projectRepo := newMockNamespaceProjectRepo()
 	userRepo := newMockNamespaceUserRepo()
 	settingsRepo := newMockNamespaceSystemSettingsRepo()
-	svc := NewNamespaceService(nsRepo, memberRepo, projectRepo, userRepo, settingsRepo)
+	svc := NewNamespaceService(nsRepo, memberRepo, projectRepo, userRepo, settingsRepo, nil)
 
 	userID := userRepo.addUser(model.RoleUser)
 	info := nsUserAuthInfo(userID)
@@ -941,5 +942,111 @@ func TestAddNamespaceMember_InvalidRole(t *testing.T) {
 	_, err := svc.AddNamespaceMember(context.Background(), info, "team", targetID, "invalid-role")
 	if !errors.Is(err, model.ErrValidation) {
 		t.Fatalf("expected ErrValidation for invalid role, got %v", err)
+	}
+}
+
+// --- ListUserNamespaces with hide_non_member_projects tests ---
+
+// mockNamespaceRepoWithMembership differentiates List (all) from ListByUser (member-only).
+type mockNamespaceRepoWithMembership struct {
+	*mockNamespaceRepo
+	memberNamespaces []model.Namespace
+}
+
+func (r *mockNamespaceRepoWithMembership) ListByUser(_ context.Context, _ uuid.UUID) ([]model.Namespace, error) {
+	return r.memberNamespaces, nil
+}
+
+// mockNamespaceUserSettingsRepo stores per-user global preferences.
+type mockNamespaceUserSettingsRepo struct {
+	settings map[string]*model.UserSetting // key: "userID:settingKey"
+}
+
+func newMockNamespaceUserSettingsRepo() *mockNamespaceUserSettingsRepo {
+	return &mockNamespaceUserSettingsRepo{settings: make(map[string]*model.UserSetting)}
+}
+
+func (r *mockNamespaceUserSettingsRepo) Get(_ context.Context, userID uuid.UUID, _ *uuid.UUID, key string) (*model.UserSetting, error) {
+	s, ok := r.settings[userID.String()+":"+key]
+	if !ok {
+		return nil, model.ErrNotFound
+	}
+	return s, nil
+}
+
+func (r *mockNamespaceUserSettingsRepo) setHideNonMember(userID uuid.UUID, hide bool) {
+	r.settings[userID.String()+":hide_non_member_projects"] = &model.UserSetting{
+		UserID: userID,
+		Key:    "hide_non_member_projects",
+		Value:  json.RawMessage(func() string { if hide { return "true" }; return "false" }()),
+	}
+}
+
+func TestListUserNamespaces_AdminSeesAllWithoutPreference(t *testing.T) {
+	nsRepo := &mockNamespaceRepoWithMembership{
+		mockNamespaceRepo: newMockNamespaceRepo(),
+		memberNamespaces:  []model.Namespace{{Slug: "mine"}},
+	}
+	nsRepo.Create(context.Background(), &model.Namespace{ID: uuid.New(), Slug: "mine", DisplayName: "Mine"})
+	nsRepo.Create(context.Background(), &model.Namespace{ID: uuid.New(), Slug: "other", DisplayName: "Other"})
+
+	svc := NewNamespaceService(nsRepo, newMockNamespaceMemberRepo(), newMockNamespaceProjectRepo(), newMockNamespaceUserRepo(), newMockNamespaceSystemSettingsRepo(), nil)
+	info := nsAdminAuthInfo()
+
+	namespaces, err := svc.ListUserNamespaces(context.Background(), info)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(namespaces) != 2 {
+		t.Fatalf("expected 2 namespaces (all), got %d", len(namespaces))
+	}
+}
+
+func TestListUserNamespaces_AdminHidesNonMemberNamespaces(t *testing.T) {
+	nsRepo := &mockNamespaceRepoWithMembership{
+		mockNamespaceRepo: newMockNamespaceRepo(),
+		memberNamespaces:  []model.Namespace{{Slug: "mine"}},
+	}
+	nsRepo.Create(context.Background(), &model.Namespace{ID: uuid.New(), Slug: "mine", DisplayName: "Mine"})
+	nsRepo.Create(context.Background(), &model.Namespace{ID: uuid.New(), Slug: "other", DisplayName: "Other"})
+
+	userSettingsRepo := newMockNamespaceUserSettingsRepo()
+	svc := NewNamespaceService(nsRepo, newMockNamespaceMemberRepo(), newMockNamespaceProjectRepo(), newMockNamespaceUserRepo(), newMockNamespaceSystemSettingsRepo(), userSettingsRepo)
+
+	info := nsAdminAuthInfo()
+	userSettingsRepo.setHideNonMember(info.UserID, true)
+
+	namespaces, err := svc.ListUserNamespaces(context.Background(), info)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(namespaces) != 1 {
+		t.Fatalf("expected 1 namespace (member-only), got %d", len(namespaces))
+	}
+	if namespaces[0].Slug != "mine" {
+		t.Fatalf("expected slug 'mine', got %q", namespaces[0].Slug)
+	}
+}
+
+func TestListUserNamespaces_AdminHideDisabledSeesAll(t *testing.T) {
+	nsRepo := &mockNamespaceRepoWithMembership{
+		mockNamespaceRepo: newMockNamespaceRepo(),
+		memberNamespaces:  []model.Namespace{{Slug: "mine"}},
+	}
+	nsRepo.Create(context.Background(), &model.Namespace{ID: uuid.New(), Slug: "mine", DisplayName: "Mine"})
+	nsRepo.Create(context.Background(), &model.Namespace{ID: uuid.New(), Slug: "other", DisplayName: "Other"})
+
+	userSettingsRepo := newMockNamespaceUserSettingsRepo()
+	svc := NewNamespaceService(nsRepo, newMockNamespaceMemberRepo(), newMockNamespaceProjectRepo(), newMockNamespaceUserRepo(), newMockNamespaceSystemSettingsRepo(), userSettingsRepo)
+
+	info := nsAdminAuthInfo()
+	userSettingsRepo.setHideNonMember(info.UserID, false)
+
+	namespaces, err := svc.ListUserNamespaces(context.Background(), info)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(namespaces) != 2 {
+		t.Fatalf("expected 2 namespaces (hide disabled), got %d", len(namespaces))
 	}
 }

@@ -66,6 +66,11 @@ type NamespaceSystemSettingsRepository interface {
 	Get(ctx context.Context, key string) (*model.SystemSetting, error)
 }
 
+// NamespaceUserSettingsRepository defines user setting operations needed by the namespace service.
+type NamespaceUserSettingsRepository interface {
+	Get(ctx context.Context, userID uuid.UUID, projectID *uuid.UUID, key string) (*model.UserSetting, error)
+}
+
 // NamespaceService handles namespace business logic.
 type NamespaceService struct {
 	namespaces     NamespaceRepository
@@ -73,16 +78,18 @@ type NamespaceService struct {
 	projects       NamespaceProjectRepository
 	users          NamespaceUserRepository
 	systemSettings NamespaceSystemSettingsRepository
+	userSettings   NamespaceUserSettingsRepository
 }
 
 // NewNamespaceService creates a new NamespaceService.
-func NewNamespaceService(namespaces NamespaceRepository, members NamespaceMemberRepository, projects NamespaceProjectRepository, users NamespaceUserRepository, systemSettings NamespaceSystemSettingsRepository) *NamespaceService {
+func NewNamespaceService(namespaces NamespaceRepository, members NamespaceMemberRepository, projects NamespaceProjectRepository, users NamespaceUserRepository, systemSettings NamespaceSystemSettingsRepository, userSettings NamespaceUserSettingsRepository) *NamespaceService {
 	return &NamespaceService{
 		namespaces:     namespaces,
 		members:        members,
 		projects:       projects,
 		users:          users,
 		systemSettings: systemSettings,
+		userSettings:   userSettings,
 	}
 }
 
@@ -181,7 +188,7 @@ func (s *NamespaceService) GetNamespace(ctx context.Context, info *model.AuthInf
 
 // ListUserNamespaces returns all namespaces the user belongs to.
 func (s *NamespaceService) ListUserNamespaces(ctx context.Context, info *model.AuthInfo) ([]model.Namespace, error) {
-	if info.GlobalRole == model.RoleAdmin {
+	if info.GlobalRole == model.RoleAdmin && !s.adminHidesNonMember(ctx, info.UserID) {
 		return s.namespaces.List(ctx)
 	}
 	return s.namespaces.ListByUser(ctx, info.UserID)
@@ -665,6 +672,23 @@ func (s *NamespaceService) SeedDefaultNamespace(ctx context.Context) error {
 }
 
 // --- Helpers ---
+
+// adminHidesNonMember checks whether the admin user has enabled the
+// "hide_non_member_projects" global preference. Returns false on any error.
+func (s *NamespaceService) adminHidesNonMember(ctx context.Context, userID uuid.UUID) bool {
+	if s.userSettings == nil {
+		return false
+	}
+	setting, err := s.userSettings.Get(ctx, userID, nil, "hide_non_member_projects")
+	if err != nil {
+		return false
+	}
+	var hide bool
+	if err := json.Unmarshal(setting.Value, &hide); err != nil {
+		return false
+	}
+	return hide
+}
 
 // requireNamespacesEnabled checks the feature flag.
 func (s *NamespaceService) requireNamespacesEnabled(ctx context.Context) error {

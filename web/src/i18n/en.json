@@ -496,7 +496,7 @@
   "preferences.general.description": "General preferences for your account.",
   "preferences.general.adminSection": "Administrator",
   "preferences.general.hideNonMember": "Hide non-member projects",
-  "preferences.general.hideNonMemberDesc": "Only show projects you are a member or owner of in the project list.",
+  "preferences.general.hideNonMemberDesc": "Only show projects and namespaces you are a member or owner of.",
   "preferences.general.noSettings": "No general settings available for your account.",
   "preferences.appearance": "Appearance",
   "preferences.theme": "Theme",
