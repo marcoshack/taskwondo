@@ -113,17 +113,20 @@ func (s *NamespaceService) CreateNamespace(ctx context.Context, info *model.Auth
 				return nil, fmt.Errorf("counting user namespaces: %w", err)
 			}
 			if count >= limit {
-				return nil, fmt.Errorf("namespace ownership limit reached; contact an administrator to increase your limit: %w", model.ErrForbidden)
+				return nil, model.NewKeyedError(model.ErrForbidden, "namespace_limit_reached",
+					"namespace ownership limit reached; contact an administrator to increase your limit", nil)
 			}
 		}
 	}
 
 	if !namespaceSlugRegexp.MatchString(slug) {
-		return nil, fmt.Errorf("namespace slug must be 2-30 lowercase alphanumeric characters or hyphens, starting with a letter: %w", model.ErrValidation)
+		return nil, model.NewKeyedError(model.ErrValidation, "namespace_slug_invalid",
+			"namespace slug must be 2-30 lowercase alphanumeric characters or hyphens, starting with a letter", nil)
 	}
 
 	if reservedSlugs[slug] {
-		return nil, fmt.Errorf("namespace slug %q is reserved: %w", slug, model.ErrValidation)
+		return nil, model.NewKeyedError(model.ErrValidation, "namespace_slug_reserved",
+			fmt.Sprintf("namespace slug %q is reserved", slug), map[string]string{"slug": slug})
 	}
 
 	if err := s.checkReservedSlug(ctx, slug); err != nil {
@@ -131,13 +134,15 @@ func (s *NamespaceService) CreateNamespace(ctx context.Context, info *model.Auth
 	}
 
 	if displayName == "" {
-		return nil, fmt.Errorf("display_name is required: %w", model.ErrValidation)
+		return nil, model.NewKeyedError(model.ErrValidation, "display_name_required",
+			"display_name is required", nil)
 	}
 
 	// Check for duplicate slug
 	existing, err := s.namespaces.GetBySlug(ctx, slug)
 	if err == nil && existing != nil {
-		return nil, fmt.Errorf("namespace slug %q already in use: %w", slug, model.ErrAlreadyExists)
+		return nil, model.NewKeyedError(model.ErrAlreadyExists, "namespace_slug_in_use",
+			fmt.Sprintf("namespace slug %q already in use", slug), map[string]string{"slug": slug})
 	}
 	if err != nil && err != model.ErrNotFound {
 		return nil, fmt.Errorf("checking namespace slug: %w", err)
@@ -215,10 +220,12 @@ func (s *NamespaceService) UpdateNamespace(ctx context.Context, info *model.Auth
 
 	if newSlug != nil {
 		if !namespaceSlugRegexp.MatchString(*newSlug) {
-			return nil, fmt.Errorf("namespace slug must be 2-30 lowercase alphanumeric characters or hyphens, starting with a letter: %w", model.ErrValidation)
+			return nil, model.NewKeyedError(model.ErrValidation, "namespace_slug_invalid",
+				"namespace slug must be 2-30 lowercase alphanumeric characters or hyphens, starting with a letter", nil)
 		}
 		if reservedSlugs[*newSlug] {
-			return nil, fmt.Errorf("namespace slug %q is reserved: %w", *newSlug, model.ErrValidation)
+			return nil, model.NewKeyedError(model.ErrValidation, "namespace_slug_reserved",
+				fmt.Sprintf("namespace slug %q is reserved", *newSlug), map[string]string{"slug": *newSlug})
 		}
 		if err := s.checkReservedSlug(ctx, *newSlug); err != nil {
 			return nil, err
@@ -227,7 +234,8 @@ func (s *NamespaceService) UpdateNamespace(ctx context.Context, info *model.Auth
 		if *newSlug != ns.Slug {
 			existing, err := s.namespaces.GetBySlug(ctx, *newSlug)
 			if err == nil && existing != nil {
-				return nil, fmt.Errorf("namespace slug %q already in use: %w", *newSlug, model.ErrAlreadyExists)
+				return nil, model.NewKeyedError(model.ErrAlreadyExists, "namespace_slug_in_use",
+					fmt.Sprintf("namespace slug %q already in use", *newSlug), map[string]string{"slug": *newSlug})
 			}
 			if err != nil && err != model.ErrNotFound {
 				return nil, fmt.Errorf("checking namespace slug: %w", err)
@@ -880,7 +888,8 @@ func (s *NamespaceService) checkReservedSlug(ctx context.Context, slug string) e
 	}
 	for _, reserved := range denyList {
 		if reserved == slug {
-			return fmt.Errorf("namespace slug %q is reserved: %w", slug, model.ErrValidation)
+			return model.NewKeyedError(model.ErrValidation, "namespace_slug_reserved",
+				fmt.Sprintf("namespace slug %q is reserved", slug), map[string]string{"slug": slug})
 		}
 	}
 	return nil

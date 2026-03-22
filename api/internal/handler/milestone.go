@@ -299,7 +299,7 @@ func handleMilestoneError(w http.ResponseWriter, r *http.Request, err error, log
 		return
 	}
 	if errors.Is(err, model.ErrValidation) {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+		writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
 		return
 	}
 

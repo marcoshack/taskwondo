@@ -409,7 +409,7 @@ func handleNamespaceError(w http.ResponseWriter, r *http.Request, err error, log
 		return
 	}
 	if errors.Is(err, model.ErrAlreadyExists) {
-		writeError(w, http.StatusConflict, "CONFLICT", err.Error())
+		writeErrorFromService(w, http.StatusConflict, "CONFLICT", err)
 		return
 	}
 	if errors.Is(err, model.ErrNamespacesDisabled) {
@@ -417,15 +417,15 @@ func handleNamespaceError(w http.ResponseWriter, r *http.Request, err error, log
 		return
 	}
 	if errors.Is(err, model.ErrNamespaceNotEmpty) {
-		writeError(w, http.StatusConflict, "NAMESPACE_NOT_EMPTY", err.Error())
+		writeErrorFromService(w, http.StatusConflict, "NAMESPACE_NOT_EMPTY", err)
 		return
 	}
 	if errors.Is(err, model.ErrValidation) {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+		writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
 		return
 	}
 	if errors.Is(err, model.ErrConflict) {
-		writeError(w, http.StatusConflict, "CONFLICT", err.Error())
+		writeErrorFromService(w, http.StatusConflict, "CONFLICT", err)
 		return
 	}
 

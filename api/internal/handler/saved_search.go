@@ -198,7 +198,7 @@ func handleSavedSearchError(w http.ResponseWriter, r *http.Request, err error, l
 		return
 	}
 	if errors.Is(err, model.ErrValidation) {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+		writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
 		return
 	}
 

@@ -694,11 +694,11 @@ func handleWorkflowError(w http.ResponseWriter, r *http.Request, err error, logM
 		return
 	}
 	if errors.Is(err, model.ErrValidation) {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+		writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
 		return
 	}
 	if errors.Is(err, model.ErrForbidden) {
-		writeError(w, http.StatusForbidden, "FORBIDDEN", err.Error())
+		writeErrorFromService(w, http.StatusForbidden, "FORBIDDEN", err)
 		return
 	}
 

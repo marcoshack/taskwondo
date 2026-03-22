@@ -5,8 +5,8 @@ import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { isAxiosError } from 'axios'
 import * as authApi from '@/api/auth'
+import { getLocalizedError } from '@/utils/apiError'
 import { useBrand } from '@/contexts/BrandContext'
 import { PoweredByFooter } from '@/components/PoweredByFooter'
 
@@ -49,11 +49,7 @@ export function ChangePasswordPage() {
       clearForcePasswordChange(token)
       navigate('/d/projects', { replace: true })
     } catch (err) {
-      if (isAxiosError(err) && err.response?.data?.error?.message) {
-        setError(err.response.data.error.message)
-      } else {
-        setError(t('changePassword.error'))
-      }
+      setError(getLocalizedError(err, t, 'changePassword.error'))
     } finally {
       setLoading(false)
     }

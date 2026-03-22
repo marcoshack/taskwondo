@@ -19,7 +19,7 @@ import { NamespaceIcon } from '@/components/NamespaceIcon'
 import { UserSearchInput } from '@/components/UserSearchInput'
 import { MentionSearchModal } from '@/components/ui/MentionSearchModal'
 import { useMentionAutocomplete } from '@/hooks/useMentionAutocomplete'
-import type { AxiosError } from 'axios'
+import { getLocalizedError } from '@/utils/apiError'
 import type { UserSearchResult } from '@/api/users'
 
 function TruncatedName({ name, className }: { name: string; className?: string }) {
@@ -195,8 +195,7 @@ export function ProjectSettingsPage() {
         showSaved('general')
       },
       onError: (err) => {
-        const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-        setSaveError(axiosErr.response?.data?.error?.message ?? t('projects.settings.updateError'))
+        setSaveError(getLocalizedError(err, t, 'projects.settings.updateError'))
       },
     })
   }
@@ -208,8 +207,7 @@ export function ProjectSettingsPage() {
         navigate(p('/projects'), { replace: true })
       },
       onError: (err) => {
-        const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-        setSaveError(axiosErr.response?.data?.error?.message ?? t('projects.settings.deleteError'))
+        setSaveError(getLocalizedError(err, t, 'projects.settings.deleteError'))
         setShowDeleteModal(false)
       },
     })
@@ -228,8 +226,7 @@ export function ProjectSettingsPage() {
           showSaved('addMember')
         },
         onError: (err) => {
-          const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-          setMemberError(axiosErr.response?.data?.error?.message ?? t('projects.settings.addMemberError'))
+          setMemberError(getLocalizedError(err, t, 'projects.settings.addMemberError'))
         },
       },
     )
@@ -253,8 +250,7 @@ export function ProjectSettingsPage() {
           }
         },
         onError: (err) => {
-          const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-          setMemberError(axiosErr.response?.data?.error?.message ?? t('projects.settings.emailInviteError'))
+          setMemberError(getLocalizedError(err, t, 'projects.settings.emailInviteError'))
         },
       },
     )
@@ -270,8 +266,7 @@ export function ProjectSettingsPage() {
           showSaved(`role:${userId}`)
         },
         onError: (err) => {
-          const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-          setMemberError(axiosErr.response?.data?.error?.message ?? t('projects.settings.updateRoleError'))
+          setMemberError(getLocalizedError(err, t, 'projects.settings.updateRoleError'))
         },
       },
     )
@@ -289,8 +284,7 @@ export function ProjectSettingsPage() {
         }
       },
       onError: (err) => {
-        const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-        setMemberError(axiosErr.response?.data?.error?.message ?? t('projects.settings.removeMemberError'))
+        setMemberError(getLocalizedError(err, t, 'projects.settings.removeMemberError'))
         setRemoveTarget(null)
       },
     })
@@ -731,8 +725,7 @@ export function ProjectSettingsPage() {
                       showSaved('complexity')
                     },
                     onError: (err) => {
-                      const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-                      setComplexityError(axiosErr.response?.data?.error?.message ?? t('projects.settings.updateError'))
+                      setComplexityError(getLocalizedError(err, t, 'projects.settings.updateError'))
                     },
                   })
                 }}
@@ -751,8 +744,7 @@ export function ProjectSettingsPage() {
                         showSaved('complexity')
                       },
                       onError: (err) => {
-                        const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-                        setComplexityError(axiosErr.response?.data?.error?.message ?? t('projects.settings.updateError'))
+                        setComplexityError(getLocalizedError(err, t, 'projects.settings.updateError'))
                       },
                     })
                   }}
@@ -1001,8 +993,7 @@ export function ProjectSettingsPage() {
                     navigate(p('/projects'), { replace: true })
                   },
                   onError: (err) => {
-                    const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-                    setTransferError(axiosErr.response?.data?.error?.message ?? t('projects.settings.transferError'))
+                    setTransferError(getLocalizedError(err, t, 'projects.settings.transferError'))
                   },
                 },
               )

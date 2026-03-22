@@ -30,7 +30,7 @@ import { Tooltip } from '@/components/ui/Tooltip'
 import { SLAConfigModal } from '@/components/SLAConfigModal'
 import { EscalationListModal } from '@/components/EscalationListModal'
 import type { WorkflowStatus } from '@/api/workflows'
-import type { AxiosError } from 'axios'
+import { getLocalizedError } from '@/utils/apiError'
 
 const CATEGORY_COLORS: Record<string, 'blue' | 'indigo' | 'green' | 'gray'> = {
   todo: 'blue',
@@ -122,8 +122,7 @@ export function ProjectWorkflowsPage() {
         setDeleteTarget(null)
       },
       onError: (err) => {
-        const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-        setError(axiosErr.response?.data?.error?.message ?? t('workflows.deleteError'))
+        setError(getLocalizedError(err, t, 'workflows.deleteError'))
         setDeleteTarget(null)
       },
     })
@@ -285,8 +284,7 @@ export function ProjectWorkflowsPage() {
                           showSaved(`wf:${itemType}`)
                         },
                         onError: (err) => {
-                          const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-                          setWorkflowError(axiosErr.response?.data?.error?.message ?? t('projects.settings.workflowUpdateError'))
+                          setWorkflowError(getLocalizedError(err, t, 'projects.settings.workflowUpdateError'))
                         },
                       },
                     )
@@ -443,8 +441,7 @@ export function ProjectWorkflowsPage() {
                         deleteEscalationMappingMutation.mutate(itemType, {
                           onSuccess: () => showSaved(`esc:${itemType}`),
                           onError: (err) => {
-                            const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-                            setEscalationMappingError(axiosErr.response?.data?.error?.message ?? t('escalation.saveError'))
+                            setEscalationMappingError(getLocalizedError(err, t, 'escalation.saveError'))
                           },
                         })
                       } else {
@@ -453,8 +450,7 @@ export function ProjectWorkflowsPage() {
                           {
                             onSuccess: () => showSaved(`esc:${itemType}`),
                             onError: (err) => {
-                              const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-                              setEscalationMappingError(axiosErr.response?.data?.error?.message ?? t('escalation.saveError'))
+                              setEscalationMappingError(getLocalizedError(err, t, 'escalation.saveError'))
                             },
                           }
                         )
@@ -622,8 +618,7 @@ export function ProjectWorkflowsPage() {
                                 showSaved('businessHours')
                               },
                               onError: (err) => {
-                                const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-                                setBhError(axiosErr.response?.data?.error?.message ?? t('projects.settings.updateError'))
+                                setBhError(getLocalizedError(err, t, 'projects.settings.updateError'))
                               },
                             }
                           )
@@ -647,8 +642,7 @@ export function ProjectWorkflowsPage() {
                                   showSaved('businessHours')
                                 },
                                 onError: (err) => {
-                                  const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-                                  setBhError(axiosErr.response?.data?.error?.message ?? t('projects.settings.updateError'))
+                                  setBhError(getLocalizedError(err, t, 'projects.settings.updateError'))
                                 },
                               }
                             )
@@ -711,8 +705,7 @@ export function ProjectWorkflowsPage() {
                   setEscalationDeleteTarget(null)
                 },
                 onError: (err) => {
-                  const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-                  setEscalationError(axiosErr.response?.data?.error?.message ?? t('escalation.deleteError'))
+                  setEscalationError(getLocalizedError(err, t, 'escalation.deleteError'))
                   setEscalationDeleteTarget(null)
                 },
               })
@@ -1082,8 +1075,7 @@ function WorkflowEditorModal({
             onClose()
           },
           onError: (err) => {
-            const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-            onError(axiosErr.response?.data?.error?.message ?? t('workflows.updateError'))
+            onError(getLocalizedError(err, t, 'workflows.updateError'))
           },
         },
       )
@@ -1094,8 +1086,7 @@ function WorkflowEditorModal({
           onClose()
         },
         onError: (err) => {
-          const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-          onError(axiosErr.response?.data?.error?.message ?? t('workflows.createError'))
+          onError(getLocalizedError(err, t, 'workflows.createError'))
         },
       })
     }

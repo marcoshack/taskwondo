@@ -290,11 +290,11 @@ func handleInboxError(w http.ResponseWriter, r *http.Request, err error, logMsg 
 		return
 	}
 	if errors.Is(err, model.ErrValidation) {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+		writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
 		return
 	}
 	if errors.Is(err, model.ErrAlreadyExists) {
-		writeError(w, http.StatusConflict, "CONFLICT", err.Error())
+		writeErrorFromService(w, http.StatusConflict, "CONFLICT", err)
 		return
 	}
 

@@ -6,6 +6,8 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+
+	"github.com/marcoshack/taskwondo/internal/model"
 )
 
 // writeJSON writes a raw JSON response with the given status code.
@@ -45,4 +47,29 @@ func writeError(w http.ResponseWriter, status int, code string, message string) 
 			"message": message,
 		},
 	})
+}
+
+// writeErrorKeyed writes an error response with a stable error_key for frontend i18n.
+// The params map provides interpolation values for the localized message template.
+func writeErrorKeyed(w http.ResponseWriter, status int, code, errorKey, message string, params map[string]string) {
+	resp := map[string]interface{}{
+		"code":      code,
+		"error_key": errorKey,
+		"message":   message,
+	}
+	if len(params) > 0 {
+		resp["params"] = params
+	}
+	writeJSON(w, status, map[string]interface{}{"error": resp})
+}
+
+// writeErrorFromService writes an error response, automatically extracting
+// error_key and params from a KeyedError if present.
+func writeErrorFromService(w http.ResponseWriter, status int, code string, err error) {
+	key, params := model.ErrorKey(err)
+	if key != "" {
+		writeErrorKeyed(w, status, code, key, err.Error(), params)
+		return
+	}
+	writeError(w, status, code, err.Error())
 }

@@ -48,7 +48,7 @@ func (h *StatsHandler) Timeline(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, model.ErrNotFound):
 			writeError(w, http.StatusNotFound, "NOT_FOUND", "project not found")
 		case errors.Is(err, model.ErrValidation):
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+			writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
 		default:
 			writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to fetch stats")
 		}

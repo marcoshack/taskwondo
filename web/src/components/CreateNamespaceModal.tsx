@@ -5,6 +5,7 @@ import { useCreateNamespace, useOwnedNamespaceCount, useMaxNamespaces } from '@/
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { getLocalizedError } from '@/utils/apiError'
 import type { Namespace } from '@/api/namespaces'
 
 interface Props {
@@ -51,12 +52,7 @@ export function CreateNamespaceModal({ open, onClose, onCreated }: Props) {
           onCreated(created)
         },
         onError: (err) => {
-          if (err && typeof err === 'object' && 'response' in err) {
-            const axiosErr = err as { response?: { data?: { error?: { message?: string } } } }
-            setFormError(axiosErr.response?.data?.error?.message ?? t('namespaces.createError'))
-          } else {
-            setFormError(t('namespaces.createError'))
-          }
+          setFormError(getLocalizedError(err, t, 'namespaces.createError'))
         },
       },
     )

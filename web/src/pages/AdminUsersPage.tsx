@@ -16,7 +16,8 @@ import { MultiSelect } from '@/components/ui/MultiSelect'
 import { Spinner } from '@/components/ui/Spinner'
 import { Tooltip } from '@/components/ui/Tooltip'
 import type { AdminUser } from '@/api/admin'
-import type { AxiosError } from 'axios'
+import { isAxiosError } from 'axios'
+import { getLocalizedError } from '@/utils/apiError'
 
 const PREFERENCE_KEY = 'admin_users_status_filter'
 
@@ -213,8 +214,7 @@ export function AdminUsersPage() {
       {
         onSuccess: () => showSaved(`role:${userId}`),
         onError: (err) => {
-          const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-          setError(axiosErr.response?.data?.error?.message ?? t('admin.users.updateError'))
+          setError(getLocalizedError(err, t, 'admin.users.updateError'))
         },
       },
     )
@@ -231,8 +231,7 @@ export function AdminUsersPage() {
           setDisableTarget(null)
         },
         onError: (err) => {
-          const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-          setError(axiosErr.response?.data?.error?.message ?? t('admin.users.updateError'))
+          setError(getLocalizedError(err, t, 'admin.users.updateError'))
           setDisableTarget(null)
         },
       },
@@ -246,8 +245,7 @@ export function AdminUsersPage() {
       {
         onSuccess: () => showSaved(`status:${userId}`),
         onError: (err) => {
-          const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-          setError(axiosErr.response?.data?.error?.message ?? t('admin.users.updateError'))
+          setError(getLocalizedError(err, t, 'admin.users.updateError'))
         },
       },
     )
@@ -266,11 +264,10 @@ export function AdminUsersPage() {
           setRevealedUserName(data.user.display_name)
         },
         onError: (err) => {
-          const axiosErr = err as AxiosError<{ error?: { message?: string; code?: string } }>
-          if (axiosErr.response?.status === 409) {
+          if (isAxiosError(err) && err.response?.status === 409) {
             setCreateError(t('admin.users.emailExists'))
           } else {
-            setCreateError(axiosErr.response?.data?.error?.message ?? t('admin.users.createUserError'))
+            setCreateError(getLocalizedError(err, t, 'admin.users.createUserError'))
           }
         },
       },
@@ -286,8 +283,7 @@ export function AdminUsersPage() {
         setResetTarget(null)
       },
       onError: (err) => {
-        const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-        setError(axiosErr.response?.data?.error?.message ?? t('admin.users.resetPasswordError'))
+        setError(getLocalizedError(err, t, 'admin.users.resetPasswordError'))
         setResetTarget(null)
       },
     })
@@ -799,11 +795,11 @@ function UserProjectsPanel({
           setSelectedRole('member')
         },
         onError: (err) => {
-          const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-          const msg = axiosErr.response?.status === 409
-            ? t('admin.users.alreadyMember')
-            : axiosErr.response?.data?.error?.message ?? t('admin.users.addToProjectError')
-          setError(msg)
+          if (isAxiosError(err) && err.response?.status === 409) {
+            setError(t('admin.users.alreadyMember'))
+          } else {
+            setError(getLocalizedError(err, t, 'admin.users.addToProjectError'))
+          }
         },
       },
     )
@@ -817,8 +813,7 @@ function UserProjectsPanel({
         setRemoveTarget(null)
       },
       onError: (err) => {
-        const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-        setError(axiosErr.response?.data?.error?.message ?? t('admin.users.removeFromProjectError'))
+        setError(getLocalizedError(err, t, 'admin.users.removeFromProjectError'))
         setRemoveTarget(null)
       },
     })
@@ -918,8 +913,7 @@ function UserProjectsPanel({
                             {
                               onSuccess: () => showSaved(`role:${p.project_id}`),
                               onError: (err) => {
-                                const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-                                setError(axiosErr.response?.data?.error?.message ?? t('admin.users.updateError'))
+                                setError(getLocalizedError(err, t, 'admin.users.updateError'))
                               },
                             },
                           )

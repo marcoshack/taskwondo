@@ -5,7 +5,7 @@ import { WorkItemForm } from '@/components/workitems/WorkItemForm'
 import { useProjects, useMembers } from '@/hooks/useProjects'
 import { useCreateWorkItem } from '@/hooks/useWorkItems'
 import { useMilestones } from '@/hooks/useMilestones'
-import type { AxiosError } from 'axios'
+import { getLocalizedError } from '@/utils/apiError'
 
 interface CreateWorkItemModalProps {
   open: boolean
@@ -58,7 +58,7 @@ export function CreateWorkItemModal({ open, onClose, lockedProjectKey, onCreated
         }}
         onCancel={handleClose}
         isSubmitting={createMutation.isPending}
-        submitError={createMutation.error ? t('workitems.form.submitError', { message: (createMutation.error as AxiosError<{ error?: { message?: string } }>).response?.data?.error?.message ?? t('common.unknown') }) : null}
+        submitError={createMutation.error ? t('workitems.form.submitError', { message: getLocalizedError(createMutation.error, t, 'common.unknown') }) : null}
       />
     </Modal>
   )

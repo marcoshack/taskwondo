@@ -347,9 +347,9 @@ func handleEscalationError(w http.ResponseWriter, r *http.Request, err error, lo
 	case errors.Is(err, model.ErrForbidden):
 		writeError(w, http.StatusForbidden, "FORBIDDEN", "insufficient permissions")
 	case errors.Is(err, model.ErrValidation):
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+		writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
 	case errors.Is(err, model.ErrAlreadyExists) || errors.Is(err, model.ErrConflict):
-		writeError(w, http.StatusConflict, "CONFLICT", err.Error())
+		writeErrorFromService(w, http.StatusConflict, "CONFLICT", err)
 	default:
 		log.Ctx(r.Context()).Error().Err(err).Msg(logMsg)
 		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")

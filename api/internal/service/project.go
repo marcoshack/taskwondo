@@ -118,13 +118,15 @@ func (s *ProjectService) Create(ctx context.Context, info *model.AuthInfo, name,
 				return nil, fmt.Errorf("counting user projects: %w", err)
 			}
 			if count >= limit {
-				return nil, fmt.Errorf("project ownership limit reached; contact an administrator to increase your limit: %w", model.ErrForbidden)
+				return nil, model.NewKeyedError(model.ErrForbidden, "project_limit_reached",
+					"project ownership limit reached; contact an administrator to increase your limit", nil)
 			}
 		}
 	}
 
 	if !projectKeyRegexp.MatchString(key) {
-		return nil, fmt.Errorf("project key must be 2-5 uppercase alphanumeric characters starting with a letter: %w", model.ErrConflict)
+		return nil, model.NewKeyedError(model.ErrConflict, "project_key_invalid",
+			"project key must be 2-5 uppercase alphanumeric characters starting with a letter", nil)
 	}
 
 	if err := s.checkReservedKey(ctx, key); err != nil {
@@ -136,7 +138,8 @@ func (s *ProjectService) Create(ctx context.Context, info *model.AuthInfo, name,
 	if namespaceID != uuid.Nil {
 		existing, err := s.projects.GetByKeyAndNamespace(ctx, namespaceID, key)
 		if err == nil && existing != nil {
-			return nil, fmt.Errorf("project key %q already in use: %w", key, model.ErrAlreadyExists)
+			return nil, model.NewKeyedError(model.ErrAlreadyExists, "project_key_in_use",
+				fmt.Sprintf("project key %q already in use", key), map[string]string{"key": key})
 		}
 		if err != nil && err != model.ErrNotFound {
 			return nil, fmt.Errorf("checking project key: %w", err)
@@ -144,7 +147,8 @@ func (s *ProjectService) Create(ctx context.Context, info *model.AuthInfo, name,
 	} else {
 		existing, err := s.projects.GetByKey(ctx, key)
 		if err == nil && existing != nil {
-			return nil, fmt.Errorf("project key %q already in use: %w", key, model.ErrAlreadyExists)
+			return nil, model.NewKeyedError(model.ErrAlreadyExists, "project_key_in_use",
+				fmt.Sprintf("project key %q already in use", key), map[string]string{"key": key})
 		}
 		if err != nil && err != model.ErrNotFound {
 			return nil, fmt.Errorf("checking project key: %w", err)
@@ -1426,7 +1430,8 @@ func (s *ProjectService) checkReservedKey(ctx context.Context, key string) error
 	}
 	for _, reserved := range denyList {
 		if reserved == key {
-			return fmt.Errorf("project key %q is reserved: %w", key, model.ErrValidation)
+			return model.NewKeyedError(model.ErrValidation, "project_key_reserved",
+				fmt.Sprintf("project key %q is reserved", key), map[string]string{"key": key})
 		}
 	}
 	return nil

@@ -639,7 +639,8 @@ func (s *AuthService) RequestRegistration(ctx context.Context, email, displayNam
 	// Check user doesn't already exist
 	_, err = s.users.GetByEmail(ctx, email)
 	if err == nil {
-		return fmt.Errorf("%w: a user with this email already exists", model.ErrAlreadyExists)
+		return model.NewKeyedError(model.ErrAlreadyExists, "email_already_exists",
+			"a user with this email already exists", nil)
 	}
 	if !errors.Is(err, model.ErrNotFound) {
 		return fmt.Errorf("checking existing user: %w", err)

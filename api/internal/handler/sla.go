@@ -190,7 +190,7 @@ func handleSLAError(w http.ResponseWriter, r *http.Request, err error, msg strin
 	case errors.Is(err, model.ErrForbidden):
 		writeError(w, http.StatusForbidden, "FORBIDDEN", "insufficient permissions")
 	case errors.Is(err, model.ErrValidation):
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+		writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
 	default:
 		log.Ctx(r.Context()).Error().Err(err).Msg(msg)
 		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")

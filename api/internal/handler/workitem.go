@@ -1262,19 +1262,19 @@ func handleWorkItemError(w http.ResponseWriter, r *http.Request, err error, logM
 		return
 	}
 	if errors.Is(err, model.ErrInvalidTransition) {
-		writeError(w, http.StatusConflict, "INVALID_TRANSITION", err.Error())
+		writeErrorFromService(w, http.StatusConflict, "INVALID_TRANSITION", err)
 		return
 	}
 	if errors.Is(err, model.ErrStatusIncompatible) {
-		writeError(w, http.StatusConflict, "STATUS_INCOMPATIBLE", err.Error())
+		writeErrorFromService(w, http.StatusConflict, "STATUS_INCOMPATIBLE", err)
 		return
 	}
 	if errors.Is(err, model.ErrValidation) {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+		writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
 		return
 	}
 	if errors.Is(err, model.ErrConflict) {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+		writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
 		return
 	}
 

@@ -7,8 +7,8 @@ import { useBrand } from '@/contexts/BrandContext'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { PoweredByFooter } from '@/components/PoweredByFooter'
-import { isAxiosError } from 'axios'
 import * as authApi from '@/api/auth'
+import { getLocalizedError } from '@/utils/apiError'
 
 export function VerifyEmailPage() {
   const { t } = useTranslation()
@@ -53,11 +53,7 @@ export function VerifyEmailPage() {
       localStorage.removeItem('taskwondo_pending_invite')
       loginWithToken(result.token, result.user)
     } catch (err) {
-      if (isAxiosError(err) && err.response?.data?.error?.message) {
-        setError(err.response.data.error.message)
-      } else {
-        setError(t('verifyEmail.error'))
-      }
+      setError(getLocalizedError(err, t, 'verifyEmail.error'))
     } finally {
       setLoading(false)
     }

@@ -379,7 +379,7 @@ func handleSystemSettingError(w http.ResponseWriter, r *http.Request, err error,
 		return
 	}
 	if errors.Is(err, model.ErrValidation) {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+		writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
 		return
 	}
 	log.Ctx(r.Context()).Error().Err(err).Msg(logMsg)

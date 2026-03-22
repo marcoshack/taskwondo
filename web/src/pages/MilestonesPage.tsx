@@ -13,7 +13,7 @@ import { Spinner } from '@/components/ui/Spinner'
 import { Plus, Pencil, Trash2, ChevronDown, ChevronRight, Check, Clock } from 'lucide-react'
 import { formatDuration } from '@/utils/duration'
 import type { Milestone, CreateMilestoneInput, UpdateMilestoneInput } from '@/api/milestones'
-import type { AxiosError } from 'axios'
+import { getLocalizedError } from '@/utils/apiError'
 
 export function MilestonesPage() {
   const { t } = useTranslation()
@@ -71,8 +71,7 @@ export function MilestonesPage() {
             setEditingMilestone(null)
           },
           onError: (err) => {
-            const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-            setError(axiosErr.response?.data?.error?.message ?? t('milestones.updateError'))
+            setError(getLocalizedError(err, t, 'milestones.updateError'))
           },
         },
       )
@@ -83,8 +82,7 @@ export function MilestonesPage() {
           setEditorOpen(false)
         },
         onError: (err) => {
-          const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-          setError(axiosErr.response?.data?.error?.message ?? t('milestones.createError'))
+          setError(getLocalizedError(err, t, 'milestones.createError'))
         },
       })
     }
@@ -98,8 +96,7 @@ export function MilestonesPage() {
         setDeleteTarget(null)
       },
       onError: (err) => {
-        const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-        setError(axiosErr.response?.data?.error?.message ?? t('milestones.deleteError'))
+        setError(getLocalizedError(err, t, 'milestones.deleteError'))
         setDeleteTarget(null)
       },
     })

@@ -2,6 +2,7 @@ import { useState, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Search, Plus, Check } from 'lucide-react'
+import { getLocalizedError } from '@/utils/apiError'
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
 import { useNamespacePath } from '@/hooks/useNamespacePath'
 import { useProjects, useCreateProject, useOwnedProjectCount, useMaxProjects } from '@/hooks/useProjects'
@@ -176,12 +177,7 @@ export function ProjectListPage() {
           navigate(p(`/projects/${project.key}`))
         },
         onError: (err) => {
-          if (err && typeof err === 'object' && 'response' in err) {
-            const axiosErr = err as { response?: { data?: { error?: { message?: string } } } }
-            setFormError(axiosErr.response?.data?.error?.message ?? t('projects.createError'))
-          } else {
-            setFormError(t('projects.createError'))
-          }
+          setFormError(getLocalizedError(err, t, 'projects.createError'))
         },
       },
     )

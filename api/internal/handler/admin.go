@@ -114,7 +114,7 @@ func (h *AdminHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, model.ErrValidation) {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+			writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
 			return
 		}
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to create user")
@@ -187,7 +187,7 @@ func (h *AdminHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, model.ErrValidation) {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+			writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
 			return
 		}
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to update user")
@@ -267,7 +267,7 @@ func (h *AdminHandler) AddUserToProject(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 		if errors.Is(err, model.ErrValidation) {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+			writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
 			return
 		}
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to add user to project")
@@ -313,7 +313,7 @@ func (h *AdminHandler) UpdateUserProjectRole(w http.ResponseWriter, r *http.Requ
 			return
 		}
 		if errors.Is(err, model.ErrValidation) {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+			writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
 			return
 		}
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to update user project role")

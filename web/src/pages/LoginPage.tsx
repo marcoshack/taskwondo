@@ -5,8 +5,8 @@ import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { isAxiosError } from 'axios'
 import * as authApi from '@/api/auth'
+import { getLocalizedError } from '@/utils/apiError'
 import { useBrand } from '@/contexts/BrandContext'
 import { usePublicSettings } from '@/hooks/useSystemSettings'
 import { PoweredByFooter } from '@/components/PoweredByFooter'
@@ -90,11 +90,7 @@ export function LoginPage() {
       // Navigation is handled by the declarative if (user) block above,
       // which checks for pending invites and redirects accordingly.
     } catch (err) {
-      if (isAxiosError(err) && err.response?.data?.error?.message) {
-        setError(err.response.data.error.message)
-      } else {
-        setError(t('login.error'))
-      }
+      setError(getLocalizedError(err, t, 'login.error'))
     } finally {
       setLoading(false)
     }

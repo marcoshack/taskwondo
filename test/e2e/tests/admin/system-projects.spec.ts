@@ -317,6 +317,9 @@ test.describe('Admin Deny Lists — API', () => {
     expect(res.status()).toBe(400);
     const body = await res.json();
     expect(body.error.message).toContain('reserved');
+    // Verify error_key and params are present for i18n
+    expect(body.error.error_key).toBe('namespace_slug_reserved');
+    expect(body.error.params).toEqual({ slug: 'blocked' });
 
     // Clean up: remove the extra test entry
     await api.setSystemSetting(request, adminToken, 'reserved_namespace_slugs', ['admin', 'taskwondo']);
@@ -336,9 +339,39 @@ test.describe('Admin Deny Lists — API', () => {
     expect(res.status()).toBe(400);
     const body = await res.json();
     expect(body.error.message).toContain('reserved');
+    // Verify error_key and params are present for i18n
+    expect(body.error.error_key).toBe('project_key_reserved');
+    expect(body.error.params).toEqual({ key: 'NOPE' });
 
     // Clean up
     await api.setSystemSetting(request, adminToken, 'reserved_project_keys', []);
+  });
+
+  test('error response includes error_key for namespace slug validation', async ({ request }) => {
+    const adminToken = getAdminToken();
+    await api.enableNamespaces(request, adminToken);
+
+    // Invalid slug format → should return error_key
+    const res = await request.post(`${BASE_URL}/api/v1/namespaces`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+      data: { slug: 'X', display_name: 'Bad Slug' },
+    });
+    expect(res.status()).toBe(400);
+    const body = await res.json();
+    expect(body.error.error_key).toBe('namespace_slug_invalid');
+  });
+
+  test('error response includes error_key for project key validation', async ({ request }) => {
+    const adminToken = getAdminToken();
+
+    // Invalid key format → should return error_key
+    const res = await request.post(`${BASE_URL}/api/v1/default/projects`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+      data: { key: 'bad', name: 'Bad Key' },
+    });
+    expect(res.status()).toBe(400);
+    const body = await res.json();
+    expect(body.error.error_key).toBe('project_key_invalid');
   });
 });
 

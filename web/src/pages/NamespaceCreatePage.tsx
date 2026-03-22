@@ -8,7 +8,7 @@ import { useLayout } from '@/contexts/LayoutContext'
 import { AppSidebar } from '@/components/AppSidebar'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import type { AxiosError } from 'axios'
+import { getLocalizedError } from '@/utils/apiError'
 
 export function NamespaceCreatePage() {
   const { t } = useTranslation()
@@ -34,8 +34,7 @@ export function NamespaceCreatePage() {
           setActiveNamespace(ns.slug)
         },
         onError: (err) => {
-          const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-          setFormError(axiosErr.response?.data?.error?.message ?? t('namespaces.createError'))
+          setFormError(getLocalizedError(err, t, 'namespaces.createError'))
         },
       },
     )

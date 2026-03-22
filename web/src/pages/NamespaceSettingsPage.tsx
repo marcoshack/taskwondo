@@ -18,7 +18,7 @@ import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { UserSearchInput } from '@/components/UserSearchInput'
-import type { AxiosError } from 'axios'
+import { getLocalizedError } from '@/utils/apiError'
 import type { UserSearchResult } from '@/api/users'
 
 const ROLE_OPTIONS = ['admin', 'member'] as const
@@ -118,8 +118,7 @@ export function NamespaceSettingsPage() {
         }
       },
       onError: (err) => {
-        const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-        setSaveError(axiosErr.response?.data?.error?.message ?? t('namespaces.updateError'))
+        setSaveError(getLocalizedError(err, t, 'namespaces.updateError'))
       },
     })
   }
@@ -132,8 +131,7 @@ export function NamespaceSettingsPage() {
         if (defaultNs) setActiveNamespace(defaultNs.slug)
       },
       onError: (err) => {
-        const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-        setSaveError(axiosErr.response?.data?.error?.message ?? t('namespaces.deleteError'))
+        setSaveError(getLocalizedError(err, t, 'namespaces.deleteError'))
         setShowDeleteModal(false)
       },
     })
@@ -151,8 +149,7 @@ export function NamespaceSettingsPage() {
           showSaved('addMember')
         },
         onError: (err) => {
-          const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-          setMemberError(axiosErr.response?.data?.error?.message ?? t('namespaces.addMemberError'))
+          setMemberError(getLocalizedError(err, t, 'namespaces.addMemberError'))
         },
       },
     )
@@ -165,8 +162,7 @@ export function NamespaceSettingsPage() {
       {
         onSuccess: () => showSaved(`role:${userId}`),
         onError: (err) => {
-          const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-          setMemberError(axiosErr.response?.data?.error?.message ?? t('namespaces.updateRoleError'))
+          setMemberError(getLocalizedError(err, t, 'namespaces.updateRoleError'))
         },
       },
     )
@@ -178,8 +174,7 @@ export function NamespaceSettingsPage() {
     removeMemberMutation.mutate(removeTarget.userId, {
       onSuccess: () => setRemoveTarget(null),
       onError: (err) => {
-        const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-        setMemberError(axiosErr.response?.data?.error?.message ?? t('namespaces.removeMemberError'))
+        setMemberError(getLocalizedError(err, t, 'namespaces.removeMemberError'))
         setRemoveTarget(null)
       },
     })

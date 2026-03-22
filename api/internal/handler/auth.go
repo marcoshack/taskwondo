@@ -282,7 +282,7 @@ func (h *AuthHandler) CreateAPIKey(w http.ResponseWriter, r *http.Request) {
 	apiKey, fullKey, err := h.auth.CreateAPIKey(r.Context(), info.UserID, req.Name, req.Permissions, expiresAt)
 	if err != nil {
 		if errors.Is(err, model.ErrValidation) {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+			writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
 			return
 		}
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to create api key")
@@ -361,7 +361,7 @@ func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, model.ErrValidation) {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+			writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
 			return
 		}
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to change password")
@@ -415,7 +415,7 @@ func (h *AuthHandler) RenameAPIKey(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.auth.RenameAPIKey(r.Context(), keyID, info.UserID, req.Name); err != nil {
 		if errors.Is(err, model.ErrValidation) {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+			writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
 			return
 		}
 		if errors.Is(err, model.ErrNotFound) {
@@ -538,7 +538,7 @@ func (h *AuthHandler) CreateSystemAPIKey(w http.ResponseWriter, r *http.Request)
 	apiKey, fullKey, err := h.auth.CreateSystemAPIKey(r.Context(), info.UserID, req.Name, req.Permissions, expiresAt)
 	if err != nil {
 		if errors.Is(err, model.ErrValidation) {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+			writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
 			return
 		}
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to create system api key")
@@ -574,7 +574,7 @@ func (h *AuthHandler) RenameSystemAPIKey(w http.ResponseWriter, r *http.Request)
 
 	if err := h.auth.RenameSystemAPIKey(r.Context(), keyID, req.Name); err != nil {
 		if errors.Is(err, model.ErrValidation) {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+			writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
 			return
 		}
 		if errors.Is(err, model.ErrNotFound) {
@@ -641,7 +641,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, model.ErrValidation) {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+			writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
 			return
 		}
 		log.Ctx(r.Context()).Error().Err(err).Msg("registration failed")
@@ -683,7 +683,7 @@ func (h *AuthHandler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, model.ErrValidation) {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+			writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
 			return
 		}
 		if errors.Is(err, model.ErrForbidden) {
@@ -737,7 +737,7 @@ func (h *AuthHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	user, err := h.auth.UpdateProfile(r.Context(), info.UserID, req.DisplayName)
 	if err != nil {
 		if errors.Is(err, model.ErrValidation) {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+			writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
 			return
 		}
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to update profile")
@@ -782,7 +782,7 @@ func (h *AuthHandler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
 	user, err := h.auth.UploadAvatar(r.Context(), info.UserID, file, header.Size, contentType)
 	if err != nil {
 		if errors.Is(err, model.ErrValidation) {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+			writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
 			return
 		}
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to upload avatar")

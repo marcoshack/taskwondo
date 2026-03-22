@@ -20,7 +20,7 @@ import { formatDuration } from '@/utils/duration'
 import type { Milestone, UpdateMilestoneInput } from '@/api/milestones'
 import type { WorkItem } from '@/api/workitems'
 import type { ProjectMember } from '@/api/projects'
-import type { AxiosError } from 'axios'
+import { getLocalizedError } from '@/utils/apiError'
 import { usePreference } from '@/hooks/usePreferences'
 
 // Color maps matching badge components
@@ -114,8 +114,7 @@ export function MilestoneDashboardPage() {
       {
         onSuccess: () => setEditOpen(false),
         onError: (err) => {
-          const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-          setError(axiosErr.response?.data?.error?.message ?? t('milestones.updateError'))
+          setError(getLocalizedError(err, t, 'milestones.updateError'))
         },
       },
     )

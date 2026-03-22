@@ -18,7 +18,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Plus, Pencil, Trash2, ArrowRight, Check, Eye } from 'lucide-react'
 import { Tooltip } from '@/components/ui/Tooltip'
 import type { WorkflowStatus } from '@/api/workflows'
-import type { AxiosError } from 'axios'
+import { getLocalizedError } from '@/utils/apiError'
 
 const CATEGORY_COLORS: Record<string, 'blue' | 'indigo' | 'green' | 'gray'> = {
   todo: 'blue',
@@ -63,8 +63,7 @@ export function SystemWorkflowsPage() {
         setDeleteTarget(null)
       },
       onError: (err) => {
-        const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-        showNotification(axiosErr.response?.data?.error?.message ?? t('workflows.deleteError'), 'error')
+        showNotification(getLocalizedError(err, t, 'workflows.deleteError'), 'error')
         setDeleteTarget(null)
       },
     })
@@ -175,8 +174,7 @@ export function SystemWorkflowsPage() {
                       {
                         onSuccess: () => flashSaved(`dtw:${itemType}`),
                         onError: (err) => {
-                          const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-                          showNotification(axiosErr.response?.data?.error?.message ?? t('admin.workflows.updateError'), 'error')
+                          showNotification(getLocalizedError(err, t, 'admin.workflows.updateError'), 'error')
                         },
                       },
                     )
@@ -464,8 +462,7 @@ function SystemWorkflowEditorModal({
             onClose()
           },
           onError: (err) => {
-            const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-            onError(axiosErr.response?.data?.error?.message ?? t('workflows.updateError'))
+            onError(getLocalizedError(err, t, 'workflows.updateError'))
           },
         },
       )
@@ -476,8 +473,7 @@ function SystemWorkflowEditorModal({
           onClose()
         },
         onError: (err) => {
-          const axiosErr = err as AxiosError<{ error?: { message?: string } }>
-          onError(axiosErr.response?.data?.error?.message ?? t('workflows.createError'))
+          onError(getLocalizedError(err, t, 'workflows.createError'))
         },
       })
     }

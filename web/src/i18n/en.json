@@ -39,6 +39,17 @@
   "common.search": "Search...",
   "common.close": "Close",
 
+  "errors.namespace_slug_invalid": "Namespace slug must be 2-30 lowercase alphanumeric characters or hyphens, starting with a letter.",
+  "errors.namespace_slug_reserved": "Namespace slug \"{{slug}}\" is reserved.",
+  "errors.namespace_slug_in_use": "Namespace slug \"{{slug}}\" is already in use.",
+  "errors.namespace_limit_reached": "Namespace ownership limit reached. Contact an administrator to increase your limit.",
+  "errors.display_name_required": "Display name is required.",
+  "errors.project_key_invalid": "Project key must be 2-5 uppercase alphanumeric characters starting with a letter.",
+  "errors.project_key_reserved": "Project key \"{{key}}\" is reserved.",
+  "errors.project_key_in_use": "Project key \"{{key}}\" is already in use.",
+  "errors.project_limit_reached": "Project ownership limit reached. Contact an administrator to increase your limit.",
+  "errors.email_already_exists": "A user with this email already exists.",
+
   "brand.name": "Taskwondo",
 
   "nav.preferences": "Preferences",
