@@ -18,7 +18,7 @@ jobs:
       - name: Delete untagged images older than 14 days
         uses: snok/container-retention-policy@v3.0.1
         with:
-          account: marcoshack
+          account: user
           token: ${{ secrets.GITHUB_TOKEN }}
           image-names: taskwondo/${{ matrix.package }}
           cut-off: 14d
