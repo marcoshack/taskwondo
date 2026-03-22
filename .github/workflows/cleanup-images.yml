@@ -15,11 +15,9 @@ jobs:
       matrix:
         package: [api, web, worker]
     steps:
-      - name: Delete untagged images older than 14 days
-        uses: snok/container-retention-policy@v3.0.1
+      - uses: actions/delete-package-versions@v5
         with:
-          account: user
-          token: ${{ secrets.GITHUB_TOKEN }}
-          image-names: taskwondo/${{ matrix.package }}
-          cut-off: 14d
-          tag-selection: untagged
+          package-name: taskwondo/${{ matrix.package }}
+          package-type: container
+          min-versions-to-keep: 10
+          delete-only-untagged-versions: true
