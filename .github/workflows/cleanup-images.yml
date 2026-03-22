@@ -12,6 +12,7 @@ jobs:
     permissions:
       packages: write
     strategy:
+      fail-fast: false
       matrix:
         package: [api, web, worker]
     steps:
