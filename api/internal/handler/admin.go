@@ -351,6 +351,17 @@ func (h *AdminHandler) RemoveUserFromProject(w http.ResponseWriter, r *http.Requ
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// GetStats handles GET /api/v1/admin/stats.
+func (h *AdminHandler) GetStats(w http.ResponseWriter, r *http.Request) {
+	stats, err := h.admin.GetStats(r.Context())
+	if err != nil {
+		log.Ctx(r.Context()).Error().Err(err).Msg("failed to get admin stats")
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		return
+	}
+	writeData(w, http.StatusOK, stats)
+}
+
 // ListAllProjects handles GET /api/v1/admin/projects.
 func (h *AdminHandler) ListAllProjects(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()

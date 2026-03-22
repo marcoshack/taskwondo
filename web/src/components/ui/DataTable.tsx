@@ -9,6 +9,8 @@ export interface Column<T> {
   width?: string
   sortKey?: string
   resizable?: boolean
+  /** Hide this column on mobile (below sm breakpoint) */
+  hiddenOnMobile?: boolean
 }
 
 interface DataTableProps<T> {
@@ -24,6 +26,8 @@ interface DataTableProps<T> {
   columnWidths?: Record<string, number>
   onColumnResize?: (key: string, width: number) => void
   onColumnResetWidth?: (key: string) => void
+  /** Show column headers on all screen sizes (default: hidden on mobile) */
+  alwaysShowHeader?: boolean
 }
 
 const MIN_COL_WIDTH = 40
@@ -55,6 +59,7 @@ export function DataTable<T>({
   columns, data, onRowClick, emptyMessage,
   sortBy, sortOrder, onSort, activeRowIndex,
   resizable, columnWidths, onColumnResize, onColumnResetWidth,
+  alwaysShowHeader,
 }: DataTableProps<T>) {
   const { t } = useTranslation()
   const resolvedEmptyMessage = emptyMessage ?? t('common.noData')
@@ -114,6 +119,10 @@ export function DataTable<T>({
     document.body.style.userSelect = 'none'
   }, [handleResizeMove, handleResizeEnd])
 
+  function mobileHideClass(col: Column<T>): string {
+    return col.hiddenOnMobile ? 'hidden sm:table-cell' : ''
+  }
+
   function getColStyle(col: Column<T>): React.CSSProperties | undefined {
     if (columnWidths?.[col.key]) return { width: columnWidths[col.key] }
     if (col.width) return { width: col.width }
@@ -131,12 +140,12 @@ export function DataTable<T>({
           {columns.map((col) => (
             <col
               key={col.key}
-              className={columnWidths?.[col.key] ? '' : (col.className ?? '')}
+              className={`${columnWidths?.[col.key] ? '' : (col.className ?? '')} ${mobileHideClass(col)}`}
               style={getColStyle(col)}
             />
           ))}
         </colgroup>
-        <thead className="hidden sm:table-header-group bg-gray-50 dark:bg-gray-800 group/thead">
+        <thead className={`${alwaysShowHeader ? '' : 'hidden sm:table-header-group'} bg-gray-50 dark:bg-gray-800 group/thead`}>
           <tr>
             {columns.map((col) => {
               const isSortable = !!col.sortKey && !!onSort
@@ -146,7 +155,7 @@ export function DataTable<T>({
                 <th
                   key={col.key}
                   style={getColStyle(col)}
-                  className={`px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap ${columnWidths?.[col.key] ? '' : (col.className ?? '')} ${isSortable ? 'cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200' : ''} ${colResizable ? 'relative' : ''}`}
+                  className={`px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap ${columnWidths?.[col.key] ? '' : (col.className ?? '')} ${isSortable ? 'cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200' : ''} ${colResizable ? 'relative' : ''} ${mobileHideClass(col)}`}
                   onClick={isSortable ? () => onSort!(col.sortKey!) : undefined}
                 >
                   <span className="inline-flex items-center gap-1">
@@ -186,7 +195,7 @@ export function DataTable<T>({
                 className={`group ${onRowClick ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800' : ''} ${isActive ? 'ring-2 ring-inset ring-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/20' : ''}`}
               >
                 {columns.map((col) => (
-                  <td key={col.key} className={`px-3 sm:px-6 py-4 whitespace-nowrap text-sm overflow-hidden ${columnWidths?.[col.key] ? '' : (col.className ?? '')}`}>
+                  <td key={col.key} className={`px-3 sm:px-6 py-4 whitespace-nowrap text-sm overflow-hidden ${columnWidths?.[col.key] ? '' : (col.className ?? '')} ${mobileHideClass(col)}`}>
                     {col.render(row)}
                   </td>
                 ))}

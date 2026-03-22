@@ -1275,6 +1275,10 @@
   "admin.projects.col.default": "Default",
   "admin.projects.col.projects": "Projects",
   "admin.projects.col.defaultBadge": "Default",
+  "admin.projects.stats.projects": "Projects",
+  "admin.projects.stats.namespaces": "Namespaces",
+  "admin.projects.stats.users": "Users",
+  "admin.projects.stats.storage": "Storage",
 
   "admin.features.namespaces.title": "Namespaces",
   "admin.features.namespaces.description": "Enable namespace support for multi-tenancy. Allows creating isolated project groups with separate project key scopes.",

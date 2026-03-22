@@ -641,6 +641,7 @@ func TestResetUserPassword_Handler_404(t *testing.T) {
 type mockAdminInspectionRepo struct {
 	projects   *model.AdminProjectList
 	namespaces *model.AdminNamespaceList
+	stats      *model.AdminStats
 	err        error
 }
 
@@ -656,6 +657,13 @@ func (m *mockAdminInspectionRepo) ListNamespaces(_ context.Context, search, curs
 		return nil, m.err
 	}
 	return m.namespaces, nil
+}
+
+func (m *mockAdminInspectionRepo) GetStats(_ context.Context) (*model.AdminStats, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	return m.stats, nil
 }
 
 func adminTestSetupWithInspection(t *testing.T) (*AdminHandler, *mockAdminInspectionRepo) {
@@ -880,5 +888,45 @@ func TestAdminListAllNamespaces_Empty(t *testing.T) {
 	}
 	if len(data) != 0 {
 		t.Fatalf("expected 0 namespaces, got %d", len(data))
+	}
+}
+
+func TestAdminGetStats(t *testing.T) {
+	h, inspectionRepo := adminTestSetupWithInspection(t)
+
+	inspectionRepo.stats = &model.AdminStats{
+		Projects:     12,
+		Namespaces:   3,
+		Users:        8,
+		StorageBytes: 6291456,
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/stats", nil)
+	req = req.WithContext(adminCtx(uuid.New()))
+	w := httptest.NewRecorder()
+
+	h.GetStats(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]any
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data, ok := resp["data"].(map[string]any)
+	if !ok {
+		t.Fatal("expected data object in response")
+	}
+	if int(data["projects"].(float64)) != 12 {
+		t.Fatalf("expected 12 projects, got %v", data["projects"])
+	}
+	if int(data["namespaces"].(float64)) != 3 {
+		t.Fatalf("expected 3 namespaces, got %v", data["namespaces"])
+	}
+	if int(data["users"].(float64)) != 8 {
+		t.Fatalf("expected 8 users, got %v", data["users"])
+	}
+	if int64(data["storage_bytes"].(float64)) != 6291456 {
+		t.Fatalf("expected 6291456 storage_bytes, got %v", data["storage_bytes"])
 	}
 }

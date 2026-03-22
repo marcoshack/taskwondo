@@ -120,3 +120,17 @@ export async function listAdminNamespaces(params: { search?: string; cursor?: st
   const res = await api.get<PaginatedResponse<AdminNamespace>>('/admin/namespaces', { params })
   return res.data
 }
+
+// Admin Stats
+
+export interface AdminStats {
+  projects: number
+  namespaces: number
+  users: number
+  storage_bytes: number
+}
+
+export async function fetchAdminStats(): Promise<AdminStats> {
+  const res = await api.get<{ data: AdminStats }>('/admin/stats')
+  return res.data.data
+}

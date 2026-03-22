@@ -1296,3 +1296,15 @@ export async function setSLATargets(
   });
   if (!res.ok()) throw new Error(`Set SLA targets failed (${res.status()}): ${await res.text()}`);
 }
+
+export async function getAdminStats(
+  request: APIRequestContext,
+  adminToken: string,
+): Promise<{ projects: number; namespaces: number; users: number; storage_bytes: number }> {
+  const res = await request.get(`${BASE_URL}/api/v1/admin/stats`, {
+    headers: { Authorization: `Bearer ${adminToken}` },
+  });
+  if (!res.ok()) throw new Error(`Get admin stats failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}

@@ -47,6 +47,7 @@ type AdminMemberRepository interface {
 type AdminInspectionRepository interface {
 	ListProjects(ctx context.Context, search string, cursor string, limit int) (*model.AdminProjectList, error)
 	ListNamespaces(ctx context.Context, search string, cursor string, limit int) (*model.AdminNamespaceList, error)
+	GetStats(ctx context.Context) (*model.AdminStats, error)
 }
 
 // AdminService handles admin-only business logic.
@@ -324,6 +325,11 @@ func (s *AdminService) ListAllNamespaces(ctx context.Context, search, cursor str
 		limit = 100
 	}
 	return s.inspection.ListNamespaces(ctx, search, cursor, limit)
+}
+
+// GetStats returns aggregated system-wide counts.
+func (s *AdminService) GetStats(ctx context.Context) (*model.AdminStats, error) {
+	return s.inspection.GetStats(ctx)
 }
 
 func generateTemporaryPassword() (string, error) {

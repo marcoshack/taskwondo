@@ -575,6 +575,7 @@ func main() {
 						})
 					})
 				})
+				r.Get("/stats", admin.GetStats)
 				r.Get("/projects", admin.ListAllProjects)
 				r.Get("/namespaces", admin.ListAllNamespaces)
 				r.Route("/settings", func(r chi.Router) {

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
-import { listUsers, updateUser, listUserProjects, addUserToProject, updateUserProjectRole, removeUserFromProject, createUser, resetUserPassword, listAdminProjects, listAdminNamespaces } from '@/api/admin'
+import { listUsers, updateUser, listUserProjects, addUserToProject, updateUserProjectRole, removeUserFromProject, createUser, resetUserPassword, listAdminProjects, listAdminNamespaces, fetchAdminStats } from '@/api/admin'
 import type { CreateUserInput } from '@/api/admin'
 
 export function useAdminUsers() {
@@ -72,6 +72,13 @@ export function useCreateUser() {
 export function useResetUserPassword() {
   return useMutation({
     mutationFn: (userId: string) => resetUserPassword(userId),
+  })
+}
+
+export function useAdminStats() {
+  return useQuery({
+    queryKey: ['admin', 'stats'],
+    queryFn: fetchAdminStats,
   })
 }
 

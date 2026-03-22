@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useAdminProjects, useAdminNamespaces } from '@/hooks/useAdmin'
+import { FolderKanban, Building2, Users, HardDrive } from 'lucide-react'
+import { ScrollableRow } from '@/components/ui/ScrollableRow'
+import { useAdminProjects, useAdminNamespaces, useAdminStats } from '@/hooks/useAdmin'
 import { useDebounce } from '@/hooks/useDebounce'
 import { DataTable } from '@/components/ui/DataTable'
 import { Badge } from '@/components/ui/Badge'
@@ -26,6 +28,7 @@ export function SystemProjectsPage() {
   const [activeTab, setActiveTab] = useState('projects')
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 300)
+  const statsQuery = useAdminStats()
 
   const tabs = [
     { key: 'projects', label: t('admin.projects.tab.projects') },
@@ -55,11 +58,13 @@ export function SystemProjectsPage() {
     {
       key: 'name',
       header: t('admin.projects.col.name'),
+      hiddenOnMobile: true,
       render: (row) => <span className="text-gray-900 dark:text-gray-100 font-medium">{row.name}</span>,
     },
     {
       key: 'namespace',
       header: t('admin.projects.col.namespace'),
+      hiddenOnMobile: true,
       render: (row) => (
         <span className="text-gray-600 dark:text-gray-400">{row.namespace_display_name}</span>
       ),
@@ -67,6 +72,7 @@ export function SystemProjectsPage() {
     {
       key: 'owner',
       header: t('admin.projects.col.owner'),
+      hiddenOnMobile: true,
       render: (row) => (
         <div>
           <div className="text-gray-900 dark:text-gray-100">{row.owner_display_name}</div>
@@ -96,6 +102,7 @@ export function SystemProjectsPage() {
       key: 'created',
       header: t('admin.projects.col.created'),
       className: 'w-28',
+      hiddenOnMobile: true,
       render: (row) => <span className="text-gray-500 dark:text-gray-400">{formatRelativeTime(row.created_at)}</span>,
     },
   ]
@@ -110,6 +117,7 @@ export function SystemProjectsPage() {
     {
       key: 'displayName',
       header: t('admin.projects.col.displayName'),
+      hiddenOnMobile: true,
       render: (row) => <span className="text-gray-900 dark:text-gray-100 font-medium">{row.display_name}</span>,
     },
     {
@@ -134,12 +142,14 @@ export function SystemProjectsPage() {
       key: 'storage',
       header: t('admin.projects.col.storage'),
       className: 'w-24',
+      hiddenOnMobile: true,
       render: (row) => <span className="text-gray-600 dark:text-gray-400">{formatStorageBytes(row.storage_bytes)}</span>,
     },
     {
       key: 'created',
       header: t('admin.projects.col.created'),
       className: 'w-28',
+      hiddenOnMobile: true,
       render: (row) => <span className="text-gray-500 dark:text-gray-400">{formatRelativeTime(row.created_at)}</span>,
     },
   ]
@@ -154,10 +164,43 @@ export function SystemProjectsPage() {
     setSearch('')
   }
 
+  const statCards = [
+    { icon: FolderKanban, value: statsQuery.data?.projects ?? '-', label: t('admin.projects.stats.projects') },
+    { icon: Building2, value: statsQuery.data?.namespaces ?? '-', label: t('admin.projects.stats.namespaces') },
+    { icon: Users, value: statsQuery.data?.users ?? '-', label: t('admin.projects.stats.users') },
+    { icon: HardDrive, value: statsQuery.data ? formatStorageBytes(statsQuery.data.storage_bytes) : '-', label: t('admin.projects.stats.storage') },
+  ]
+
   return (
     <div>
-      <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{t('admin.projects.title')}</h2>
-      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('admin.projects.description')}</p>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{t('admin.projects.title')}</h2>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('admin.projects.description')}</p>
+        </div>
+        {/* Mobile: single bordered row with horizontal scroll */}
+        <ScrollableRow className="sm:hidden rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2" gradientFrom="from-white dark:from-gray-900">
+          {statCards.map((card, i) => (
+            <div key={card.label} className={`flex items-center gap-1.5 shrink-0 ${i < statCards.length - 1 ? 'pr-3 border-r border-gray-200 dark:border-gray-700' : ''}`}>
+              <card.icon className="h-3.5 w-3.5 text-indigo-400" />
+              <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{card.value}</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">{card.label}</span>
+            </div>
+          ))}
+        </ScrollableRow>
+        {/* Desktop: individual cards */}
+        <div className="hidden sm:grid grid-cols-4 gap-3">
+          {statCards.map((card) => (
+            <div key={card.label} className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 text-center min-w-[100px]">
+              <div className="flex items-center justify-center gap-2">
+                <card.icon className="h-4 w-4 text-indigo-400" />
+                <span className="text-xl font-bold text-gray-900 dark:text-gray-100">{card.value}</span>
+              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{card.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
 
       <div className="mt-6">
         <Tabs tabs={tabs} activeTab={activeTab} onTabChange={handleTabChange} />
@@ -181,12 +224,14 @@ export function SystemProjectsPage() {
             columns={projectColumns}
             data={projects}
             emptyMessage={t('admin.projects.empty.projects')}
+            alwaysShowHeader
           />
         ) : (
           <DataTable
             columns={namespaceColumns}
             data={namespaces}
             emptyMessage={t('admin.projects.empty.namespaces')}
+            alwaysShowHeader
           />
         )}
 

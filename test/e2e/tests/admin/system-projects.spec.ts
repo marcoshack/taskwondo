@@ -171,6 +171,55 @@ test.describe('Admin Projects & Namespaces — API', () => {
   });
 });
 
+// ─── Stats API Tests ─────────────────────────────────────────────────────────
+
+test.describe('Admin Stats — API', () => {
+  test.describe.configure({ mode: 'serial' });
+
+  test('admin stats API returns aggregated counts', async ({ request }) => {
+    const adminToken = getAdminToken();
+    const stats = await api.getAdminStats(request, adminToken);
+
+    expect(typeof stats.projects).toBe('number');
+    expect(typeof stats.namespaces).toBe('number');
+    expect(typeof stats.users).toBe('number');
+    expect(typeof stats.storage_bytes).toBe('number');
+    expect(stats.projects).toBeGreaterThan(0);
+    expect(stats.namespaces).toBeGreaterThan(0);
+    expect(stats.users).toBeGreaterThan(0);
+  });
+
+  test('admin stats counts increase after creating a project', async ({ request }) => {
+    const adminToken = getAdminToken();
+    const before = await api.getAdminStats(request, adminToken);
+
+    const suffix = randomUUID().slice(0, 4).toUpperCase();
+    await api.createProject(request, adminToken, `S${suffix}`, `Stats Test ${suffix}`);
+
+    const after = await api.getAdminStats(request, adminToken);
+    // Use >= because other parallel tests may also create projects
+    expect(after.projects).toBeGreaterThanOrEqual(before.projects + 1);
+  });
+
+  test('non-admin gets 403 on admin stats endpoint', async ({ request }) => {
+    const adminToken = getAdminToken();
+    const uniqueId = randomUUID().slice(0, 8);
+    const email = `e2e-noadmin-stats-${uniqueId}@test.local`;
+
+    const created = await api.createUser(request, adminToken, email, `Stats Non-Admin ${uniqueId}`);
+    const tempLogin = await api.login(request, email, created.temporary_password);
+    await api.changePassword(request, tempLogin.token, created.temporary_password, 'TestPass123!');
+    const userLogin = await api.login(request, email, 'TestPass123!');
+
+    const res = await request.get(`${BASE_URL}/api/v1/admin/stats`, {
+      headers: { Authorization: `Bearer ${userLogin.token}` },
+    });
+    expect(res.status()).toBe(403);
+
+    await api.deactivateUser(request, adminToken, userLogin.user.id).catch(() => {});
+  });
+});
+
 // ─── UI Tests ────────────────────────────────────────────────────────────────
 
 test.describe('Admin Projects & Namespaces — UI', () => {
@@ -220,5 +269,28 @@ test.describe('Admin Projects & Namespaces — UI', () => {
     // Verify the "default" namespace appears in the table body
     await expect(page.locator('tbody').getByText('default', { exact: true })).toBeVisible({ timeout: 10000 });
     await attach(page, testInfo, '01-namespaces-tab');
+  });
+
+  test('admin projects page shows stat cards', async ({ page, request }, testInfo) => {
+    const adminToken = getAdminToken();
+
+    // Get current stats from API for comparison
+    const stats = await api.getAdminStats(request, adminToken);
+
+    await page.goto('/admin/project-overview');
+    await page.waitForLoadState('networkidle');
+    await expect(page.getByRole('heading', { name: 'Projects & Namespaces' })).toBeVisible({ timeout: 10000 });
+
+    // Stat labels should be visible (at least one of mobile/desktop variant)
+    // Use filter with visible to avoid matching the hidden responsive variant
+    await expect(page.getByText('Projects').locator('visible=true').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Namespaces').locator('visible=true').first()).toBeVisible();
+    await expect(page.getByText('Users').locator('visible=true').first()).toBeVisible();
+    await expect(page.getByText('Storage').locator('visible=true').first()).toBeVisible();
+
+    // Stat values should be visible — match project count as a sanity check
+    await expect(page.getByText(String(stats.projects), { exact: true }).locator('visible=true').first()).toBeVisible();
+
+    await attach(page, testInfo, '01-stat-cards');
   });
 });

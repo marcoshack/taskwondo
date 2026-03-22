@@ -46,3 +46,11 @@ type AdminNamespaceList struct {
 	Cursor  string           `json:"cursor"`
 	HasMore bool             `json:"has_more"`
 }
+
+// AdminStats contains aggregated system-wide counts for the admin dashboard.
+type AdminStats struct {
+	Projects     int   `json:"projects"`
+	Namespaces   int   `json:"namespaces"`
+	Users        int   `json:"users"`
+	StorageBytes int64 `json:"storage_bytes"`
+}

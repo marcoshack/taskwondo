@@ -174,6 +174,22 @@ WHERE ($1 = '' OR n.slug ILIKE '%' || $1 || '%' OR n.display_name ILIKE '%' || $
 	}, nil
 }
 
+// GetStats returns aggregated system-wide counts.
+func (r *AdminRepository) GetStats(ctx context.Context) (*model.AdminStats, error) {
+	var stats model.AdminStats
+	err := r.db.QueryRowContext(ctx, `
+SELECT
+  (SELECT COUNT(*) FROM projects WHERE deleted_at IS NULL),
+  (SELECT COUNT(*) FROM namespaces),
+  (SELECT COUNT(*) FROM users),
+  COALESCE((SELECT SUM(size_bytes) FROM attachments WHERE deleted_at IS NULL), 0)
+`).Scan(&stats.Projects, &stats.Namespaces, &stats.Users, &stats.StorageBytes)
+	if err != nil {
+		return nil, fmt.Errorf("querying admin stats: %w", err)
+	}
+	return &stats, nil
+}
+
 // encodeProjectCursor encodes a project cursor as base64 of "name|id".
 func encodeProjectCursor(name string, id uuid.UUID) string {
 	return base64.StdEncoding.EncodeToString([]byte(name + "|" + id.String()))
