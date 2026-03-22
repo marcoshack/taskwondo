@@ -1297,6 +1297,20 @@ export async function setSLATargets(
   if (!res.ok()) throw new Error(`Set SLA targets failed (${res.status()}): ${await res.text()}`);
 }
 
+export async function listWorkItems(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  params?: Record<string, string>,
+): Promise<{ data: Array<{ id: string; display_id: string; item_number: number; title: string; sla_target_at: string | null; sla?: { remaining_seconds: number; status: string } }>; meta: { cursor: string; has_more: boolean; total: number } }> {
+  const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+  const res = await request.get(`${BASE_URL}/api/v1/default/projects/${projectKey}/items${qs}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`List work items failed (${res.status()}): ${await res.text()}`);
+  return res.json();
+}
+
 export async function getAdminStats(
   request: APIRequestContext,
   adminToken: string,

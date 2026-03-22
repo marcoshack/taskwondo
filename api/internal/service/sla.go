@@ -42,12 +42,24 @@ type SLATargetInput struct {
 	CalendarMode  string
 }
 
+// WorkItemSLABackfiller provides access to work items for SLA backfilling.
+type WorkItemSLABackfiller interface {
+	ListByProjectTypeNullSLA(ctx context.Context, projectID uuid.UUID, workItemType string) ([]model.WorkItem, error)
+	UpdateSLATargetAt(ctx context.Context, id uuid.UUID, slaTargetAt *time.Time) error
+}
+
 // SLAService handles SLA business logic and authorization.
 type SLAService struct {
-	sla       SLARepository
-	projects  ProjectRepository
-	members   ProjectMemberRepository
-	workflows WorkflowRepository
+	sla        SLARepository
+	projects   ProjectRepository
+	members    ProjectMemberRepository
+	workflows  WorkflowRepository
+	backfiller WorkItemSLABackfiller
+}
+
+// SetBackfiller sets the work item backfiller for SLA target backfilling.
+func (s *SLAService) SetBackfiller(b WorkItemSLABackfiller) {
+	s.backfiller = b
 }
 
 // NewSLAService creates a new SLAService.
@@ -162,6 +174,9 @@ func (s *SLAService) BulkUpsertTargets(ctx context.Context, info *model.AuthInfo
 		Int("targets_count", len(result)).
 		Msg("SLA targets upserted")
 
+	// Backfill sla_target_at for existing items that match the new targets
+	s.backfillSLATargetAt(ctx, project, input.WorkItemType, input.WorkflowID)
+
 	return result, nil
 }
 
@@ -177,6 +192,37 @@ func (s *SLAService) DeleteTarget(ctx context.Context, info *model.AuthInfo, pro
 	}
 
 	return s.sla.DeleteTarget(ctx, targetID)
+}
+
+// backfillSLATargetAt finds items with NULL sla_target_at that match the given
+// project/type and computes+stores their sla_target_at. This ensures items
+// created before SLA policies were configured get proper deadlines for sorting.
+func (s *SLAService) backfillSLATargetAt(ctx context.Context, project *model.Project, workItemType string, workflowID uuid.UUID) {
+	if s.backfiller == nil {
+		return
+	}
+
+	items, err := s.backfiller.ListByProjectTypeNullSLA(ctx, project.ID, workItemType)
+	if err != nil {
+		log.Ctx(ctx).Warn().Err(err).Msg("failed to list items for SLA backfill")
+		return
+	}
+
+	backfilled := 0
+	for i := range items {
+		target := s.ComputeSLATargetAt(ctx, &items[i], workflowID, project.BusinessHours)
+		if target != nil {
+			if err := s.backfiller.UpdateSLATargetAt(ctx, items[i].ID, target); err != nil {
+				log.Ctx(ctx).Warn().Err(err).Str("item_id", items[i].ID.String()).Msg("failed to backfill sla_target_at")
+			} else {
+				backfilled++
+			}
+		}
+	}
+
+	if backfilled > 0 {
+		log.Ctx(ctx).Info().Int("count", backfilled).Msg("backfilled sla_target_at for existing items")
+	}
 }
 
 // ComputeSLAInfo computes the SLA status for a work item's current status.

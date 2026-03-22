@@ -147,6 +147,7 @@ func main() {
 	savedSearchService := service.NewSavedSearchService(savedSearchRepo, projectRepo, projectMemberRepo)
 	milestoneService := service.NewMilestoneService(milestoneRepo, projectRepo, projectMemberRepo)
 	slaService := service.NewSLAService(slaRepo, projectRepo, projectMemberRepo, workflowRepo)
+	slaService.SetBackfiller(workItemRepo)
 	escalationService := service.NewEscalationService(escalationRepo, projectRepo, projectMemberRepo, userRepo)
 	workItemService := service.NewWorkItemService(workItemRepo, workItemEventRepo, commentRepo, relationRepo, attachmentRepo, timeEntryRepo, watcherRepo, projectRepo, projectMemberRepo, workflowRepo, typeWorkflowRepo, queueRepo, milestoneRepo, slaRepo, slaService, store, cfg.MaxUploadSize)
 	inboxService := service.NewInboxService(inboxRepo, projectMemberRepo)

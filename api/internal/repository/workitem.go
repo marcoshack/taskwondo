@@ -214,12 +214,14 @@ func (r *WorkItemRepository) List(ctx context.Context, projectID uuid.UUID, filt
 		sortOrder = "ASC"
 	}
 
-	// Push NULL sla_target_at values to the end regardless of sort direction
+	// Push NULL sla_target_at values to the end regardless of sort direction.
+	// Use extreme but parseable timestamps instead of PostgreSQL infinity/-infinity,
+	// which lib/pq cannot scan into time.Time (breaking cursor pagination).
 	if sortCol == "sla_target_at" {
 		if sortOrder == "ASC" {
-			sortCol = "COALESCE(sla_target_at, 'infinity'::timestamptz)"
+			sortCol = "COALESCE(sla_target_at, '9999-12-31T23:59:59Z'::timestamptz)"
 		} else {
-			sortCol = "COALESCE(sla_target_at, '-infinity'::timestamptz)"
+			sortCol = "COALESCE(sla_target_at, '0001-01-01T00:00:00Z'::timestamptz)"
 		}
 	}
 
@@ -599,6 +601,25 @@ func (r *WorkItemRepository) SearchFTS(ctx context.Context, query string, projec
 		})
 	}
 	return results, rows.Err()
+}
+
+// ListByProjectTypeNullSLA returns non-deleted work items in a project with a
+// given type that have sla_target_at IS NULL. Used for backfilling SLA deadlines.
+func (r *WorkItemRepository) ListByProjectTypeNullSLA(ctx context.Context, projectID uuid.UUID, workItemType string) ([]model.WorkItem, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT id, project_id, queue_id, milestone_id, parent_id, item_number, display_id, type, title, description,
+		        status, priority, assignee_id, reporter_id, portal_contact_id, visibility,
+		        labels, complexity, custom_fields, due_date, resolved_at, sla_target_at, estimated_seconds,
+		        created_at, updated_at,
+		        (SELECT display_name FROM users WHERE users.id = work_items.reporter_id) AS reporter_name
+		 FROM work_items
+		 WHERE project_id = $1 AND type = $2 AND sla_target_at IS NULL AND deleted_at IS NULL`,
+		projectID, workItemType)
+	if err != nil {
+		return nil, fmt.Errorf("listing items for SLA backfill: %w", err)
+	}
+	defer rows.Close()
+	return scanWorkItems(rows)
 }
 
 // UpdateSLATargetAt updates only the sla_target_at column for a work item.
