@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { FolderKanban, Building2, Users, HardDrive } from 'lucide-react'
+import { FolderKanban, Building2, Users, HardDrive, Settings, X, Plus } from 'lucide-react'
 import { ScrollableRow } from '@/components/ui/ScrollableRow'
 import { useAdminProjects, useAdminNamespaces, useAdminStats } from '@/hooks/useAdmin'
+import { useSystemSetting, useSetSystemSetting } from '@/hooks/useSystemSettings'
 import { useDebounce } from '@/hooks/useDebounce'
 import { DataTable } from '@/components/ui/DataTable'
 import { Badge } from '@/components/ui/Badge'
@@ -33,6 +34,7 @@ export function SystemProjectsPage() {
   const tabs = [
     { key: 'projects', label: t('admin.projects.tab.projects') },
     { key: 'namespaces', label: t('admin.projects.tab.namespaces') },
+    { key: 'settings', label: t('admin.projects.tab.settings'), icon: Settings },
   ]
 
   const projectsQuery = useAdminProjects(activeTab === 'projects' ? debouncedSearch : '')
@@ -206,16 +208,20 @@ export function SystemProjectsPage() {
         <Tabs tabs={tabs} activeTab={activeTab} onTabChange={handleTabChange} />
       </div>
 
-      <div className="mt-4 max-w-sm">
-        <Input
-          placeholder={activeTab === 'projects' ? t('admin.projects.search.projects') : t('admin.projects.search.namespaces')}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
+      {activeTab !== 'settings' && (
+        <div className="mt-4 max-w-sm">
+          <Input
+            placeholder={activeTab === 'projects' ? t('admin.projects.search.projects') : t('admin.projects.search.namespaces')}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+      )}
 
       <div className="mt-4">
-        {isLoading ? (
+        {activeTab === 'settings' ? (
+          <SettingsTab />
+        ) : isLoading ? (
           <div className="flex justify-center py-12">
             <Spinner />
           </div>
@@ -235,7 +241,7 @@ export function SystemProjectsPage() {
           />
         )}
 
-        {hasNextPage && (
+        {activeTab !== 'settings' && hasNextPage && (
           <div className="flex justify-center pt-4">
             <Button
               variant="secondary"
@@ -244,6 +250,118 @@ export function SystemProjectsPage() {
             >
               {isFetchingNextPage ? t('admin.projects.loading') : t('admin.projects.loadMore')}
             </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function SettingsTab() {
+  const { t } = useTranslation()
+
+  return (
+    <div className="space-y-6">
+      <ReservedListSection
+        settingKey="reserved_namespace_slugs"
+        title={t('admin.projects.settings.reservedSlugs.title')}
+        description={t('admin.projects.settings.reservedSlugs.description')}
+        placeholder={t('admin.projects.settings.reservedSlugs.placeholder')}
+        emptyMessage={t('admin.projects.settings.reservedSlugs.empty')}
+        normalize={(v) => v.toLowerCase().replace(/[^a-z0-9-]/g, '')}
+      />
+      <ReservedListSection
+        settingKey="reserved_project_keys"
+        title={t('admin.projects.settings.reservedKeys.title')}
+        description={t('admin.projects.settings.reservedKeys.description')}
+        placeholder={t('admin.projects.settings.reservedKeys.placeholder')}
+        emptyMessage={t('admin.projects.settings.reservedKeys.empty')}
+        normalize={(v) => v.toUpperCase().replace(/[^A-Z0-9]/g, '')}
+      />
+    </div>
+  )
+}
+
+function ReservedListSection({
+  settingKey,
+  title,
+  description,
+  placeholder,
+  emptyMessage,
+  normalize,
+}: {
+  settingKey: string
+  title: string
+  description: string
+  placeholder: string
+  emptyMessage: string
+  normalize: (value: string) => string
+}) {
+  const { t } = useTranslation()
+  const { data: items, isLoading } = useSystemSetting<string[]>(settingKey)
+  const setSetting = useSetSystemSetting()
+  const [input, setInput] = useState('')
+  const [error, setError] = useState('')
+
+  const list = items ?? []
+
+  function handleAdd() {
+    const value = normalize(input.trim())
+    if (!value) return
+    if (list.includes(value)) {
+      setError(t('admin.projects.settings.duplicate'))
+      return
+    }
+    setSetting.mutate({ key: settingKey, value: [...list, value] })
+    setInput('')
+    setError('')
+  }
+
+  function handleRemove(value: string) {
+    setSetting.mutate({ key: settingKey, value: list.filter((v) => v !== value) })
+  }
+
+  return (
+    <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+      <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">{title}</h3>
+      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{description}</p>
+
+      <div className="mt-4 flex gap-2">
+        <Input
+          value={input}
+          onChange={(e) => { setInput(e.target.value); setError('') }}
+          placeholder={placeholder}
+          onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+          className="max-w-xs"
+        />
+        <Button onClick={handleAdd} disabled={!input.trim() || setSetting.isPending} variant="secondary" size="sm">
+          <Plus className="h-4 w-4 mr-1" />
+          {t('admin.projects.settings.add')}
+        </Button>
+      </div>
+      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+
+      <div className="mt-3">
+        {isLoading ? (
+          <Spinner />
+        ) : list.length === 0 ? (
+          <p className="text-sm text-gray-500 dark:text-gray-400">{emptyMessage}</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {list.map((item) => (
+              <span
+                key={item}
+                className="inline-flex items-center gap-1 rounded-md bg-gray-100 dark:bg-gray-800 px-2.5 py-1 text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
+                {item}
+                <button
+                  onClick={() => handleRemove(item)}
+                  className="ml-0.5 rounded p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            ))}
           </div>
         )}
       </div>

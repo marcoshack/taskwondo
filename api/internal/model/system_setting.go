@@ -30,6 +30,10 @@ const (
 	SettingOAuthGitHubConfig     = "oauth_github_config"
 	SettingOAuthMicrosoftConfig  = "oauth_microsoft_config"
 
+	// Deny lists (JSON arrays of strings)
+	SettingReservedNamespaceSlugs = "reserved_namespace_slugs"
+	SettingReservedProjectKeys   = "reserved_project_keys"
+
 	// Feature flags
 	SettingFeatureStatsTimeline  = "feature_stats_timeline"
 	SettingFeatureSemanticSearch = "feature_semantic_search"

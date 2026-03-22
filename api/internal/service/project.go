@@ -127,6 +127,10 @@ func (s *ProjectService) Create(ctx context.Context, info *model.AuthInfo, name,
 		return nil, fmt.Errorf("project key must be 2-5 uppercase alphanumeric characters starting with a letter: %w", model.ErrConflict)
 	}
 
+	if err := s.checkReservedKey(ctx, key); err != nil {
+		return nil, err
+	}
+
 	// Check for duplicate key (namespace-scoped if namespace context present)
 	namespaceID := model.NamespaceIDFromContext(ctx)
 	if namespaceID != uuid.Nil {
@@ -1408,4 +1412,22 @@ func (s *ProjectService) publishMemberAdded(_ context.Context, project *model.Pr
 	if err := s.publisher.Publish("notification.member_added", evt); err != nil {
 		log.Ctx(context.Background()).Warn().Err(err).Msg("failed to publish member added notification")
 	}
+}
+
+// checkReservedKey checks the project key against the admin-managed deny list.
+func (s *ProjectService) checkReservedKey(ctx context.Context, key string) error {
+	setting, err := s.systemSettings.Get(ctx, model.SettingReservedProjectKeys)
+	if err != nil {
+		return nil // no deny list configured — allow
+	}
+	var denyList []string
+	if err := json.Unmarshal(setting.Value, &denyList); err != nil {
+		return nil // malformed — allow
+	}
+	for _, reserved := range denyList {
+		if reserved == key {
+			return fmt.Errorf("project key %q is reserved: %w", key, model.ErrValidation)
+		}
+	}
+	return nil
 }

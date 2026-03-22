@@ -599,6 +599,60 @@ func TestCreateNamespace_DuplicateSlug(t *testing.T) {
 	}
 }
 
+func TestCreateNamespace_DenyListSlug(t *testing.T) {
+	svc, _, _, _, userRepo, settingsRepo := newTestNamespaceServiceWithSettings()
+	enableNamespaces(settingsRepo)
+	userID := userRepo.addUser(model.RoleUser)
+	info := nsUserAuthInfo(userID)
+
+	// Add a slug to the deny list
+	settingsRepo.settings[model.SettingReservedNamespaceSlugs] = &model.SystemSetting{
+		Key:   model.SettingReservedNamespaceSlugs,
+		Value: []byte(`["forbidden","blocked"]`),
+	}
+
+	_, err := svc.CreateNamespace(context.Background(), info, "forbidden", "Forbidden NS")
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation for deny-listed slug, got %v", err)
+	}
+
+	// A non-denied slug should succeed
+	ns, err := svc.CreateNamespace(context.Background(), info, "allowed", "Allowed NS")
+	if err != nil {
+		t.Fatalf("expected no error for allowed slug, got %v", err)
+	}
+	if ns.Slug != "allowed" {
+		t.Fatalf("expected slug 'allowed', got %q", ns.Slug)
+	}
+}
+
+func TestUpdateNamespace_DenyListSlug(t *testing.T) {
+	svc, _, _, _, userRepo, settingsRepo := newTestNamespaceServiceWithSettings()
+	enableNamespaces(settingsRepo)
+	userID := userRepo.addUser(model.RoleUser)
+	info := nsUserAuthInfo(userID)
+
+	// Create a namespace first
+	ns, err := svc.CreateNamespace(context.Background(), info, "myns", "My Namespace")
+	if err != nil {
+		t.Fatalf("create failed: %v", err)
+	}
+	_ = ns
+
+	// Add deny list
+	settingsRepo.settings[model.SettingReservedNamespaceSlugs] = &model.SystemSetting{
+		Key:   model.SettingReservedNamespaceSlugs,
+		Value: []byte(`["forbidden"]`),
+	}
+
+	// Try to rename to a denied slug
+	denied := "forbidden"
+	_, err = svc.UpdateNamespace(context.Background(), info, "myns", &denied, nil, nil, nil)
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation for deny-listed slug rename, got %v", err)
+	}
+}
+
 func TestGetNamespace_AsGlobalAdmin(t *testing.T) {
 	svc, nsRepo, _, _, _, _ := newTestNamespaceServiceWithSettings()
 	info := nsAdminAuthInfo()

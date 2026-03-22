@@ -193,6 +193,11 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to seed default limit settings")
 	}
 
+	// Seed default deny lists (reserved namespace slugs and project keys)
+	if err := systemSettingService.SeedDefaultDenyLists(ctx); err != nil {
+		log.Fatal().Err(err).Msg("failed to seed default deny lists")
+	}
+
 	// Sync default namespace display name when brand changes
 	systemSettingService.SetBrandChangeHandler(namespaceService.UpdateDefaultNamespaceDisplayName)
 

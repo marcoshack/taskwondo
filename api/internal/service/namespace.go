@@ -126,6 +126,10 @@ func (s *NamespaceService) CreateNamespace(ctx context.Context, info *model.Auth
 		return nil, fmt.Errorf("namespace slug %q is reserved: %w", slug, model.ErrValidation)
 	}
 
+	if err := s.checkReservedSlug(ctx, slug); err != nil {
+		return nil, err
+	}
+
 	if displayName == "" {
 		return nil, fmt.Errorf("display_name is required: %w", model.ErrValidation)
 	}
@@ -215,6 +219,9 @@ func (s *NamespaceService) UpdateNamespace(ctx context.Context, info *model.Auth
 		}
 		if reservedSlugs[*newSlug] {
 			return nil, fmt.Errorf("namespace slug %q is reserved: %w", *newSlug, model.ErrValidation)
+		}
+		if err := s.checkReservedSlug(ctx, *newSlug); err != nil {
+			return nil, err
 		}
 		// Check for slug collision
 		if *newSlug != ns.Slug {
@@ -859,4 +866,22 @@ func isValidNamespaceRole(role string) bool {
 		return true
 	}
 	return false
+}
+
+// checkReservedSlug checks the slug against the admin-managed deny list.
+func (s *NamespaceService) checkReservedSlug(ctx context.Context, slug string) error {
+	setting, err := s.systemSettings.Get(ctx, model.SettingReservedNamespaceSlugs)
+	if err != nil {
+		return nil // no deny list configured — allow
+	}
+	var denyList []string
+	if err := json.Unmarshal(setting.Value, &denyList); err != nil {
+		return nil // malformed — allow
+	}
+	for _, reserved := range denyList {
+		if reserved == slug {
+			return fmt.Errorf("namespace slug %q is reserved: %w", slug, model.ErrValidation)
+		}
+	}
+	return nil
 }

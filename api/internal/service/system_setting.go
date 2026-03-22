@@ -189,6 +189,26 @@ func (s *SystemSettingService) SeedDefaultLimits(ctx context.Context) error {
 	return nil
 }
 
+// SeedDefaultDenyLists creates default reserved namespace slug and project key
+// lists if they do not already exist.
+func (s *SystemSettingService) SeedDefaultDenyLists(ctx context.Context) error {
+	defaults := map[string][]string{
+		model.SettingReservedNamespaceSlugs: {"admin", "taskwondo"},
+		model.SettingReservedProjectKeys:   {},
+	}
+	for key, value := range defaults {
+		if _, err := s.settings.Get(ctx, key); err == nil {
+			continue // already set
+		}
+		raw, _ := json.Marshal(value)
+		if err := s.settings.Upsert(ctx, &model.SystemSetting{Key: key, Value: raw}); err != nil {
+			return fmt.Errorf("seeding %s: %w", key, err)
+		}
+		log.Ctx(ctx).Info().Str("key", key).Msg("seeded default deny list setting")
+	}
+	return nil
+}
+
 func requireAdmin(info *model.AuthInfo) error {
 	if info == nil || info.GlobalRole != model.RoleAdmin {
 		return model.ErrForbidden

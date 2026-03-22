@@ -452,6 +452,31 @@ func TestCreateProject_DuplicateKey(t *testing.T) {
 	}
 }
 
+func TestCreateProject_DenyListKey(t *testing.T) {
+	s := newTestProjectSetup()
+	info := userAuthInfo()
+
+	// Add a key to the deny list
+	s.settingsRepo.settings[model.SettingReservedProjectKeys] = &model.SystemSetting{
+		Key:   model.SettingReservedProjectKeys,
+		Value: []byte(`["ADMIN","SYS"]`),
+	}
+
+	_, err := s.svc.Create(context.Background(), info, "Admin Project", "ADMIN", nil, nil)
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation for deny-listed key, got %v", err)
+	}
+
+	// A non-denied key should succeed
+	proj, err := s.svc.Create(context.Background(), info, "Good Project", "GOOD", nil, nil)
+	if err != nil {
+		t.Fatalf("expected no error for allowed key, got %v", err)
+	}
+	if proj.Key != "GOOD" {
+		t.Fatalf("expected key 'GOOD', got %q", proj.Key)
+	}
+}
+
 func TestCreateProject_CreatorBecomesOwner(t *testing.T) {
 	svc, _, memberRepo, _ := newTestProjectService()
 	info := userAuthInfo()

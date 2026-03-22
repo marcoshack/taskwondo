@@ -294,3 +294,118 @@ test.describe('Admin Projects & Namespaces — UI', () => {
     await attach(page, testInfo, '01-stat-cards');
   });
 });
+
+// ─── Deny List Tests ─────────────────────────────────────────────────────────
+
+test.describe('Admin Deny Lists — API', () => {
+  test.describe.configure({ mode: 'serial' });
+
+  test('reserved namespace slug blocks namespace creation', async ({ request }) => {
+    const adminToken = getAdminToken();
+
+    // Set a deny list containing a test slug
+    await api.setSystemSetting(request, adminToken, 'reserved_namespace_slugs', ['admin', 'taskwondo', 'blocked']);
+
+    // Enable namespaces
+    await api.enableNamespaces(request, adminToken);
+
+    // Try to create a namespace with a denied slug — should fail
+    const res = await request.post(`${BASE_URL}/api/v1/namespaces`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+      data: { slug: 'blocked', display_name: 'Blocked NS' },
+    });
+    expect(res.status()).toBe(400);
+    const body = await res.json();
+    expect(body.error.message).toContain('reserved');
+
+    // Clean up: remove the extra test entry
+    await api.setSystemSetting(request, adminToken, 'reserved_namespace_slugs', ['admin', 'taskwondo']);
+  });
+
+  test('reserved project key blocks project creation', async ({ request }) => {
+    const adminToken = getAdminToken();
+
+    // Set a deny list with a test key
+    await api.setSystemSetting(request, adminToken, 'reserved_project_keys', ['NOPE']);
+
+    // Try to create a project with a denied key — should fail
+    const res = await request.post(`${BASE_URL}/api/v1/default/projects`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+      data: { key: 'NOPE', name: 'Denied Project' },
+    });
+    expect(res.status()).toBe(400);
+    const body = await res.json();
+    expect(body.error.message).toContain('reserved');
+
+    // Clean up
+    await api.setSystemSetting(request, adminToken, 'reserved_project_keys', []);
+  });
+});
+
+test.describe('Admin Deny Lists — UI', () => {
+  test.describe.configure({ mode: 'serial' });
+
+  test('settings tab shows deny list sections', async ({ page, request }, testInfo) => {
+    const adminToken = getAdminToken();
+
+    // Seed deny lists to known state
+    await api.setSystemSetting(request, adminToken, 'reserved_namespace_slugs', ['admin', 'taskwondo']);
+    await api.setSystemSetting(request, adminToken, 'reserved_project_keys', []);
+
+    await page.goto('/admin/project-overview');
+    await page.waitForLoadState('networkidle');
+    await expect(page.getByRole('heading', { name: 'Projects & Namespaces' })).toBeVisible({ timeout: 10000 });
+
+    // Click the Settings tab
+    await page.getByRole('button', { name: 'Settings' }).click();
+
+    // Verify both sections are visible
+    await expect(page.getByText('Reserved Namespace Slugs')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Reserved Project Keys')).toBeVisible();
+
+    // Verify the seeded slugs appear as tags
+    await expect(page.getByText('admin', { exact: true })).toBeVisible();
+    await expect(page.getByText('taskwondo', { exact: true })).toBeVisible();
+
+    await attach(page, testInfo, '01-settings-tab');
+  });
+
+  test('can add and remove a reserved namespace slug', async ({ page, request }, testInfo) => {
+    const adminToken = getAdminToken();
+
+    // Reset deny list to clean state via API before navigating
+    await api.setSystemSetting(request, adminToken, 'reserved_namespace_slugs', ['admin', 'taskwondo']);
+
+    await page.goto('/admin/project-overview');
+    await page.waitForLoadState('networkidle');
+    await expect(page.getByRole('heading', { name: 'Projects & Namespaces' })).toBeVisible({ timeout: 10000 });
+    await page.getByRole('button', { name: 'Settings' }).click();
+    await expect(page.getByText('Reserved Namespace Slugs')).toBeVisible({ timeout: 10000 });
+
+    // Wait for the deny list to be fully loaded (admin and taskwondo visible, no stale items)
+    await expect(page.getByText('admin', { exact: true })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('taskwondo', { exact: true })).toBeVisible({ timeout: 5000 });
+
+    // Use a unique slug name to avoid collisions with leftover state
+    const uniqueSlug = `test${randomUUID().slice(0, 4)}`;
+
+    // Add a new slug using the textbox by placeholder
+    const slugInput = page.getByRole('textbox', { name: /internal/i });
+    await slugInput.fill(uniqueSlug);
+    await page.getByRole('button', { name: 'Add' }).first().click();
+
+    // Verify it appears
+    await expect(page.getByText(uniqueSlug, { exact: true })).toBeVisible({ timeout: 5000 });
+
+    // Remove it by clicking the X button within the same tag span
+    await page.locator('span', { hasText: uniqueSlug }).getByRole('button').click();
+
+    // Verify it's gone
+    await expect(page.getByText(uniqueSlug, { exact: true })).not.toBeVisible({ timeout: 5000 });
+
+    // Clean up via API to ensure pristine state
+    await api.setSystemSetting(request, adminToken, 'reserved_namespace_slugs', ['admin', 'taskwondo']);
+
+    await attach(page, testInfo, '02-add-remove-slug');
+  });
+});
