@@ -392,9 +392,9 @@ test.describe('Admin Deny Lists — UI', () => {
     // Click the Settings tab
     await page.getByRole('button', { name: 'Settings' }).click();
 
-    // Verify both sections are visible
-    await expect(page.getByText('Reserved Namespace Slugs')).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText('Reserved Project Keys')).toBeVisible();
+    // Verify both sections are visible (use heading role to avoid matching "No reserved project keys." paragraph)
+    await expect(page.getByRole('heading', { name: 'Reserved Namespace Slugs' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Reserved Project Keys' })).toBeVisible();
 
     // Verify the seeded slugs appear as tags
     await expect(page.getByText('admin', { exact: true })).toBeVisible();

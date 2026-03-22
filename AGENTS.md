@@ -88,13 +88,15 @@ Path alias: `@/` → `src/`. Vite proxies `/api` to `:8080` in dev.
 - **Logging**: zerolog only. Use `log.Ctx(ctx)` for contextual logging.
 - **Context**: `context.Context` as first param everywhere (`_ context.Context` if unused)
 - **Interfaces**: Define in the consumer package, not the provider. `service` defines repo interfaces; `repository` implements them.
-- **Errors**: Wrap with context: `fmt.Errorf("creating work item: %w", err)`
+- **Errors**: Wrap with context: `fmt.Errorf("creating work item: %w", err)`. For user-facing validation errors that need localization, use `model.NewKeyedError(sentinel, "error_key", "english message", params)` — the handler layer automatically extracts the key via `writeErrorFromService`.
+- **Error keys**: Stable, snake_case identifiers (e.g. `namespace_slug_reserved`, `project_key_in_use`). Never rename once released. Add the corresponding `errors.<key>` i18n entry to all language files.
 - **No global state.** Dependency injection via constructors. No `init()` except in `main`.
 - **All times UTC** in the database. Convert to user timezone only in the frontend.
 - **Commit messages**: Prefix with `[DISPLAY_ID]` (e.g. `[TF-141]`, `[PROJ-23]`) when a work item display ID is provided. The display ID format is `<PROJECT_KEY>-<NUMBER>`. No Co-Authored-By.
 
 ### React/TypeScript
 - **i18n**: All UI strings in `web/src/i18n/en.json`. Use `const { t } = useTranslation()` in every component. `<Trans>` for JSX with embedded HTML. Module-level arrays with display strings must be inside component body. Interpolation: `{{var}}`. Pluralization: `_one`/`_other` suffixes. Any key added to `en.json` must also be added to all other language files.
+- **API errors**: Use `getLocalizedError(err, t, 'fallback.key')` from `@/utils/apiError` to display API errors. Never extract `error.message` manually. The helper resolves `error_key` → i18n translation with params, falling back to the raw message then the fallback key.
 - **Destructive actions**: Always `<Modal>` with cancel/confirm. Never `window.confirm()`.
 - **Success feedback**: Inline green checkmark (`<Check>` from lucide-react), never layout-shifting toasts. Pattern: `savedId` state + `setTimeout(~2s)`.
 - **Settings pages**: Danger Zone is always the last section.
