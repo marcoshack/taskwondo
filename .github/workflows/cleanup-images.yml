@@ -1,0 +1,25 @@
+name: Cleanup untagged images
+
+on:
+  schedule:
+    - cron: "0 3 * * 0" # every Sunday at 03:00 UTC
+  workflow_dispatch: # allow manual trigger
+
+jobs:
+  cleanup:
+    name: Delete untagged images
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    strategy:
+      matrix:
+        package: [api, web, worker]
+    steps:
+      - name: Delete untagged images older than 14 days
+        uses: snok/container-retention-policy@v3.0.1
+        with:
+          account: marcoshack
+          token: ${{ secrets.GITHUB_TOKEN }}
+          image-names: taskwondo/${{ matrix.package }}
+          cut-off: 14d
+          tag-selection: untagged

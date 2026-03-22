@@ -1,3 +1,70 @@
+# v0.3.0
+
+Namespace multi-tenancy, AI-powered semantic search, SLA breach monitoring with escalations, Prometheus observability, user profiles with avatars, admin dashboards, CI/CD with GitHub Actions, and 130+ commits across the full stack.
+
+## New Features
+
+- **Namespace multi-tenancy** — organize projects under namespaces with URL-scoped paths, custom icons/colors, ownership limits, per-user namespace filtering, and cross-namespace project switcher
+- **Semantic search** — pgvector + Ollama embeddings with Ctrl+K global search modal, FTS fallback, deep-linking, and result snippets
+- **Unified search endpoint** — combined FTS and semantic search behind `/api/v1/search` with status, display ID, and namespace in results
+- **SLA breach monitoring** — email notification engine for SLA breaches with escalation lists, per-type assignment, and priority-based SLA targets
+- **Prometheus metrics** — `/metrics` endpoint with gauge metrics for resource counts (projects, users, work items, etc.)
+- **User profiles** — profile page with display name and avatar management, avatars shown across all UI locations
+- **Milestone dashboard** — dedicated milestone page with stats API and progress visualization
+- **Admin dashboard** — Projects & Namespaces inspection page with stats summary on the admin Projects page
+- **System API keys** — resource-based permissions for system-level API keys (distinct from user API keys)
+- **Email project invites** — invite users to projects via email with notification delivery
+- **UI layout modes** — Expanded and Centered layout options for different screen preferences
+- **Children progress** — parent work items show progress bar based on children completion
+- **Activity graph time range** — custom time range selector with persistent period preference
+- **Mention search modal** — replaced `@` autocomplete with mini search modal using unified search
+- **Localized API errors** — API error messages returned with error keys for client-side i18n
+- **Namespace deny list** — reserved slugs and project keys blocked from user creation
+
+## Improvements
+
+- **CI/CD pipeline** — GitHub Actions with build, test, smoke test, Docker publish to GHCR, nightly releases, and tagged versioned releases
+- **Completed item styling** — strikethrough preference toggle and done/cancelled visual effect across all views (list, board, cards)
+- **Unified top bar layout** — consistent search bar and action row across Inbox, Watchlist, and Work Items pages
+- **Inbox enhancements** — project filter, refresh button with auto-refresh, highlight previously opened items, back-to-source navigation
+- **Email notifications** — remaining notification types implemented, sent in user's preferred language, assignee names resolved in watcher emails
+- **Board view** — navigation chevrons for horizontal scrolling, Backlog status ordering fix
+- **Mobile responsiveness** — milestone in detail metadata, reworked mobile top bar, rem-based toolbar heights
+- **Project privacy** — admin option to hide non-member projects, extended to filter namespaces
+- **Project switcher** — all-namespaces toggle, show projects across all namespaces, auto-select current namespace in New Project modal
+- **Search result navigation** — uses result's namespace for correct routing
+- **Admin workflow routes** — moved system workflow endpoints to `/api/v1/admin/workflows`
+- **User scoping** — `/api/v1/users` scoped to co-project members for privacy
+- **API key rename** — ability to rename existing API keys
+- **MCP server** — MCPB bundle for Claude Desktop on Windows, milestone filter and labels in `list_work_items`, namespace support
+- **Expired token cleanup** — periodic background job to purge expired email verification tokens
+- **Notification preferences** — "Added to project" notification moved to global preferences
+
+## Bug Fixes
+
+- Fix SLA ordering and backfill on policy creation
+- Fix retroactive SLA notifications and duplicate email race condition
+- Fix "Project not found" flash when switching namespaces
+- Fix namespace icon not showing in New Project modal
+- Fix sidebar namespace badge not showing after creation
+- Fix duplicate `display_id` constraint violation across namespaces
+- Fix namespace settings mobile icon spacing
+- Fix mention modal positioning on scrolled pages
+- Fix reporter name showing UUID for non-member users
+- Fix missing `backlog → in_progress` workflow transition
+- Fix "Back to..." link to return to source page instead of list
+- Fix inbox search box losing focus while typing
+- Fix refresh button height mismatch on mobile Inbox
+- Fix attachment list filename overflow on mobile
+- Fix modal header text overlapping action icons on mobile
+- Fix top bar overflow on User Preferences on mobile
+- Fix missing bottom border on DataTable
+- Strengthen email validation in registration
+- Backfill `resolved_at` for work items resolved before the field was managed
+- Fix various flaky E2E tests (namespace, notifications, keyboard shortcuts, board view)
+
+---
+
 # v0.2.0
 
 Major productivity features for daily work item management, project invite links, background job processing with NATS JetStream, an MCP server for AI tool integration, broader authentication options, and 100+ automated E2E tests.
