@@ -17,6 +17,7 @@ jobs:
         package: [api, web, worker]
     steps:
       - uses: actions/delete-package-versions@v5
+        continue-on-error: true # action has a 100/run limit and errors on the boundary
         with:
           package-name: taskwondo/${{ matrix.package }}
           package-type: container
