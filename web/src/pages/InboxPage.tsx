@@ -677,7 +677,7 @@ function InboxListPage() {
             onChange={setSelectedProjects}
             placeholder={t('inbox.allProjects')}
             searchable
-            dropdownWidthClass="right-0 min-w-[340px]"
+            dropdownWidthClass="left-0 min-w-[340px]"
             renderOption={renderProjectOption}
           />
         </div>
