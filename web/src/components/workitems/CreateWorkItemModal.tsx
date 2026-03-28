@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Modal } from '@/components/ui/Modal'
 import { WorkItemForm } from '@/components/workitems/WorkItemForm'
-import { useProjects, useMembers } from '@/hooks/useProjects'
+import { useAllProjects, useMembers } from '@/hooks/useProjects'
 import { useCreateWorkItem } from '@/hooks/useWorkItems'
 import { useMilestones } from '@/hooks/useMilestones'
 import { getLocalizedError } from '@/utils/apiError'
@@ -23,7 +23,7 @@ export function CreateWorkItemModal({ open, onClose, lockedProjectKey, onCreated
   )
   const activeProjectKey = lockedProjectKey ?? selectedProjectKey
 
-  const { data: projects } = useProjects()
+  const { data: projects } = useAllProjects()
   const { data: members } = useMembers(activeProjectKey)
   const { data: milestones } = useMilestones(activeProjectKey)
 

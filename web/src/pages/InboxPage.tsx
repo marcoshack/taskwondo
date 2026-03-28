@@ -13,13 +13,16 @@ import { PriorityBadge } from '@/components/workitems/PriorityBadge'
 import { TypeBadge } from '@/components/workitems/TypeBadge'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { MultiSelect, type MultiSelectOption } from '@/components/ui/MultiSelect'
+import { ProjectKeyBadge } from '@/components/ui/ProjectKeyBadge'
+import { NamespaceIcon } from '@/components/NamespaceIcon'
+import { useNamespaceContext } from '@/contexts/NamespaceContext'
 import { RefreshButton, type RefreshInterval } from '@/components/ui/RefreshButton'
 import { SLAIndicator } from '@/components/SLAIndicator'
 import { AppSidebar } from '@/components/AppSidebar'
 import { useSidebar } from '@/contexts/SidebarContext'
 import { useLayout } from '@/contexts/LayoutContext'
 import { useInboxItems, useRemoveFromInbox, useReorderInboxItem, useClearCompletedInbox, useAddToInbox } from '@/hooks/useInbox'
-import { useProjects } from '@/hooks/useProjects'
+import { useAllProjects } from '@/hooks/useProjects'
 import { usePreference, useSetPreference } from '@/hooks/usePreferences'
 import { useColumnWidths } from '@/hooks/useColumnWidths'
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
@@ -287,7 +290,8 @@ function InboxListPage() {
     }
   }, [projectFilterPref, projectFilterInit])
   const [projectFilterOpen, setProjectFilterOpen] = useState(false)
-  const { data: projects } = useProjects()
+  const { data: projects } = useAllProjects()
+  const { showSwitcher: showNamespaces } = useNamespaceContext()
 
   const { columnWidths, onColumnResize, resetColumnWidth } = useColumnWidths('inbox')
 
@@ -369,6 +373,29 @@ function InboxListPage() {
     (projects ?? []).map((p) => ({ value: p.key, label: `${p.key} – ${p.name}` })),
     [projects],
   )
+
+  const projectMap = useMemo(() => {
+    const map = new Map<string, typeof projects extends (infer T)[] | undefined ? T : never>()
+    for (const p of projects ?? []) map.set(p.key, p)
+    return map
+  }, [projects])
+
+  const renderProjectOption = useCallback((opt: MultiSelectOption) => {
+    const p = projectMap.get(opt.value)
+    if (!p) return opt.label
+    return (
+      <span className="flex items-center gap-2 min-w-0 flex-1">
+        <ProjectKeyBadge size="icon">{p.key}</ProjectKeyBadge>
+        <span className="truncate">{p.name}</span>
+        {showNamespaces && p.namespace_slug && (
+          <span className="ml-auto flex items-center gap-1 text-[0.7rem] text-gray-400 dark:text-gray-500 shrink-0">
+            <span>{p.namespace_slug}</span>
+            <NamespaceIcon icon={p.namespace_icon ?? 'building2'} color={p.namespace_color ?? 'slate'} className="h-3 w-3" />
+          </span>
+        )}
+      </span>
+    )
+  }, [projectMap, showNamespaces])
 
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -650,7 +677,8 @@ function InboxListPage() {
             onChange={setSelectedProjects}
             placeholder={t('inbox.allProjects')}
             searchable
-            dropdownWidthClass="right-0 min-w-[280px]"
+            dropdownWidthClass="right-0 min-w-[340px]"
+            renderOption={renderProjectOption}
           />
         </div>
         <div className="flex-1" />
@@ -801,6 +829,8 @@ function InboxListPage() {
           projectOptions={projectOptions}
           selectedProjects={selectedProjects}
           setSelectedProjects={setSelectedProjects}
+          projectMap={projectMap}
+          showNamespaces={showNamespaces}
         />
       </Modal>
 
@@ -968,10 +998,12 @@ function FeedPage() {
 
 // --- Mobile Project Filter (with search) ---
 
-function MobileProjectFilterContent({ projectOptions, selectedProjects, setSelectedProjects }: {
+function MobileProjectFilterContent({ projectOptions, selectedProjects, setSelectedProjects, projectMap, showNamespaces }: {
   projectOptions: MultiSelectOption[]
   selectedProjects: string[]
   setSelectedProjects: (val: string[] | ((prev: string[]) => string[])) => void
+  projectMap: Map<string, import('@/api/projects').Project>
+  showNamespaces: boolean
 }) {
   const { t } = useTranslation()
   const [search, setSearch] = useState('')
@@ -1010,19 +1042,29 @@ function MobileProjectFilterContent({ projectOptions, selectedProjects, setSelec
         {filtered.length === 0 ? (
           <p className="text-sm text-gray-400 dark:text-gray-500 py-2">{t('common.noResults')}</p>
         ) : (
-          filtered.map((opt) => (
-            <label key={opt.value} className="flex items-center gap-2 px-1 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer text-sm text-gray-700 dark:text-gray-300 rounded">
-              <input
-                type="checkbox"
-                checked={selectedProjects.includes(opt.value)}
-                onChange={() => setSelectedProjects((prev: string[]) =>
-                  prev.includes(opt.value) ? prev.filter((v) => v !== opt.value) : [...prev, opt.value]
+          filtered.map((opt) => {
+            const p = projectMap.get(opt.value)
+            return (
+              <label key={opt.value} className="flex items-center gap-2 px-1 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer text-sm text-gray-700 dark:text-gray-300 rounded">
+                <input
+                  type="checkbox"
+                  checked={selectedProjects.includes(opt.value)}
+                  onChange={() => setSelectedProjects((prev: string[]) =>
+                    prev.includes(opt.value) ? prev.filter((v) => v !== opt.value) : [...prev, opt.value]
+                  )}
+                  className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 shrink-0"
+                />
+                <ProjectKeyBadge size="icon">{opt.value}</ProjectKeyBadge>
+                <span className="truncate">{p?.name ?? opt.label}</span>
+                {showNamespaces && p?.namespace_slug && (
+                  <span className="ml-auto flex items-center gap-1 text-[0.7rem] text-gray-400 dark:text-gray-500 shrink-0">
+                    <span>{p.namespace_slug}</span>
+                    <NamespaceIcon icon={p.namespace_icon ?? 'building2'} color={p.namespace_color ?? 'slate'} className="h-3 w-3" />
+                  </span>
                 )}
-                className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-              />
-              <span className="truncate">{opt.label}</span>
-            </label>
-          ))
+              </label>
+            )
+          })
         )}
       </div>
     </div>

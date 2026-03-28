@@ -165,8 +165,9 @@ export async function createWorkItem(
   token: string,
   projectKey: string,
   data: { title: string; type: string; description?: string; assignee_id?: string; watcher_ids?: string[] },
+  namespace = 'default',
 ): Promise<{ id: string; item_number: number; display_id: string }> {
-  const res = await request.post(`${BASE_URL}/api/v1/default/projects/${projectKey}/items`, {
+  const res = await request.post(`${BASE_URL}/api/v1/${namespace}/projects/${projectKey}/items`, {
     headers: { Authorization: `Bearer ${token}` },
     data,
   });

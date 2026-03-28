@@ -1,6 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Project } from '@/api/projects'
+import { ProjectKeyBadge } from '@/components/ui/ProjectKeyBadge'
+import { NamespaceIcon } from '@/components/NamespaceIcon'
+import { useNamespaceContext } from '@/contexts/NamespaceContext'
 
 interface ProjectPickerProps {
   projects: Project[]
@@ -11,6 +14,7 @@ interface ProjectPickerProps {
 
 export function ProjectPicker({ projects, value, onChange, disabled }: ProjectPickerProps) {
   const { t } = useTranslation()
+  const { showSwitcher: showNamespaces } = useNamespaceContext()
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
   const ref = useRef<HTMLDivElement>(null)
@@ -21,7 +25,7 @@ export function ProjectPicker({ projects, value, onChange, disabled }: ProjectPi
   const filtered = projects.filter((p) => {
     if (!search) return true
     const q = search.toLowerCase()
-    return p.name.toLowerCase().includes(q) || p.key.toLowerCase().includes(q)
+    return p.name.toLowerCase().includes(q) || p.key.toLowerCase().includes(q) || (p.namespace_slug ?? '').toLowerCase().includes(q)
   })
 
   // Close on click outside
@@ -49,7 +53,16 @@ export function ProjectPicker({ projects, value, onChange, disabled }: ProjectPi
         disabled={disabled}
       >
         {selected ? (
-          <span className="text-gray-900 dark:text-gray-100">{selected.name} ({selected.key})</span>
+          <span className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
+            <ProjectKeyBadge size="icon">{selected.key}</ProjectKeyBadge>
+            <span className="truncate">{selected.name}</span>
+            {showNamespaces && selected.namespace_slug && (
+              <span className="ml-auto flex items-center gap-1 text-[0.7rem] text-gray-400 dark:text-gray-500 shrink-0">
+                <span>{selected.namespace_slug}</span>
+                <NamespaceIcon icon={selected.namespace_icon ?? 'building2'} color={selected.namespace_color ?? 'slate'} className="h-3 w-3" />
+              </span>
+            )}
+          </span>
         ) : (
           <span className="text-gray-400 dark:text-gray-500">{t('workitems.form.projectPlaceholder')}</span>
         )}
@@ -71,13 +84,19 @@ export function ProjectPicker({ projects, value, onChange, disabled }: ProjectPi
               <li key={p.key}>
                 <button
                   type="button"
-                  className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 ${
-                    p.key === value ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' : 'text-gray-900 dark:text-gray-100'
+                  className={`w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                    p.key === value ? 'bg-indigo-50 dark:bg-indigo-900/30' : ''
                   }`}
                   onClick={() => { onChange(p.key); setOpen(false); setSearch('') }}
                 >
-                  <div className="font-medium">{p.name}</div>
-                  <div className="text-xs text-gray-400">{p.key}</div>
+                  <ProjectKeyBadge size="icon">{p.key}</ProjectKeyBadge>
+                  <span className="text-gray-900 dark:text-gray-100 font-medium truncate">{p.name}</span>
+                  {showNamespaces && p.namespace_slug && (
+                    <span className="ml-auto flex items-center gap-1 text-[0.7rem] text-gray-400 dark:text-gray-500 shrink-0">
+                      <span>{p.namespace_slug}</span>
+                      <NamespaceIcon icon={p.namespace_icon ?? 'building2'} color={p.namespace_color ?? 'slate'} className="h-3 w-3" />
+                    </span>
+                  )}
                 </button>
               </li>
             ))}

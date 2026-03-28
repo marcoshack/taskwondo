@@ -21,9 +21,10 @@ interface MultiSelectProps {
   searchable?: boolean
   groupActions?: GroupAction[]
   dropdownWidthClass?: string
+  renderOption?: (option: MultiSelectOption) => React.ReactNode
 }
 
-export function MultiSelect({ options, selected, onChange, placeholder = 'All', className = '', searchable = false, groupActions, dropdownWidthClass }: MultiSelectProps) {
+export function MultiSelect({ options, selected, onChange, placeholder = 'All', className = '', searchable = false, groupActions, dropdownWidthClass, renderOption }: MultiSelectProps) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -147,13 +148,13 @@ export function MultiSelect({ options, selected, onChange, placeholder = 'All', 
                     </div>
                   )}
                   {group.items.map((opt) => (
-                    <OptionRow key={opt.value} option={opt} checked={selected.includes(opt.value)} onToggle={toggle} />
+                    <OptionRow key={opt.value} option={opt} checked={selected.includes(opt.value)} onToggle={toggle} renderOption={renderOption} />
                   ))}
                 </div>
               ))
             ) : (
               filteredOptions.map((opt) => (
-                <OptionRow key={opt.value} option={opt} checked={selected.includes(opt.value)} onToggle={toggle} />
+                <OptionRow key={opt.value} option={opt} checked={selected.includes(opt.value)} onToggle={toggle} renderOption={renderOption} />
               ))
             )}
           </div>
@@ -163,16 +164,16 @@ export function MultiSelect({ options, selected, onChange, placeholder = 'All', 
   )
 }
 
-function OptionRow({ option, checked, onToggle }: { option: MultiSelectOption; checked: boolean; onToggle: (value: string) => void }) {
+function OptionRow({ option, checked, onToggle, renderOption }: { option: MultiSelectOption; checked: boolean; onToggle: (value: string) => void; renderOption?: (option: MultiSelectOption) => React.ReactNode }) {
   return (
     <label className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
       <input
         type="checkbox"
         checked={checked}
         onChange={() => onToggle(option.value)}
-        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 shrink-0"
       />
-      {option.label}
+      {renderOption ? renderOption(option) : option.label}
     </label>
   )
 }
