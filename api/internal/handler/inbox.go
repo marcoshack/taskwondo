@@ -124,6 +124,16 @@ func (h *InboxHandler) List(w http.ResponseWriter, r *http.Request) {
 	search := r.URL.Query().Get("search")
 	includeCompleted := r.URL.Query().Get("include_completed") == "true"
 
+	var workItemID *uuid.UUID
+	if wi := r.URL.Query().Get("work_item_id"); wi != "" {
+		parsed, err := uuid.Parse(wi)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid work_item_id")
+			return
+		}
+		workItemID = &parsed
+	}
+
 	var projectKeys []string
 	if p := r.URL.Query().Get("project"); p != "" {
 		for _, k := range strings.Split(p, ",") {
@@ -154,7 +164,7 @@ func (h *InboxHandler) List(w http.ResponseWriter, r *http.Request) {
 		limit = parsed
 	}
 
-	list, err := h.inbox.List(r.Context(), info, !includeCompleted, search, projectKeys, cursor, limit)
+	list, err := h.inbox.List(r.Context(), info, !includeCompleted, search, projectKeys, workItemID, cursor, limit)
 	if err != nil {
 		handleInboxError(w, r, err, "listing inbox items")
 		return

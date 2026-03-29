@@ -302,7 +302,7 @@ type noopInboxRepo struct{}
 func (noopInboxRepo) Add(context.Context, *model.InboxItem) error                  { return nil }
 func (noopInboxRepo) Remove(context.Context, uuid.UUID, uuid.UUID) error           { return nil }
 func (noopInboxRepo) RemoveByID(context.Context, uuid.UUID, uuid.UUID) error       { return nil }
-func (noopInboxRepo) List(context.Context, uuid.UUID, bool, string, []string, *uuid.UUID, int) (*model.InboxItemList, error) {
+func (noopInboxRepo) List(context.Context, uuid.UUID, bool, string, []string, *uuid.UUID, *uuid.UUID, int) (*model.InboxItemList, error) {
 	return &model.InboxItemList{}, nil
 }
 func (noopInboxRepo) CountByUser(context.Context, uuid.UUID) (int, error)    { return 0, nil }

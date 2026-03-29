@@ -48,7 +48,7 @@ func (m *mockInboxRepo) RemoveByID(_ context.Context, id, userID uuid.UUID) erro
 	return nil
 }
 
-func (m *mockInboxRepo) List(_ context.Context, userID uuid.UUID, _ bool, _ string, _ []string, _ *uuid.UUID, limit int) (*model.InboxItemList, error) {
+func (m *mockInboxRepo) List(_ context.Context, userID uuid.UUID, _ bool, _ string, _ []string, _ *uuid.UUID, _ *uuid.UUID, limit int) (*model.InboxItemList, error) {
 	var items []model.InboxItemWithWorkItem
 	for _, item := range m.items {
 		if item.UserID == userID {
@@ -360,7 +360,7 @@ func TestInboxList_Success(t *testing.T) {
 		}
 	}
 
-	list, err := svc.List(context.Background(), info, false, "", nil, nil, 50)
+	list, err := svc.List(context.Background(), info, false, "", nil, nil, nil, 50)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -393,8 +393,8 @@ func TestInboxList_IsolatedPerUser(t *testing.T) {
 	inboxRepo.projectIDs[wiID] = projectID
 	svc.Add(context.Background(), user2, wiID)
 
-	list1, _ := svc.List(context.Background(), user1, false, "", nil, nil, 50)
-	list2, _ := svc.List(context.Background(), user2, false, "", nil, nil, 50)
+	list1, _ := svc.List(context.Background(), user1, false, "", nil, nil, nil, 50)
+	list2, _ := svc.List(context.Background(), user2, false, "", nil, nil, nil, 50)
 
 	if list1.Total != 2 {
 		t.Fatalf("user1: expected 2, got %d", list1.Total)

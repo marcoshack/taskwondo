@@ -53,7 +53,7 @@ func (m *mockHandlerInboxRepo) RemoveByID(_ context.Context, id, userID uuid.UUI
 	return nil
 }
 
-func (m *mockHandlerInboxRepo) List(_ context.Context, userID uuid.UUID, _ bool, _ string, _ []string, _ *uuid.UUID, limit int) (*model.InboxItemList, error) {
+func (m *mockHandlerInboxRepo) List(_ context.Context, userID uuid.UUID, _ bool, _ string, _ []string, _ *uuid.UUID, _ *uuid.UUID, limit int) (*model.InboxItemList, error) {
 	var items []model.InboxItemWithWorkItem
 	for _, item := range m.items {
 		if item.UserID == userID {

@@ -65,7 +65,9 @@ export function WorkItemDetailPage() {
   const deleteMutation = useDeleteWorkItem(projectKey ?? '')
 
   // Inbox: find if this work item is in the user's inbox
-  const { data: inboxData } = useInboxItems({ include_completed: true })
+  const { data: inboxData } = useInboxItems(
+    item ? { include_completed: true, work_item_id: item.id } : {}
+  )
   const inboxItemId = useMemo(() => {
     if (!item || !inboxData?.items) return undefined
     return inboxData.items.find((i) => i.work_item_id === item.id)?.id
