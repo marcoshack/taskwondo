@@ -129,6 +129,14 @@ export function WorkItemDetailPage() {
   )
   const [previewTarget, setPreviewTarget] = useState<PreviewTarget | null>(null)
 
+  // Update browser tab title with work item display ID
+  useEffect(() => {
+    if (item) {
+      document.title = `${currentDisplayId} ${item.title} - Taskwondo`
+    }
+    return () => { document.title = 'Taskwondo' }
+  }, [item, currentDisplayId])
+
   // Clean up deep-link search params after reading them
   useEffect(() => {
     if (initialTab) setSearchParams({}, { replace: true })

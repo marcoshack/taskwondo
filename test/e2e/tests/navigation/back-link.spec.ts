@@ -23,6 +23,9 @@ test.describe('Back link navigation', () => {
     await page.getByRole('table').getByText('Back link list test').click();
     await expect(page).toHaveURL(new RegExp(`/d/projects/${testProject.key}/items/${item.item_number}`), { timeout: 10000 });
 
+    // Browser tab title should show the work item display ID
+    await expect(page).toHaveTitle(new RegExp(`${testProject.key}-${item.item_number}.*Taskwondo`));
+
     const backLink = page.getByText('Back to items');
     await expect(backLink).toBeVisible();
 
