@@ -101,10 +101,13 @@ export function NamespaceProvider({ children }: { children: ReactNode }) {
       const isDefault = slug === 'default'
       setNamespaceSlug(isDefault ? null : slug)
 
-      // Remove namespace-scoped query cache to prevent stale data from the
-      // previous namespace (e.g. "Project not found" flash when switching
-      // namespaces via the project switcher modal).
-      queryClient.removeQueries({ queryKey: ['projects'] })
+      // Reset namespace-scoped queries so active observers see a loading
+      // state instead of stale data from the previous namespace, and
+      // automatically refetch against the (already-updated) API client.
+      // Using resetQueries instead of removeQueries because removeQueries
+      // silently destroys queries without notifying active observers,
+      // leaving mounted components stuck in a permanent loading state.
+      queryClient.resetQueries({ queryKey: ['projects'] })
     },
     [activeSlug, queryClient],
   )
