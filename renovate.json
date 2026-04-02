@@ -1,0 +1,39 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "schedule": ["before 9am on monday"],
+  "timezone": "UTC",
+  "rangeStrategy": "pin",
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 9am on monday"]
+  },
+  "packageRules": [
+    {
+      "description": "Group all non-major updates into a single PR per ecosystem",
+      "matchUpdateTypes": ["minor", "patch", "digest"],
+      "groupName": "non-major dependencies",
+      "groupSlug": "non-major"
+    },
+    {
+      "description": "Group all major updates separately for careful review",
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true
+    },
+    {
+      "description": "Pin Docker images that currently use latest or loose tags",
+      "matchManagers": ["docker-compose", "dockerfile"],
+      "pinDigests": true
+    },
+    {
+      "description": "Go module updates",
+      "matchManagers": ["gomod"],
+      "enabled": true
+    },
+    {
+      "description": "E2E test dependencies — lower priority",
+      "matchFileNames": ["test/e2e/**"],
+      "schedule": ["before 9am on the first day of the month"]
+    }
+  ]
+}
