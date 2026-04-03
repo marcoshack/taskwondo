@@ -94,6 +94,25 @@ func (r *QueueRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
+// GetPublicByProject returns the public queue for a project, or ErrNotFound.
+func (r *QueueRepository) GetPublicByProject(ctx context.Context, projectID uuid.UUID) (*model.Queue, error) {
+	row := r.db.QueryRowContext(ctx,
+		`SELECT id, project_id, name, description, queue_type, is_public, default_priority, default_assignee_id, workflow_id, created_at, updated_at
+		 FROM queues WHERE project_id = $1 AND is_public = true LIMIT 1`, projectID)
+	return scanQueue(row)
+}
+
+// CountPublicByProject returns how many public queues a project has.
+func (r *QueueRepository) CountPublicByProject(ctx context.Context, projectID uuid.UUID) (int, error) {
+	var count int
+	err := r.db.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM queues WHERE project_id = $1 AND is_public = true`, projectID).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("counting public queues: %w", err)
+	}
+	return count, nil
+}
+
 func scanQueue(row *sql.Row) (*model.Queue, error) {
 	var q model.Queue
 	var description sql.NullString

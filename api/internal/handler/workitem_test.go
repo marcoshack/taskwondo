@@ -284,6 +284,9 @@ func (m *mockWorkItemRepo) List(_ context.Context, projectID uuid.UUID, filter *
 		if len(filter.Statuses) > 0 && !strContains(filter.Statuses, item.Status) {
 			continue
 		}
+		if filter.ReporterID != nil && item.ReporterID != *filter.ReporterID {
+			continue
+		}
 		matched = append(matched, *item)
 	}
 
@@ -333,6 +336,15 @@ func (m *mockWorkItemRepo) Delete(_ context.Context, id uuid.UUID) error {
 	}
 	now := time.Now()
 	item.DeletedAt = &now
+	return nil
+}
+
+func (m *mockWorkItemRepo) TouchUpdatedAt(_ context.Context, id uuid.UUID) error {
+	item, ok := m.items[id]
+	if !ok {
+		return model.ErrNotFound
+	}
+	item.UpdatedAt = time.Now()
 	return nil
 }
 
@@ -541,6 +553,25 @@ func (m *mockQueueRepo) Delete(_ context.Context, id uuid.UUID) error {
 	}
 	delete(m.queues, id)
 	return nil
+}
+
+func (m *mockQueueRepo) GetPublicByProject(_ context.Context, projectID uuid.UUID) (*model.Queue, error) {
+	for _, q := range m.queues {
+		if q.ProjectID == projectID && q.IsPublic {
+			return q, nil
+		}
+	}
+	return nil, model.ErrNotFound
+}
+
+func (m *mockQueueRepo) CountPublicByProject(_ context.Context, projectID uuid.UUID) (int, error) {
+	count := 0
+	for _, q := range m.queues {
+		if q.ProjectID == projectID && q.IsPublic {
+			count++
+		}
+	}
+	return count, nil
 }
 
 // --- Mock milestone repository ---

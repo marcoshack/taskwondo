@@ -23,6 +23,7 @@ type WorkItemRepository interface {
 	List(ctx context.Context, projectID uuid.UUID, filter *model.WorkItemFilter) (*model.WorkItemList, error)
 	Update(ctx context.Context, item *model.WorkItem) error
 	Delete(ctx context.Context, id uuid.UUID) error
+	TouchUpdatedAt(ctx context.Context, id uuid.UUID) error
 }
 
 // WorkItemEventRepository defines persistence operations for work item events.
@@ -305,14 +306,14 @@ func (s *WorkItemService) Create(ctx context.Context, info *model.AuthInfo, proj
 		return nil, fmt.Errorf("invalid visibility %q: %w", input.Visibility, model.ErrValidation)
 	}
 
-	// Validate assignee is a project member and not a viewer
+	// Validate assignee is a project member and not a viewer or customer
 	if input.AssigneeID != nil {
 		member, err := s.members.GetByProjectAndUser(ctx, project.ID, *input.AssigneeID)
 		if err != nil {
 			return nil, fmt.Errorf("assignee must be a project member: %w", model.ErrValidation)
 		}
-		if member.Role == model.ProjectRoleViewer {
-			return nil, fmt.Errorf("viewers cannot be assigned to work items: %w", model.ErrValidation)
+		if member.Role == model.ProjectRoleViewer || member.Role == model.ProjectRoleCustomer {
+			return nil, fmt.Errorf("viewers and customers cannot be assigned to work items: %w", model.ErrValidation)
 		}
 	}
 
@@ -705,13 +706,13 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 		}
 		newAssignee := input.AssigneeID.String()
 		if oldAssignee != newAssignee {
-			// Validate assignee is a project member and not a viewer
+			// Validate assignee is a project member and not a viewer or customer
 			member, err := s.members.GetByProjectAndUser(ctx, project.ID, *input.AssigneeID)
 			if err != nil {
 				return nil, fmt.Errorf("assignee must be a project member: %w", model.ErrValidation)
 			}
-			if member.Role == model.ProjectRoleViewer {
-				return nil, fmt.Errorf("viewers cannot be assigned to work items: %w", model.ErrValidation)
+			if member.Role == model.ProjectRoleViewer || member.Role == model.ProjectRoleCustomer {
+				return nil, fmt.Errorf("viewers and customers cannot be assigned to work items: %w", model.ErrValidation)
 			}
 			s.recordEvent(ctx, item.ID, info, "assigned", strPtr("assignee_id"), strPtr(oldAssignee), strPtr(newAssignee))
 			watcherChanges = append(watcherChanges, fieldChange{"assignee", oldAssignee, newAssignee})
@@ -899,6 +900,207 @@ func (s *WorkItemService) Delete(ctx context.Context, info *model.AuthInfo, proj
 	return nil
 }
 
+// --- Portal methods ---
+
+// CreatePortalTicketInput holds the input for creating a portal ticket.
+type CreatePortalTicketInput struct {
+	Title       string
+	Description *string
+	Priority    string
+	QueueID     uuid.UUID
+	CategoryID  *uuid.UUID
+}
+
+// CreatePortalTicket creates a new ticket in the portal context (customer-facing).
+// It forces type="ticket", visibility="portal" and sets the reporter to the authenticated user.
+// The caller must be a customer (or higher role) on the project.
+func (s *WorkItemService) CreatePortalTicket(ctx context.Context, info *model.AuthInfo, projectKey string, input CreatePortalTicketInput) (*model.WorkItem, error) {
+	project, err := s.projects.GetByKey(ctx, projectKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.requireRole(ctx, info, project.ID,
+		model.ProjectRoleOwner, model.ProjectRoleAdmin, model.ProjectRoleMember, model.ProjectRoleCustomer); err != nil {
+		return nil, err
+	}
+
+	// Validate title
+	if strings.TrimSpace(input.Title) == "" {
+		return nil, fmt.Errorf("title is required: %w", model.ErrValidation)
+	}
+
+	// Default and validate priority
+	if input.Priority == "" {
+		input.Priority = model.PriorityMedium
+	}
+	if !isValidPriority(input.Priority) {
+		return nil, fmt.Errorf("invalid priority %q: %w", input.Priority, model.ErrValidation)
+	}
+
+	// Validate queue belongs to this project
+	q, err := s.queues.GetByID(ctx, input.QueueID)
+	if err != nil {
+		return nil, fmt.Errorf("queue not found: %w", model.ErrValidation)
+	}
+	if q.ProjectID != project.ID {
+		return nil, fmt.Errorf("queue does not belong to this project: %w", model.ErrValidation)
+	}
+
+	// Determine initial status from the type-specific workflow
+	initialStatus := "open"
+	var slaTargetAt *time.Time
+	if wfID, err := s.resolveWorkflowID(ctx, project.ID, model.WorkItemTypeTicket, project.DefaultWorkflowID); err == nil {
+		if status, err := s.workflows.GetInitialStatus(ctx, wfID); err == nil {
+			initialStatus = status.Name
+		}
+		if target, err := s.sla.GetTarget(ctx, project.ID, model.WorkItemTypeTicket, wfID, initialStatus, input.Priority); err == nil {
+			slaTargetAt = ComputeSLATargetAtSimple(target.TargetSeconds, target.CalendarMode, project.BusinessHours)
+		}
+	}
+
+	queueID := input.QueueID
+	item := &model.WorkItem{
+		ID:          uuid.Must(uuid.NewV7()),
+		ProjectID:   project.ID,
+		QueueID:     &queueID,
+		Type:        model.WorkItemTypeTicket,
+		Title:       strings.TrimSpace(input.Title),
+		Description: input.Description,
+		Status:      initialStatus,
+		Priority:    input.Priority,
+		ReporterID:  info.UserID,
+		Visibility:  model.VisibilityPortal,
+		Labels:      []string{},
+		CustomFields: map[string]interface{}{},
+		SLATargetAt: slaTargetAt,
+	}
+
+	if err := s.items.Create(ctx, item); err != nil {
+		return nil, fmt.Errorf("creating portal ticket: %w", err)
+	}
+
+	// Record "created" event
+	s.recordEvent(ctx, item.ID, info, "created", nil, nil, nil)
+
+	// Initialize SLA elapsed tracking for the initial status
+	if err := s.sla.InitElapsedOnCreate(ctx, item.ID, item.Status, time.Now()); err != nil {
+		log.Ctx(ctx).Warn().Err(err).Msg("failed to initialize SLA elapsed tracking")
+	}
+
+	log.Ctx(ctx).Info().
+		Str("project_key", projectKey).
+		Int("item_number", item.ItemNumber).
+		Str("type", item.Type).
+		Msg("portal ticket created")
+
+	// Re-fetch to get DB-assigned timestamps
+	created, err := s.items.GetByProjectAndNumber(ctx, project.ID, item.ItemNumber)
+	if err != nil {
+		return nil, fmt.Errorf("fetching created portal ticket: %w", err)
+	}
+
+	// Publish embed.index event for semantic search
+	publishEmbedIndex(ctx, s.publisher, s.embedCache, model.EntityTypeWorkItem, created.ID, &created.ProjectID)
+
+	return created, nil
+}
+
+// UpdatePortalTicketInput holds the allowed fields a customer can update on their own ticket.
+type UpdatePortalTicketInput struct {
+	Title       *string
+	Description *string
+}
+
+// UpdatePortalTicket updates the title and/or description of a portal ticket.
+// Only the reporter (customer) can update their own ticket.
+func (s *WorkItemService) UpdatePortalTicket(ctx context.Context, info *model.AuthInfo, projectKey string, itemNumber int, input UpdatePortalTicketInput) (*model.WorkItem, error) {
+	project, err := s.projects.GetByKey(ctx, projectKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.requireRole(ctx, info, project.ID,
+		model.ProjectRoleOwner, model.ProjectRoleAdmin, model.ProjectRoleMember, model.ProjectRoleCustomer); err != nil {
+		return nil, err
+	}
+
+	item, err := s.items.GetByProjectAndNumber(ctx, project.ID, itemNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	// Customer can only update their own tickets
+	if item.ReporterID != info.UserID {
+		return nil, model.ErrNotFound
+	}
+
+	updateInput := UpdateWorkItemInput{
+		Title:       input.Title,
+		Description: input.Description,
+	}
+	if input.Description == nil && input.Title == nil {
+		// Explicit null description = clear it
+		updateInput.ClearDescription = true
+	}
+
+	return s.Update(ctx, &model.AuthInfo{
+		UserID:     info.UserID,
+		GlobalRole: model.RoleAdmin, // bypass role check in Update — we already validated
+	}, projectKey, itemNumber, updateInput)
+}
+
+// CreatePortalComment creates a public comment on a work item in the portal context.
+// The caller must be a customer (or higher role) on the project.
+// Visibility is forced to "public".
+func (s *WorkItemService) CreatePortalComment(ctx context.Context, info *model.AuthInfo, projectKey string, itemNumber int, body string) (*model.Comment, error) {
+	project, err := s.projects.GetByKey(ctx, projectKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.requireRole(ctx, info, project.ID,
+		model.ProjectRoleOwner, model.ProjectRoleAdmin, model.ProjectRoleMember, model.ProjectRoleCustomer); err != nil {
+		return nil, err
+	}
+
+	item, err := s.items.GetByProjectAndNumber(ctx, project.ID, itemNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	if strings.TrimSpace(body) == "" {
+		return nil, fmt.Errorf("body is required: %w", model.ErrValidation)
+	}
+
+	comment := &model.Comment{
+		ID:         uuid.Must(uuid.NewV7()),
+		WorkItemID: item.ID,
+		AuthorID:   &info.UserID,
+		Body:       body,
+		Visibility: model.VisibilityPublic,
+	}
+
+	if err := s.comments.Create(ctx, comment); err != nil {
+		return nil, fmt.Errorf("creating portal comment: %w", err)
+	}
+
+	// Bump work item updated_at
+	_ = s.items.TouchUpdatedAt(ctx, item.ID)
+
+	// Record "comment_added" event
+	s.recordEventWithMetadata(ctx, item.ID, info, "comment_added", model.VisibilityPublic, map[string]interface{}{
+		"comment_id": comment.ID.String(),
+		"preview":    body,
+	})
+
+	// Publish embed.index event for the new comment
+	publishEmbedIndex(ctx, s.publisher, s.embedCache, model.EntityTypeComment, comment.ID, &project.ID)
+
+	// Re-fetch to get DB-assigned timestamps
+	return s.comments.GetByID(ctx, comment.ID)
+}
+
 // --- Comment methods ---
 
 // CreateComment creates a new comment on a work item.
@@ -940,6 +1142,9 @@ func (s *WorkItemService) CreateComment(ctx context.Context, info *model.AuthInf
 	if err := s.comments.Create(ctx, comment); err != nil {
 		return nil, fmt.Errorf("creating comment: %w", err)
 	}
+
+	// Bump work item updated_at
+	_ = s.items.TouchUpdatedAt(ctx, item.ID)
 
 	// Record "comment_added" event
 	s.recordEventWithMetadata(ctx, item.ID, info, "comment_added", input.Visibility, map[string]interface{}{
@@ -983,8 +1188,8 @@ func (s *WorkItemService) ListComments(ctx context.Context, info *model.AuthInfo
 	return s.comments.ListByWorkItem(ctx, item.ID, visibility)
 }
 
-// UpdateComment updates a comment's body. Only the author can edit their own comments.
-func (s *WorkItemService) UpdateComment(ctx context.Context, info *model.AuthInfo, projectKey string, itemNumber int, commentID uuid.UUID, body string) (*model.Comment, error) {
+// UpdateComment updates a comment's body and optionally its visibility. Only the author can edit their own comments.
+func (s *WorkItemService) UpdateComment(ctx context.Context, info *model.AuthInfo, projectKey string, itemNumber int, commentID uuid.UUID, body string, visibility string) (*model.Comment, error) {
 	project, err := s.projects.GetByKey(ctx, projectKey)
 	if err != nil {
 		return nil, err
@@ -1015,6 +1220,9 @@ func (s *WorkItemService) UpdateComment(ctx context.Context, info *model.AuthInf
 
 	oldBody := comment.Body
 	comment.Body = body
+	if visibility != "" && isValidVisibility(visibility) {
+		comment.Visibility = visibility
+	}
 	if err := s.comments.Update(ctx, comment); err != nil {
 		return nil, fmt.Errorf("updating comment: %w", err)
 	}
@@ -1300,6 +1508,9 @@ func (s *WorkItemService) UploadAttachment(ctx context.Context, info *model.Auth
 		_ = s.fileStorage.Delete(ctx, storageKey)
 		return nil, fmt.Errorf("creating attachment record: %w", err)
 	}
+
+	// Bump work item updated_at
+	_ = s.items.TouchUpdatedAt(ctx, item.ID)
 
 	s.recordEventWithMetadata(ctx, item.ID, info, "attachment_added", model.VisibilityInternal, map[string]interface{}{
 		"attachment_id": attachmentID.String(),

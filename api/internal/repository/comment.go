@@ -118,12 +118,12 @@ func (r *CommentRepository) ListByWorkItem(ctx context.Context, workItemID uuid.
 	return comments, rows.Err()
 }
 
-// Update modifies a comment's body.
+// Update modifies a comment's body and visibility.
 func (r *CommentRepository) Update(ctx context.Context, comment *model.Comment) error {
 	result, err := r.db.ExecContext(ctx,
-		`UPDATE comments SET body = $1, edit_count = edit_count + 1, updated_at = now()
-		 WHERE id = $2 AND deleted_at IS NULL`,
-		comment.Body, comment.ID)
+		`UPDATE comments SET body = $1, visibility = $2, edit_count = edit_count + 1, updated_at = now()
+		 WHERE id = $3 AND deleted_at IS NULL`,
+		comment.Body, comment.Visibility, comment.ID)
 	if err != nil {
 		return fmt.Errorf("updating comment: %w", err)
 	}

@@ -21,4 +21,5 @@ const (
 	PathEscalationLists  = "escalation-lists"
 	PathUserSettings     = "user-settings"
 	PathStats            = "stats"
+	PathTeams            = "teams"
 )

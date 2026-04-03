@@ -158,6 +158,16 @@ func (r *WorkItemRepository) List(ctx context.Context, projectID uuid.UUID, filt
 		qb.add("queue_id = ?", *filter.QueueID)
 	}
 
+	// Reporter filter
+	if filter.ReporterID != nil {
+		qb.add("reporter_id = ?", *filter.ReporterID)
+	}
+
+	// Exclude resolved (hide completed)
+	if filter.ExcludeResolved {
+		qb.addRaw("resolved_at IS NULL")
+	}
+
 	// Milestone filter
 	if filter.MilestoneNone && len(filter.MilestoneIDs) > 0 {
 		qb.add("(milestone_id IS NULL OR milestone_id = ANY(?))", pq.Array(filter.MilestoneIDs))
@@ -343,6 +353,13 @@ func (r *WorkItemRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	}
 
 	return nil
+}
+
+// TouchUpdatedAt bumps the updated_at timestamp on a work item.
+func (r *WorkItemRepository) TouchUpdatedAt(ctx context.Context, id uuid.UUID) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE work_items SET updated_at = now() WHERE id = $1 AND deleted_at IS NULL`, id)
+	return err
 }
 
 // --- Query builder ---

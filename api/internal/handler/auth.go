@@ -21,15 +21,21 @@ type InviteAcceptor interface {
 	AcceptInvite(ctx context.Context, info *model.AuthInfo, code string) (*service.AcceptInviteResult, error)
 }
 
+// PortalProjectResolver looks up a user's customer-role project memberships.
+type PortalProjectResolver interface {
+	ListByUser(ctx context.Context, userID uuid.UUID) ([]model.ProjectMemberWithProject, error)
+}
+
 // AuthHandler handles authentication endpoints.
 type AuthHandler struct {
-	auth    *service.AuthService
-	invites InviteAcceptor
+	auth       *service.AuthService
+	invites    InviteAcceptor
+	memberRepo PortalProjectResolver
 }
 
 // NewAuthHandler creates a new AuthHandler.
-func NewAuthHandler(auth *service.AuthService, invites InviteAcceptor) *AuthHandler {
-	return &AuthHandler{auth: auth, invites: invites}
+func NewAuthHandler(auth *service.AuthService, invites InviteAcceptor, memberRepo PortalProjectResolver) *AuthHandler {
+	return &AuthHandler{auth: auth, invites: invites, memberRepo: memberRepo}
 }
 
 type loginRequest struct {
@@ -37,12 +43,19 @@ type loginRequest struct {
 	Password string `json:"password"`
 }
 
+type portalProjectInfo struct {
+	ProjectKey  string `json:"project_key"`
+	ProjectName string `json:"project_name"`
+	Namespace   string `json:"namespace"`
+}
+
 type userResponse struct {
-	ID          uuid.UUID `json:"id"`
-	Email       string    `json:"email"`
-	DisplayName string    `json:"display_name"`
-	GlobalRole  string    `json:"global_role"`
-	AvatarURL   *string   `json:"avatar_url,omitempty"`
+	ID             uuid.UUID          `json:"id"`
+	Email          string             `json:"email"`
+	DisplayName    string             `json:"display_name"`
+	GlobalRole     string             `json:"global_role"`
+	AvatarURL      *string            `json:"avatar_url,omitempty"`
+	PortalProjects []portalProjectInfo `json:"portal_projects,omitempty"`
 }
 
 func toUserResponse(u *model.User) userResponse {
@@ -84,9 +97,12 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	resp := toUserResponse(user)
+	h.populatePortalProjects(r.Context(), user.ID, &resp)
+
 	writeData(w, http.StatusOK, map[string]interface{}{
 		"token":                 token,
-		"user":                  toUserResponse(user),
+		"user":                  resp,
 		"force_password_change": user.ForcePasswordChange,
 	})
 }
@@ -130,7 +146,29 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeData(w, http.StatusOK, toUserResponse(user))
+	resp := toUserResponse(user)
+	h.populatePortalProjects(r.Context(), info.UserID, &resp)
+
+	writeData(w, http.StatusOK, resp)
+}
+
+// populatePortalProjects adds customer-role project memberships to the user response.
+func (h *AuthHandler) populatePortalProjects(ctx context.Context, userID uuid.UUID, resp *userResponse) {
+	if h.memberRepo == nil {
+		return
+	}
+	memberships, err := h.memberRepo.ListByUser(ctx, userID)
+	if err != nil {
+		return
+	}
+	for _, m := range memberships {
+		if m.Role == model.ProjectRoleCustomer {
+			resp.PortalProjects = append(resp.PortalProjects, portalProjectInfo{
+				ProjectKey:  m.ProjectKey,
+				ProjectName: m.ProjectName,
+			})
+		}
+	}
 }
 
 // Logout is a no-op for stateless JWT auth. The client should discard the token.

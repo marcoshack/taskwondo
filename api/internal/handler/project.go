@@ -65,6 +65,7 @@ type projectResponse struct {
 	DefaultWorkflowID       *uuid.UUID                  `json:"default_workflow_id,omitempty"`
 	AllowedComplexityValues []int                       `json:"allowed_complexity_values"`
 	BusinessHours           *model.BusinessHoursConfig  `json:"business_hours,omitempty"`
+	AvailableRoles          []string                    `json:"available_roles"`
 	ItemCounter             int                         `json:"item_counter"`
 	CreatedAt               time.Time                   `json:"created_at"`
 	UpdatedAt               time.Time                   `json:"updated_at"`
@@ -102,6 +103,7 @@ func toProjectResponse(p *model.Project) projectResponse {
 		DefaultWorkflowID:       p.DefaultWorkflowID,
 		AllowedComplexityValues: acv,
 		BusinessHours:           p.BusinessHours,
+		AvailableRoles:          model.AvailableProjectRoles(),
 		ItemCounter:             p.ItemCounter,
 		CreatedAt:               p.CreatedAt,
 		UpdatedAt:               p.UpdatedAt,

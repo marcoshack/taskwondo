@@ -21,11 +21,12 @@ import { UserSearchInput } from '@/components/UserSearchInput'
 import { getLocalizedError } from '@/utils/apiError'
 import type { UserSearchResult } from '@/api/users'
 
-const ROLE_OPTIONS = ['admin', 'member'] as const
-const ROLE_BADGE_COLORS: Record<string, 'indigo' | 'blue' | 'green' | 'gray'> = {
+const ROLE_OPTIONS = ['admin', 'member', 'customer'] as const
+const ROLE_BADGE_COLORS: Record<string, 'indigo' | 'blue' | 'green' | 'gray' | 'yellow'> = {
   owner: 'indigo',
   admin: 'blue',
   member: 'green',
+  customer: 'yellow',
 }
 
 export function NamespaceSettingsPage() {

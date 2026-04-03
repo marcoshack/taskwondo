@@ -84,6 +84,9 @@ func main() {
 	relationRepo := repository.NewWorkItemRelationRepository(db)
 	workflowRepo := repository.NewWorkflowRepository(db)
 	queueRepo := repository.NewQueueRepository(db)
+	queueCategoryRepo := repository.NewQueueCategoryRepository(db)
+	queueTeamRepo := repository.NewQueueTeamRepository(db)
+	teamRepo := repository.NewTeamRepository(db)
 	savedSearchRepo := repository.NewSavedSearchRepository(db)
 	milestoneRepo := repository.NewMilestoneRepository(db)
 	userSettingRepo := repository.NewUserSettingRepository(db)
@@ -143,7 +146,8 @@ func main() {
 	)
 	projectService := service.NewProjectService(projectRepo, projectMemberRepo, userRepo, workflowRepo, typeWorkflowRepo, systemSettingRepo, inviteRepo, inboxRepo, watcherRepo, userSettingRepo)
 	workflowService := service.NewWorkflowService(workflowRepo)
-	queueService := service.NewQueueService(queueRepo, projectRepo, projectMemberRepo)
+	queueService := service.NewQueueService(queueRepo, queueCategoryRepo, queueTeamRepo, projectRepo, projectMemberRepo)
+	teamService := service.NewTeamService(teamRepo, projectRepo, projectMemberRepo)
 	savedSearchService := service.NewSavedSearchService(savedSearchRepo, projectRepo, projectMemberRepo)
 	milestoneService := service.NewMilestoneService(milestoneRepo, projectRepo, projectMemberRepo)
 	slaService := service.NewSLAService(slaRepo, projectRepo, projectMemberRepo, workflowRepo)
@@ -281,10 +285,11 @@ func main() {
 
 	// Initialize handlers
 	health := handler.NewHealthHandler(db, commitSHA)
-	auth := handler.NewAuthHandler(authService, projectService)
+	auth := handler.NewAuthHandler(authService, projectService, projectMemberRepo)
 	projects := handler.NewProjectHandler(projectService, cfg.BaseURL)
 	workflows := handler.NewWorkflowHandler(workflowService, projectService)
 	queues := handler.NewQueueHandler(queueService)
+	teams := handler.NewTeamHandler(teamService)
 	savedSearches := handler.NewSavedSearchHandler(savedSearchService)
 	milestones := handler.NewMilestoneHandler(milestoneService)
 	items := handler.NewWorkItemHandler(workItemService, slaService, cfg.MaxUploadSize)
@@ -297,6 +302,7 @@ func main() {
 	stats := handler.NewStatsHandler(statsService)
 	search := handler.NewSearchHandler(searchService)
 	namespaces := handler.NewNamespaceHandler(namespaceService)
+	portal := handler.NewPortalHandler(workItemService, queueService, authService, cfg.MaxUploadSize)
 
 	metricsHandler := handler.NewMetricsHandler()
 
@@ -421,6 +427,7 @@ func main() {
 				r.Get("/", projects.List)
 				r.Post("/", projects.Create)
 				r.Route("/{projectKey}", func(r chi.Router) {
+					r.Use(middleware.ExcludeCustomer(projectRepo, projectMemberRepo))
 					r.Get("/", projects.Get)
 					r.Patch("/", projects.Update)
 					r.Delete("/", projects.Delete)
@@ -456,6 +463,33 @@ func main() {
 							r.Get("/", queues.Get)
 							r.Patch("/", queues.Update)
 							r.Delete("/", queues.Delete)
+							r.Route("/categories", func(r chi.Router) {
+								r.Get("/", queues.ListCategories)
+								r.Post("/", queues.CreateCategory)
+								r.Route("/{categoryId}", func(r chi.Router) {
+									r.Patch("/", queues.UpdateCategory)
+									r.Delete("/", queues.DeleteCategory)
+								})
+							})
+							r.Route("/teams", func(r chi.Router) {
+								r.Get("/", queues.ListQueueTeams)
+								r.Post("/", queues.AssignQueueTeam)
+								r.Delete("/{teamId}", queues.UnassignQueueTeam)
+							})
+						})
+					})
+					r.Route("/"+handler.PathTeams, func(r chi.Router) {
+						r.Get("/", teams.List)
+						r.Post("/", teams.Create)
+						r.Route("/{teamId}", func(r chi.Router) {
+							r.Get("/", teams.Get)
+							r.Patch("/", teams.Update)
+							r.Delete("/", teams.Delete)
+							r.Route("/members", func(r chi.Router) {
+								r.Get("/", teams.ListMembers)
+								r.Post("/", teams.AddMember)
+								r.Delete("/{userId}", teams.RemoveMember)
+							})
 						})
 					})
 					r.Route("/"+handler.PathSavedSearches, func(r chi.Router) {
@@ -542,6 +576,29 @@ func main() {
 							})
 							r.Post("/watch", items.ToggleWatch)
 							r.Get("/"+handler.PathEvents, items.ListEvents)
+						})
+					})
+				})
+			})
+
+			// Portal routes (customer-facing)
+			r.Route("/portal/{namespace}/projects/{projectKey}", func(r chi.Router) {
+				r.Get("/queues", portal.ListQueues)
+				r.Route("/tickets", func(r chi.Router) {
+					r.Post("/", portal.CreateTicket)
+					r.Get("/", portal.ListTickets)
+					r.Route("/{itemNumber}", func(r chi.Router) {
+						r.Get("/", portal.GetTicket)
+						r.Patch("/", portal.UpdateTicket)
+						r.Get("/comments", portal.ListComments)
+						r.Post("/comments", portal.AddComment)
+						r.Get("/events", portal.ListEvents)
+						r.Route("/attachments", func(r chi.Router) {
+							r.Get("/", portal.ListAttachments)
+							r.Post("/", portal.UploadAttachment)
+							r.Get("/{attachmentId}", portal.DownloadAttachment)
+							r.Patch("/{attachmentId}", portal.UpdateAttachmentComment)
+							r.Delete("/{attachmentId}", portal.DeleteAttachment)
 						})
 					})
 				})

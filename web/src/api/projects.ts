@@ -15,6 +15,7 @@ export interface Project {
   default_workflow_id?: string
   allowed_complexity_values: number[]
   business_hours?: BusinessHoursConfig | null
+  available_roles: string[]
   item_counter: number
   member_count: number
   open_count: number

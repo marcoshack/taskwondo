@@ -5,7 +5,7 @@ import { useTheme, type Theme, type FontSize } from '@/contexts/ThemeContext'
 import { useLayout, type Layout } from '@/contexts/LayoutContext'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { usePreference, useSetPreference } from '@/hooks/usePreferences'
-export function AppearancePage() {
+export function AppearancePage({ hideCompletedItems = false }: { hideCompletedItems?: boolean } = {}) {
   const { t } = useTranslation()
   const { theme, setTheme, fontSize, setFontSize } = useTheme()
   const { layout, setLayout } = useLayout()
@@ -171,7 +171,7 @@ export function AppearancePage() {
           </div>
         </div>
 
-        <div>
+        {!hideCompletedItems && <div>
           <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
             {t('preferences.completedItems')}
           </h2>
@@ -208,7 +208,7 @@ export function AppearancePage() {
               </div>
             </label>
           </div>
-        </div>
+        </div>}
 
       </div>
     </div>

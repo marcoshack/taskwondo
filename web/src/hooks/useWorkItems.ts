@@ -137,8 +137,8 @@ export function useCreateComment(projectKey: string, itemNumber: number) {
 export function useUpdateComment(projectKey: string, itemNumber: number) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ commentId, body }: { commentId: string; body: string }) =>
-      updateComment(projectKey, itemNumber, commentId, body),
+    mutationFn: ({ commentId, body, visibility }: { commentId: string; body: string; visibility?: string }) =>
+      updateComment(projectKey, itemNumber, commentId, body, visibility),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['projects', projectKey, 'items', itemNumber, 'comments'] })
     },

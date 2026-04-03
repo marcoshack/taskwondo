@@ -306,6 +306,320 @@ func (h *QueueHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// --- Category Request/Response DTOs ---
+
+type createCategoryRequest struct {
+	Name        string  `json:"name"`
+	Description *string `json:"description,omitempty"`
+	Position    int     `json:"position"`
+}
+
+type updateCategoryRequest struct {
+	Name        *string `json:"name,omitempty"`
+	Description *string `json:"description,omitempty"`
+	Position    *int    `json:"position,omitempty"`
+}
+
+type categoryResponse struct {
+	ID          uuid.UUID `json:"id"`
+	QueueID     uuid.UUID `json:"queue_id"`
+	Name        string    `json:"name"`
+	Description *string   `json:"description,omitempty"`
+	Position    int       `json:"position"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+func toCategoryResponse(cat *model.QueueCategory) categoryResponse {
+	return categoryResponse{
+		ID:          cat.ID,
+		QueueID:     cat.QueueID,
+		Name:        cat.Name,
+		Description: cat.Description,
+		Position:    cat.Position,
+		CreatedAt:   cat.CreatedAt,
+		UpdatedAt:   cat.UpdatedAt,
+	}
+}
+
+// --- Queue Team Request/Response DTOs ---
+
+type addQueueTeamRequest struct {
+	TeamID string `json:"team_id"`
+}
+
+type queueTeamResponse struct {
+	ID          uuid.UUID `json:"id"`
+	ProjectID   uuid.UUID `json:"project_id"`
+	Name        string    `json:"name"`
+	Description *string   `json:"description,omitempty"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+func toQueueTeamResponse(t *model.Team) queueTeamResponse {
+	return queueTeamResponse{
+		ID:          t.ID,
+		ProjectID:   t.ProjectID,
+		Name:        t.Name,
+		Description: t.Description,
+		CreatedAt:   t.CreatedAt,
+		UpdatedAt:   t.UpdatedAt,
+	}
+}
+
+// --- Category Handlers ---
+
+// ListCategories handles GET /api/v1/{namespace}/projects/{projectKey}/queues/{queueId}/categories
+func (h *QueueHandler) ListCategories(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	projectKey := chi.URLParam(r, "projectKey")
+	queueID, err := uuid.Parse(chi.URLParam(r, "queueId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid queue ID")
+		return
+	}
+
+	categories, err := h.queues.ListCategories(r.Context(), info, projectKey, queueID)
+	if err != nil {
+		handleQueueError(w, r, err, "failed to list categories")
+		return
+	}
+
+	resp := make([]categoryResponse, len(categories))
+	for i := range categories {
+		resp[i] = toCategoryResponse(&categories[i])
+	}
+
+	writeData(w, http.StatusOK, resp)
+}
+
+// CreateCategory handles POST /api/v1/{namespace}/projects/{projectKey}/queues/{queueId}/categories
+func (h *QueueHandler) CreateCategory(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	projectKey := chi.URLParam(r, "projectKey")
+	queueID, err := uuid.Parse(chi.URLParam(r, "queueId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid queue ID")
+		return
+	}
+
+	var req createCategoryRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		return
+	}
+
+	input := service.CreateCategoryInput{
+		Name:        req.Name,
+		Description: req.Description,
+		Position:    req.Position,
+	}
+
+	cat, err := h.queues.CreateCategory(r.Context(), info, projectKey, queueID, input)
+	if err != nil {
+		handleQueueError(w, r, err, "failed to create category")
+		return
+	}
+
+	writeData(w, http.StatusCreated, toCategoryResponse(cat))
+}
+
+// UpdateCategory handles PATCH /api/v1/{namespace}/projects/{projectKey}/queues/{queueId}/categories/{categoryId}
+func (h *QueueHandler) UpdateCategory(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	projectKey := chi.URLParam(r, "projectKey")
+	queueID, err := uuid.Parse(chi.URLParam(r, "queueId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid queue ID")
+		return
+	}
+	categoryID, err := uuid.Parse(chi.URLParam(r, "categoryId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid category ID")
+		return
+	}
+
+	// Decode to raw map for explicit null detection on description
+	raw := make(map[string]json.RawMessage)
+	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		return
+	}
+
+	var input service.UpdateCategoryInput
+
+	if v, ok := raw["name"]; ok {
+		var name string
+		if err := json.Unmarshal(v, &name); err == nil {
+			input.Name = &name
+		}
+	}
+
+	if v, ok := raw["description"]; ok {
+		if string(v) == "null" {
+			input.ClearDescription = true
+		} else {
+			var desc string
+			if err := json.Unmarshal(v, &desc); err == nil {
+				input.Description = &desc
+			}
+		}
+	}
+
+	if v, ok := raw["position"]; ok {
+		var pos int
+		if err := json.Unmarshal(v, &pos); err == nil {
+			input.Position = &pos
+		}
+	}
+
+	cat, err := h.queues.UpdateCategory(r.Context(), info, projectKey, queueID, categoryID, input)
+	if err != nil {
+		handleQueueError(w, r, err, "failed to update category")
+		return
+	}
+
+	writeData(w, http.StatusOK, toCategoryResponse(cat))
+}
+
+// DeleteCategory handles DELETE /api/v1/{namespace}/projects/{projectKey}/queues/{queueId}/categories/{categoryId}
+func (h *QueueHandler) DeleteCategory(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	projectKey := chi.URLParam(r, "projectKey")
+	queueID, err := uuid.Parse(chi.URLParam(r, "queueId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid queue ID")
+		return
+	}
+	categoryID, err := uuid.Parse(chi.URLParam(r, "categoryId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid category ID")
+		return
+	}
+
+	if err := h.queues.DeleteCategory(r.Context(), info, projectKey, queueID, categoryID); err != nil {
+		handleQueueError(w, r, err, "failed to delete category")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// --- Queue Team Handlers ---
+
+// ListQueueTeams handles GET /api/v1/{namespace}/projects/{projectKey}/queues/{queueId}/teams
+func (h *QueueHandler) ListQueueTeams(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	projectKey := chi.URLParam(r, "projectKey")
+	queueID, err := uuid.Parse(chi.URLParam(r, "queueId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid queue ID")
+		return
+	}
+
+	teams, err := h.queues.ListQueueTeams(r.Context(), info, projectKey, queueID)
+	if err != nil {
+		handleQueueError(w, r, err, "failed to list queue teams")
+		return
+	}
+
+	resp := make([]queueTeamResponse, len(teams))
+	for i := range teams {
+		resp[i] = toQueueTeamResponse(&teams[i])
+	}
+
+	writeData(w, http.StatusOK, resp)
+}
+
+// AssignQueueTeam handles POST /api/v1/{namespace}/projects/{projectKey}/queues/{queueId}/teams
+func (h *QueueHandler) AssignQueueTeam(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	projectKey := chi.URLParam(r, "projectKey")
+	queueID, err := uuid.Parse(chi.URLParam(r, "queueId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid queue ID")
+		return
+	}
+
+	var req addQueueTeamRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		return
+	}
+
+	teamID, err := uuid.Parse(req.TeamID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid team_id")
+		return
+	}
+
+	if err := h.queues.AssignTeam(r.Context(), info, projectKey, queueID, teamID); err != nil {
+		handleQueueError(w, r, err, "failed to assign team to queue")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// UnassignQueueTeam handles DELETE /api/v1/{namespace}/projects/{projectKey}/queues/{queueId}/teams/{teamId}
+func (h *QueueHandler) UnassignQueueTeam(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	projectKey := chi.URLParam(r, "projectKey")
+	queueID, err := uuid.Parse(chi.URLParam(r, "queueId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid queue ID")
+		return
+	}
+	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid team ID")
+		return
+	}
+
+	if err := h.queues.UnassignTeam(r.Context(), info, projectKey, queueID, teamID); err != nil {
+		handleQueueError(w, r, err, "failed to unassign team from queue")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func handleQueueError(w http.ResponseWriter, r *http.Request, err error, logMsg string) {
 	if errors.Is(err, model.ErrNotFound) {
 		writeError(w, http.StatusNotFound, "NOT_FOUND", "queue not found")

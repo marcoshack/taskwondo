@@ -132,6 +132,29 @@ const SAME_VALUE_ALLOWED = new Set([
 
   // "Color" is identical in English and Spanish
   'namespaces.color',
+
+  // Teams/Queues: "Teams"/"Name" identical in German; "Support"/"Feedback"/"General"/"Type"/"Public"/"Position" are cognates
+  'sidebar.teams',
+  'teams.title',
+  'teams.name',
+  'queues.name',
+  'queues.type',
+  'queues.types.support',
+  'queues.types.feedback',
+  'queues.types.general',
+  'queues.general',
+  'queues.isPublic',
+  'queues.public',
+  'queues.categories.name',
+  'queues.categories.position',
+
+  // Portal: "Portal", "Status", "Priority" are cognates in many languages
+  'portal.title',
+  'portal.status',
+  'portal.priority',
+  'portal.category',
+  'portal.queue',
+  'portal.ticketDescription',
 ])
 
 describe('i18n completeness', () => {

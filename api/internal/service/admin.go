@@ -150,9 +150,7 @@ func (s *AdminService) ListUserProjects(ctx context.Context, userID uuid.UUID) (
 // AddUserToProject adds a user to a project with the given role.
 func (s *AdminService) AddUserToProject(ctx context.Context, userID, projectID uuid.UUID, role string) error {
 	// Validate role
-	switch role {
-	case model.ProjectRoleOwner, model.ProjectRoleAdmin, model.ProjectRoleMember, model.ProjectRoleViewer:
-	default:
+	if !isValidProjectRole(role) {
 		return fmt.Errorf("%w: invalid project role %q", model.ErrValidation, role)
 	}
 
@@ -185,9 +183,7 @@ func (s *AdminService) AddUserToProject(ctx context.Context, userID, projectID u
 
 // UpdateUserProjectRole updates a user's role in a project.
 func (s *AdminService) UpdateUserProjectRole(ctx context.Context, userID, projectID uuid.UUID, role string) error {
-	switch role {
-	case model.ProjectRoleOwner, model.ProjectRoleAdmin, model.ProjectRoleMember, model.ProjectRoleViewer:
-	default:
+	if !isValidProjectRole(role) {
 		return fmt.Errorf("%w: invalid project role %q", model.ErrValidation, role)
 	}
 

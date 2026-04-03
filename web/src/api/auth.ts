@@ -1,11 +1,18 @@
 import { api } from './client'
 
+export interface PortalProject {
+  project_key: string
+  project_name: string
+  namespace?: string
+}
+
 export interface User {
   id: string
   email: string
   display_name: string
   global_role: string
   avatar_url?: string
+  portal_projects?: PortalProject[]
 }
 
 interface LoginResponse {

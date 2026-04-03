@@ -59,12 +59,12 @@ function formatRelativeTime(date: Date): string {
   return `${diffDays}d`
 }
 
-const ROLE_OPTIONS = ['admin', 'member', 'viewer'] as const
-const ROLE_BADGE_COLORS: Record<string, 'indigo' | 'blue' | 'green' | 'gray'> = {
+const ROLE_BADGE_COLORS: Record<string, 'indigo' | 'blue' | 'green' | 'gray' | 'yellow'> = {
   owner: 'indigo',
   admin: 'blue',
   member: 'green',
   viewer: 'gray',
+  customer: 'yellow',
 }
 
 export function ProjectSettingsPage() {
@@ -83,6 +83,7 @@ export function ProjectSettingsPage() {
   const { data: invites } = useInvites(projectKey ?? '')
   const createInviteMutation = useCreateInvite(projectKey ?? '')
   const deleteInviteMutation = useDeleteInvite(projectKey ?? '')
+  const assignableRoles = (project?.available_roles ?? []).filter((r: string) => r !== 'owner')
   const [name, setName] = useState<string | null>(null)
   const [description, setDescription] = useState<string | null>(null)
   const [saveError, setSaveError] = useState('')
@@ -385,7 +386,7 @@ export function ProjectSettingsPage() {
               onChange={(e) => setNewMemberRole(e.target.value)}
             >
               {isOwner && <option value="owner">{t('projects.settings.roles.owner')}</option>}
-              {ROLE_OPTIONS.map((role) => (
+              {assignableRoles.map((role) => (
                 <option key={role} value={role}>{t(`projects.settings.roles.${role}`)}</option>
               ))}
             </select>
@@ -418,7 +419,7 @@ export function ProjectSettingsPage() {
               value={emailInviteRole}
               onChange={(e) => setEmailInviteRole(e.target.value)}
             >
-              {ROLE_OPTIONS.map((role) => (
+              {assignableRoles.map((role) => (
                 <option key={role} value={role}>{t(`projects.settings.roles.${role}`)}</option>
               ))}
             </select>
@@ -471,7 +472,7 @@ export function ProjectSettingsPage() {
                           disabled={updateRoleMutation.isPending || isLastOwner}
                         >
                           {isOwner && <option value="owner">{t('projects.settings.roles.owner')}</option>}
-                          {ROLE_OPTIONS.map((role) => (
+                          {assignableRoles.map((role) => (
                             <option key={role} value={role}>{t(`projects.settings.roles.${role}`)}</option>
                           ))}
                         </select>
@@ -531,7 +532,7 @@ export function ProjectSettingsPage() {
                     }
                   }}
                 >
-                  {ROLE_OPTIONS.map((role) => (
+                  {assignableRoles.map((role) => (
                     <option key={role} value={role}>{t(`projects.settings.roles.${role}`)}</option>
                   ))}
                 </select>

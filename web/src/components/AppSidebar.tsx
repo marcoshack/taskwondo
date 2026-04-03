@@ -17,6 +17,7 @@ import {
   ClipboardList,
   SquareStack,
   Target,
+  Users,
   Route,
   Settings,
   PanelLeftClose,
@@ -96,8 +97,9 @@ export function AppSidebar({ projectKey, mobileOnly }: AppSidebarProps) {
   const projectNavItems: NavItem[] = activeProjectKey ? [
     { to: `${projectBase}/`, label: t('sidebar.overview'), icon: LayoutDashboard, end: true },
     { to: `${projectBase}/items`, label: t('sidebar.items'), icon: ClipboardList, end: false },
-    { to: `${projectBase}/queues`, label: t('sidebar.queues'), icon: SquareStack, end: false },
     { to: `${projectBase}/milestones`, label: t('sidebar.milestones'), icon: Target, end: false },
+    { to: `${projectBase}/teams`, label: t('sidebar.teams'), icon: Users, end: false },
+    { to: `${projectBase}/queues`, label: t('sidebar.queues'), icon: SquareStack, end: false },
     { to: `${projectBase}/workflows`, label: t('sidebar.workflows'), icon: Route, end: false },
     { to: `${projectBase}/settings`, label: t('sidebar.settings'), icon: Settings, end: false },
   ] : []

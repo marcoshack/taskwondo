@@ -56,12 +56,13 @@ func toAdminUserResponse(u *model.User) adminUserResponse {
 }
 
 type userProjectResponse struct {
-	ProjectID   uuid.UUID `json:"project_id"`
-	ProjectName string    `json:"project_name"`
-	ProjectKey  string    `json:"project_key"`
-	Role        string    `json:"role"`
-	OwnerCount  int       `json:"owner_count"`
-	CreatedAt   time.Time `json:"created_at"`
+	ProjectID      uuid.UUID `json:"project_id"`
+	ProjectName    string    `json:"project_name"`
+	ProjectKey     string    `json:"project_key"`
+	Role           string    `json:"role"`
+	AvailableRoles []string  `json:"available_roles"`
+	OwnerCount     int       `json:"owner_count"`
+	CreatedAt      time.Time `json:"created_at"`
 }
 
 // ListUsers handles GET /api/v1/admin/users.
@@ -216,12 +217,13 @@ func (h *AdminHandler) ListUserProjects(w http.ResponseWriter, r *http.Request) 
 	resp := make([]userProjectResponse, len(memberships))
 	for i, m := range memberships {
 		resp[i] = userProjectResponse{
-			ProjectID:   m.ProjectID,
-			ProjectName: m.ProjectName,
-			ProjectKey:  m.ProjectKey,
-			Role:        m.Role,
-			OwnerCount:  m.OwnerCount,
-			CreatedAt:   m.CreatedAt,
+			ProjectID:      m.ProjectID,
+			ProjectName:    m.ProjectName,
+			ProjectKey:     m.ProjectKey,
+			Role:           m.Role,
+			AvailableRoles: model.AvailableProjectRoles(),
+			OwnerCount:     m.OwnerCount,
+			CreatedAt:      m.CreatedAt,
 		}
 	}
 	writeData(w, http.StatusOK, resp)

@@ -52,6 +52,13 @@ export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc', hig
     }
   }, [highlightedAttachmentId, onHighlightClear]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const currentUserRole = members?.find((m) => m.user_id === user?.id)?.role
+  const canManageAll = user?.global_role === 'admin' || currentUserRole === 'owner' || currentUserRole === 'admin'
+
+  function canManageAttachment(uploaderId: string): boolean {
+    return (user != null && uploaderId === user.id) || canManageAll
+  }
+
   function uploaderName(uploaderId: string): string {
     const member = members?.find((m) => m.user_id === uploaderId)
     return member?.display_name ?? t('common.unknown')
@@ -173,9 +180,9 @@ export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc', hig
               </div>
             ) : a.comment ? (
               <p
-                className={`text-xs text-gray-500 dark:text-gray-400 mt-0.5 rounded ${user && a.uploader_id === user.id ? 'hover:bg-gray-100 dark:hover:bg-gray-700 cursor-default' : ''}`}
+                className={`text-xs text-gray-500 dark:text-gray-400 mt-0.5 rounded ${canManageAttachment(a.uploader_id) ? 'hover:bg-gray-100 dark:hover:bg-gray-700 cursor-default' : ''}`}
                 onDoubleClick={() => {
-                  if (user && a.uploader_id === user.id) {
+                  if (canManageAttachment(a.uploader_id)) {
                     setEditingCommentId(a.id)
                     setEditCommentDraft(a.comment)
                   }
@@ -187,7 +194,7 @@ export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc', hig
             </p>
           </div>
           <div className="flex items-center gap-1 shrink-0">
-            {user && a.uploader_id === user.id && (
+            {canManageAttachment(a.uploader_id) && (
               <Tooltip content={t('attachments.editDescription')}>
                 <button
                   className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -212,7 +219,7 @@ export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc', hig
                 </svg>
               </button>
             </Tooltip>
-            {user && a.uploader_id === user.id && (
+            {canManageAttachment(a.uploader_id) && (
               <Tooltip content={t('common.delete')}>
                 <button
                   className="p-1 text-red-400 hover:text-red-600 dark:hover:text-red-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700"

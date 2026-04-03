@@ -502,7 +502,10 @@ export function WorkItemDetailPage() {
           {/* Description */}
           <div className="group/desc">
             <div className="flex items-center gap-1 mb-1">
-              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('workitems.detail.description')}</h3>
+              <h3
+                className={`text-sm font-medium text-gray-500 dark:text-gray-400 ${!readOnly ? 'cursor-pointer' : ''}`}
+                onClick={readOnly ? undefined : () => { setDescDraft(item.description ?? ''); setEditingDesc(true) }}
+              >{t('workitems.detail.description')}</h3>
               <ConfirmCheck visible={descConfirmed} />
               {!readOnly && !editingDesc && (
                 <button
@@ -556,8 +559,8 @@ export function WorkItemDetailPage() {
               </div>
             ) : (
               <div
-                className="border border-transparent hover:border-gray-300 dark:hover:border-gray-600 rounded p-2 min-h-[2rem]"
-                onDoubleClick={readOnly ? undefined : () => { setDescDraft(item.description ?? ''); setEditingDesc(true) }}
+                className={`border border-transparent hover:border-gray-300 dark:hover:border-gray-600 rounded p-2 min-h-[2rem] ${!readOnly ? 'cursor-pointer' : ''}`}
+                onClick={readOnly ? undefined : () => { setDescDraft(item.description ?? ''); setEditingDesc(true) }}
               >
                 {item.description ? (
                   <div className="prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 break-words">
@@ -601,7 +604,7 @@ export function WorkItemDetailPage() {
               )}
             </div>
 
-            {activeTab === 'comments' && <CommentList projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} highlightedCommentId={highlightedCommentId} onHighlightClear={() => setHighlightedCommentId(null)} onImageClick={handleImageClick} onAttachmentLinkClick={handleAttachmentLinkClick} draft={commentDraft} onDraftChange={setCommentDraft} readOnly={readOnly} />}
+            {activeTab === 'comments' && <CommentList projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} highlightedCommentId={highlightedCommentId} onHighlightClear={() => setHighlightedCommentId(null)} onImageClick={handleImageClick} onAttachmentLinkClick={handleAttachmentLinkClick} draft={commentDraft} onDraftChange={setCommentDraft} readOnly={readOnly} itemVisibility={item?.visibility} />}
             {activeTab === 'activity' && <ActivityTimeline projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} onAttachmentClick={(id) => { setActiveTab('attachments'); setHighlightedAttachmentId(id) }} onCommentClick={(id) => { setActiveTab('comments'); setHighlightedCommentId(id) }} />}
             {activeTab === 'relations' && <RelationList projectKey={projectKey ?? ''} itemNumber={itemNumber} readOnly={readOnly} />}
             {activeTab === 'attachments' && <AttachmentList projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} highlightedAttachmentId={highlightedAttachmentId} onHighlightClear={() => setHighlightedAttachmentId(null)} onPreview={(a) => setPreviewTarget({ kind: 'attachment', attachment: a, projectKey: projectKey ?? '', itemNumber })} readOnly={readOnly} />}

@@ -651,7 +651,8 @@ type createCommentRequest struct {
 }
 
 type updateCommentRequest struct {
-	Body string `json:"body"`
+	Body       string `json:"body"`
+	Visibility string `json:"visibility,omitempty"`
 }
 
 type commentResponse struct {
@@ -861,7 +862,7 @@ func (h *WorkItemHandler) UpdateComment(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	comment, err := h.items.UpdateComment(r.Context(), info, projectKey, itemNumber, commentID, req.Body)
+	comment, err := h.items.UpdateComment(r.Context(), info, projectKey, itemNumber, commentID, req.Body, req.Visibility)
 	if err != nil {
 		handleWorkItemError(w, r, err, "failed to update comment")
 		return

@@ -11,7 +11,7 @@ import remarkGfm from 'remark-gfm'
 import { markdownComponents } from '@/components/ui/markdownComponents'
 
 export type PreviewTarget =
-  | { kind: 'attachment'; attachment: Attachment; projectKey: string; itemNumber: number }
+  | { kind: 'attachment'; attachment: Attachment; projectKey: string; itemNumber: number; downloadUrl?: string }
   | { kind: 'image'; src: string; label?: string; comment?: string }
 
 interface FilePreviewModalProps {
@@ -47,8 +47,8 @@ function getTargetInfo(target: PreviewTarget): { url: string; filename: string; 
     const filename = target.label ?? target.src.split('/').pop() ?? 'image'
     return { url: target.src, filename, comment: target.comment, previewType: 'image' }
   }
-  const { attachment, projectKey, itemNumber } = target
-  const url = getAttachmentDownloadURL(projectKey, itemNumber, attachment.id)
+  const { attachment, projectKey, itemNumber, downloadUrl } = target
+  const url = downloadUrl ?? getAttachmentDownloadURL(projectKey, itemNumber, attachment.id)
   const previewType = getPreviewType(attachment.content_type, attachment.filename) ?? 'image'
   return { url, filename: attachment.filename, comment: attachment.comment || undefined, previewType }
 }

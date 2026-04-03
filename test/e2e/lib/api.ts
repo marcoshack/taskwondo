@@ -1323,3 +1323,118 @@ export async function getAdminStats(
   const body = await res.json();
   return body.data;
 }
+
+// --- Queue helpers ---
+
+export async function createQueue(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  data: { name: string; queue_type: string; is_public?: boolean },
+): Promise<{ id: string; name: string }> {
+  const res = await request.post(`${BASE_URL}/api/v1/default/projects/${projectKey}/queues`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data,
+  });
+  if (!res.ok()) throw new Error(`Create queue failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+// --- Comment with visibility ---
+
+export async function addCommentWithVisibility(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  itemNumber: number,
+  body: string,
+  visibility: string,
+): Promise<{ id: string; visibility: string }> {
+  const res = await request.post(`${BASE_URL}/api/v1/default/projects/${projectKey}/items/${itemNumber}/comments`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { body, visibility },
+  });
+  if (!res.ok()) throw new Error(`Add comment failed (${res.status()}): ${await res.text()}`);
+  const json = await res.json();
+  return json.data;
+}
+
+export async function updateCommentWithVisibility(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  itemNumber: number,
+  commentId: string,
+  body: string,
+  visibility: string,
+): Promise<void> {
+  const res = await request.patch(`${BASE_URL}/api/v1/default/projects/${projectKey}/items/${itemNumber}/comments/${commentId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { body, visibility },
+  });
+  if (!res.ok()) throw new Error(`Update comment failed (${res.status()}): ${await res.text()}`);
+}
+
+// --- Portal API helpers ---
+
+export async function createPortalTicket(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  data: { title: string; description?: string; priority?: string },
+): Promise<{ id: string; item_number: number; display_id: string }> {
+  const res = await request.post(`${BASE_URL}/api/v1/portal/default/projects/${projectKey}/tickets`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data,
+  });
+  if (!res.ok()) throw new Error(`Create portal ticket failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function listPortalTickets(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+): Promise<{ items: { id: string; item_number: number; display_id: string; title: string }[] }> {
+  const res = await request.get(`${BASE_URL}/api/v1/portal/default/projects/${projectKey}/tickets`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`List portal tickets failed (${res.status()}): ${await res.text()}`);
+  return await res.json();
+}
+
+export async function listPortalComments(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  itemNumber: number,
+): Promise<{ id: string; body: string; author_name: string }[]> {
+  const res = await request.get(`${BASE_URL}/api/v1/portal/default/projects/${projectKey}/tickets/${itemNumber}/comments`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`List portal comments failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function uploadPortalAttachment(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  itemNumber: number,
+  filename: string,
+  content: Buffer,
+  contentType: string,
+): Promise<{ id: string; filename: string }> {
+  const res = await request.post(`${BASE_URL}/api/v1/portal/default/projects/${projectKey}/tickets/${itemNumber}/attachments`, {
+    headers: { Authorization: `Bearer ${token}` },
+    multipart: {
+      file: { name: filename, mimeType: contentType, buffer: content },
+    },
+  });
+  if (!res.ok()) throw new Error(`Upload portal attachment failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}

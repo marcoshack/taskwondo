@@ -19,6 +19,7 @@ export interface UserProject {
   project_name: string
   project_key: string
   role: string
+  available_roles: string[]
   owner_count: number
   created_at: string
 }

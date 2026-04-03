@@ -782,6 +782,8 @@ function UserProjectsPanel({
   // Filter out projects the user is already a member of
   const memberProjectIds = new Set(userProjects?.map((p) => p.project_id) ?? [])
   const availableProjects = allProjects?.filter((p) => !memberProjectIds.has(p.id)) ?? []
+  const selectedProject = availableProjects.find((p) => p.id === selectedProjectId)
+  const addRoles = selectedProject?.available_roles ?? []
 
   function handleAdd() {
     if (!selectedProjectId) return
@@ -920,10 +922,9 @@ function UserProjectsPanel({
                         }}
                         disabled={updateRoleMutation.isPending || isLastOwner}
                       >
-                        <option value="owner">{t('projects.settings.roles.owner')}</option>
-                        <option value="admin">{t('projects.settings.roles.admin')}</option>
-                        <option value="member">{t('projects.settings.roles.member')}</option>
-                        <option value="viewer">{t('projects.settings.roles.viewer')}</option>
+                        {p.available_roles.map((role) => (
+                          <option key={role} value={role}>{t(`projects.settings.roles.${role}`)}</option>
+                        ))}
                       </select>
                     </Tooltip>
                     <Tooltip content={isLastOwner ? t('projects.settings.lastOwnerTooltip') : undefined}>
@@ -960,10 +961,9 @@ function UserProjectsPanel({
               value={selectedRole}
               onChange={(e) => setSelectedRole(e.target.value)}
             >
-              <option value="owner">{t('projects.settings.roles.owner')}</option>
-              <option value="admin">{t('projects.settings.roles.admin')}</option>
-              <option value="member">{t('projects.settings.roles.member')}</option>
-              <option value="viewer">{t('projects.settings.roles.viewer')}</option>
+              {addRoles.map((role) => (
+                <option key={role} value={role}>{t(`projects.settings.roles.${role}`)}</option>
+              ))}
             </select>
             <Button size="sm" disabled={!selectedProjectId || addMutation.isPending} onClick={handleAdd}>
               {addMutation.isPending ? t('common.saving') : t('common.add')}

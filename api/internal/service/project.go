@@ -1177,6 +1177,8 @@ func roleRank(role string) int {
 		return 2
 	case model.ProjectRoleViewer:
 		return 1
+	case model.ProjectRoleCustomer:
+		return 0
 	default:
 		return 0
 	}
@@ -1283,7 +1285,7 @@ func generateInviteCode() (string, error) {
 
 func isValidInviteRole(role string) bool {
 	switch role {
-	case model.ProjectRoleAdmin, model.ProjectRoleMember, model.ProjectRoleViewer:
+	case model.ProjectRoleAdmin, model.ProjectRoleMember, model.ProjectRoleViewer, model.ProjectRoleCustomer:
 		return true
 	}
 	return false
@@ -1363,7 +1365,7 @@ func (s *ProjectService) RequireProjectRole(ctx context.Context, info *model.Aut
 
 func isValidProjectRole(role string) bool {
 	switch role {
-	case model.ProjectRoleOwner, model.ProjectRoleAdmin, model.ProjectRoleMember, model.ProjectRoleViewer:
+	case model.ProjectRoleOwner, model.ProjectRoleAdmin, model.ProjectRoleMember, model.ProjectRoleViewer, model.ProjectRoleCustomer:
 		return true
 	}
 	return false

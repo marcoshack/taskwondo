@@ -92,6 +92,7 @@ type WorkItemFilter struct {
 	Unassigned  bool         // true = include WHERE assignee_id IS NULL
 	AssigneeMe  bool         // true = include the caller's user ID
 	QueueID    *uuid.UUID // filter by queue
+	ReporterID *uuid.UUID // filter by reporter (customer's own tickets)
 	MilestoneIDs  []uuid.UUID // filter by milestone (multiple allowed)
 	MilestoneNone bool        // true = WHERE milestone_id IS NULL
 	Labels        []string   // filter items that contain ALL these labels
@@ -102,6 +103,7 @@ type WorkItemFilter struct {
 	Search     string     // full-text search query
 	Sort       string     // sort field: created_at, updated_at, priority, due_date, item_number
 	Order      string     // asc or desc
+	ExcludeResolved bool       // true = WHERE resolved_at IS NULL (hide completed)
 	Cursor     *uuid.UUID // cursor-based pagination: items after this ID
 	Limit      int        // page size (max 100, default 50)
 }

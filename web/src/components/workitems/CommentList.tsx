@@ -26,9 +26,10 @@ interface CommentListProps {
   draft?: string
   onDraftChange?: (value: string) => void
   readOnly?: boolean
+  itemVisibility?: string
 }
 
-export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highlightedCommentId, onHighlightClear, onImageClick, onAttachmentLinkClick, draft, onDraftChange, readOnly = false }: CommentListProps) {
+export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highlightedCommentId, onHighlightClear, onImageClick, onAttachmentLinkClick, draft, onDraftChange, readOnly = false, itemVisibility }: CommentListProps) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const { data: comments, isLoading } = useComments(projectKey, itemNumber)
@@ -57,6 +58,10 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editBody, setEditBody] = useState('')
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [commentVisibility, setCommentVisibility] = useState<'internal' | 'public'>('internal')
+  const [editVisibility, setEditVisibility] = useState<'internal' | 'public'>('internal')
+  const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null)
+  const showVisibilityToggle = itemVisibility === 'portal'
 
   const addCommentRef = useRef<HTMLDivElement>(null)
   const [addCommentVisible, setAddCommentVisible] = useState(true)
@@ -161,24 +166,45 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
               if (e.defaultPrevented) return
               if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && newBody.trim()) {
                 e.preventDefault()
-                createMutation.mutate({ body: newBody }, { onSuccess: () => setNewBody('') })
+                const doCreate = () => createMutation.mutate({ body: newBody, visibility: showVisibilityToggle ? commentVisibility : undefined }, { onSuccess: () => setNewBody('') })
+                if (showVisibilityToggle && commentVisibility === 'public') {
+                  setConfirmAction(() => doCreate)
+                } else {
+                  doCreate()
+                }
               }
             }}
             onPaste={handlePaste}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
           />
-          <Button
-            size="sm"
-            onClick={() => {
-              createMutation.mutate({ body: newBody }, {
-                onSuccess: () => setNewBody(''),
-              })
-            }}
-            disabled={!newBody.trim() || createMutation.isPending}
-          >
-            {createMutation.isPending ? t('comments.adding') : t('comments.add')}
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              size="sm"
+              onClick={() => {
+                const doCreate = () => createMutation.mutate({ body: newBody, visibility: showVisibilityToggle ? commentVisibility : undefined }, { onSuccess: () => setNewBody('') })
+                if (showVisibilityToggle && commentVisibility === 'public') {
+                  setConfirmAction(() => doCreate)
+                } else {
+                  doCreate()
+                }
+              }}
+              disabled={!newBody.trim() || createMutation.isPending}
+            >
+              {createMutation.isPending ? t('comments.adding') : t('comments.add')}
+            </Button>
+            {showVisibilityToggle && (
+              <label className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={commentVisibility === 'public'}
+                  onChange={(e) => setCommentVisibility(e.target.checked ? 'public' : 'internal')}
+                  className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800"
+                />
+                {t('comments.visibleToCustomer')}
+              </label>
+            )}
+          </div>
         </div>
       )}
 
@@ -213,7 +239,12 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
                   if (e.defaultPrevented) return
                   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                     e.preventDefault()
-                    updateMutation.mutate({ commentId: c.id, body: editBody }, { onSuccess: () => setEditingId(null) })
+                    const doUpdate = () => updateMutation.mutate({ commentId: c.id, body: editBody, visibility: showVisibilityToggle ? editVisibility : undefined }, { onSuccess: () => setEditingId(null) })
+                    if (showVisibilityToggle && editVisibility === 'public' && c.visibility !== 'public') {
+                      setConfirmAction(() => doUpdate)
+                    } else {
+                      doUpdate()
+                    }
                   }
                   if (e.key === 'Escape') setEditingId(null)
                 }}
@@ -221,19 +252,33 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
                 onDrop={editPaste.handleDrop}
                 onDragOver={editPaste.handleDragOver}
               />
-              <div className="flex gap-2">
+              <div className="flex items-center gap-3">
                 <Button
                   size="sm"
                   onClick={() => {
-                    updateMutation.mutate({ commentId: c.id, body: editBody }, {
-                      onSuccess: () => setEditingId(null),
-                    })
+                    const doUpdate = () => updateMutation.mutate({ commentId: c.id, body: editBody, visibility: showVisibilityToggle ? editVisibility : undefined }, { onSuccess: () => setEditingId(null) })
+                    if (showVisibilityToggle && editVisibility === 'public' && c.visibility !== 'public') {
+                      setConfirmAction(() => doUpdate)
+                    } else {
+                      doUpdate()
+                    }
                   }}
                   disabled={updateMutation.isPending}
                 >
                   {t('common.save')}
                 </Button>
                 <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>{t('common.cancel')}</Button>
+                {showVisibilityToggle && (
+                  <label className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={editVisibility === 'public'}
+                      onChange={(e) => setEditVisibility(e.target.checked ? 'public' : 'internal')}
+                      className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800"
+                    />
+                    {t('comments.visibleToCustomer')}
+                  </label>
+                )}
               </div>
             </div>
           ) : (
@@ -244,15 +289,27 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300 shrink-0">{authorName(c.author_id)}</span>
                   <ScrollableDate date={c.created_at} />
                   {c.edit_count > 0 && <span className="text-xs text-gray-400 dark:text-gray-500 italic shrink-0">{t('comments.editCount', { count: c.edit_count })}</span>}
-                  {c.visibility !== 'internal' && (
-                    <span className="text-xs text-indigo-500 shrink-0">{c.visibility}</span>
-                  )}
+                  {c.visibility !== 'internal' && (() => {
+                    // On portal items, public comments are shown with the portal badge
+                    const displayAs = (itemVisibility === 'portal' && c.visibility === 'public') ? 'portal' : c.visibility
+                    return (
+                      <span className={`inline-flex items-center gap-1 text-xs shrink-0 ${
+                        displayAs === 'portal' ? 'text-yellow-500 dark:text-yellow-400' :
+                        displayAs === 'public' ? 'text-red-500 dark:text-red-400' :
+                        'text-indigo-500'
+                      }`}>
+                        {displayAs === 'portal' && <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" /></svg>}
+                        {displayAs === 'public' && <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" /></svg>}
+                        {t(`workitems.visibilities.${displayAs}`)}
+                      </span>
+                    )
+                  })()}
                 </div>
                 <div className="flex items-center shrink-0">
                   {user && c.author_id === user.id && (
                     <button
                       className="group/edit relative inline-flex items-center justify-center w-7 h-7 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-gray-700 transition-colors sm:opacity-0 sm:group-hover/comment:opacity-100"
-                      onClick={() => { setEditingId(c.id); setEditBody(c.body) }}
+                      onClick={() => { setEditingId(c.id); setEditBody(c.body); setEditVisibility(c.visibility === 'public' ? 'public' : 'internal') }}
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M11.5 2.5a1.5 1.5 0 012.121 2.121L6.5 11.743l-2.5.757.757-2.5L11.5 2.5z" />
@@ -283,6 +340,7 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
                   if (user && c.author_id === user.id) {
                     setEditingId(c.id)
                     setEditBody(c.body)
+                    setEditVisibility(c.visibility === 'public' ? 'public' : 'internal')
                   }
                 }}
               >
@@ -305,6 +363,18 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
         onClose={editMention.onMentionClose}
         onSelect={editMention.onMentionSelect}
       />
+
+      <Modal open={!!confirmAction} onClose={() => setConfirmAction(null)} title={t('comments.visibilityConfirmTitle')}>
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+          {t('comments.visibilityConfirmBody')}
+        </p>
+        <div className="flex justify-end gap-3">
+          <Button variant="secondary" onClick={() => setConfirmAction(null)}>{t('common.cancel')}</Button>
+          <Button onClick={() => { confirmAction?.(); setConfirmAction(null) }}>
+            {t('common.confirm')}
+          </Button>
+        </div>
+      </Modal>
 
       <Modal open={!!deletingId} onClose={() => setDeletingId(null)} title={t('comments.deleteConfirm')}>
         <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">

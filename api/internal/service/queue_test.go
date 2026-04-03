@@ -4,18 +4,129 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 
 	"github.com/marcoshack/taskwondo/internal/model"
 )
 
-func newTestQueueService() (*QueueService, *mockQueueRepo, *mockProjectRepo, *mockProjectMemberRepo) {
+// --- Mock queue category repository ---
+
+type mockQueueCategoryRepo struct {
+	categories map[uuid.UUID]*model.QueueCategory
+}
+
+func newMockQueueCategoryRepo() *mockQueueCategoryRepo {
+	return &mockQueueCategoryRepo{categories: make(map[uuid.UUID]*model.QueueCategory)}
+}
+
+func (m *mockQueueCategoryRepo) Create(_ context.Context, cat *model.QueueCategory) error {
+	now := time.Now()
+	cat.CreatedAt = now
+	cat.UpdatedAt = now
+	m.categories[cat.ID] = cat
+	return nil
+}
+
+func (m *mockQueueCategoryRepo) GetByID(_ context.Context, id uuid.UUID) (*model.QueueCategory, error) {
+	cat, ok := m.categories[id]
+	if !ok {
+		return nil, model.ErrNotFound
+	}
+	return cat, nil
+}
+
+func (m *mockQueueCategoryRepo) ListByQueue(_ context.Context, queueID uuid.UUID) ([]model.QueueCategory, error) {
+	var result []model.QueueCategory
+	for _, cat := range m.categories {
+		if cat.QueueID == queueID {
+			result = append(result, *cat)
+		}
+	}
+	return result, nil
+}
+
+func (m *mockQueueCategoryRepo) Update(_ context.Context, cat *model.QueueCategory) error {
+	if _, ok := m.categories[cat.ID]; !ok {
+		return model.ErrNotFound
+	}
+	cat.UpdatedAt = time.Now()
+	m.categories[cat.ID] = cat
+	return nil
+}
+
+func (m *mockQueueCategoryRepo) Delete(_ context.Context, id uuid.UUID) error {
+	if _, ok := m.categories[id]; !ok {
+		return model.ErrNotFound
+	}
+	delete(m.categories, id)
+	return nil
+}
+
+// --- Mock queue team repository ---
+
+type mockQueueTeamRepo struct {
+	assignments map[string]bool // "queueID:teamID"
+	teams       map[uuid.UUID]*model.Team
+}
+
+func newMockQueueTeamRepo() *mockQueueTeamRepo {
+	return &mockQueueTeamRepo{
+		assignments: make(map[string]bool),
+		teams:       make(map[uuid.UUID]*model.Team),
+	}
+}
+
+func qtKey(queueID, teamID uuid.UUID) string {
+	return queueID.String() + ":" + teamID.String()
+}
+
+func (m *mockQueueTeamRepo) Assign(_ context.Context, queueID, teamID uuid.UUID) error {
+	m.assignments[qtKey(queueID, teamID)] = true
+	return nil
+}
+
+func (m *mockQueueTeamRepo) Unassign(_ context.Context, queueID, teamID uuid.UUID) error {
+	key := qtKey(queueID, teamID)
+	if !m.assignments[key] {
+		return model.ErrNotFound
+	}
+	delete(m.assignments, key)
+	return nil
+}
+
+func (m *mockQueueTeamRepo) ListTeamsByQueue(_ context.Context, queueID uuid.UUID) ([]model.Team, error) {
+	var result []model.Team
+	for key := range m.assignments {
+		qID := key[:36]
+		tID := key[37:]
+		if qID == queueID.String() {
+			teamID, _ := uuid.Parse(tID)
+			if team, ok := m.teams[teamID]; ok {
+				result = append(result, *team)
+			}
+		}
+	}
+	return result, nil
+}
+
+func (m *mockQueueTeamRepo) ListQueuesByTeam(_ context.Context, _ uuid.UUID) ([]model.Queue, error) {
+	return nil, nil
+}
+
+func (m *mockQueueTeamRepo) AddTeam(team *model.Team) {
+	m.teams[team.ID] = team
+}
+
+func newTestQueueService() (*QueueService, *mockQueueRepo, *mockProjectRepo, *mockProjectMemberRepo, *mockQueueCategoryRepo, *mockQueueTeamRepo) {
 	queueRepo := newMockQueueRepo()
 	projectRepo := newMockProjectRepo()
 	memberRepo := newMockProjectMemberRepo()
-	svc := NewQueueService(queueRepo, projectRepo, memberRepo)
-	return svc, queueRepo, projectRepo, memberRepo
+	categoryRepo := newMockQueueCategoryRepo()
+	queueTeamRepo := newMockQueueTeamRepo()
+	svc := NewQueueService(queueRepo, categoryRepo, queueTeamRepo, projectRepo, memberRepo)
+	return svc, queueRepo, projectRepo, memberRepo, categoryRepo, queueTeamRepo
 }
 
 func setupQueueProject(t *testing.T, projectRepo *mockProjectRepo, memberRepo *mockProjectMemberRepo, info *model.AuthInfo, role string) *model.Project {
@@ -46,7 +157,7 @@ func validCreateQueueInput() CreateQueueInput {
 // --- Tests ---
 
 func TestQueueCreate_Success(t *testing.T) {
-	svc, _, projectRepo, memberRepo := newTestQueueService()
+	svc, _, projectRepo, memberRepo, _, _ := newTestQueueService()
 	info := userAuthInfo()
 	setupQueueProject(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
 
@@ -63,7 +174,7 @@ func TestQueueCreate_Success(t *testing.T) {
 }
 
 func TestQueueCreate_EmptyName(t *testing.T) {
-	svc, _, projectRepo, memberRepo := newTestQueueService()
+	svc, _, projectRepo, memberRepo, _, _ := newTestQueueService()
 	info := userAuthInfo()
 	setupQueueProject(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
 
@@ -79,7 +190,7 @@ func TestQueueCreate_EmptyName(t *testing.T) {
 }
 
 func TestQueueCreate_InvalidType(t *testing.T) {
-	svc, _, projectRepo, memberRepo := newTestQueueService()
+	svc, _, projectRepo, memberRepo, _, _ := newTestQueueService()
 	info := userAuthInfo()
 	setupQueueProject(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
 
@@ -92,7 +203,7 @@ func TestQueueCreate_InvalidType(t *testing.T) {
 }
 
 func TestQueueCreate_MemberForbidden(t *testing.T) {
-	svc, _, projectRepo, memberRepo := newTestQueueService()
+	svc, _, projectRepo, memberRepo, _, _ := newTestQueueService()
 	info := userAuthInfo()
 	setupQueueProject(t, projectRepo, memberRepo, info, model.ProjectRoleMember)
 
@@ -103,7 +214,7 @@ func TestQueueCreate_MemberForbidden(t *testing.T) {
 }
 
 func TestQueueCreate_AdminAllowed(t *testing.T) {
-	svc, _, projectRepo, memberRepo := newTestQueueService()
+	svc, _, projectRepo, memberRepo, _, _ := newTestQueueService()
 	info := userAuthInfo()
 	setupQueueProject(t, projectRepo, memberRepo, info, model.ProjectRoleAdmin)
 
@@ -114,7 +225,7 @@ func TestQueueCreate_AdminAllowed(t *testing.T) {
 }
 
 func TestQueueGet_Success(t *testing.T) {
-	svc, queueRepo, projectRepo, memberRepo := newTestQueueService()
+	svc, queueRepo, projectRepo, memberRepo, _, _ := newTestQueueService()
 	info := userAuthInfo()
 	project := setupQueueProject(t, projectRepo, memberRepo, info, model.ProjectRoleMember)
 
@@ -136,7 +247,7 @@ func TestQueueGet_Success(t *testing.T) {
 }
 
 func TestQueueGet_NotFound(t *testing.T) {
-	svc, _, projectRepo, memberRepo := newTestQueueService()
+	svc, _, projectRepo, memberRepo, _, _ := newTestQueueService()
 	info := userAuthInfo()
 	setupQueueProject(t, projectRepo, memberRepo, info, model.ProjectRoleMember)
 
@@ -147,7 +258,7 @@ func TestQueueGet_NotFound(t *testing.T) {
 }
 
 func TestQueueGet_WrongProject(t *testing.T) {
-	svc, queueRepo, projectRepo, memberRepo := newTestQueueService()
+	svc, queueRepo, projectRepo, memberRepo, _, _ := newTestQueueService()
 	info := userAuthInfo()
 	setupQueueProject(t, projectRepo, memberRepo, info, model.ProjectRoleMember)
 
@@ -166,7 +277,7 @@ func TestQueueGet_WrongProject(t *testing.T) {
 }
 
 func TestQueueList_Success(t *testing.T) {
-	svc, queueRepo, projectRepo, memberRepo := newTestQueueService()
+	svc, queueRepo, projectRepo, memberRepo, _, _ := newTestQueueService()
 	info := userAuthInfo()
 	project := setupQueueProject(t, projectRepo, memberRepo, info, model.ProjectRoleMember)
 
@@ -187,7 +298,7 @@ func TestQueueList_Success(t *testing.T) {
 }
 
 func TestQueueUpdate_Success(t *testing.T) {
-	svc, queueRepo, projectRepo, memberRepo := newTestQueueService()
+	svc, queueRepo, projectRepo, memberRepo, _, _ := newTestQueueService()
 	info := userAuthInfo()
 	project := setupQueueProject(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
 
@@ -213,7 +324,7 @@ func TestQueueUpdate_Success(t *testing.T) {
 }
 
 func TestQueueDelete_Success(t *testing.T) {
-	svc, queueRepo, projectRepo, memberRepo := newTestQueueService()
+	svc, queueRepo, projectRepo, memberRepo, _, _ := newTestQueueService()
 	info := userAuthInfo()
 	project := setupQueueProject(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
 
@@ -237,7 +348,7 @@ func TestQueueDelete_Success(t *testing.T) {
 }
 
 func TestQueueDelete_MemberForbidden(t *testing.T) {
-	svc, queueRepo, projectRepo, memberRepo := newTestQueueService()
+	svc, queueRepo, projectRepo, memberRepo, _, _ := newTestQueueService()
 	info := userAuthInfo()
 	project := setupQueueProject(t, projectRepo, memberRepo, info, model.ProjectRoleMember)
 
@@ -256,7 +367,7 @@ func TestQueueDelete_MemberForbidden(t *testing.T) {
 }
 
 func TestQueueCreate_InvalidPriority(t *testing.T) {
-	svc, _, projectRepo, memberRepo := newTestQueueService()
+	svc, _, projectRepo, memberRepo, _, _ := newTestQueueService()
 	info := userAuthInfo()
 	setupQueueProject(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
 
@@ -269,7 +380,7 @@ func TestQueueCreate_InvalidPriority(t *testing.T) {
 }
 
 func TestQueueCreate_NonMemberNotFound(t *testing.T) {
-	svc, _, projectRepo, _ := newTestQueueService()
+	svc, _, projectRepo, _, _, _ := newTestQueueService()
 	info := userAuthInfo()
 	// Create project but don't add user as member
 	projectRepo.Create(context.Background(), &model.Project{
@@ -285,7 +396,7 @@ func TestQueueCreate_NonMemberNotFound(t *testing.T) {
 }
 
 func TestQueueUpdate_AllFields(t *testing.T) {
-	svc, queueRepo, projectRepo, memberRepo := newTestQueueService()
+	svc, queueRepo, projectRepo, memberRepo, _, _ := newTestQueueService()
 	info := userAuthInfo()
 	project := setupQueueProject(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
 
@@ -333,7 +444,7 @@ func TestQueueUpdate_AllFields(t *testing.T) {
 }
 
 func TestQueueUpdate_ClearFields(t *testing.T) {
-	svc, queueRepo, projectRepo, memberRepo := newTestQueueService()
+	svc, queueRepo, projectRepo, memberRepo, _, _ := newTestQueueService()
 	info := userAuthInfo()
 	project := setupQueueProject(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
 
@@ -372,7 +483,7 @@ func TestQueueUpdate_ClearFields(t *testing.T) {
 }
 
 func TestQueueUpdate_EmptyName(t *testing.T) {
-	svc, queueRepo, projectRepo, memberRepo := newTestQueueService()
+	svc, queueRepo, projectRepo, memberRepo, _, _ := newTestQueueService()
 	info := userAuthInfo()
 	project := setupQueueProject(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
 
@@ -395,7 +506,7 @@ func TestQueueUpdate_EmptyName(t *testing.T) {
 }
 
 func TestQueueUpdate_InvalidType(t *testing.T) {
-	svc, queueRepo, projectRepo, memberRepo := newTestQueueService()
+	svc, queueRepo, projectRepo, memberRepo, _, _ := newTestQueueService()
 	info := userAuthInfo()
 	project := setupQueueProject(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
 
@@ -418,7 +529,7 @@ func TestQueueUpdate_InvalidType(t *testing.T) {
 }
 
 func TestQueueUpdate_InvalidPriority(t *testing.T) {
-	svc, queueRepo, projectRepo, memberRepo := newTestQueueService()
+	svc, queueRepo, projectRepo, memberRepo, _, _ := newTestQueueService()
 	info := userAuthInfo()
 	project := setupQueueProject(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
 
@@ -441,7 +552,7 @@ func TestQueueUpdate_InvalidPriority(t *testing.T) {
 }
 
 func TestQueueUpdate_WrongProject(t *testing.T) {
-	svc, queueRepo, projectRepo, memberRepo := newTestQueueService()
+	svc, queueRepo, projectRepo, memberRepo, _, _ := newTestQueueService()
 	info := userAuthInfo()
 	setupQueueProject(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
 
@@ -464,7 +575,7 @@ func TestQueueUpdate_WrongProject(t *testing.T) {
 }
 
 func TestQueueList_AdminBypass(t *testing.T) {
-	svc, queueRepo, projectRepo, _ := newTestQueueService()
+	svc, queueRepo, projectRepo, _, _, _ := newTestQueueService()
 	admin := adminAuthInfo()
 
 	project := &model.Project{ID: uuid.New(), Name: "Test", Key: "TEST"}
@@ -480,5 +591,208 @@ func TestQueueList_AdminBypass(t *testing.T) {
 	}
 	if len(queues) != 1 {
 		t.Fatalf("expected 1 queue, got %d", len(queues))
+	}
+}
+
+// --- Category Tests ---
+
+func setupQueueForCategory(t *testing.T, svc *QueueService, queueRepo *mockQueueRepo, projectRepo *mockProjectRepo, memberRepo *mockProjectMemberRepo, info *model.AuthInfo, role string) (*model.Project, *model.Queue) {
+	t.Helper()
+	project := setupQueueProject(t, projectRepo, memberRepo, info, role)
+	q := &model.Queue{
+		ID:        uuid.New(),
+		ProjectID: project.ID,
+		Name:      "Test Queue",
+		QueueType: model.QueueTypeGeneral,
+	}
+	queueRepo.Create(context.Background(), q)
+	return project, q
+}
+
+func TestQueueCreateCategory_Success(t *testing.T) {
+	svc, queueRepo, projectRepo, memberRepo, _, _ := newTestQueueService()
+	info := userAuthInfo()
+	_, q := setupQueueForCategory(t, svc, queueRepo, projectRepo, memberRepo, info, model.ProjectRoleOwner)
+
+	cat, err := svc.CreateCategory(context.Background(), info, "TEST", q.ID, CreateCategoryInput{
+		Name:     "Bug Reports",
+		Position: 1,
+	})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if cat.Name != "Bug Reports" {
+		t.Fatalf("expected name 'Bug Reports', got %s", cat.Name)
+	}
+	if cat.QueueID != q.ID {
+		t.Fatalf("expected queue_id %s, got %s", q.ID, cat.QueueID)
+	}
+	if cat.Position != 1 {
+		t.Fatalf("expected position 1, got %d", cat.Position)
+	}
+}
+
+func TestQueueCreateCategory_EmptyName(t *testing.T) {
+	svc, queueRepo, projectRepo, memberRepo, _, _ := newTestQueueService()
+	info := userAuthInfo()
+	_, q := setupQueueForCategory(t, svc, queueRepo, projectRepo, memberRepo, info, model.ProjectRoleOwner)
+
+	_, err := svc.CreateCategory(context.Background(), info, "TEST", q.ID, CreateCategoryInput{
+		Name: "",
+	})
+	if err == nil {
+		t.Fatal("expected validation error for empty name")
+	}
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation, got %v", err)
+	}
+}
+
+func TestQueueCreateCategory_MemberForbidden(t *testing.T) {
+	svc, queueRepo, projectRepo, memberRepo, _, _ := newTestQueueService()
+	info := userAuthInfo()
+	_, q := setupQueueForCategory(t, svc, queueRepo, projectRepo, memberRepo, info, model.ProjectRoleMember)
+
+	_, err := svc.CreateCategory(context.Background(), info, "TEST", q.ID, CreateCategoryInput{
+		Name: "Bug Reports",
+	})
+	if !errors.Is(err, model.ErrForbidden) {
+		t.Fatalf("expected ErrForbidden, got %v", err)
+	}
+}
+
+func TestQueueListCategories_Success(t *testing.T) {
+	svc, queueRepo, projectRepo, memberRepo, categoryRepo, _ := newTestQueueService()
+	info := userAuthInfo()
+	_, q := setupQueueForCategory(t, svc, queueRepo, projectRepo, memberRepo, info, model.ProjectRoleMember)
+
+	// Add categories directly to the mock
+	categoryRepo.Create(context.Background(), &model.QueueCategory{
+		ID: uuid.New(), QueueID: q.ID, Name: "Cat1", Position: 0,
+	})
+	categoryRepo.Create(context.Background(), &model.QueueCategory{
+		ID: uuid.New(), QueueID: q.ID, Name: "Cat2", Position: 1,
+	})
+
+	cats, err := svc.ListCategories(context.Background(), info, "TEST", q.ID)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(cats) != 2 {
+		t.Fatalf("expected 2 categories, got %d", len(cats))
+	}
+}
+
+func TestQueueUpdateCategory_Success(t *testing.T) {
+	svc, queueRepo, projectRepo, memberRepo, categoryRepo, _ := newTestQueueService()
+	info := userAuthInfo()
+	_, q := setupQueueForCategory(t, svc, queueRepo, projectRepo, memberRepo, info, model.ProjectRoleAdmin)
+
+	cat := &model.QueueCategory{
+		ID: uuid.New(), QueueID: q.ID, Name: "Original", Position: 0,
+	}
+	categoryRepo.Create(context.Background(), cat)
+
+	newName := "Updated"
+	updated, err := svc.UpdateCategory(context.Background(), info, "TEST", q.ID, cat.ID, UpdateCategoryInput{
+		Name: &newName,
+	})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if updated.Name != "Updated" {
+		t.Fatalf("expected name 'Updated', got %s", updated.Name)
+	}
+}
+
+func TestQueueDeleteCategory_Success(t *testing.T) {
+	svc, queueRepo, projectRepo, memberRepo, categoryRepo, _ := newTestQueueService()
+	info := userAuthInfo()
+	_, q := setupQueueForCategory(t, svc, queueRepo, projectRepo, memberRepo, info, model.ProjectRoleOwner)
+
+	cat := &model.QueueCategory{
+		ID: uuid.New(), QueueID: q.ID, Name: "ToDelete", Position: 0,
+	}
+	categoryRepo.Create(context.Background(), cat)
+
+	err := svc.DeleteCategory(context.Background(), info, "TEST", q.ID, cat.ID)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	_, err = categoryRepo.GetByID(context.Background(), cat.ID)
+	if !errors.Is(err, model.ErrNotFound) {
+		t.Fatal("expected category to be deleted")
+	}
+}
+
+// --- Queue Team Tests ---
+
+func TestQueueAssignTeam_Success(t *testing.T) {
+	svc, queueRepo, projectRepo, memberRepo, _, queueTeamRepo := newTestQueueService()
+	info := userAuthInfo()
+	_, q := setupQueueForCategory(t, svc, queueRepo, projectRepo, memberRepo, info, model.ProjectRoleOwner)
+
+	teamID := uuid.New()
+	err := svc.AssignTeam(context.Background(), info, "TEST", q.ID, teamID)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	// Verify assignment exists
+	key := qtKey(q.ID, teamID)
+	if !queueTeamRepo.assignments[key] {
+		t.Fatal("expected team to be assigned to queue")
+	}
+}
+
+func TestQueueAssignTeam_MemberForbidden(t *testing.T) {
+	svc, queueRepo, projectRepo, memberRepo, _, _ := newTestQueueService()
+	info := userAuthInfo()
+	_, q := setupQueueForCategory(t, svc, queueRepo, projectRepo, memberRepo, info, model.ProjectRoleMember)
+
+	teamID := uuid.New()
+	err := svc.AssignTeam(context.Background(), info, "TEST", q.ID, teamID)
+	if !errors.Is(err, model.ErrForbidden) {
+		t.Fatalf("expected ErrForbidden, got %v", err)
+	}
+}
+
+func TestQueueUnassignTeam_Success(t *testing.T) {
+	svc, queueRepo, projectRepo, memberRepo, _, queueTeamRepo := newTestQueueService()
+	info := userAuthInfo()
+	_, q := setupQueueForCategory(t, svc, queueRepo, projectRepo, memberRepo, info, model.ProjectRoleOwner)
+
+	teamID := uuid.New()
+	queueTeamRepo.assignments[qtKey(q.ID, teamID)] = true
+
+	err := svc.UnassignTeam(context.Background(), info, "TEST", q.ID, teamID)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	if queueTeamRepo.assignments[qtKey(q.ID, teamID)] {
+		t.Fatal("expected team to be unassigned from queue")
+	}
+}
+
+func TestQueueListQueueTeams_Success(t *testing.T) {
+	svc, queueRepo, projectRepo, memberRepo, _, queueTeamRepo := newTestQueueService()
+	info := userAuthInfo()
+	_, q := setupQueueForCategory(t, svc, queueRepo, projectRepo, memberRepo, info, model.ProjectRoleMember)
+
+	team1 := &model.Team{ID: uuid.New(), ProjectID: uuid.New(), Name: "Team Alpha"}
+	team2 := &model.Team{ID: uuid.New(), ProjectID: uuid.New(), Name: "Team Beta"}
+	queueTeamRepo.AddTeam(team1)
+	queueTeamRepo.AddTeam(team2)
+	queueTeamRepo.assignments[qtKey(q.ID, team1.ID)] = true
+	queueTeamRepo.assignments[qtKey(q.ID, team2.ID)] = true
+
+	teams, err := svc.ListQueueTeams(context.Background(), info, "TEST", q.ID)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(teams) != 2 {
+		t.Fatalf("expected 2 teams, got %d", len(teams))
 	}
 }

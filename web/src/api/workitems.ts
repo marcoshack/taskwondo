@@ -215,8 +215,8 @@ export async function createComment(projectKey: string, itemNumber: number, body
   return res.data.data
 }
 
-export async function updateComment(projectKey: string, itemNumber: number, commentId: string, body: string) {
-  const res = await api.patch<DataResponse<Comment>>(`${nsPrefix()}/projects/${projectKey}/items/${itemNumber}/comments/${commentId}`, { body })
+export async function updateComment(projectKey: string, itemNumber: number, commentId: string, body: string, visibility?: string) {
+  const res = await api.patch<DataResponse<Comment>>(`${nsPrefix()}/projects/${projectKey}/items/${itemNumber}/comments/${commentId}`, { body, visibility })
   return res.data.data
 }
 

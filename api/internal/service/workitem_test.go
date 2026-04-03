@@ -348,6 +348,15 @@ func (m *mockWorkItemRepo) Delete(_ context.Context, id uuid.UUID) error {
 	return nil
 }
 
+func (m *mockWorkItemRepo) TouchUpdatedAt(_ context.Context, id uuid.UUID) error {
+	item, ok := m.items[id]
+	if !ok {
+		return model.ErrNotFound
+	}
+	item.UpdatedAt = time.Now()
+	return nil
+}
+
 func contains(slice []string, s string) bool {
 	for _, v := range slice {
 		if v == s {
@@ -579,6 +588,25 @@ func (m *mockQueueRepo) Delete(_ context.Context, id uuid.UUID) error {
 	}
 	delete(m.queues, id)
 	return nil
+}
+
+func (m *mockQueueRepo) GetPublicByProject(_ context.Context, projectID uuid.UUID) (*model.Queue, error) {
+	for _, q := range m.queues {
+		if q.ProjectID == projectID && q.IsPublic {
+			return q, nil
+		}
+	}
+	return nil, model.ErrNotFound
+}
+
+func (m *mockQueueRepo) CountPublicByProject(_ context.Context, projectID uuid.UUID) (int, error) {
+	count := 0
+	for _, q := range m.queues {
+		if q.ProjectID == projectID && q.IsPublic {
+			count++
+		}
+	}
+	return count, nil
 }
 
 // --- Mock milestone repository ---
@@ -1672,7 +1700,7 @@ func TestUpdateComment_AuthorCanEdit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	updated, err := s.svc.UpdateComment(context.Background(), info, "TEST", item.ItemNumber, comment.ID, "Updated body")
+	updated, err := s.svc.UpdateComment(context.Background(), info, "TEST", item.ItemNumber, comment.ID, "Updated body", "")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -1702,7 +1730,7 @@ func TestUpdateComment_NonAuthorMemberDenied(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = s.svc.UpdateComment(context.Background(), other, "TEST", item.ItemNumber, comment.ID, "Hacked")
+	_, err = s.svc.UpdateComment(context.Background(), other, "TEST", item.ItemNumber, comment.ID, "Hacked", "")
 	if err != model.ErrForbidden {
 		t.Fatalf("expected ErrForbidden, got %v", err)
 	}
@@ -1729,7 +1757,7 @@ func TestUpdateComment_AdminCannotEdit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = s.svc.UpdateComment(context.Background(), admin, "TEST", item.ItemNumber, comment.ID, "Admin edit")
+	_, err = s.svc.UpdateComment(context.Background(), admin, "TEST", item.ItemNumber, comment.ID, "Admin edit", "")
 	if err != model.ErrForbidden {
 		t.Fatalf("expected ErrForbidden, got %v", err)
 	}

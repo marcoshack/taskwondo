@@ -8,11 +8,23 @@ import (
 
 // Project member roles
 const (
-	ProjectRoleOwner  = "owner"
-	ProjectRoleAdmin  = "admin"
-	ProjectRoleMember = "member"
-	ProjectRoleViewer = "viewer"
+	ProjectRoleOwner    = "owner"
+	ProjectRoleAdmin    = "admin"
+	ProjectRoleMember   = "member"
+	ProjectRoleViewer   = "viewer"
+	ProjectRoleCustomer = "customer"
 )
+
+// AvailableProjectRoles returns all project roles that can be assigned to members.
+func AvailableProjectRoles() []string {
+	return []string{
+		ProjectRoleOwner,
+		ProjectRoleAdmin,
+		ProjectRoleMember,
+		ProjectRoleViewer,
+		ProjectRoleCustomer,
+	}
+}
 
 // Project represents a top-level organizational unit.
 type Project struct {

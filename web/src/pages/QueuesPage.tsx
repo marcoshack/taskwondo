@@ -1,0 +1,258 @@
+import { useState } from 'react'
+import { useParams, Link } from 'react-router-dom'
+import { Trans, useTranslation } from 'react-i18next'
+import { useQueues, useCreateQueue, useDeleteQueue } from '@/hooks/useQueues'
+import { useMembers } from '@/hooks/useProjects'
+import { useAuth } from '@/contexts/AuthContext'
+import { useNamespacePath } from '@/hooks/useNamespacePath'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
+import { Select } from '@/components/ui/Select'
+import { Modal } from '@/components/ui/Modal'
+import { Spinner } from '@/components/ui/Spinner'
+import { Badge } from '@/components/ui/Badge'
+import { Plus, Trash2, Check, Settings, LayoutList } from 'lucide-react'
+import type { Queue, CreateQueueInput } from '@/api/queues'
+import { getLocalizedError } from '@/utils/apiError'
+
+const QUEUE_TYPES = ['support', 'alerts', 'feedback', 'general'] as const
+
+export function QueuesPage() {
+  const { t } = useTranslation()
+  const { projectKey } = useParams<{ projectKey: string }>()
+  const { p } = useNamespacePath()
+  const { user } = useAuth()
+  const { data: members } = useMembers(projectKey ?? '')
+  const { data: queues, isLoading } = useQueues(projectKey ?? '')
+
+  const createMutation = useCreateQueue(projectKey ?? '')
+  const deleteMutation = useDeleteQueue(projectKey ?? '')
+
+  const [createOpen, setCreateOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<Queue | null>(null)
+  const [error, setError] = useState('')
+  const [savedId, setSavedId] = useState<string | null>(null)
+
+  const currentUserMember = members?.find((m) => m.user_id === user?.id)
+  const currentUserRole = currentUserMember?.role ?? (user?.global_role === 'admin' ? 'owner' : null)
+  const canManage = currentUserRole === 'owner' || currentUserRole === 'admin' || user?.global_role === 'admin'
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Spinner />
+      </div>
+    )
+  }
+
+  function flashSaved(id: string) {
+    setSavedId(id)
+    setTimeout(() => setSavedId(null), 2000)
+  }
+
+  function handleCreate(input: CreateQueueInput) {
+    setError('')
+    createMutation.mutate(input, {
+      onSuccess: (data) => {
+        flashSaved(data.id)
+        setCreateOpen(false)
+      },
+      onError: (err) => {
+        setError(getLocalizedError(err, t, 'queues.createError'))
+      },
+    })
+  }
+
+  function handleDelete() {
+    if (!deleteTarget) return
+    setError('')
+    deleteMutation.mutate(deleteTarget.id, {
+      onSuccess: () => {
+        setDeleteTarget(null)
+      },
+      onError: (err) => {
+        setError(getLocalizedError(err, t, 'queues.deleteError'))
+        setDeleteTarget(null)
+      },
+    })
+  }
+
+  return (
+    <div className="max-w-3xl space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('queues.title')}</h2>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('queues.description')}</p>
+        </div>
+        {canManage && (
+          <Button onClick={() => setCreateOpen(true)} className="border border-transparent">
+            <Plus className="h-4 w-4 mr-1" />
+            {t('queues.create')}
+          </Button>
+        )}
+      </div>
+
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+
+      {(!queues || queues.length === 0) ? (
+        <div className="border border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center">
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t('queues.noQueues')}</p>
+          {canManage && (
+            <Button size="sm" variant="secondary" className="mt-3" onClick={() => setCreateOpen(true)}>
+              <Plus className="h-4 w-4 mr-1" />
+              {t('queues.createFirst')}
+            </Button>
+          )}
+        </div>
+      ) : (
+        <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
+          {queues.map((queue) => (
+            <div key={queue.id} className="p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Link
+                      to={p(`/projects/${projectKey}/queues/${queue.id}`)}
+                      className="text-base font-semibold text-gray-900 dark:text-gray-100 hover:text-indigo-600 dark:hover:text-indigo-400"
+                    >
+                      {queue.name}
+                    </Link>
+                    <Badge color="gray">{t(`queues.types.${queue.queue_type}`)}</Badge>
+                    {queue.is_public && (
+                      <Badge color="indigo">{t('queues.public')}</Badge>
+                    )}
+                  </div>
+                  {queue.description && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{queue.description}</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  {savedId === queue.id && <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />}
+                  <Link to={p(`/projects/${projectKey}/queues/${queue.id}/items`)} title={t('queues.viewItems')}>
+                    <Button variant="ghost" size="sm">
+                      <LayoutList className="h-3.5 w-3.5" />
+                    </Button>
+                  </Link>
+                  <Link to={p(`/projects/${projectKey}/queues/${queue.id}`)}>
+                    <Button variant="ghost" size="sm">
+                      <Settings className="h-3.5 w-3.5" />
+                    </Button>
+                  </Link>
+                  {canManage && (
+                    <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(queue)}>
+                      <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Create modal */}
+      <Modal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        title={t('queues.createQueue')}
+      >
+        <QueueCreateForm
+          onSubmit={handleCreate}
+          onCancel={() => setCreateOpen(false)}
+          isPending={createMutation.isPending}
+        />
+      </Modal>
+
+      {/* Delete confirmation */}
+      <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} title={t('queues.deleteConfirmTitle')}>
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+          <Trans i18nKey="queues.deleteConfirmBody" values={{ name: deleteTarget?.name }} components={{ bold: <strong /> }} />
+        </p>
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={() => setDeleteTarget(null)}>
+            {t('common.cancel')}
+          </Button>
+          <Button variant="danger" disabled={deleteMutation.isPending} onClick={handleDelete}>
+            {deleteMutation.isPending ? t('common.deleting') : t('common.delete')}
+          </Button>
+        </div>
+      </Modal>
+    </div>
+  )
+}
+
+// --- Queue Create Form ---
+
+function QueueCreateForm({
+  onSubmit,
+  onCancel,
+  isPending,
+}: {
+  onSubmit: (input: CreateQueueInput) => void
+  onCancel: () => void
+  isPending: boolean
+}) {
+  const { t } = useTranslation()
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [queueType, setQueueType] = useState<string>('general')
+  const [validationError, setValidationError] = useState('')
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setValidationError('')
+
+    if (!name.trim()) {
+      setValidationError(t('queues.nameRequired'))
+      return
+    }
+
+    onSubmit({
+      name: name.trim(),
+      description: description || undefined,
+      queue_type: queueType,
+    })
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {validationError && (
+        <p className="text-sm text-red-600 dark:text-red-400">{validationError}</p>
+      )}
+      <Input
+        label={t('queues.name')}
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder={t('queues.namePlaceholder')}
+        required
+        autoFocus
+      />
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          {t('common.description')}
+        </label>
+        <textarea
+          rows={3}
+          className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+        />
+      </div>
+      <Select
+        label={t('queues.type')}
+        value={queueType}
+        onChange={(e) => setQueueType(e.target.value)}
+      >
+        {QUEUE_TYPES.map((qt) => (
+          <option key={qt} value={qt}>{t(`queues.types.${qt}`)}</option>
+        ))}
+      </Select>
+      <div className="flex justify-end gap-3 pt-2">
+        <Button type="button" variant="secondary" onClick={onCancel}>{t('common.cancel')}</Button>
+        <Button type="submit" disabled={isPending}>
+          {isPending ? t('common.creating') : t('common.create')}
+        </Button>
+      </div>
+    </form>
+  )
+}

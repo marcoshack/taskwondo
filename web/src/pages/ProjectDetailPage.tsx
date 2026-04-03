@@ -1,6 +1,5 @@
 import { useParams, Routes, Route } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { SquareStack } from 'lucide-react'
 import { useProject } from '@/hooks/useProjects'
 import { AppSidebar } from '@/components/AppSidebar'
 import { useSidebar } from '@/contexts/SidebarContext'
@@ -13,16 +12,10 @@ import { ProjectOverviewPage } from './ProjectOverviewPage'
 import { ProjectWorkflowsPage } from './ProjectWorkflowsPage'
 import { MilestonesPage } from './MilestonesPage'
 import { MilestoneDashboardPage } from './MilestoneDashboardPage'
-
-function QueuesPage() {
-  const { t } = useTranslation()
-  return (
-    <div className="flex flex-col items-center justify-center h-64 text-gray-500 dark:text-gray-400">
-      <SquareStack className="h-12 w-12 mb-4 opacity-30" />
-      <p className="text-lg font-medium">{t('projects.queuesComingSoon')}</p>
-    </div>
-  )
-}
+import { QueuesPage } from './QueuesPage'
+import { QueueSettingsPage } from './QueueSettingsPage'
+import { TeamsPage } from './TeamsPage'
+import { QueueWorkItemsPage } from './QueueWorkItemsPage'
 
 export function ProjectDetailPage() {
   const { t } = useTranslation()
@@ -57,6 +50,9 @@ export function ProjectDetailPage() {
             <Route path="items" element={<WorkItemListPage />} />
             <Route path="items/:itemNumber" element={<WorkItemDetailPage />} />
             <Route path="queues" element={<QueuesPage />} />
+            <Route path="queues/:queueId" element={<QueueSettingsPage />} />
+            <Route path="queues/:queueId/items" element={<QueueWorkItemsPage />} />
+            <Route path="teams" element={<TeamsPage />} />
             <Route path="milestones" element={<MilestonesPage />} />
             <Route path="milestones/:milestoneId" element={<MilestoneDashboardPage />} />
             <Route path="workflows" element={<ProjectWorkflowsPage />} />
