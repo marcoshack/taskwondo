@@ -164,7 +164,7 @@ export async function createWorkItem(
   request: APIRequestContext,
   token: string,
   projectKey: string,
-  data: { title: string; type: string; description?: string; assignee_id?: string; watcher_ids?: string[] },
+  data: { title: string; type: string; description?: string; assignee_id?: string; watcher_ids?: string[]; queue_id?: string },
   namespace = 'default',
 ): Promise<{ id: string; item_number: number; display_id: string }> {
   const res = await request.post(`${BASE_URL}/api/v1/${namespace}/projects/${projectKey}/items`, {

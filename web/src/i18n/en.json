@@ -1406,6 +1406,9 @@
   "queues.createError": "Failed to create queue.",
   "queues.updateError": "Failed to update queue.",
   "queues.deleteError": "Failed to delete queue.",
+  "queues.dangerZone": "Danger Zone",
+  "queues.dangerZoneDescription": "Deleting a queue will remove all items and settings. This action cannot be undone.",
+  "queues.deleteQueue": "Delete queue",
 
   "queues.categories": "Categories",
   "queues.categories.create": "Add category",

@@ -218,9 +218,10 @@ func TestPortalHandler_CreateTicket_MissingQueueID(t *testing.T) {
 
 	s.portal.CreateTicket(w, req)
 
-	// queue_id is required but empty string will fail uuid.Parse
-	if w.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+	// queue_id in the request body is no longer required — the handler
+	// auto-resolves the project's public queue via GetPublicQueue.
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
 	}
 }
 

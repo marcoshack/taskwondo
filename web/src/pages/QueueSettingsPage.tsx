@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { Trans, useTranslation } from 'react-i18next'
-import { useQueue, useUpdateQueue } from '@/hooks/useQueues'
+import { useQueue, useUpdateQueue, useDeleteQueue } from '@/hooks/useQueues'
 import { useQueueCategories, useCreateCategory, useUpdateCategory, useDeleteCategory, useQueueTeams, useAssignQueueTeam, useUnassignQueueTeam } from '@/hooks/useQueueCategories'
 import { useTeams } from '@/hooks/useTeams'
 import { useMembers } from '@/hooks/useProjects'
@@ -25,11 +25,15 @@ const PRIORITIES = ['critical', 'high', 'medium', 'low'] as const
 export function QueueSettingsPage() {
   const { t } = useTranslation()
   const { projectKey, queueId } = useParams<{ projectKey: string; queueId: string }>()
+  const navigate = useNavigate()
   const { p } = useNamespacePath()
   const { user } = useAuth()
   const { data: members } = useMembers(projectKey ?? '')
   const { data: queue, isLoading } = useQueue(projectKey ?? '', queueId ?? '')
+  const deleteMutation = useDeleteQueue(projectKey ?? '')
   const [activeTab, setActiveTab] = useState('general')
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
 
   const currentUserMember = members?.find((m) => m.user_id === user?.id)
   const currentUserRole = currentUserMember?.role ?? (user?.global_role === 'admin' ? 'owner' : null)
@@ -85,6 +89,47 @@ export function QueueSettingsPage() {
           <TeamsTab projectKey={projectKey ?? ''} queueId={queueId ?? ''} canManage={canManage} />
         )}
       </div>
+
+      {/* Danger Zone */}
+      {canManage && (
+        <div className="border border-red-200 dark:border-red-800 rounded-lg p-4 mt-8">
+          <h3 className="text-sm font-semibold text-red-600 dark:text-red-400 mb-2">{t('queues.dangerZone')}</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">{t('queues.dangerZoneDescription')}</p>
+          {deleteError && <p className="text-sm text-red-600 dark:text-red-400 mb-3">{deleteError}</p>}
+          <Button variant="danger" onClick={() => setDeleteOpen(true)}>
+            <Trash2 className="h-3.5 w-3.5 mr-1" />
+            {t('queues.deleteQueue')}
+          </Button>
+        </div>
+      )}
+
+      {/* Delete queue confirmation */}
+      <Modal open={deleteOpen} onClose={() => setDeleteOpen(false)} title={t('queues.deleteConfirmTitle')}>
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+          <Trans i18nKey="queues.deleteConfirmBody" values={{ name: queue.name }} components={{ bold: <strong /> }} />
+        </p>
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={() => setDeleteOpen(false)}>
+            {t('common.cancel')}
+          </Button>
+          <Button
+            variant="danger"
+            disabled={deleteMutation.isPending}
+            onClick={() => {
+              setDeleteError('')
+              deleteMutation.mutate(queue.id, {
+                onSuccess: () => navigate(p(`/projects/${projectKey}/queues`)),
+                onError: (err) => {
+                  setDeleteError(getLocalizedError(err, t, 'queues.deleteError'))
+                  setDeleteOpen(false)
+                },
+              })
+            }}
+          >
+            {deleteMutation.isPending ? t('common.deleting') : t('common.delete')}
+          </Button>
+        </div>
+      </Modal>
     </div>
   )
 }

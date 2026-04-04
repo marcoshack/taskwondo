@@ -36,11 +36,13 @@ interface WorkItemFiltersProps {
   leadingContentMobileButton?: ReactNode
   trailingContent?: ReactNode
   trailingContentMobileButton?: ReactNode
+  /** Hide the Type filter dropdown (default: false) */
+  hideTypeFilter?: boolean
 }
 
 const closedCategories = new Set(['done', 'cancelled'])
 
-export function WorkItemFilters({ filter, onFilterChange, statuses, milestones = [], members = [], search, onSearchChange, sort, order, onSort, onOrderChange, showDates, onShowDatesChange, onSave, onClearFilters, hasUnsavedChanges, hasActiveSearch, savedSearchSelector, savedSearchMobileButton, leadingContent, leadingContentMobileButton, trailingContent, trailingContentMobileButton }: WorkItemFiltersProps) {
+export function WorkItemFilters({ filter, onFilterChange, statuses, milestones = [], members = [], search, onSearchChange, sort, order, onSort, onOrderChange, showDates, onShowDatesChange, onSave, onClearFilters, hasUnsavedChanges, hasActiveSearch, savedSearchSelector, savedSearchMobileButton, leadingContent, leadingContentMobileButton, trailingContent, trailingContentMobileButton, hideTypeFilter }: WorkItemFiltersProps) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const [filtersOpen, setFiltersOpen] = useState(false)
@@ -101,7 +103,7 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
   ]
 
   const activeFilterCount =
-    (filter.type?.length ? 1 : 0) +
+    (!hideTypeFilter && filter.type?.length ? 1 : 0) +
     (filter.priority?.length ? 1 : 0) +
     (filter.status?.length ? 1 : 0) +
     (filter.assignee?.length ? 1 : 0) +
@@ -130,9 +132,11 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
         {savedSearchSelector && (
           <div className="flex-1 min-w-0">{savedSearchSelector}</div>
         )}
-        <div className="flex-1 min-w-0">
-          <MultiSelect options={typeOptions} selected={filter.type ?? []} onChange={(v) => setArray('type', v)} placeholder={t('workitems.filters.allTypes')} />
-        </div>
+        {!hideTypeFilter && (
+          <div className="flex-1 min-w-0">
+            <MultiSelect options={typeOptions} selected={filter.type ?? []} onChange={(v) => setArray('type', v)} placeholder={t('workitems.filters.allTypes')} />
+          </div>
+        )}
         <div className="flex-1 min-w-0">
           <MultiSelect options={priorityOptions} selected={filter.priority ?? []} onChange={(v) => setArray('priority', v)} placeholder={t('workitems.filters.allPriorities')} />
         </div>
@@ -347,10 +351,12 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
         </span>
       }>
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('workitems.filters.allTypes')}</label>
-            <MultiSelect options={typeOptions} selected={filter.type ?? []} onChange={(v) => setArray('type', v)} placeholder={t('workitems.filters.allTypes')} />
-          </div>
+          {!hideTypeFilter && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('workitems.filters.allTypes')}</label>
+              <MultiSelect options={typeOptions} selected={filter.type ?? []} onChange={(v) => setArray('type', v)} placeholder={t('workitems.filters.allTypes')} />
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('workitems.filters.allPriorities')}</label>
             <MultiSelect options={priorityOptions} selected={filter.priority ?? []} onChange={(v) => setArray('priority', v)} placeholder={t('workitems.filters.allPriorities')} />

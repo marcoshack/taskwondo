@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { Trans, useTranslation } from 'react-i18next'
-import { useQueues, useCreateQueue, useDeleteQueue } from '@/hooks/useQueues'
+import { useTranslation } from 'react-i18next'
+import { useQueues, useCreateQueue } from '@/hooks/useQueues'
 import { useMembers } from '@/hooks/useProjects'
 import { useAuth } from '@/contexts/AuthContext'
 import { useNamespacePath } from '@/hooks/useNamespacePath'
@@ -11,8 +11,8 @@ import { Select } from '@/components/ui/Select'
 import { Modal } from '@/components/ui/Modal'
 import { Spinner } from '@/components/ui/Spinner'
 import { Badge } from '@/components/ui/Badge'
-import { Plus, Trash2, Check, Settings, LayoutList } from 'lucide-react'
-import type { Queue, CreateQueueInput } from '@/api/queues'
+import { Plus, Check, Settings } from 'lucide-react'
+import type { CreateQueueInput } from '@/api/queues'
 import { getLocalizedError } from '@/utils/apiError'
 
 const QUEUE_TYPES = ['support', 'alerts', 'feedback', 'general'] as const
@@ -26,10 +26,8 @@ export function QueuesPage() {
   const { data: queues, isLoading } = useQueues(projectKey ?? '')
 
   const createMutation = useCreateQueue(projectKey ?? '')
-  const deleteMutation = useDeleteQueue(projectKey ?? '')
 
   const [createOpen, setCreateOpen] = useState(false)
-  const [deleteTarget, setDeleteTarget] = useState<Queue | null>(null)
   const [error, setError] = useState('')
   const [savedId, setSavedId] = useState<string | null>(null)
 
@@ -59,20 +57,6 @@ export function QueuesPage() {
       },
       onError: (err) => {
         setError(getLocalizedError(err, t, 'queues.createError'))
-      },
-    })
-  }
-
-  function handleDelete() {
-    if (!deleteTarget) return
-    setError('')
-    deleteMutation.mutate(deleteTarget.id, {
-      onSuccess: () => {
-        setDeleteTarget(null)
-      },
-      onError: (err) => {
-        setError(getLocalizedError(err, t, 'queues.deleteError'))
-        setDeleteTarget(null)
       },
     })
   }
@@ -107,16 +91,17 @@ export function QueuesPage() {
       ) : (
         <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
           {queues.map((queue) => (
-            <div key={queue.id} className="p-4">
+            <Link
+              key={queue.id}
+              to={p(`/projects/${projectKey}/queues/${queue.id}/items`)}
+              className="block p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors first:rounded-t-lg last:rounded-b-lg"
+            >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <Link
-                      to={p(`/projects/${projectKey}/queues/${queue.id}`)}
-                      className="text-base font-semibold text-gray-900 dark:text-gray-100 hover:text-indigo-600 dark:hover:text-indigo-400"
-                    >
+                    <span className="text-base font-semibold text-gray-900 dark:text-gray-100">
                       {queue.name}
-                    </Link>
+                    </span>
                     <Badge color="gray">{t(`queues.types.${queue.queue_type}`)}</Badge>
                     {queue.is_public && (
                       <Badge color="indigo">{t('queues.public')}</Badge>
@@ -126,26 +111,20 @@ export function QueuesPage() {
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{queue.description}</p>
                   )}
                 </div>
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.preventDefault()}>
                   {savedId === queue.id && <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />}
-                  <Link to={p(`/projects/${projectKey}/queues/${queue.id}/items`)} title={t('queues.viewItems')}>
+                  <Link
+                    to={p(`/projects/${projectKey}/queues/${queue.id}`)}
+                    onClick={(e) => e.stopPropagation()}
+                    title={t('queues.settings')}
+                  >
                     <Button variant="ghost" size="sm">
-                      <LayoutList className="h-3.5 w-3.5" />
+                      <Settings className="h-4.5 w-4.5" />
                     </Button>
                   </Link>
-                  <Link to={p(`/projects/${projectKey}/queues/${queue.id}`)}>
-                    <Button variant="ghost" size="sm">
-                      <Settings className="h-3.5 w-3.5" />
-                    </Button>
-                  </Link>
-                  {canManage && (
-                    <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(queue)}>
-                      <Trash2 className="h-3.5 w-3.5 text-red-500" />
-                    </Button>
-                  )}
                 </div>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       )}
@@ -163,20 +142,6 @@ export function QueuesPage() {
         />
       </Modal>
 
-      {/* Delete confirmation */}
-      <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} title={t('queues.deleteConfirmTitle')}>
-        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-          <Trans i18nKey="queues.deleteConfirmBody" values={{ name: deleteTarget?.name }} components={{ bold: <strong /> }} />
-        </p>
-        <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={() => setDeleteTarget(null)}>
-            {t('common.cancel')}
-          </Button>
-          <Button variant="danger" disabled={deleteMutation.isPending} onClick={handleDelete}>
-            {deleteMutation.isPending ? t('common.deleting') : t('common.delete')}
-          </Button>
-        </div>
-      </Modal>
     </div>
   )
 }
