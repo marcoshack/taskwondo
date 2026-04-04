@@ -87,7 +87,7 @@ export function NamespaceProvider({ children }: { children: ReactNode }) {
       // Remove namespace-scoped query cache so the new namespace starts fresh
       // (loading state instead of stale data/errors from the old namespace)
       queryClient.removeQueries({ queryKey: ['projects'] })
-      navigate(`/${toUrlSegment(slug)}/projects`)
+      navigate(`/${toUrlSegment(slug)}/projects`, { state: { autoRedirect: true } })
     },
     [namespaces, queryClient, navigate],
   )

@@ -1,5 +1,5 @@
-import { useState, useMemo, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useMemo, useRef, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Search, Plus, Check } from 'lucide-react'
 import { getLocalizedError } from '@/utils/apiError'
@@ -79,6 +79,26 @@ export function ProjectListPage() {
   const projectCount = ownedCount ?? 0
   const atLimit = !isAdmin && maxProjects > 0 && projectCount >= maxProjects
 
+  // Customer-only users in this namespace cannot create projects
+  const isCustomerOnly = !isAdmin
+    && (projects ?? []).length > 0
+    && (projects ?? []).every((proj) => proj.member_role === 'customer')
+
+  const location = useLocation()
+
+  // Auto-redirect: when arriving via login or namespace switch, if the user is
+  // customer-only with exactly 1 project, go straight to that project's support page.
+  useEffect(() => {
+    if (
+      location.state?.autoRedirect
+      && projects
+      && projects.length === 1
+      && projects[0].member_role === 'customer'
+    ) {
+      navigate(p(`/projects/${projects[0].key}/support`), { replace: true })
+    }
+  }, [projects, location.state, navigate, p])
+
   const { namespaces, activeNamespace, showSwitcher } = useNamespaceContext()
 
   const [showCreate, setShowCreate] = useState(false)
@@ -100,7 +120,7 @@ export function ProjectListPage() {
     setShowCreate(true)
   }
 
-  useKeyboardShortcut({ key: 'n' }, () => openCreateModal())
+  useKeyboardShortcut({ key: 'n' }, () => openCreateModal(), !isCustomerOnly)
   useKeyboardShortcut({ key: '/' }, () => searchRef.current?.focus())
 
   const projectList = useMemo(() => {
@@ -113,7 +133,8 @@ export function ProjectListPage() {
   useKeyboardShortcut([{ key: 'ArrowUp' }, { key: 'k' }], () => setActiveRow((prev) => Math.max(prev - 1, 0)))
   useKeyboardShortcut([{ key: 'Enter' }, { key: 'o' }], () => {
     if (activeRow >= 0 && activeRow < projectList.length) {
-      navigate(p(`/projects/${projectList[activeRow].key}`))
+      const proj = projectList[activeRow]
+      navigate(p(`/projects/${proj.key}${proj.member_role === 'customer' ? '/support' : ''}`))
     }
   }, activeRow >= 0)
   useKeyboardShortcut({ key: 'Escape' }, () => setActiveRow(-1), activeRow >= 0)
@@ -133,32 +154,51 @@ export function ProjectListPage() {
       render: (p) => <span className="font-medium text-gray-900 dark:text-gray-100 truncate block">{p.name}</span>,
     },
     {
+      key: 'role',
+      header: t('projects.table.role'),
+      width: '10%',
+      className: 'text-right',
+      render: (p) => (
+        <span className="text-gray-500 dark:text-gray-400 capitalize">
+          {p.member_role ? t(`projects.settings.roles.${p.member_role}`) : ''}
+        </span>
+      ),
+    },
+    {
       key: 'open',
       header: t('projects.table.open'),
       width: '12%',
       className: 'text-right',
-      render: (p) => <span className="text-gray-500 dark:text-gray-400">{p.open_count}</span>,
+      render: (p) => p.member_role === 'customer'
+        ? <span className="text-gray-300 dark:text-gray-600">&mdash;</span>
+        : <span className="text-gray-500 dark:text-gray-400">{p.open_count}</span>,
     },
     {
       key: 'in_progress',
       header: t('projects.table.inProgress'),
       width: '12%',
       className: 'text-right',
-      render: (p) => <span className="text-gray-500 dark:text-gray-400">{p.in_progress_count}</span>,
+      render: (p) => p.member_role === 'customer'
+        ? <span className="text-gray-300 dark:text-gray-600">&mdash;</span>
+        : <span className="text-gray-500 dark:text-gray-400">{p.in_progress_count}</span>,
     },
     {
       key: 'total',
       header: t('projects.table.total'),
       width: '12%',
       className: 'text-right',
-      render: (p) => <span className="text-gray-500 dark:text-gray-400">{p.item_counter}</span>,
+      render: (p) => p.member_role === 'customer'
+        ? <span className="text-gray-300 dark:text-gray-600">&mdash;</span>
+        : <span className="text-gray-500 dark:text-gray-400">{p.item_counter}</span>,
     },
     {
       key: 'members',
       header: t('projects.table.members'),
       width: '12%',
       className: 'text-right',
-      render: (p) => <span className="text-gray-500 dark:text-gray-400">{p.member_count}</span>,
+      render: (p) => p.member_role === 'customer'
+        ? <span className="text-gray-300 dark:text-gray-600">&mdash;</span>
+        : <span className="text-gray-500 dark:text-gray-400">{p.member_count}</span>,
     },
   ]
 
@@ -216,7 +256,7 @@ export function ProjectListPage() {
         <div className="flex-1 min-w-0">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('projects.title')}</h1>
-        <Button onClick={openCreateModal} className="border border-transparent">{t('projects.new')}</Button>
+        {!isCustomerOnly && <Button onClick={openCreateModal} className="border border-transparent">{t('projects.new')}</Button>}
       </div>
 
       {/* Search */}
@@ -237,44 +277,54 @@ export function ProjectListPage() {
         {projectList.length === 0 ? (
           <p className="text-center text-sm text-gray-500 dark:text-gray-400 py-12">{t('projects.empty')}</p>
         ) : (
-          projectList.map((proj) => (
-            <button
-              key={proj.key}
-              onClick={() => navigate(p(`/projects/${proj.key}`))}
-              className="w-full text-left bg-white dark:bg-gray-800 rounded-lg shadow p-4 active:bg-gray-50 dark:active:bg-gray-700 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <ProjectKeyBadge>{proj.key}</ProjectKeyBadge>
-                <span className="font-medium text-gray-900 dark:text-gray-100 truncate">{proj.name}</span>
-              </div>
-              <div className="flex items-center gap-4 mt-2.5 ml-1 text-xs text-gray-500 dark:text-gray-400">
-                <Tooltip content={t('projects.table.open')}>
-                  <span className="inline-flex items-center gap-1">
-                    <IconOpen className="w-3.5 h-3.5" />
-                    {proj.open_count}
-                  </span>
-                </Tooltip>
-                <Tooltip content={t('projects.table.inProgress')}>
-                  <span className="inline-flex items-center gap-1">
-                    <IconInProgress className="w-3.5 h-3.5" />
-                    {proj.in_progress_count}
-                  </span>
-                </Tooltip>
-                <Tooltip content={t('projects.table.total')}>
-                  <span className="inline-flex items-center gap-1">
-                    <IconTotal className="w-3.5 h-3.5" />
-                    {proj.item_counter}
-                  </span>
-                </Tooltip>
-                <Tooltip content={t('projects.table.members')}>
-                  <span className="inline-flex items-center gap-1">
-                    <IconMembers className="w-3.5 h-3.5" />
-                    {proj.member_count}
-                  </span>
-                </Tooltip>
-              </div>
-            </button>
-          ))
+          projectList.map((proj) => {
+            const isCustomer = proj.member_role === 'customer'
+            return (
+              <button
+                key={proj.key}
+                onClick={() => navigate(p(`/projects/${proj.key}${isCustomer ? '/support' : ''}`))}
+                className="w-full text-left bg-white dark:bg-gray-800 rounded-lg shadow p-4 active:bg-gray-50 dark:active:bg-gray-700 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <ProjectKeyBadge>{proj.key}</ProjectKeyBadge>
+                  <span className="font-medium text-gray-900 dark:text-gray-100 truncate flex-1">{proj.name}</span>
+                  {proj.member_role && (
+                    <span className="text-xs text-gray-400 dark:text-gray-500 capitalize shrink-0">
+                      {t(`projects.settings.roles.${proj.member_role}`)}
+                    </span>
+                  )}
+                </div>
+                {!isCustomer && (
+                  <div className="flex items-center gap-4 mt-2.5 ml-1 text-xs text-gray-500 dark:text-gray-400">
+                    <Tooltip content={t('projects.table.open')}>
+                      <span className="inline-flex items-center gap-1">
+                        <IconOpen className="w-3.5 h-3.5" />
+                        {proj.open_count}
+                      </span>
+                    </Tooltip>
+                    <Tooltip content={t('projects.table.inProgress')}>
+                      <span className="inline-flex items-center gap-1">
+                        <IconInProgress className="w-3.5 h-3.5" />
+                        {proj.in_progress_count}
+                      </span>
+                    </Tooltip>
+                    <Tooltip content={t('projects.table.total')}>
+                      <span className="inline-flex items-center gap-1">
+                        <IconTotal className="w-3.5 h-3.5" />
+                        {proj.item_counter}
+                      </span>
+                    </Tooltip>
+                    <Tooltip content={t('projects.table.members')}>
+                      <span className="inline-flex items-center gap-1">
+                        <IconMembers className="w-3.5 h-3.5" />
+                        {proj.member_count}
+                      </span>
+                    </Tooltip>
+                  </div>
+                )}
+              </button>
+            )
+          })
         )}
       </div>
 
@@ -283,7 +333,7 @@ export function ProjectListPage() {
         <DataTable
           columns={columns}
           data={projectList}
-          onRowClick={(proj) => navigate(p(`/projects/${proj.key}`))}
+          onRowClick={(proj) => navigate(p(`/projects/${proj.key}${proj.member_role === 'customer' ? '/support' : ''}`))}
           emptyMessage={t('projects.empty')}
           activeRowIndex={activeRow}
         />

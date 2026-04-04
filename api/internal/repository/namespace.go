@@ -131,6 +131,17 @@ func (r *NamespaceRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
+// DetachDeletedProjects nulls out namespace_id on soft-deleted projects for a namespace,
+// so the namespace can be hard-deleted without FK violations.
+func (r *NamespaceRepository) DetachDeletedProjects(ctx context.Context, id uuid.UUID) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE projects SET namespace_id = NULL WHERE namespace_id = $1 AND deleted_at IS NOT NULL`, id)
+	if err != nil {
+		return fmt.Errorf("detaching deleted projects: %w", err)
+	}
+	return nil
+}
+
 // HasProjects checks if a namespace has any non-deleted projects.
 func (r *NamespaceRepository) HasProjects(ctx context.Context, id uuid.UUID) (bool, error) {
 	var count int

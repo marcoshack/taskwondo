@@ -18,12 +18,13 @@ const enKeys = Object.keys(en).sort()
 // Keys where the translated value is legitimately the same as English.
 // Includes brand names, technical terms, cognates, and format-only strings.
 const SAME_VALUE_ALLOWED = new Set([
-  // Brand / proper nouns
+  // Brand / proper nouns / loanwords identical across languages
   'admin.authentication.discord.title',
   'admin.authentication.google.title',
   'admin.authentication.github.title',
   'admin.authentication.microsoft.title',
   'brand.name',
+  'sidebar.support',
 
   // Placeholder examples (emails, domains, format strings)
   'admin.integrations.smtp.fromAddressPlaceholder',

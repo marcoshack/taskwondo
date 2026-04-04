@@ -32,6 +32,7 @@ type NamespaceRepository interface {
 	ListByUser(ctx context.Context, userID uuid.UUID) ([]model.Namespace, error)
 	Update(ctx context.Context, ns *model.Namespace) error
 	Delete(ctx context.Context, id uuid.UUID) error
+	DetachDeletedProjects(ctx context.Context, id uuid.UUID) error
 	HasProjects(ctx context.Context, id uuid.UUID) (bool, error)
 	CountNonDefault(ctx context.Context) (int, error)
 }
@@ -71,22 +72,29 @@ type NamespaceUserSettingsRepository interface {
 	Get(ctx context.Context, userID uuid.UUID, projectID *uuid.UUID, key string) (*model.UserSetting, error)
 }
 
+// NamespaceProjectMemberRepository defines project member operations needed by the namespace service.
+type NamespaceProjectMemberRepository interface {
+	GetByProjectAndUser(ctx context.Context, projectID, userID uuid.UUID) (*model.ProjectMember, error)
+}
+
 // NamespaceService handles namespace business logic.
 type NamespaceService struct {
 	namespaces     NamespaceRepository
 	members        NamespaceMemberRepository
 	projects       NamespaceProjectRepository
+	projectMembers NamespaceProjectMemberRepository
 	users          NamespaceUserRepository
 	systemSettings NamespaceSystemSettingsRepository
 	userSettings   NamespaceUserSettingsRepository
 }
 
 // NewNamespaceService creates a new NamespaceService.
-func NewNamespaceService(namespaces NamespaceRepository, members NamespaceMemberRepository, projects NamespaceProjectRepository, users NamespaceUserRepository, systemSettings NamespaceSystemSettingsRepository, userSettings NamespaceUserSettingsRepository) *NamespaceService {
+func NewNamespaceService(namespaces NamespaceRepository, members NamespaceMemberRepository, projects NamespaceProjectRepository, projectMembers NamespaceProjectMemberRepository, users NamespaceUserRepository, systemSettings NamespaceSystemSettingsRepository, userSettings NamespaceUserSettingsRepository) *NamespaceService {
 	return &NamespaceService{
 		namespaces:     namespaces,
 		members:        members,
 		projects:       projects,
+		projectMembers: projectMembers,
 		users:          users,
 		systemSettings: systemSettings,
 		userSettings:   userSettings,
@@ -300,6 +308,11 @@ func (s *NamespaceService) DeleteNamespace(ctx context.Context, info *model.Auth
 		return fmt.Errorf("namespace still contains projects; migrate or delete them first: %w", model.ErrNamespaceNotEmpty)
 	}
 
+	// Detach soft-deleted projects so the FK constraint doesn't block deletion
+	if err := s.namespaces.DetachDeletedProjects(ctx, ns.ID); err != nil {
+		return fmt.Errorf("detaching deleted projects: %w", err)
+	}
+
 	// Remove all members before deleting (FK constraint)
 	if err := s.members.RemoveAllByNamespace(ctx, ns.ID); err != nil {
 		return fmt.Errorf("removing namespace members: %w", err)
@@ -507,20 +520,24 @@ func (s *NamespaceService) MigrateProject(ctx context.Context, info *model.AuthI
 		return fmt.Errorf("target namespace: %w", err)
 	}
 
-	// Actor must be admin/owner in source namespace (or global admin)
+	// Find the project in the source namespace (needed for both auth checks)
+	project, err := s.projects.GetByKeyAndNamespace(ctx, fromNs.ID, projectKey)
+	if err != nil {
+		return fmt.Errorf("project not found in source namespace: %w", err)
+	}
+
+	// Actor must be admin/owner in source namespace, OR the project owner
 	if err := s.requireNamespaceRole(ctx, info, fromNs.ID, model.NamespaceRoleOwner, model.NamespaceRoleAdmin); err != nil {
-		return fmt.Errorf("insufficient permissions in source namespace: %w", model.ErrForbidden)
+		// Fall back to project-level ownership check
+		pm, pmErr := s.projectMembers.GetByProjectAndUser(ctx, project.ID, info.UserID)
+		if pmErr != nil || pm.Role != model.ProjectRoleOwner {
+			return fmt.Errorf("insufficient permissions in source namespace: %w", model.ErrForbidden)
+		}
 	}
 
 	// Actor must be admin/owner in target namespace (or global admin)
 	if err := s.requireNamespaceRole(ctx, info, toNs.ID, model.NamespaceRoleOwner, model.NamespaceRoleAdmin); err != nil {
 		return fmt.Errorf("insufficient permissions in target namespace: %w", model.ErrForbidden)
-	}
-
-	// Find the project in the source namespace
-	project, err := s.projects.GetByKeyAndNamespace(ctx, fromNs.ID, projectKey)
-	if err != nil {
-		return fmt.Errorf("project not found in source namespace: %w", err)
 	}
 
 	// Check key doesn't collide in target namespace

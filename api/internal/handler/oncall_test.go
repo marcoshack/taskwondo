@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -349,7 +348,7 @@ func TestOncallHandler_ListHistory(t *testing.T) {
 	oncallCreateRequest(t, h, info, projectKey, teamID, memberIDs)
 
 	// List history
-	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/?limit=10&offset=0"), nil)
+	req := httptest.NewRequest(http.MethodGet, "/?limit=10&offset=0", nil)
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("projectKey", projectKey)
 	rctx.URLParams.Add("teamId", teamID.String())

@@ -13,6 +13,7 @@ export interface User {
   global_role: string
   avatar_url?: string
   portal_projects?: PortalProject[]
+  total_project_count?: number
 }
 
 interface LoginResponse {

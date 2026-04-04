@@ -159,7 +159,7 @@ func main() {
 	inboxService := service.NewInboxService(inboxRepo, projectMemberRepo)
 	userSettingService := service.NewUserSettingService(userSettingRepo, projectRepo, projectMemberRepo)
 	systemSettingService := service.NewSystemSettingService(systemSettingRepo)
-	namespaceService := service.NewNamespaceService(namespaceRepo, namespaceMemberRepo, projectRepo, userRepo, systemSettingRepo, userSettingRepo)
+	namespaceService := service.NewNamespaceService(namespaceRepo, namespaceMemberRepo, projectRepo, projectMemberRepo, userRepo, systemSettingRepo, userSettingRepo)
 	adminRepo := repository.NewAdminRepository(db)
 	adminService := service.NewAdminService(userRepo, projectRepo, projectMemberRepo, adminRepo)
 	statsService := service.NewStatsService(statsRepo, projectRepo, projectMemberRepo)

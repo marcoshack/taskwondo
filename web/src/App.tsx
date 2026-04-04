@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, Outlet } from 'react-router-dom'
+import { Routes, Route, Navigate, Outlet, useParams } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { AdminRoute } from '@/components/AdminRoute'
 import { NamespaceGuard } from '@/components/NamespaceGuard'
@@ -24,32 +24,46 @@ import { PortalAppearancePage } from '@/pages/PortalAppearancePage'
 import { ProfilePage } from '@/pages/ProfilePage'
 import { useAuth } from '@/contexts/AuthContext'
 
-/** Redirect to stored namespace or default — customer-only users go to portal */
+/** True when the user is a portal-only customer (single customer project, no other memberships). */
+function isPortalOnly(user: { portal_projects?: { project_key: string; namespace?: string }[]; total_project_count?: number } | null): boolean {
+  const pp = user?.portal_projects ?? []
+  const total = user?.total_project_count ?? 0
+  return pp.length === 1 && total === 1
+}
+
+/** Redirect to stored namespace or default — portal-only users go to portal */
 function DefaultRedirect() {
   const { user } = useAuth()
-  const portalProjects = user?.portal_projects ?? []
 
-  // If the user is a customer-only user, redirect to portal
-  if (portalProjects.length > 0) {
-    const first = portalProjects[0]
-    const ns = first.namespace || localStorage.getItem('taskwondo_namespace') || 'default'
-    const segment = ns === 'default' ? 'd' : ns
+  if (isPortalOnly(user)) {
+    const first = user!.portal_projects![0]
+    const segment = first.namespace || 'd'
     return <Navigate to={`/portal/${segment}/projects/${first.project_key}/tickets`} replace />
   }
 
   const stored = localStorage.getItem('taskwondo_namespace') || 'default'
   const segment = stored === 'default' ? 'd' : stored
-  return <Navigate to={`/${segment}/projects`} replace />
+  return <Navigate to={`/${segment}/projects`} state={{ autoRedirect: true }} replace />
 }
 
-/** Blocks customer-only users from regular routes — redirects them to portal */
+/** Redirects non-portal-only users away from /portal routes to the AppShell equivalent */
+function PortalOnlyGuard() {
+  const { user } = useAuth()
+  const { namespace, projectKey } = useParams<{ namespace: string; projectKey: string }>()
+
+  if (!isPortalOnly(user)) {
+    return <Navigate to={`/${namespace}/projects/${projectKey}/support`} replace />
+  }
+  return <Outlet />
+}
+
+/** Blocks portal-only users from regular routes — redirects them to portal */
 function CustomerGuard() {
   const { user } = useAuth()
-  const portalProjects = user?.portal_projects ?? []
-  if (portalProjects.length > 0) {
-    const first = portalProjects[0]
-    const ns = first.namespace || localStorage.getItem('taskwondo_namespace') || 'default'
-    const segment = ns === 'default' ? 'd' : ns
+
+  if (isPortalOnly(user)) {
+    const first = user!.portal_projects![0]
+    const segment = first.namespace || 'd'
     return <Navigate to={`/portal/${segment}/projects/${first.project_key}/tickets`} replace />
   }
   return <Outlet />
@@ -80,13 +94,15 @@ export default function App() {
         </Route>
       </Route>
       <Route element={<ProtectedRoute />}>
-        <Route path="/portal/:namespace/projects/:projectKey" element={<PortalShell />}>
-          <Route path="tickets" element={<PortalTicketListPage />} />
-          <Route path="tickets/:itemNumber" element={<PortalTicketDetailPage />} />
-          <Route path="preferences" element={<PortalPreferencesPage />}>
-            <Route index element={<Navigate to="profile" replace />} />
-            <Route path="profile" element={<ProfilePage />} />
-            <Route path="appearance" element={<PortalAppearancePage />} />
+        <Route path="/portal/:namespace/projects/:projectKey" element={<PortalOnlyGuard />}>
+          <Route element={<PortalShell />}>
+            <Route path="tickets" element={<PortalTicketListPage />} />
+            <Route path="tickets/:itemNumber" element={<PortalTicketDetailPage />} />
+            <Route path="preferences" element={<PortalPreferencesPage />}>
+              <Route index element={<Navigate to="profile" replace />} />
+              <Route path="profile" element={<ProfilePage />} />
+              <Route path="appearance" element={<PortalAppearancePage />} />
+            </Route>
           </Route>
         </Route>
       </Route>

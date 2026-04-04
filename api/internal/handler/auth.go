@@ -50,12 +50,13 @@ type portalProjectInfo struct {
 }
 
 type userResponse struct {
-	ID             uuid.UUID          `json:"id"`
-	Email          string             `json:"email"`
-	DisplayName    string             `json:"display_name"`
-	GlobalRole     string             `json:"global_role"`
-	AvatarURL      *string            `json:"avatar_url,omitempty"`
-	PortalProjects []portalProjectInfo `json:"portal_projects,omitempty"`
+	ID                uuid.UUID          `json:"id"`
+	Email             string             `json:"email"`
+	DisplayName       string             `json:"display_name"`
+	GlobalRole        string             `json:"global_role"`
+	AvatarURL         *string            `json:"avatar_url,omitempty"`
+	PortalProjects    []portalProjectInfo `json:"portal_projects,omitempty"`
+	TotalProjectCount int                `json:"total_project_count,omitempty"`
 }
 
 func toUserResponse(u *model.User) userResponse {
@@ -152,7 +153,7 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 	writeData(w, http.StatusOK, resp)
 }
 
-// populatePortalProjects adds customer-role project memberships to the user response.
+// populatePortalProjects adds customer-role project memberships and total project count to the user response.
 func (h *AuthHandler) populatePortalProjects(ctx context.Context, userID uuid.UUID, resp *userResponse) {
 	if h.memberRepo == nil {
 		return
@@ -161,11 +162,17 @@ func (h *AuthHandler) populatePortalProjects(ctx context.Context, userID uuid.UU
 	if err != nil {
 		return
 	}
+	resp.TotalProjectCount = len(memberships)
 	for _, m := range memberships {
 		if m.Role == model.ProjectRoleCustomer {
+			ns := m.NamespaceSlug
+			if ns == "default" {
+				ns = "d"
+			}
 			resp.PortalProjects = append(resp.PortalProjects, portalProjectInfo{
 				ProjectKey:  m.ProjectKey,
 				ProjectName: m.ProjectName,
+				Namespace:   ns,
 			})
 		}
 	}

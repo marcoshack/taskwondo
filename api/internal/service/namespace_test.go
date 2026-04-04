@@ -95,6 +95,10 @@ func (r *mockNamespaceRepo) Delete(_ context.Context, id uuid.UUID) error {
 	return nil
 }
 
+func (r *mockNamespaceRepo) DetachDeletedProjects(_ context.Context, _ uuid.UUID) error {
+	return nil
+}
+
 func (r *mockNamespaceRepo) HasProjects(_ context.Context, _ uuid.UUID) (bool, error) {
 	return false, nil
 }
@@ -277,6 +281,35 @@ func (r *mockNamespaceSystemSettingsRepo) Get(_ context.Context, key string) (*m
 	return s, nil
 }
 
+type mockNamespaceProjectMemberRepo struct {
+	members map[string]*model.ProjectMember // key: "projectID:userID"
+}
+
+func newMockNamespaceProjectMemberRepo() *mockNamespaceProjectMemberRepo {
+	return &mockNamespaceProjectMemberRepo{
+		members: make(map[string]*model.ProjectMember),
+	}
+}
+
+func (r *mockNamespaceProjectMemberRepo) GetByProjectAndUser(_ context.Context, projectID, userID uuid.UUID) (*model.ProjectMember, error) {
+	key := projectID.String() + ":" + userID.String()
+	m, ok := r.members[key]
+	if !ok {
+		return nil, model.ErrNotFound
+	}
+	return m, nil
+}
+
+func (r *mockNamespaceProjectMemberRepo) addMember(projectID, userID uuid.UUID, role string) {
+	key := projectID.String() + ":" + userID.String()
+	r.members[key] = &model.ProjectMember{
+		ID:        uuid.New(),
+		ProjectID: projectID,
+		UserID:    userID,
+		Role:      role,
+	}
+}
+
 // --- Test helper ---
 
 func newTestNamespaceService() (*NamespaceService, *mockNamespaceRepo, *mockNamespaceMemberRepo, *mockNamespaceProjectRepo, *mockNamespaceUserRepo) {
@@ -285,7 +318,7 @@ func newTestNamespaceService() (*NamespaceService, *mockNamespaceRepo, *mockName
 	projectRepo := newMockNamespaceProjectRepo()
 	userRepo := newMockNamespaceUserRepo()
 	settingsRepo := newMockNamespaceSystemSettingsRepo()
-	svc := NewNamespaceService(nsRepo, memberRepo, projectRepo, userRepo, settingsRepo, nil)
+	svc := NewNamespaceService(nsRepo, memberRepo, projectRepo, newMockNamespaceProjectMemberRepo(), userRepo, settingsRepo, nil)
 	return svc, nsRepo, memberRepo, projectRepo, userRepo
 }
 
@@ -484,7 +517,7 @@ func newTestNamespaceServiceWithSettings() (*NamespaceService, *mockNamespaceRep
 	projectRepo := newMockNamespaceProjectRepo()
 	userRepo := newMockNamespaceUserRepo()
 	settingsRepo := newMockNamespaceSystemSettingsRepo()
-	svc := NewNamespaceService(nsRepo, memberRepo, projectRepo, userRepo, settingsRepo, nil)
+	svc := NewNamespaceService(nsRepo, memberRepo, projectRepo, newMockNamespaceProjectMemberRepo(), userRepo, settingsRepo, nil)
 	return svc, nsRepo, memberRepo, projectRepo, userRepo, settingsRepo
 }
 
@@ -757,7 +790,7 @@ func TestDeleteNamespace_NotEmptyDenied(t *testing.T) {
 	projectRepo := newMockNamespaceProjectRepo()
 	userRepo := newMockNamespaceUserRepo()
 	settingsRepo := newMockNamespaceSystemSettingsRepo()
-	svc := NewNamespaceService(nsRepo, memberRepo, projectRepo, userRepo, settingsRepo, nil)
+	svc := NewNamespaceService(nsRepo, memberRepo, projectRepo, newMockNamespaceProjectMemberRepo(), userRepo, settingsRepo, nil)
 
 	userID := userRepo.addUser(model.RoleUser)
 	info := nsUserAuthInfo(userID)
@@ -1044,7 +1077,7 @@ func TestListUserNamespaces_AdminSeesAllWithoutPreference(t *testing.T) {
 	nsRepo.Create(context.Background(), &model.Namespace{ID: uuid.New(), Slug: "mine", DisplayName: "Mine"})
 	nsRepo.Create(context.Background(), &model.Namespace{ID: uuid.New(), Slug: "other", DisplayName: "Other"})
 
-	svc := NewNamespaceService(nsRepo, newMockNamespaceMemberRepo(), newMockNamespaceProjectRepo(), newMockNamespaceUserRepo(), newMockNamespaceSystemSettingsRepo(), nil)
+	svc := NewNamespaceService(nsRepo, newMockNamespaceMemberRepo(), newMockNamespaceProjectRepo(), newMockNamespaceProjectMemberRepo(), newMockNamespaceUserRepo(), newMockNamespaceSystemSettingsRepo(), nil)
 	info := nsAdminAuthInfo()
 
 	namespaces, err := svc.ListUserNamespaces(context.Background(), info)
@@ -1065,7 +1098,7 @@ func TestListUserNamespaces_AdminHidesNonMemberNamespaces(t *testing.T) {
 	nsRepo.Create(context.Background(), &model.Namespace{ID: uuid.New(), Slug: "other", DisplayName: "Other"})
 
 	userSettingsRepo := newMockNamespaceUserSettingsRepo()
-	svc := NewNamespaceService(nsRepo, newMockNamespaceMemberRepo(), newMockNamespaceProjectRepo(), newMockNamespaceUserRepo(), newMockNamespaceSystemSettingsRepo(), userSettingsRepo)
+	svc := NewNamespaceService(nsRepo, newMockNamespaceMemberRepo(), newMockNamespaceProjectRepo(), newMockNamespaceProjectMemberRepo(), newMockNamespaceUserRepo(), newMockNamespaceSystemSettingsRepo(), userSettingsRepo)
 
 	info := nsAdminAuthInfo()
 	userSettingsRepo.setHideNonMember(info.UserID, true)
@@ -1091,7 +1124,7 @@ func TestListUserNamespaces_AdminHideDisabledSeesAll(t *testing.T) {
 	nsRepo.Create(context.Background(), &model.Namespace{ID: uuid.New(), Slug: "other", DisplayName: "Other"})
 
 	userSettingsRepo := newMockNamespaceUserSettingsRepo()
-	svc := NewNamespaceService(nsRepo, newMockNamespaceMemberRepo(), newMockNamespaceProjectRepo(), newMockNamespaceUserRepo(), newMockNamespaceSystemSettingsRepo(), userSettingsRepo)
+	svc := NewNamespaceService(nsRepo, newMockNamespaceMemberRepo(), newMockNamespaceProjectRepo(), newMockNamespaceProjectMemberRepo(), newMockNamespaceUserRepo(), newMockNamespaceSystemSettingsRepo(), userSettingsRepo)
 
 	info := nsAdminAuthInfo()
 	userSettingsRepo.setHideNonMember(info.UserID, false)

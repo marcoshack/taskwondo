@@ -1,6 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import { useEffect, useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useAuth } from '@/contexts/AuthContext'
 import { useSidebar } from '@/contexts/SidebarContext'
 import { useNavigationGuard } from '@/contexts/NavigationGuardContext'
 import { useNamespacePath, toUrlSegment } from '@/hooks/useNamespacePath'
@@ -13,6 +14,7 @@ import {
   Rss,
   Bookmark,
   FolderKanban,
+  Headphones,
   LayoutDashboard,
   ClipboardList,
   SquareStack,
@@ -28,6 +30,8 @@ import type { LucideIcon } from 'lucide-react'
 
 interface AppSidebarProps {
   projectKey?: string
+  /** True when the active project is a customer-role project (show only Support nav) */
+  customerProject?: boolean
   /** Render only the mobile overlay (used in AppShell for global availability) */
   mobileOnly?: boolean
 }
@@ -42,7 +46,7 @@ interface NavItem {
 
 const LAST_PROJECT_KEY = 'taskwondo_last_project_key'
 
-export function AppSidebar({ projectKey, mobileOnly }: AppSidebarProps) {
+export function AppSidebar({ projectKey, customerProject, mobileOnly }: AppSidebarProps) {
   const { t } = useTranslation()
   const { p } = useNamespacePath()
   const { collapsed, toggleCollapsed, mobileOpen, closeMobile } = useSidebar('app')
@@ -79,6 +83,12 @@ export function AppSidebar({ projectKey, mobileOnly }: AppSidebarProps) {
   }, [projectKey])
 
   const activeProjectKey = projectKey ?? lastProjectKey
+  const { user } = useAuth()
+
+  // Detect customer project: explicit prop or derived from portal_projects for the remembered project
+  const isCustomerProject = customerProject
+    || (!projectKey && !!activeProjectKey && user?.global_role !== 'admin'
+        && (user?.portal_projects ?? []).some((pp) => pp.project_key === activeProjectKey))
 
   // Close mobile sidebar and namespace dropdown on route change
   useEffect(() => {
@@ -94,15 +104,21 @@ export function AppSidebar({ projectKey, mobileOnly }: AppSidebarProps) {
 
   const projectBase = activeProjectKey ? p(`/projects/${activeProjectKey}`) : ''
 
-  const projectNavItems: NavItem[] = activeProjectKey ? [
-    { to: `${projectBase}/`, label: t('sidebar.overview'), icon: LayoutDashboard, end: true },
-    { to: `${projectBase}/items`, label: t('sidebar.items'), icon: ClipboardList, end: false },
-    { to: `${projectBase}/milestones`, label: t('sidebar.milestones'), icon: Target, end: false },
-    { to: `${projectBase}/teams`, label: t('sidebar.teams'), icon: Users, end: false },
-    { to: `${projectBase}/queues`, label: t('sidebar.queues'), icon: SquareStack, end: false },
-    { to: `${projectBase}/workflows`, label: t('sidebar.workflows'), icon: Route, end: false },
-    { to: `${projectBase}/settings`, label: t('sidebar.settings'), icon: Settings, end: false },
-  ] : []
+  const projectNavItems: NavItem[] = activeProjectKey
+    ? isCustomerProject
+      ? [
+          { to: `${projectBase}/support`, label: t('sidebar.support'), icon: Headphones, end: false },
+        ]
+      : [
+          { to: `${projectBase}/`, label: t('sidebar.overview'), icon: LayoutDashboard, end: true },
+          { to: `${projectBase}/items`, label: t('sidebar.items'), icon: ClipboardList, end: false },
+          { to: `${projectBase}/milestones`, label: t('sidebar.milestones'), icon: Target, end: false },
+          { to: `${projectBase}/teams`, label: t('sidebar.teams'), icon: Users, end: false },
+          { to: `${projectBase}/queues`, label: t('sidebar.queues'), icon: SquareStack, end: false },
+          { to: `${projectBase}/workflows`, label: t('sidebar.workflows'), icon: Route, end: false },
+          { to: `${projectBase}/settings`, label: t('sidebar.settings'), icon: Settings, end: false },
+        ]
+    : []
 
   function renderNavItem(item: NavItem, showLabels: boolean) {
     return (

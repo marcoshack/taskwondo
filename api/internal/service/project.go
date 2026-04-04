@@ -40,6 +40,8 @@ type ProjectMemberRepository interface {
 	UpdateRole(ctx context.Context, projectID, userID uuid.UUID, role string) error
 	Remove(ctx context.Context, projectID, userID uuid.UUID) error
 	CountByRole(ctx context.Context, projectID uuid.UUID, role string) (int, error)
+	GetRolesForUser(ctx context.Context, userID uuid.UUID, projectIDs []uuid.UUID) (map[uuid.UUID]string, error)
+	IsCustomerOnlyInNamespace(ctx context.Context, userID, namespaceID uuid.UUID) (bool, error)
 }
 
 // ProjectTypeWorkflowRepository defines persistence operations for project type-workflow mappings.
@@ -133,8 +135,20 @@ func (s *ProjectService) Create(ctx context.Context, info *model.AuthInfo, name,
 		return nil, err
 	}
 
-	// Check for duplicate key (namespace-scoped if namespace context present)
+	// Block customer-only users from creating projects in a namespace
 	namespaceID := model.NamespaceIDFromContext(ctx)
+	if namespaceID != uuid.Nil && info.GlobalRole != model.RoleAdmin {
+		customerOnly, err := s.members.IsCustomerOnlyInNamespace(ctx, info.UserID, namespaceID)
+		if err != nil {
+			return nil, fmt.Errorf("checking namespace project roles: %w", err)
+		}
+		if customerOnly {
+			return nil, model.NewKeyedError(model.ErrForbidden, "customer_cannot_create_project",
+				"cannot create projects in this namespace; create your own namespace first", nil)
+		}
+	}
+
+	// Check for duplicate key (namespace-scoped if namespace context present)
 	if namespaceID != uuid.Nil {
 		existing, err := s.projects.GetByKeyAndNamespace(ctx, namespaceID, key)
 		if err == nil && existing != nil {
@@ -280,11 +294,18 @@ func (s *ProjectService) ListWithSummary(ctx context.Context, info *model.AuthIn
 		return nil, fmt.Errorf("fetching project summaries: %w", err)
 	}
 
+	// Resolve the authenticated user's role per project.
+	roleMap, err := s.members.GetRolesForUser(ctx, info.UserID, ids)
+	if err != nil {
+		return nil, fmt.Errorf("fetching user roles: %w", err)
+	}
+
 	result := make([]model.ProjectWithSummary, len(projects))
 	for i := range projects {
 		result[i] = model.ProjectWithSummary{
 			Project:        projects[i],
 			ProjectSummary: summaries[projects[i].ID],
+			MemberRole:     roleMap[projects[i].ID],
 		}
 	}
 	return result, nil

@@ -20,6 +20,7 @@ export interface Project {
   member_count: number
   open_count: number
   in_progress_count: number
+  member_role?: string
   namespace_slug?: string
   namespace_icon?: string
   namespace_color?: string

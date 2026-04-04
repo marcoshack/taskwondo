@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"github.com/marcoshack/taskwondo/internal/model"
 )
 
@@ -128,9 +129,11 @@ func (r *ProjectMemberRepository) ListByUser(ctx context.Context, userID uuid.UU
 	rows, err := r.db.QueryContext(ctx,
 		`SELECT pm.id, pm.project_id, pm.user_id, pm.role, pm.created_at,
 		        p.name, p.key,
-		        (SELECT COUNT(*) FROM project_members pm2 WHERE pm2.project_id = pm.project_id AND pm2.role = 'owner') AS owner_count
+		        (SELECT COUNT(*) FROM project_members pm2 WHERE pm2.project_id = pm.project_id AND pm2.role = 'owner') AS owner_count,
+		        COALESCE(ns.slug, 'default') AS namespace_slug
 		 FROM project_members pm
 		 INNER JOIN projects p ON p.id = pm.project_id
+		 LEFT JOIN namespaces ns ON ns.id = p.namespace_id
 		 WHERE pm.user_id = $1 AND p.deleted_at IS NULL
 		 ORDER BY p.name`, userID)
 	if err != nil {
@@ -142,13 +145,56 @@ func (r *ProjectMemberRepository) ListByUser(ctx context.Context, userID uuid.UU
 	for rows.Next() {
 		var m model.ProjectMemberWithProject
 		if err := rows.Scan(&m.ID, &m.ProjectID, &m.UserID, &m.Role, &m.CreatedAt,
-			&m.ProjectName, &m.ProjectKey, &m.OwnerCount); err != nil {
+			&m.ProjectName, &m.ProjectKey, &m.OwnerCount, &m.NamespaceSlug); err != nil {
 			return nil, fmt.Errorf("scanning user project membership row: %w", err)
 		}
 		members = append(members, m)
 	}
 
 	return members, rows.Err()
+}
+
+// GetRolesForUser returns a map of project ID to the user's role for the given projects.
+func (r *ProjectMemberRepository) GetRolesForUser(ctx context.Context, userID uuid.UUID, projectIDs []uuid.UUID) (map[uuid.UUID]string, error) {
+	if len(projectIDs) == 0 {
+		return nil, nil
+	}
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT project_id, role FROM project_members WHERE user_id = $1 AND project_id = ANY($2)`,
+		userID, pq.Array(projectIDs))
+	if err != nil {
+		return nil, fmt.Errorf("querying user roles: %w", err)
+	}
+	defer rows.Close()
+
+	roles := make(map[uuid.UUID]string, len(projectIDs))
+	for rows.Next() {
+		var pid uuid.UUID
+		var role string
+		if err := rows.Scan(&pid, &role); err != nil {
+			return nil, fmt.Errorf("scanning user role row: %w", err)
+		}
+		roles[pid] = role
+	}
+	return roles, rows.Err()
+}
+
+// IsCustomerOnlyInNamespace returns true if the user has at least one customer-role
+// project in the namespace and no non-customer-role projects.
+func (r *ProjectMemberRepository) IsCustomerOnlyInNamespace(ctx context.Context, userID, namespaceID uuid.UUID) (bool, error) {
+	var customerCount, nonCustomerCount int
+	err := r.db.QueryRowContext(ctx,
+		`SELECT
+			COUNT(*) FILTER (WHERE pm.role = 'customer'),
+			COUNT(*) FILTER (WHERE pm.role != 'customer')
+		 FROM project_members pm
+		 JOIN projects p ON p.id = pm.project_id
+		 WHERE pm.user_id = $1 AND p.namespace_id = $2 AND p.deleted_at IS NULL`,
+		userID, namespaceID).Scan(&customerCount, &nonCustomerCount)
+	if err != nil {
+		return false, fmt.Errorf("checking customer-only status: %w", err)
+	}
+	return customerCount > 0 && nonCustomerCount == 0, nil
 }
 
 // CountByRole returns the number of members with a given role in a project.

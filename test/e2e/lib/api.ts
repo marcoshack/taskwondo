@@ -1627,3 +1627,57 @@ export async function uploadPortalAttachment(
   const body = await res.json();
   return body.data;
 }
+
+// --- Project list & delete ---
+
+export async function listProjects(
+  request: APIRequestContext,
+  token: string,
+  namespace = 'default',
+): Promise<{ key: string; name: string; member_role?: string; member_count: number; open_count: number; in_progress_count: number }[]> {
+  const res = await request.get(`${BASE_URL}/api/v1/${namespace}/projects`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`List projects failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function deleteProject(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  namespace = 'default',
+): Promise<void> {
+  const res = await request.delete(`${BASE_URL}/api/v1/${namespace}/projects/${projectKey}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`Delete project failed (${res.status()}): ${await res.text()}`);
+}
+
+export async function getMe(
+  request: APIRequestContext,
+  token: string,
+): Promise<{ id: string; email: string; global_role: string; portal_projects?: { project_key: string; namespace?: string }[]; total_project_count?: number }> {
+  const res = await request.get(`${BASE_URL}/api/v1/auth/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`Get me failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function addMemberInNamespace(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  userId: string,
+  role: string,
+  namespace: string,
+): Promise<void> {
+  const res = await request.post(`${BASE_URL}/api/v1/${namespace}/projects/${projectKey}/members`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { user_id: userId, role },
+  });
+  if (!res.ok()) throw new Error(`Add member in namespace failed (${res.status()}): ${await res.text()}`);
+}

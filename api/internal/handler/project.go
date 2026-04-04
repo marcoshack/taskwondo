@@ -73,12 +73,13 @@ type projectResponse struct {
 
 type projectListItemResponse struct {
 	projectResponse
-	MemberCount    int    `json:"member_count"`
-	OpenCount      int    `json:"open_count"`
-	InProgressCount int   `json:"in_progress_count"`
-	NamespaceSlug  string `json:"namespace_slug,omitempty"`
-	NamespaceIcon  string `json:"namespace_icon,omitempty"`
-	NamespaceColor string `json:"namespace_color,omitempty"`
+	MemberCount     int    `json:"member_count"`
+	OpenCount       int    `json:"open_count"`
+	InProgressCount int    `json:"in_progress_count"`
+	MemberRole      string `json:"member_role,omitempty"`
+	NamespaceSlug   string `json:"namespace_slug,omitempty"`
+	NamespaceIcon   string `json:"namespace_icon,omitempty"`
+	NamespaceColor  string `json:"namespace_color,omitempty"`
 }
 
 type memberResponse struct {
@@ -213,6 +214,7 @@ func (h *ProjectHandler) List(w http.ResponseWriter, r *http.Request) {
 			MemberCount:     projects[i].MemberCount,
 			OpenCount:       projects[i].OpenCount,
 			InProgressCount: projects[i].InProgressCount,
+			MemberRole:      projects[i].MemberRole,
 		}
 		if nsInfo, ok := nsMap[projects[i].ID]; ok {
 			resp[i].NamespaceSlug = nsInfo.NamespaceSlug

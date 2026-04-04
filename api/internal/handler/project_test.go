@@ -213,6 +213,21 @@ func (m *mockProjectMemberRepo) CountByRole(_ context.Context, projectID uuid.UU
 	return count, nil
 }
 
+func (m *mockProjectMemberRepo) GetRolesForUser(_ context.Context, userID uuid.UUID, projectIDs []uuid.UUID) (map[uuid.UUID]string, error) {
+	roles := make(map[uuid.UUID]string)
+	for _, pid := range projectIDs {
+		key := pmKey(pid, userID)
+		if member, ok := m.members[key]; ok {
+			roles[pid] = member.Role
+		}
+	}
+	return roles, nil
+}
+
+func (m *mockProjectMemberRepo) IsCustomerOnlyInNamespace(_ context.Context, _, _ uuid.UUID) (bool, error) {
+	return false, nil
+}
+
 type mockProjectInviteRepo struct {
 	invites map[uuid.UUID]*model.ProjectInvite
 	byCode  map[string]*model.ProjectInvite

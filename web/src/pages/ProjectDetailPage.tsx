@@ -1,6 +1,7 @@
-import { useParams, Routes, Route } from 'react-router-dom'
+import { useParams, Routes, Route, Navigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useProject } from '@/hooks/useProjects'
+import { useAuth } from '@/contexts/AuthContext'
 import { AppSidebar } from '@/components/AppSidebar'
 import { useSidebar } from '@/contexts/SidebarContext'
 import { useLayout } from '@/contexts/LayoutContext'
@@ -17,13 +18,40 @@ import { QueueSettingsPage } from './QueueSettingsPage'
 import { TeamsPage } from './TeamsPage'
 import { TeamDetailPage } from './TeamDetailPage'
 import { QueueWorkItemsPage } from './QueueWorkItemsPage'
+import { PortalTicketListPage } from './PortalTicketListPage'
+import { PortalTicketDetailPage } from './PortalTicketDetailPage'
 
 export function ProjectDetailPage() {
   const { t } = useTranslation()
   const { collapsed } = useSidebar('app')
   const { containerClass } = useLayout()
   const { projectKey } = useParams<{ projectKey: string }>()
-  const { data: project, isLoading, error } = useProject(projectKey ?? '')
+  const { user } = useAuth()
+
+  // Determine if the user is a customer in this project
+  const isCustomerProject = user?.global_role !== 'admin'
+    && (user?.portal_projects ?? []).some((p) => p.project_key === projectKey)
+
+  // Skip the regular project API call for customer projects (ExcludeCustomer middleware blocks it)
+  const { data: project, isLoading, error } = useProject(isCustomerProject ? '' : (projectKey ?? ''))
+
+  if (isCustomerProject) {
+    return (
+      <div className={`${containerClass(true)} py-6`}>
+        <div className={`flex transition-all duration-200 ${collapsed ? 'gap-4' : 'gap-8'}`}>
+          <AppSidebar projectKey={projectKey} customerProject />
+          <div className="flex-1 min-w-0">
+            <Routes>
+              <Route index element={<Navigate to="support" replace />} />
+              <Route path="support" element={<PortalTicketListPage />} />
+              <Route path="support/:itemNumber" element={<PortalTicketDetailPage />} />
+              <Route path="*" element={<Navigate to="support" replace />} />
+            </Routes>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (isLoading) {
     return (

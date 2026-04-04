@@ -62,6 +62,7 @@ type ProjectSummary struct {
 type ProjectWithSummary struct {
 	Project
 	ProjectSummary
+	MemberRole string `json:"member_role,omitempty"`
 }
 
 // ProjectMember associates a user with a project and their role within it.
@@ -94,9 +95,10 @@ type ProjectTypeWorkflow struct {
 // ProjectMemberWithProject includes project details alongside the membership.
 type ProjectMemberWithProject struct {
 	ProjectMember
-	ProjectName string `json:"project_name"`
-	ProjectKey  string `json:"project_key"`
-	OwnerCount  int    `json:"owner_count"`
+	ProjectName   string `json:"project_name"`
+	ProjectKey    string `json:"project_key"`
+	OwnerCount    int    `json:"owner_count"`
+	NamespaceSlug string `json:"namespace_slug,omitempty"`
 }
 
 // ProjectInvite represents a shareable invite link to join a project.
