@@ -54,10 +54,10 @@ dev-stop: ## Stop dev services (including semantic-search profile)
 	docker compose --profile semantic-search down
 	@printf "$(GREEN)## Dev services stopped$(RESET)\n"
 
-dev-services: check-env ## Start PostgreSQL, MinIO, NATS, and Ollama
+dev-services: check-env ## Start PostgreSQL, MinIO, NATS, Mailpit and Ollama
 	@echo ""
-	@printf "$(CYAN)## Starting dev services (PostgreSQL + MinIO + NATS + Ollama)...$(RESET)\n"
-	docker compose --profile semantic-search up postgres minio minio-init nats ollama ollama-init -d
+	@printf "$(CYAN)## Starting dev services (PostgreSQL + MinIO + NATS + Mailpit + Ollama)...$(RESET)\n"
+	docker compose --profile semantic-search up postgres minio minio-init nats mailpit ollama ollama-init -d
 	@printf "$(GREEN)## Dev services started$(RESET)\n"
 
 dev-db: dev-services ## Alias for dev-services (legacy)
