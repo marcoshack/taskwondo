@@ -1,4 +1,4 @@
-.PHONY: build push help setup dev dev-db dev-api dev-web dev-worker up down logs logs-api migrate migrate-new test test-api test-web test-e2e test-e2e-dev test-e2e-report check-env release build-mcp build-mcp-linux build-mcp-windows build-mcpb build-worker lint-ci
+.PHONY: build push help setup dev dev-stop dev-db dev-api dev-web dev-worker up down logs logs-api migrate migrate-new test test-api test-web test-e2e test-e2e-dev test-e2e-report check-env release build-mcp build-mcp-linux build-mcp-windows build-mcpb build-worker lint-ci
 
 # Required environment variables (checked by sourcing .env)
 REQUIRED_VARS := POSTGRES_USER POSTGRES_PASSWORD MINIO_ROOT_USER MINIO_ROOT_PASSWORD JWT_SECRET DATABASE_URL STORAGE_ACCESS_KEY STORAGE_SECRET_KEY
@@ -47,6 +47,12 @@ dev: check-env dev-services ## Start all services for development (API + Web + W
 	(cd web && npm run dev -- --host) & \
 	(set -a && . ./.env && set +a && cd api && air -c .air-worker.toml) & \
 	wait
+
+dev-stop: ## Stop dev services (including semantic-search profile)
+	@echo ""
+	@printf "$(CYAN)## Stopping dev services...$(RESET)\n"
+	docker compose --profile semantic-search down
+	@printf "$(GREEN)## Dev services stopped$(RESET)\n"
 
 dev-services: check-env ## Start PostgreSQL, MinIO, NATS, and Ollama
 	@echo ""
