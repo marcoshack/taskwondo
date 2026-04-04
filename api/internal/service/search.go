@@ -12,17 +12,17 @@ import (
 
 // SearchEmbeddingRepository is the minimal interface for semantic search operations.
 type SearchEmbeddingRepository interface {
-	SearchByVector(ctx context.Context, vector []float32, filter *model.SearchFilter, projectIDs []uuid.UUID) ([]model.SearchResult, error)
+	SearchByVector(ctx context.Context, vector []float32, filter *model.SearchFilter, access model.SearchAccess) ([]model.SearchResult, error)
 }
 
 // SearchWorkItemRepository is the minimal interface for FTS search operations.
 type SearchWorkItemRepository interface {
-	SearchFTS(ctx context.Context, query string, projectIDs []uuid.UUID, limit int) ([]model.SearchResult, error)
+	SearchFTS(ctx context.Context, query string, access model.SearchAccess, limit int) ([]model.SearchResult, error)
 }
 
-// SearchProjectRepository is the minimal interface for listing user's projects.
-type SearchProjectRepository interface {
-	ListByUser(ctx context.Context, userID uuid.UUID) ([]model.Project, error)
+// SearchMemberRepository is the minimal interface for listing a user's project memberships.
+type SearchMemberRepository interface {
+	ListByUser(ctx context.Context, userID uuid.UUID) ([]model.ProjectMemberWithProject, error)
 }
 
 // SearchSettingsRepository is the minimal interface for checking feature flags.
@@ -35,7 +35,7 @@ type SearchService struct {
 	embedding  *EmbeddingService
 	embeddings SearchEmbeddingRepository
 	workItems  SearchWorkItemRepository
-	projects   SearchProjectRepository
+	members    SearchMemberRepository
 	settings   SearchSettingsRepository
 }
 
@@ -44,14 +44,14 @@ func NewSearchService(
 	embedding *EmbeddingService,
 	embeddings SearchEmbeddingRepository,
 	workItems SearchWorkItemRepository,
-	projects SearchProjectRepository,
+	members SearchMemberRepository,
 	settings SearchSettingsRepository,
 ) *SearchService {
 	return &SearchService{
 		embedding:  embedding,
 		embeddings: embeddings,
 		workItems:  workItems,
-		projects:   projects,
+		members:    members,
 		settings:   settings,
 	}
 }
@@ -66,16 +66,16 @@ func (s *SearchService) Search(ctx context.Context, info *model.AuthInfo, filter
 
 // SearchFTS performs a cross-project full-text search with RBAC filtering.
 func (s *SearchService) SearchFTS(ctx context.Context, info *model.AuthInfo, filter *model.SearchFilter) ([]model.SearchResult, error) {
-	projectIDs, err := s.resolveProjectIDs(ctx, info.UserID, filter.ProjectIDs)
+	access, err := s.resolveAccess(ctx, info.UserID, filter.ProjectIDs)
 	if err != nil {
 		return nil, err
 	}
-	return s.workItems.SearchFTS(ctx, filter.Query, projectIDs, filter.Limit)
+	return s.workItems.SearchFTS(ctx, filter.Query, access, filter.Limit)
 }
 
 // SearchSemantic performs a semantic (vector) search with RBAC filtering.
 func (s *SearchService) SearchSemantic(ctx context.Context, info *model.AuthInfo, filter *model.SearchFilter) ([]model.SearchResult, error) {
-	projectIDs, err := s.resolveProjectIDs(ctx, info.UserID, filter.ProjectIDs)
+	access, err := s.resolveAccess(ctx, info.UserID, filter.ProjectIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +85,7 @@ func (s *SearchService) SearchSemantic(ctx context.Context, info *model.AuthInfo
 		return nil, err
 	}
 
-	results, err := s.embeddings.SearchByVector(ctx, vector, filter, projectIDs)
+	results, err := s.embeddings.SearchByVector(ctx, vector, filter, access)
 	if err != nil {
 		return nil, fmt.Errorf("searching embeddings: %w", err)
 	}
@@ -97,33 +97,35 @@ func (s *SearchService) SemanticEnabled(ctx context.Context) bool {
 	return s.isSemanticEnabled(ctx)
 }
 
-// resolveProjectIDs returns the user's accessible project IDs, optionally intersected with filter.ProjectIDs.
-func (s *SearchService) resolveProjectIDs(ctx context.Context, userID uuid.UUID, filterProjectIDs []uuid.UUID) ([]uuid.UUID, error) {
-	userProjects, err := s.projects.ListByUser(ctx, userID)
+// resolveAccess returns the user's SearchAccess (full-access project IDs,
+// customer-role project IDs, and user ID used for customer-scoped filtering).
+// Optional filterProjectIDs intersect the user's reachable projects.
+func (s *SearchService) resolveAccess(ctx context.Context, userID uuid.UUID, filterProjectIDs []uuid.UUID) (model.SearchAccess, error) {
+	memberships, err := s.members.ListByUser(ctx, userID)
 	if err != nil {
-		return nil, fmt.Errorf("listing user projects: %w", err)
+		return model.SearchAccess{}, fmt.Errorf("listing user memberships: %w", err)
 	}
 
-	projectIDs := make([]uuid.UUID, len(userProjects))
-	for i, p := range userProjects {
-		projectIDs[i] = p.ID
-	}
-
+	var allowed map[uuid.UUID]bool
 	if len(filterProjectIDs) > 0 {
-		allowed := make(map[uuid.UUID]bool)
-		for _, pid := range projectIDs {
+		allowed = make(map[uuid.UUID]bool, len(filterProjectIDs))
+		for _, pid := range filterProjectIDs {
 			allowed[pid] = true
 		}
-		var filtered []uuid.UUID
-		for _, pid := range filterProjectIDs {
-			if allowed[pid] {
-				filtered = append(filtered, pid)
-			}
-		}
-		projectIDs = filtered
 	}
 
-	return projectIDs, nil
+	access := model.SearchAccess{UserID: userID}
+	for _, m := range memberships {
+		if allowed != nil && !allowed[m.ProjectID] {
+			continue
+		}
+		if m.Role == model.ProjectRoleCustomer {
+			access.CustomerProjectIDs = append(access.CustomerProjectIDs, m.ProjectID)
+		} else {
+			access.FullProjectIDs = append(access.FullProjectIDs, m.ProjectID)
+		}
+	}
+	return access, nil
 }
 
 func (s *SearchService) isSemanticEnabled(ctx context.Context) bool {

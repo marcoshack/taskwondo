@@ -67,3 +67,19 @@ type SearchFilter struct {
 	ProjectIDs  []uuid.UUID
 	Limit       int
 }
+
+// SearchAccess describes a user's RBAC access for search operations. It
+// partitions the user's project memberships into "full access" projects
+// (owner/admin/member/viewer) and "customer" projects. Customer projects
+// are restricted to the user's own portal tickets (and public comments /
+// attachments on those tickets) — no internal data is ever returned.
+type SearchAccess struct {
+	UserID             uuid.UUID
+	FullProjectIDs     []uuid.UUID
+	CustomerProjectIDs []uuid.UUID
+}
+
+// HasAny returns true if the user can see anything across any project.
+func (a SearchAccess) HasAny() bool {
+	return len(a.FullProjectIDs) > 0 || len(a.CustomerProjectIDs) > 0
+}

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useNamespacePath, toUrlSegment } from '@/hooks/useNamespacePath'
+import { useAuth } from '@/contexts/AuthContext'
 import {
   Search,
   FileText,
@@ -105,6 +106,15 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { segment } = useNamespacePath()
+  const { user } = useAuth()
+  // Set of project keys where the authenticated user holds the "customer"
+  // role — results in these projects must route to the portal (support) view,
+  // NOT the regular /items/ URL which they can't access. Global admins never
+  // have portal_projects populated, so they always route to /items/.
+  const customerProjectKeys = useMemo(
+    () => new Set((user?.portal_projects ?? []).map((p) => p.project_key)),
+    [user?.portal_projects],
+  )
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [limit, setLimit] = useState(20)
@@ -171,28 +181,49 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
         : segment
       const prefix = (path: string) => `/${nsSegment}${path.startsWith('/') ? path : `/${path}`}`
 
+      // If the user is a customer in the result's project, the regular
+      // /items/:num route is blocked by ExcludeCustomer on the backend and
+      // the customer AppShell only renders /support/:num. Route accordingly.
+      const isCustomerProject = !!key && customerProjectKeys.has(key)
+
       switch (result.entity_type) {
         case 'work_item':
-          if (key && num != null) navigate(prefix(`/projects/${key}/items/${num}`))
+          if (key && num != null) {
+            navigate(prefix(isCustomerProject
+              ? `/projects/${key}/support/${num}`
+              : `/projects/${key}/items/${num}`))
+          }
           break
         case 'comment':
-          if (key && num != null) navigate(prefix(`/projects/${key}/items/${num}?tab=comments&highlight=${result.entity_id}`))
+          if (key && num != null) {
+            // PortalTicketDetailPage manages tabs via state, not query params,
+            // so for customer projects we simply open the ticket.
+            navigate(prefix(isCustomerProject
+              ? `/projects/${key}/support/${num}`
+              : `/projects/${key}/items/${num}?tab=comments&highlight=${result.entity_id}`))
+          }
           break
         case 'attachment':
-          if (key && num != null) navigate(prefix(`/projects/${key}/items/${num}?tab=attachments&highlight=${result.entity_id}`))
+          if (key && num != null) {
+            navigate(prefix(isCustomerProject
+              ? `/projects/${key}/support/${num}`
+              : `/projects/${key}/items/${num}?tab=attachments&highlight=${result.entity_id}`))
+          }
           break
         case 'project':
-          if (key) navigate(prefix(`/projects/${key}`))
+          if (key) navigate(prefix(isCustomerProject ? `/projects/${key}/support` : `/projects/${key}`))
           break
         case 'milestone':
-          if (key) navigate(prefix(`/projects/${key}/milestones`))
+          // Customers have no access to milestones; fall back to support list.
+          if (key) navigate(prefix(isCustomerProject ? `/projects/${key}/support` : `/projects/${key}/milestones`))
           break
         case 'queue':
-          if (key) navigate(prefix(`/projects/${key}/queues`))
+          // Customers have no access to queues; fall back to support list.
+          if (key) navigate(prefix(isCustomerProject ? `/projects/${key}/support` : `/projects/${key}/queues`))
           break
       }
     },
-    [navigate, onClose, segment],
+    [navigate, onClose, segment, customerProjectKeys],
   )
 
   const handleKeyDown = useCallback(

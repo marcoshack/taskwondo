@@ -25,7 +25,7 @@ export function ProjectDetailPage() {
   const { t } = useTranslation()
   const { collapsed } = useSidebar('app')
   const { containerClass } = useLayout()
-  const { projectKey } = useParams<{ projectKey: string }>()
+  const { namespace, projectKey } = useParams<{ namespace: string; projectKey: string }>()
   const { user } = useAuth()
 
   // Determine if the user is a customer in this project
@@ -36,16 +36,23 @@ export function ProjectDetailPage() {
   const { data: project, isLoading, error } = useProject(isCustomerProject ? '' : (projectKey ?? ''))
 
   if (isCustomerProject) {
+    // Absolute path used for the catch-all: a relative `to="support"` inside
+    // a splat route gets appended to the current pathname, causing infinite
+    // "/support/support/support…" loops if the user lands on a non-matching
+    // URL (e.g. a stale `/items/:num` link from a search result). The
+    // namespace param is read from the URL (not context) so the redirect
+    // always stays in the same namespace the user is viewing.
+    const supportHome = `/${namespace ?? 'd'}/projects/${projectKey}/support`
     return (
       <div className={`${containerClass(true)} py-6`}>
         <div className={`flex transition-all duration-200 ${collapsed ? 'gap-4' : 'gap-8'}`}>
           <AppSidebar projectKey={projectKey} customerProject />
           <div className="flex-1 min-w-0">
             <Routes>
-              <Route index element={<Navigate to="support" replace />} />
+              <Route index element={<Navigate to={supportHome} replace />} />
               <Route path="support" element={<PortalTicketListPage />} />
               <Route path="support/:itemNumber" element={<PortalTicketDetailPage />} />
-              <Route path="*" element={<Navigate to="support" replace />} />
+              <Route path="*" element={<Navigate to={supportHome} replace />} />
             </Routes>
           </div>
         </div>

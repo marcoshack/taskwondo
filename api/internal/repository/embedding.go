@@ -48,7 +48,13 @@ func (r *EmbeddingRepository) Delete(ctx context.Context, entityType string, ent
 }
 
 // SearchByVector performs a cosine similarity search filtered by accessible project IDs.
-func (r *EmbeddingRepository) SearchByVector(ctx context.Context, vector []float32, filter *model.SearchFilter, projectIDs []uuid.UUID) ([]model.SearchResult, error) {
+//
+// RBAC: for projects where the caller has the "customer" role, results are
+// restricted to the caller's own portal tickets (via reporter_id match +
+// visibility='portal' on the parent work item). For comments and attachments,
+// the parent work item's reporter and visibility are enforced. Customer-only
+// projects cannot surface project/milestone/queue embeddings.
+func (r *EmbeddingRepository) SearchByVector(ctx context.Context, vector []float32, filter *model.SearchFilter, access model.SearchAccess) ([]model.SearchResult, error) {
 	limit := filter.Limit
 	if limit <= 0 || limit > 100 {
 		limit = 20
@@ -63,18 +69,56 @@ func (r *EmbeddingRepository) SearchByVector(ctx context.Context, vector []float
 	vectorArg := argIdx
 	argIdx++
 
-	// RBAC: filter by accessible projects (or allow project_id IS NULL for global entities)
-	if len(projectIDs) > 0 {
-		placeholders := make([]string, len(projectIDs))
-		for i, pid := range projectIDs {
+	// RBAC: build the project-access clause. Customer projects apply
+	// per-entity-type restrictions enforced via the LEFT JOINed work items.
+	var accessClauses []string
+
+	if len(access.FullProjectIDs) > 0 {
+		placeholders := make([]string, len(access.FullProjectIDs))
+		for i, pid := range access.FullProjectIDs {
 			args = append(args, pid)
 			placeholders[i] = fmt.Sprintf("$%d", argIdx)
 			argIdx++
 		}
-		conditions = append(conditions, fmt.Sprintf("(e.project_id IN (%s) OR e.project_id IS NULL)", strings.Join(placeholders, ",")))
-	} else {
-		conditions = append(conditions, "e.project_id IS NULL")
+		accessClauses = append(accessClauses, fmt.Sprintf("e.project_id IN (%s)", strings.Join(placeholders, ",")))
 	}
+
+	if len(access.CustomerProjectIDs) > 0 {
+		placeholders := make([]string, len(access.CustomerProjectIDs))
+		for i, pid := range access.CustomerProjectIDs {
+			args = append(args, pid)
+			placeholders[i] = fmt.Sprintf("$%d", argIdx)
+			argIdx++
+		}
+		// Bind the user id and the portal visibility once, reuse via $N.
+		args = append(args, access.UserID)
+		userArg := argIdx
+		argIdx++
+		args = append(args, model.VisibilityPortal)
+		portalArg := argIdx
+		argIdx++
+		args = append(args, model.VisibilityPublic)
+		publicArg := argIdx
+		argIdx++
+
+		customerClause := fmt.Sprintf(
+			"(e.project_id IN (%s) AND ("+
+				"(e.entity_type = 'work_item' AND w.reporter_id = $%d AND w.visibility = $%d)"+
+				" OR (e.entity_type = 'comment' AND cw.reporter_id = $%d AND cw.visibility = $%d AND c.visibility = $%d)"+
+				" OR (e.entity_type = 'attachment' AND aw.reporter_id = $%d AND aw.visibility = $%d)"+
+				"))",
+			strings.Join(placeholders, ","),
+			userArg, portalArg,
+			userArg, portalArg, publicArg,
+			userArg, portalArg,
+		)
+		accessClauses = append(accessClauses, customerClause)
+	}
+
+	// Always allow global entities (project_id IS NULL) — they aren't sensitive.
+	accessClauses = append(accessClauses, "e.project_id IS NULL")
+
+	conditions = append(conditions, "("+strings.Join(accessClauses, " OR ")+")")
 
 	// Entity type filter
 	if len(filter.EntityTypes) > 0 {

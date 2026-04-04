@@ -18,7 +18,7 @@ import (
 
 type mockSearchEmbeddingRepo struct{}
 
-func (m *mockSearchEmbeddingRepo) SearchByVector(_ context.Context, _ []float32, _ *model.SearchFilter, _ []uuid.UUID) ([]model.SearchResult, error) {
+func (m *mockSearchEmbeddingRepo) SearchByVector(_ context.Context, _ []float32, _ *model.SearchFilter, _ model.SearchAccess) ([]model.SearchResult, error) {
 	return nil, nil
 }
 
@@ -27,14 +27,21 @@ type mockSearchWorkItemRepo struct {
 	err     error
 }
 
-func (m *mockSearchWorkItemRepo) SearchFTS(_ context.Context, _ string, _ []uuid.UUID, _ int) ([]model.SearchResult, error) {
+func (m *mockSearchWorkItemRepo) SearchFTS(_ context.Context, _ string, _ model.SearchAccess, _ int) ([]model.SearchResult, error) {
 	return m.results, m.err
 }
 
-type mockSearchProjectRepo struct{}
+type mockSearchMemberRepo struct {
+	memberships []model.ProjectMemberWithProject
+}
 
-func (m *mockSearchProjectRepo) ListByUser(_ context.Context, _ uuid.UUID) ([]model.Project, error) {
-	return []model.Project{{ID: uuid.New()}}, nil
+func (m *mockSearchMemberRepo) ListByUser(_ context.Context, _ uuid.UUID) ([]model.ProjectMemberWithProject, error) {
+	if m.memberships == nil {
+		return []model.ProjectMemberWithProject{
+			{ProjectMember: model.ProjectMember{ProjectID: uuid.New(), Role: model.ProjectRoleOwner}},
+		}, nil
+	}
+	return m.memberships, nil
 }
 
 type mockSearchSettingsRepo struct {
@@ -60,7 +67,7 @@ func newTestSearchHandler(workItemResults []model.SearchResult, semanticEnabled 
 		&service.EmbeddingService{},
 		&mockSearchEmbeddingRepo{},
 		&mockSearchWorkItemRepo{results: workItemResults},
-		&mockSearchProjectRepo{},
+		&mockSearchMemberRepo{},
 		&mockSearchSettingsRepo{settings: settings},
 	)
 	return NewSearchHandler(svc)

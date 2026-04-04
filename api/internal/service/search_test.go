@@ -14,9 +14,12 @@ import (
 type mockSearchEmbedding struct {
 	results []model.SearchResult
 	err     error
+	// recorded args for assertions
+	lastAccess model.SearchAccess
 }
 
-func (m *mockSearchEmbedding) SearchByVector(_ context.Context, _ []float32, _ *model.SearchFilter, _ []uuid.UUID) ([]model.SearchResult, error) {
+func (m *mockSearchEmbedding) SearchByVector(_ context.Context, _ []float32, _ *model.SearchFilter, access model.SearchAccess) ([]model.SearchResult, error) {
+	m.lastAccess = access
 	return m.results, m.err
 }
 
@@ -25,21 +28,24 @@ func (m *mockSearchEmbedding) SearchByVector(_ context.Context, _ []float32, _ *
 type mockSearchWorkItems struct {
 	results []model.SearchResult
 	err     error
+	// recorded args for assertions
+	lastAccess model.SearchAccess
 }
 
-func (m *mockSearchWorkItems) SearchFTS(_ context.Context, _ string, _ []uuid.UUID, _ int) ([]model.SearchResult, error) {
+func (m *mockSearchWorkItems) SearchFTS(_ context.Context, _ string, access model.SearchAccess, _ int) ([]model.SearchResult, error) {
+	m.lastAccess = access
 	return m.results, m.err
 }
 
-// --- mock search projects ---
+// --- mock search members ---
 
-type mockSearchProjects struct {
-	projects []model.Project
-	err      error
+type mockSearchMembers struct {
+	memberships []model.ProjectMemberWithProject
+	err         error
 }
 
-func (m *mockSearchProjects) ListByUser(_ context.Context, _ uuid.UUID) ([]model.Project, error) {
-	return m.projects, m.err
+func (m *mockSearchMembers) ListByUser(_ context.Context, _ uuid.UUID) ([]model.ProjectMemberWithProject, error) {
+	return m.memberships, m.err
 }
 
 // --- mock search settings ---
@@ -55,12 +61,19 @@ func (m *mockSearchSettings) Get(_ context.Context, key string) (*model.SystemSe
 	return nil, model.ErrNotFound
 }
 
+// membership is a tiny helper to build ProjectMemberWithProject for tests.
+func membership(projectID uuid.UUID, role string) model.ProjectMemberWithProject {
+	return model.ProjectMemberWithProject{
+		ProjectMember: model.ProjectMember{ProjectID: projectID, Role: role},
+	}
+}
+
 func TestSearchService_FeatureDisabled(t *testing.T) {
 	svc := NewSearchService(
 		&EmbeddingService{},
 		&mockSearchEmbedding{},
 		&mockSearchWorkItems{},
-		&mockSearchProjects{},
+		&mockSearchMembers{},
 		&mockSearchSettings{settings: map[string]*model.SystemSetting{}},
 	)
 
@@ -76,8 +89,8 @@ func TestSearchService_SemanticEnabled(t *testing.T) {
 		&EmbeddingService{},
 		&mockSearchEmbedding{},
 		&mockSearchWorkItems{},
-		&mockSearchProjects{
-			projects: []model.Project{{ID: uuid.New()}},
+		&mockSearchMembers{
+			memberships: []model.ProjectMemberWithProject{membership(uuid.New(), model.ProjectRoleOwner)},
 		},
 		&mockSearchSettings{
 			settings: map[string]*model.SystemSetting{
@@ -97,7 +110,7 @@ func TestSearchService_SemanticDisabled(t *testing.T) {
 		&EmbeddingService{},
 		&mockSearchEmbedding{},
 		&mockSearchWorkItems{},
-		&mockSearchProjects{},
+		&mockSearchMembers{},
 		&mockSearchSettings{settings: map[string]*model.SystemSetting{}},
 	)
 
@@ -120,8 +133,8 @@ func TestSearchService_SearchFTS(t *testing.T) {
 				{EntityType: "work_item", EntityID: itemID, ProjectID: &projectID, Content: "[task] Fix login", ProjectKey: "TF", ItemNumber: &num},
 			},
 		},
-		&mockSearchProjects{
-			projects: []model.Project{{ID: projectID}},
+		&mockSearchMembers{
+			memberships: []model.ProjectMemberWithProject{membership(projectID, model.ProjectRoleMember)},
 		},
 		&mockSearchSettings{settings: map[string]*model.SystemSetting{}},
 	)
@@ -161,8 +174,8 @@ func TestSearchService_FTSStatusFields(t *testing.T) {
 				},
 			},
 		},
-		&mockSearchProjects{
-			projects: []model.Project{{ID: projectID}},
+		&mockSearchMembers{
+			memberships: []model.ProjectMemberWithProject{membership(projectID, model.ProjectRoleMember)},
 		},
 		&mockSearchSettings{settings: map[string]*model.SystemSetting{}},
 	)
@@ -187,12 +200,13 @@ func TestSearchService_ProjectIDFiltering(t *testing.T) {
 	allowedProject := uuid.New()
 	disallowedProject := uuid.New()
 
+	workItemMock := &mockSearchWorkItems{results: []model.SearchResult{}}
 	svc := NewSearchService(
 		&EmbeddingService{},
 		&mockSearchEmbedding{results: []model.SearchResult{}},
-		&mockSearchWorkItems{results: []model.SearchResult{}},
-		&mockSearchProjects{
-			projects: []model.Project{{ID: allowedProject}},
+		workItemMock,
+		&mockSearchMembers{
+			memberships: []model.ProjectMemberWithProject{membership(allowedProject, model.ProjectRoleMember)},
 		},
 		&mockSearchSettings{settings: map[string]*model.SystemSetting{}},
 	)
@@ -203,9 +217,95 @@ func TestSearchService_ProjectIDFiltering(t *testing.T) {
 		ProjectIDs: []uuid.UUID{allowedProject, disallowedProject},
 	}
 
-	results, err := svc.SearchFTS(context.Background(), info, filter)
-	if err != nil {
+	if _, err := svc.SearchFTS(context.Background(), info, filter); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	_ = results
+
+	// The disallowed project must not leak through — only the allowed one should
+	// survive the intersection.
+	if got := workItemMock.lastAccess.FullProjectIDs; len(got) != 1 || got[0] != allowedProject {
+		t.Errorf("expected full access to contain only %s, got %v", allowedProject, got)
+	}
+	if len(workItemMock.lastAccess.CustomerProjectIDs) != 0 {
+		t.Errorf("expected no customer projects, got %v", workItemMock.lastAccess.CustomerProjectIDs)
+	}
+}
+
+// TestSearchService_CustomerRoleSplit verifies that customer-role memberships
+// are partitioned into CustomerProjectIDs (not FullProjectIDs) and the caller's
+// UserID is propagated — so downstream SQL can scope customer results to their
+// own portal tickets.
+func TestSearchService_CustomerRoleSplit(t *testing.T) {
+	ownedProject := uuid.New()
+	customerProject := uuid.New()
+	userID := uuid.New()
+
+	workItemMock := &mockSearchWorkItems{}
+	embeddingMock := &mockSearchEmbedding{}
+
+	svc := NewSearchService(
+		&EmbeddingService{},
+		embeddingMock,
+		workItemMock,
+		&mockSearchMembers{
+			memberships: []model.ProjectMemberWithProject{
+				membership(ownedProject, model.ProjectRoleOwner),
+				membership(customerProject, model.ProjectRoleCustomer),
+			},
+		},
+		&mockSearchSettings{settings: map[string]*model.SystemSetting{}},
+	)
+
+	info := &model.AuthInfo{UserID: userID}
+	if _, err := svc.SearchFTS(context.Background(), info, &model.SearchFilter{Query: "q", Limit: 20}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	access := workItemMock.lastAccess
+	if access.UserID != userID {
+		t.Errorf("expected access.UserID=%s, got %s", userID, access.UserID)
+	}
+	if len(access.FullProjectIDs) != 1 || access.FullProjectIDs[0] != ownedProject {
+		t.Errorf("expected full project %s, got %v", ownedProject, access.FullProjectIDs)
+	}
+	if len(access.CustomerProjectIDs) != 1 || access.CustomerProjectIDs[0] != customerProject {
+		t.Errorf("expected customer project %s, got %v", customerProject, access.CustomerProjectIDs)
+	}
+}
+
+// TestSearchService_CustomerOnly verifies that a user who is only a customer
+// (no other memberships) ends up with zero full-access projects and only
+// customer projects passed through.
+func TestSearchService_CustomerOnly(t *testing.T) {
+	customerProject := uuid.New()
+	userID := uuid.New()
+
+	workItemMock := &mockSearchWorkItems{}
+	svc := NewSearchService(
+		&EmbeddingService{},
+		&mockSearchEmbedding{},
+		workItemMock,
+		&mockSearchMembers{
+			memberships: []model.ProjectMemberWithProject{
+				membership(customerProject, model.ProjectRoleCustomer),
+			},
+		},
+		&mockSearchSettings{settings: map[string]*model.SystemSetting{}},
+	)
+
+	info := &model.AuthInfo{UserID: userID}
+	if _, err := svc.SearchFTS(context.Background(), info, &model.SearchFilter{Query: "q", Limit: 20}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	access := workItemMock.lastAccess
+	if len(access.FullProjectIDs) != 0 {
+		t.Errorf("expected no full-access projects, got %v", access.FullProjectIDs)
+	}
+	if len(access.CustomerProjectIDs) != 1 || access.CustomerProjectIDs[0] != customerProject {
+		t.Errorf("expected customer project %s, got %v", customerProject, access.CustomerProjectIDs)
+	}
+	if access.UserID != userID {
+		t.Errorf("expected user id %s, got %s", userID, access.UserID)
+	}
 }

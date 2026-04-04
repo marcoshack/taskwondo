@@ -536,17 +536,38 @@ func populateWorkItem(
 // SearchFTS performs a cross-project full-text search across all accessible projects.
 // It uses the existing search_vector tsvector column with ts_rank for ordering.
 // Display ID queries (e.g. "TF-42") are boosted to rank highest.
-func (r *WorkItemRepository) SearchFTS(ctx context.Context, query string, projectIDs []uuid.UUID, limit int) ([]model.SearchResult, error) {
+//
+// RBAC: for projects where the caller has the "customer" role, results are
+// restricted to the caller's own portal tickets (reporter_id=UserID AND
+// visibility='portal'). No internal work items are ever leaked to customers.
+func (r *WorkItemRepository) SearchFTS(ctx context.Context, query string, access model.SearchAccess, limit int) ([]model.SearchResult, error) {
 	if limit <= 0 || limit > 100 {
 		limit = 20
+	}
+
+	// If the caller has no reachable projects, short-circuit.
+	if !access.HasAny() {
+		return nil, nil
 	}
 
 	qb := &queryBuilder{argIndex: 0}
 	qb.add("w.deleted_at IS NULL")
 	qb.add("(w.search_vector @@ plainto_tsquery('english', ?) OR w.search_vector @@ plainto_tsquery('simple', ?))", query, query)
 
-	if len(projectIDs) > 0 {
-		qb.add("w.project_id = ANY(?)", pq.Array(projectIDs))
+	// RBAC: full-access projects OR (customer projects AND own portal tickets)
+	switch {
+	case len(access.FullProjectIDs) > 0 && len(access.CustomerProjectIDs) > 0:
+		qb.add(
+			"(w.project_id = ANY(?) OR (w.project_id = ANY(?) AND w.reporter_id = ? AND w.visibility = ?))",
+			pq.Array(access.FullProjectIDs), pq.Array(access.CustomerProjectIDs), access.UserID, model.VisibilityPortal,
+		)
+	case len(access.FullProjectIDs) > 0:
+		qb.add("w.project_id = ANY(?)", pq.Array(access.FullProjectIDs))
+	case len(access.CustomerProjectIDs) > 0:
+		qb.add(
+			"w.project_id = ANY(?) AND w.reporter_id = ? AND w.visibility = ?",
+			pq.Array(access.CustomerProjectIDs), access.UserID, model.VisibilityPortal,
+		)
 	}
 
 	whereClause := "WHERE " + strings.Join(qb.conditions, " AND ")
