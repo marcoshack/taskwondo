@@ -1,0 +1,597 @@
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import {
+  useOncallRotation,
+  useOncallHistory,
+  useCreateOncallRotation,
+  useUpdateOncallRotation,
+  useDeleteOncallRotation,
+} from '@/hooks/useOncall'
+import { useTeamMembers } from '@/hooks/useTeams'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
+import { Select } from '@/components/ui/Select'
+import { Modal } from '@/components/ui/Modal'
+import { Spinner } from '@/components/ui/Spinner'
+import { Avatar } from '@/components/ui/Avatar'
+import { Badge } from '@/components/ui/Badge'
+import { Tooltip } from '@/components/ui/Tooltip'
+import { Clock, Plus, Pencil, Trash2, Shuffle, GripVertical } from 'lucide-react'
+import type { OncallRotationWithMembers, CreateOncallRotationInput, UpdateOncallRotationInput } from '@/api/oncall'
+import type { TeamMemberWithUser } from '@/api/teams'
+import { OncallCalendar } from '@/components/OncallCalendar'
+import { getLocalizedError } from '@/utils/apiError'
+
+const TIMEZONES = [
+  'UTC',
+  'America/New_York',
+  'America/Chicago',
+  'America/Denver',
+  'America/Los_Angeles',
+  'Europe/London',
+  'Europe/Paris',
+  'Europe/Berlin',
+  'Asia/Tokyo',
+  'Asia/Shanghai',
+  'Australia/Sydney',
+  'Pacific/Auckland',
+]
+
+export function OncallTab({
+  projectKey,
+  teamId,
+  canManage,
+}: {
+  projectKey: string
+  teamId: string
+  canManage: boolean
+}) {
+  const { t } = useTranslation()
+  const { data: rotationData, isLoading, error: queryError } = useOncallRotation(projectKey, teamId)
+  const deleteMutation = useDeleteOncallRotation(projectKey, teamId)
+
+  const [createOpen, setCreateOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [error, setError] = useState('')
+
+  // 404 means no rotation configured — that's expected
+  const is404 = (queryError as { response?: { status?: number } })?.response?.status === 404
+  const hasRotation = !!rotationData && !is404
+  const noRotation = !isLoading && (!rotationData || is404)
+
+  function handleDelete() {
+    setError('')
+    deleteMutation.mutate(undefined, {
+      onSuccess: () => setDeleteOpen(false),
+      onError: (err) => {
+        setError(getLocalizedError(err, t, 'teams.oncall.deleteError'))
+        setDeleteOpen(false)
+      },
+    })
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Spinner />
+      </div>
+    )
+  }
+
+  if (noRotation) {
+    return (
+      <div className="space-y-4">
+        {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+        <div className="border border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-12 text-center">
+          <Clock className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{t('teams.oncall.noRotation')}</p>
+          {canManage && (
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus className="h-4 w-4 mr-1" />
+              {t('teams.oncall.setUp')}
+            </Button>
+          )}
+        </div>
+
+        <CreateRotationModal
+          open={createOpen}
+          onClose={() => setCreateOpen(false)}
+          projectKey={projectKey}
+          teamId={teamId}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+
+      {/* Summary card */}
+      {hasRotation && (
+        <RotationSummary
+          data={rotationData}
+          canManage={canManage}
+          onEdit={() => setEditOpen(true)}
+          onDelete={() => setDeleteOpen(true)}
+        />
+      )}
+
+      {/* Calendar */}
+      {hasRotation && (
+        <OncallCalendar
+          rotation={rotationData}
+          members={rotationData.members}
+        />
+      )}
+
+      {/* History */}
+      <HistoryLog projectKey={projectKey} teamId={teamId} />
+
+      {/* Edit modal */}
+      {hasRotation && (
+        <EditRotationModal
+          open={editOpen}
+          onClose={() => setEditOpen(false)}
+          projectKey={projectKey}
+          teamId={teamId}
+          data={rotationData}
+        />
+      )}
+
+      {/* Delete confirmation */}
+      <Modal open={deleteOpen} onClose={() => setDeleteOpen(false)} title={t('teams.oncall.deleteConfirmTitle')}>
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">{t('teams.oncall.deleteConfirmBody')}</p>
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={() => setDeleteOpen(false)}>
+            {t('common.cancel')}
+          </Button>
+          <Button variant="danger" disabled={deleteMutation.isPending} onClick={handleDelete}>
+            {deleteMutation.isPending ? t('common.deleting') : t('common.delete')}
+          </Button>
+        </div>
+      </Modal>
+    </div>
+  )
+}
+
+// --- Rotation Summary ---
+
+function RotationSummary({
+  data,
+  canManage,
+  onEdit,
+  onDelete,
+}: {
+  data: OncallRotationWithMembers
+  canManage: boolean
+  onEdit: () => void
+  onDelete: () => void
+}) {
+  const { t } = useTranslation()
+  const currentMember = data.members.find((m) => m.user_id === data.current_user_id)
+
+  return (
+    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-3">
+          <div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+              {t('teams.oncall.currentlyOncall')}
+            </p>
+            {currentMember ? (
+              <div className="flex items-center gap-2">
+                <Avatar name={currentMember.display_name} avatarUrl={currentMember.avatar_url} size="sm" />
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{currentMember.display_name}</span>
+                <Badge color="green">{t('teams.oncall.active')}</Badge>
+              </div>
+            ) : (
+              <span className="text-sm text-gray-400 dark:text-gray-500">{t('teams.oncall.noOneOncall')}</span>
+            )}
+          </div>
+          <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+            <span>{t('teams.oncall.period', { days: data.period_days })}</span>
+            <span>{data.timezone}</span>
+            {data.next_rotation_at && (
+              <span>{t('teams.oncall.nextRotation', { date: new Date(data.next_rotation_at).toLocaleDateString() })}</span>
+            )}
+          </div>
+        </div>
+        {canManage && (
+          <div className="flex items-center gap-1 shrink-0">
+            <Button variant="ghost" size="sm" onClick={onEdit}>
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={onDelete}>
+              <Trash2 className="h-3.5 w-3.5 text-red-500" />
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// --- Create Rotation Modal ---
+
+function CreateRotationModal({
+  open,
+  onClose,
+  projectKey,
+  teamId,
+}: {
+  open: boolean
+  onClose: () => void
+  projectKey: string
+  teamId: string
+}) {
+  const { t } = useTranslation()
+  const createMutation = useCreateOncallRotation(projectKey, teamId)
+  const { data: teamMembers } = useTeamMembers(projectKey, teamId)
+  const [error, setError] = useState('')
+
+  function handleSubmit(input: CreateOncallRotationInput) {
+    setError('')
+    createMutation.mutate(input, {
+      onSuccess: () => onClose(),
+      onError: (err) => {
+        setError(getLocalizedError(err, t, 'teams.oncall.createError'))
+      },
+    })
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} title={t('teams.oncall.createRotation')}>
+      {error && <p className="text-sm text-red-600 dark:text-red-400 mb-3">{error}</p>}
+      <RotationForm
+        teamMembers={teamMembers ?? []}
+        onSubmit={handleSubmit}
+        onCancel={onClose}
+        isPending={createMutation.isPending}
+      />
+    </Modal>
+  )
+}
+
+// --- Edit Rotation Modal ---
+
+function EditRotationModal({
+  open,
+  onClose,
+  projectKey,
+  teamId,
+  data,
+}: {
+  open: boolean
+  onClose: () => void
+  projectKey: string
+  teamId: string
+  data: OncallRotationWithMembers
+}) {
+  const { t } = useTranslation()
+  const updateMutation = useUpdateOncallRotation(projectKey, teamId)
+  const { data: teamMembers } = useTeamMembers(projectKey, teamId)
+  const [error, setError] = useState('')
+
+  function handleSubmit(input: CreateOncallRotationInput) {
+    setError('')
+    const updateInput: UpdateOncallRotationInput = {
+      period_days: input.period_days,
+      rotation_time: input.rotation_time,
+      timezone: input.timezone,
+      start_date: input.start_date,
+      member_ids: input.member_ids,
+    }
+    updateMutation.mutate(updateInput, {
+      onSuccess: () => onClose(),
+      onError: (err) => {
+        setError(getLocalizedError(err, t, 'teams.oncall.updateError'))
+      },
+    })
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} title={t('teams.oncall.editRotation')}>
+      {error && <p className="text-sm text-red-600 dark:text-red-400 mb-3">{error}</p>}
+      <RotationForm
+        teamMembers={teamMembers ?? []}
+        initial={data}
+        onSubmit={handleSubmit}
+        onCancel={onClose}
+        isPending={updateMutation.isPending}
+      />
+    </Modal>
+  )
+}
+
+// --- Rotation Form ---
+
+function RotationForm({
+  teamMembers,
+  initial,
+  onSubmit,
+  onCancel,
+  isPending,
+}: {
+  teamMembers: TeamMemberWithUser[]
+  initial?: OncallRotationWithMembers
+  onSubmit: (input: CreateOncallRotationInput) => void
+  onCancel: () => void
+  isPending: boolean
+}) {
+  const { t } = useTranslation()
+
+  // Initialize selected member IDs (ordered)
+  const initialMemberIds = initial
+    ? [...initial.members].sort((a, b) => a.position - b.position).map((m) => m.user_id)
+    : []
+
+  const [selectedIds, setSelectedIds] = useState<string[]>(initialMemberIds)
+  const [periodDays, setPeriodDays] = useState(String(initial?.period_days ?? 7))
+  const [rotationTime, setRotationTime] = useState(() => {
+    if (!initial?.rotation_time) return '12:00'
+    // API returns TIME as "0000-01-01T12:00:00Z"; extract HH:MM
+    const match = initial.rotation_time.match(/T(\d{2}:\d{2})/)
+    return match ? match[1] : initial.rotation_time.slice(0, 5)
+  })
+  const [timezone, setTimezone] = useState(initial?.timezone ?? 'UTC')
+  const [startDate, setStartDate] = useState(initial?.start_date ?? new Date().toISOString().slice(0, 10))
+  const [validationError, setValidationError] = useState('')
+  const [draggedIdx, setDraggedIdx] = useState<number | null>(null)
+
+  function toggleMember(userId: string) {
+    setSelectedIds((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId],
+    )
+  }
+
+  function randomizeOrder() {
+    setSelectedIds((prev) => {
+      const shuffled = [...prev]
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1))
+        ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+      }
+      return shuffled
+    })
+  }
+
+  // Native drag-and-drop for reordering
+  function handleDragStart(idx: number) {
+    setDraggedIdx(idx)
+  }
+
+  function handleDragOver(e: React.DragEvent, idx: number) {
+    e.preventDefault()
+    if (draggedIdx === null || draggedIdx === idx) return
+    setSelectedIds((prev) => {
+      const updated = [...prev]
+      const [moved] = updated.splice(draggedIdx, 1)
+      updated.splice(idx, 0, moved)
+      return updated
+    })
+    setDraggedIdx(idx)
+  }
+
+  function handleDragEnd() {
+    setDraggedIdx(null)
+  }
+
+  const parsedDays = parseInt(periodDays, 10)
+  const isValidPeriod = !isNaN(parsedDays) && parsedDays >= 1
+  const isValidTime = !!rotationTime
+  const isValidMembers = selectedIds.length >= 2
+  const isValidStartDate = !!startDate
+  const canSubmit = isValidMembers && isValidPeriod && isValidTime && isValidStartDate && !isPending
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setValidationError('')
+
+    if (!isValidMembers) {
+      setValidationError(t('teams.oncall.minMembers'))
+      return
+    }
+    if (!isValidPeriod) {
+      setValidationError(t('teams.oncall.invalidPeriod'))
+      return
+    }
+    if (!isValidTime) {
+      setValidationError(t('teams.oncall.invalidTime'))
+      return
+    }
+    if (!isValidStartDate) {
+      setValidationError(t('teams.oncall.invalidStartDate'))
+      return
+    }
+
+    onSubmit({
+      period_days: parsedDays,
+      rotation_time: rotationTime + ':00',
+      timezone,
+      start_date: startDate,
+      member_ids: selectedIds,
+    })
+  }
+
+  const memberMap = new Map(teamMembers.map((m) => [m.user_id, m]))
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {validationError && (
+        <p className="text-sm text-red-600 dark:text-red-400">{validationError}</p>
+      )}
+
+      {/* Participants selection */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          {t('teams.oncall.participants')}
+        </label>
+        <div className="border border-gray-200 dark:border-gray-600 rounded-md max-h-40 overflow-auto">
+          {teamMembers.map((member) => (
+            <label
+              key={member.user_id}
+              className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+            >
+              <input
+                type="checkbox"
+                checked={selectedIds.includes(member.user_id)}
+                onChange={() => toggleMember(member.user_id)}
+                className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <Avatar name={member.display_name} avatarUrl={member.avatar_url ?? undefined} size="xs" />
+              <span className="text-sm text-gray-900 dark:text-gray-100">{member.display_name}</span>
+            </label>
+          ))}
+          {teamMembers.length === 0 && (
+            <p className="px-3 py-2 text-sm text-gray-400">{t('teams.noMembers')}</p>
+          )}
+        </div>
+      </div>
+
+      {/* Order */}
+      {selectedIds.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              {t('teams.oncall.order')}
+            </label>
+            <Button type="button" variant="ghost" size="sm" onClick={randomizeOrder}>
+              <Shuffle className="h-3.5 w-3.5 mr-1" />
+              {t('teams.oncall.randomize')}
+            </Button>
+          </div>
+          <div className="border border-gray-200 dark:border-gray-600 rounded-md">
+            {selectedIds.map((userId, idx) => {
+              const member = memberMap.get(userId)
+              if (!member) return null
+              return (
+                <div
+                  key={userId}
+                  draggable
+                  onDragStart={() => handleDragStart(idx)}
+                  onDragOver={(e) => handleDragOver(e, idx)}
+                  onDragEnd={handleDragEnd}
+                  className={`flex items-center gap-2 px-3 py-2 cursor-grab active:cursor-grabbing ${
+                    draggedIdx === idx ? 'bg-indigo-50 dark:bg-indigo-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-700'
+                  } ${idx > 0 ? 'border-t border-gray-100 dark:border-gray-700' : ''}`}
+                >
+                  <GripVertical className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                  <span className="text-xs text-gray-400 w-5 text-right shrink-0">{idx + 1}</span>
+                  <Avatar name={member.display_name} avatarUrl={member.avatar_url ?? undefined} size="xs" />
+                  <span className="text-sm text-gray-900 dark:text-gray-100">{member.display_name}</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Rotation period */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="w-full">
+          <Input
+            label={t('teams.oncall.periodDays')}
+            type="number"
+            min={1}
+            value={periodDays}
+            onChange={(e) => setPeriodDays(e.target.value)}
+          />
+        </div>
+        <div className="w-full">
+          <Input
+            label={t('teams.oncall.rotationTime')}
+            type="time"
+            value={rotationTime}
+            onChange={(e) => setRotationTime(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {/* Timezone */}
+      <Select
+        label={t('teams.oncall.timezone')}
+        value={timezone}
+        onChange={(e) => setTimezone(e.target.value)}
+      >
+        {TIMEZONES.map((tz) => (
+          <option key={tz} value={tz}>{tz}</option>
+        ))}
+      </Select>
+
+      {/* Start date */}
+      <Input
+        label={t('teams.oncall.startDate')}
+        type="date"
+        value={startDate}
+        onChange={(e) => setStartDate(e.target.value)}
+      />
+
+      <div className="flex justify-end gap-3 pt-2">
+        <Button type="button" variant="secondary" onClick={onCancel}>{t('common.cancel')}</Button>
+        <Tooltip content={
+          !canSubmit && !isPending ? [
+            !isValidMembers ? t('teams.oncall.minMembers') : '',
+            !isValidPeriod ? t('teams.oncall.invalidPeriod') : '',
+            !isValidTime ? t('teams.oncall.invalidTime') : '',
+            !isValidStartDate ? t('teams.oncall.invalidStartDate') : '',
+          ].filter(Boolean).join(' ') || undefined : undefined
+        }>
+          <Button type="submit" disabled={!canSubmit}>
+            {isPending ? t('common.saving') : initial ? t('common.save') : t('common.create')}
+          </Button>
+        </Tooltip>
+      </div>
+    </form>
+  )
+}
+
+// --- History Log ---
+
+function HistoryLog({
+  projectKey,
+  teamId,
+}: {
+  projectKey: string
+  teamId: string
+}) {
+  const { t } = useTranslation()
+  const [limit] = useState(10)
+  const [offset, setOffset] = useState(0)
+  const { data: history, isLoading } = useOncallHistory(projectKey, teamId, limit, offset)
+
+  if (isLoading) {
+    return <Spinner />
+  }
+
+  if (!history || history.length === 0) {
+    return null
+  }
+
+  return (
+    <div className="space-y-3">
+      <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('teams.oncall.history')}</h3>
+      <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
+        {history.map((entry) => (
+          <div key={entry.id} className="p-3 flex items-center gap-3">
+            <Avatar name={entry.display_name} avatarUrl={entry.avatar_url} size="xs" />
+            <div className="min-w-0 flex-1">
+              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{entry.display_name}</span>
+              <div className="text-xs text-gray-500 dark:text-gray-400">
+                {new Date(entry.started_at).toLocaleDateString()} - {entry.ended_at ? new Date(entry.ended_at).toLocaleDateString() : t('common.current')}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      {history.length === limit && (
+        <div className="flex justify-center">
+          <Button variant="ghost" size="sm" onClick={() => setOffset((prev) => prev + limit)}>
+            {t('common.loadMore')}
+          </Button>
+        </div>
+      )}
+    </div>
+  )
+}

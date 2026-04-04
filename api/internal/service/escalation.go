@@ -39,6 +39,7 @@ type CreateEscalationListInput struct {
 type EscalationLevelInput struct {
 	ThresholdPct int
 	UserIDs      []uuid.UUID
+	TeamIDs      []uuid.UUID
 }
 
 // EscalationService handles escalation list business logic and authorization.
@@ -281,8 +282,8 @@ func (s *EscalationService) validateInput(ctx context.Context, input CreateEscal
 		}
 		thresholds[lv.ThresholdPct] = true
 
-		if len(lv.UserIDs) == 0 {
-			return fmt.Errorf("each level must have at least one user: %w", model.ErrValidation)
+		if len(lv.UserIDs) == 0 && len(lv.TeamIDs) == 0 {
+			return fmt.Errorf("each level must have at least one user or team: %w", model.ErrValidation)
 		}
 
 		// Verify each user exists
@@ -304,11 +305,16 @@ func buildLevels(inputs []EscalationLevelInput) []model.EscalationLevel {
 		for j, uid := range input.UserIDs {
 			users[j] = model.EscalationLevelUser{UserID: uid}
 		}
+		teams := make([]model.EscalationLevelTeam, len(input.TeamIDs))
+		for j, tid := range input.TeamIDs {
+			teams[j] = model.EscalationLevelTeam{TeamID: tid}
+		}
 		levels[i] = model.EscalationLevel{
 			ID:           uuid.Must(uuid.NewV7()),
 			ThresholdPct: input.ThresholdPct,
 			Position:     i,
 			Users:        users,
+			Teams:        teams,
 		}
 	}
 	return levels

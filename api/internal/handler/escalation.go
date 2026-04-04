@@ -34,6 +34,7 @@ type createEscalationListRequest struct {
 type escalationLevelRequest struct {
 	ThresholdPct int      `json:"threshold_pct"`
 	UserIDs      []string `json:"user_ids"`
+	TeamIDs      []string `json:"team_ids,omitempty"`
 }
 
 type updateMappingRequest struct {
@@ -55,6 +56,15 @@ type escalationLevelResponse struct {
 	ThresholdPct int                           `json:"threshold_pct"`
 	Position     int                           `json:"position"`
 	Users        []escalationLevelUserResponse `json:"users"`
+	Teams        []escalationLevelTeamResponse `json:"teams"`
+}
+
+type escalationLevelTeamResponse struct {
+	ID             uuid.UUID  `json:"id"`
+	Name           string     `json:"name"`
+	HasOncall      bool       `json:"has_oncall"`
+	OncallUserID   *uuid.UUID `json:"oncall_user_id,omitempty"`
+	OncallUserName string     `json:"oncall_user_name,omitempty"`
 }
 
 type escalationLevelUserResponse struct {
@@ -79,11 +89,22 @@ func toEscalationListResponse(el *model.EscalationList) escalationListResponse {
 				Email:       u.Email,
 			}
 		}
+		teams := make([]escalationLevelTeamResponse, len(lv.Teams))
+		for j, t := range lv.Teams {
+			teams[j] = escalationLevelTeamResponse{
+				ID:             t.TeamID,
+				Name:           t.Name,
+				HasOncall:      t.HasOncall,
+				OncallUserID:   t.OncallUserID,
+				OncallUserName: t.OncallUserName,
+			}
+		}
 		levels[i] = escalationLevelResponse{
 			ID:           lv.ID,
 			ThresholdPct: lv.ThresholdPct,
 			Position:     lv.Position,
 			Users:        users,
+			Teams:        teams,
 		}
 	}
 	return escalationListResponse{
@@ -329,9 +350,18 @@ func toEscalationInput(req createEscalationListRequest) (service.CreateEscalatio
 			}
 			userIDs[j] = id
 		}
+		teamIDs := make([]uuid.UUID, len(lv.TeamIDs))
+		for j, idStr := range lv.TeamIDs {
+			id, err := uuid.Parse(idStr)
+			if err != nil {
+				return service.CreateEscalationListInput{}, errors.New("invalid team_id: " + idStr)
+			}
+			teamIDs[j] = id
+		}
 		levels[i] = service.EscalationLevelInput{
 			ThresholdPct: lv.ThresholdPct,
 			UserIDs:      userIDs,
+			TeamIDs:      teamIDs,
 		}
 	}
 	return service.CreateEscalationListInput{

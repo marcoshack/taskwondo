@@ -23,6 +23,7 @@ type EscalationLevel struct {
 	ThresholdPct int                   `json:"threshold_pct"`
 	Position     int                   `json:"position"`
 	Users        []EscalationLevelUser `json:"users"`
+	Teams        []EscalationLevelTeam `json:"teams"`
 	CreatedAt    time.Time             `json:"created_at"`
 }
 
@@ -31,6 +32,15 @@ type EscalationLevelUser struct {
 	UserID      uuid.UUID `json:"id"`
 	DisplayName string    `json:"display_name"`
 	Email       string    `json:"email"`
+}
+
+// EscalationLevelTeam represents a team assigned to an escalation level.
+type EscalationLevelTeam struct {
+	TeamID         uuid.UUID  `json:"id"`
+	Name           string     `json:"name"`
+	HasOncall      bool       `json:"has_oncall"`
+	OncallUserID   *uuid.UUID `json:"oncall_user_id,omitempty"`
+	OncallUserName string     `json:"oncall_user_name,omitempty"`
 }
 
 // TypeEscalationMapping maps a work item type to an escalation list within a project.

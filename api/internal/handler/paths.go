@@ -22,4 +22,5 @@ const (
 	PathUserSettings     = "user-settings"
 	PathStats            = "stats"
 	PathTeams            = "teams"
+	PathOncall           = "oncall"
 )

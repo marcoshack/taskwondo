@@ -1419,6 +1419,195 @@ export async function listPortalComments(
   return body.data;
 }
 
+// --- Teams ---
+
+export async function createTeam(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  data: { name: string; description?: string },
+): Promise<{ id: string; name: string; description: string | null }> {
+  const res = await request.post(`${BASE_URL}/api/v1/default/projects/${projectKey}/teams`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data,
+  });
+  if (!res.ok()) throw new Error(`Create team failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function listTeams(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+): Promise<{ id: string; name: string; description: string | null }[]> {
+  const res = await request.get(`${BASE_URL}/api/v1/default/projects/${projectKey}/teams`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`List teams failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function getTeam(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  teamId: string,
+): Promise<{ id: string; name: string; description: string | null }> {
+  const res = await request.get(`${BASE_URL}/api/v1/default/projects/${projectKey}/teams/${teamId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`Get team failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function updateTeam(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  teamId: string,
+  data: { name?: string; description?: string | null },
+): Promise<{ id: string; name: string; description: string | null }> {
+  const res = await request.patch(`${BASE_URL}/api/v1/default/projects/${projectKey}/teams/${teamId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data,
+  });
+  if (!res.ok()) throw new Error(`Update team failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function deleteTeam(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  teamId: string,
+): Promise<void> {
+  const res = await request.delete(`${BASE_URL}/api/v1/default/projects/${projectKey}/teams/${teamId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`Delete team failed (${res.status()}): ${await res.text()}`);
+}
+
+export async function listTeamMembers(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  teamId: string,
+): Promise<{ user_id: string; display_name: string; email: string }[]> {
+  const res = await request.get(`${BASE_URL}/api/v1/default/projects/${projectKey}/teams/${teamId}/members`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`List team members failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function addTeamMember(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  teamId: string,
+  userId: string,
+): Promise<void> {
+  const res = await request.post(`${BASE_URL}/api/v1/default/projects/${projectKey}/teams/${teamId}/members`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { user_id: userId },
+  });
+  if (!res.ok()) throw new Error(`Add team member failed (${res.status()}): ${await res.text()}`);
+}
+
+export async function removeTeamMember(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  teamId: string,
+  userId: string,
+): Promise<void> {
+  const res = await request.delete(`${BASE_URL}/api/v1/default/projects/${projectKey}/teams/${teamId}/members/${userId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`Remove team member failed (${res.status()}): ${await res.text()}`);
+}
+
+// --- Oncall Rotations ---
+
+export async function createOncallRotation(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  teamId: string,
+  data: { period_days: number; rotation_time: string; timezone: string; start_date: string; member_ids: string[] },
+): Promise<{ id: string; current_user_id: string | null; members: { user_id: string; position: number; display_name: string }[] }> {
+  const res = await request.post(`${BASE_URL}/api/v1/default/projects/${projectKey}/teams/${teamId}/oncall`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data,
+  });
+  if (!res.ok()) throw new Error(`Create oncall rotation failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function getOncallRotation(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  teamId: string,
+): Promise<{ id: string; period_days: number; timezone: string; current_user_id: string | null; next_rotation_at: string | null; members: { user_id: string; position: number; display_name: string }[] }> {
+  const res = await request.get(`${BASE_URL}/api/v1/default/projects/${projectKey}/teams/${teamId}/oncall`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`Get oncall rotation failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function updateOncallRotation(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  teamId: string,
+  data: { period_days?: number; rotation_time?: string; timezone?: string; member_ids?: string[] },
+): Promise<{ id: string; period_days: number; members: { user_id: string; position: number; display_name: string }[] }> {
+  const res = await request.patch(`${BASE_URL}/api/v1/default/projects/${projectKey}/teams/${teamId}/oncall`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data,
+  });
+  if (!res.ok()) throw new Error(`Update oncall rotation failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function deleteOncallRotation(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  teamId: string,
+): Promise<void> {
+  const res = await request.delete(`${BASE_URL}/api/v1/default/projects/${projectKey}/teams/${teamId}/oncall`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`Delete oncall rotation failed (${res.status()}): ${await res.text()}`);
+}
+
+export async function getOncallHistory(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  teamId: string,
+  limit = 20,
+  offset = 0,
+): Promise<{ id: string; user_id: string; display_name: string; started_at: string; ended_at: string | null }[]> {
+  const res = await request.get(`${BASE_URL}/api/v1/default/projects/${projectKey}/teams/${teamId}/oncall/history?limit=${limit}&offset=${offset}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`Get oncall history failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
 export async function uploadPortalAttachment(
   request: APIRequestContext,
   token: string,

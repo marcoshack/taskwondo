@@ -509,12 +509,12 @@ func TestEscalationCreate_LevelWithNoUsers(t *testing.T) {
 	input := CreateEscalationListInput{
 		Name: "No Users",
 		Levels: []EscalationLevelInput{
-			{ThresholdPct: 50, UserIDs: nil},
+			{ThresholdPct: 50, UserIDs: nil, TeamIDs: nil},
 		},
 	}
 	_, err := svc.Create(context.Background(), info, "TEST", input)
 	if !errors.Is(err, model.ErrValidation) {
-		t.Fatalf("expected ErrValidation for empty users, got %v", err)
+		t.Fatalf("expected ErrValidation for empty users and teams, got %v", err)
 	}
 }
 
@@ -558,5 +558,55 @@ func TestEscalationMapping_WrongProjectList(t *testing.T) {
 	_, err := svc.UpdateMapping(context.Background(), info, "TEST", "bug", otherList.ID)
 	if !errors.Is(err, model.ErrNotFound) {
 		t.Fatalf("expected ErrNotFound for wrong project list, got %v", err)
+	}
+}
+
+func TestEscalationCreate_WithTeams(t *testing.T) {
+	svc, _, projectRepo, memberRepo, _ := newTestEscalationService()
+	info := userAuthInfo()
+	setupEscalationProject(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
+
+	teamID := uuid.New()
+	input := CreateEscalationListInput{
+		Name: "Team Escalation",
+		Levels: []EscalationLevelInput{
+			{ThresholdPct: 75, UserIDs: nil, TeamIDs: []uuid.UUID{teamID}},
+		},
+	}
+
+	el, err := svc.Create(context.Background(), info, "TEST", input)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if el.Name != "Team Escalation" {
+		t.Fatalf("expected name 'Team Escalation', got %s", el.Name)
+	}
+	if len(el.Levels) != 1 {
+		t.Fatalf("expected 1 level, got %d", len(el.Levels))
+	}
+}
+
+func TestEscalationCreate_WithUsersAndTeams(t *testing.T) {
+	svc, _, projectRepo, memberRepo, userRepo := newTestEscalationService()
+	info := userAuthInfo()
+	setupEscalationProject(t, projectRepo, memberRepo, info, model.ProjectRoleOwner)
+
+	userID := uuid.New()
+	userRepo.addUser(userID)
+	teamID := uuid.New()
+
+	input := CreateEscalationListInput{
+		Name: "Mixed Escalation",
+		Levels: []EscalationLevelInput{
+			{ThresholdPct: 50, UserIDs: []uuid.UUID{userID}, TeamIDs: []uuid.UUID{teamID}},
+		},
+	}
+
+	el, err := svc.Create(context.Background(), info, "TEST", input)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(el.Levels) != 1 {
+		t.Fatalf("expected 1 level, got %d", len(el.Levels))
 	}
 }

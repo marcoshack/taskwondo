@@ -166,6 +166,12 @@ func main() {
 	)
 	dispatcher.Register(notifySLABreach)
 
+	// Register on-call rotation notification task
+	notifyOncallRotation := workers.NewNotificationOncallRotationTask(
+		userRepo, emailSender, log.Logger,
+	)
+	dispatcher.Register(notifyOncallRotation)
+
 	// Register embedding tasks
 	embedIndex := workers.NewEmbedIndexTask(indexerService, systemSettingRepo, log.Logger)
 	dispatcher.Register(embedIndex)
@@ -214,6 +220,19 @@ func main() {
 		Name:     "sla.monitor",
 		Interval: cfg.SLAMonitorInterval,
 		Fn:       slaMonitor.Run,
+	})
+
+	// On-call rotation: periodic scan for due rotations
+	oncallRepo := repository.NewOncallRotationRepository(db)
+	teamRepo := repository.NewTeamRepository(db)
+	oncallService := service.NewOncallService(oncallRepo, teamRepo, projectRepo, memberRepo)
+	oncallTask := workers.NewOncallRotationTask(
+		oncallRepo, oncallService, teamRepo, projectRepo, eventPublisher, log.Logger,
+	)
+	scheduler.Add(workers.PeriodicTask{
+		Name:     "oncall.rotation",
+		Interval: 60 * time.Second,
+		Fn:       oncallTask.Run,
 	})
 
 	// Token cleanup: purge expired email verification tokens

@@ -237,13 +237,19 @@ func (r *EscalationRepository) loadLevels(ctx context.Context, listID uuid.UUID)
 		return nil, fmt.Errorf("iterating escalation levels: %w", err)
 	}
 
-	// Load users for each level
+	// Load users and teams for each level
 	for i := range levels {
 		users, err := r.loadLevelUsers(ctx, levels[i].ID)
 		if err != nil {
 			return nil, err
 		}
 		levels[i].Users = users
+
+		teams, err := r.loadLevelTeams(ctx, levels[i].ID)
+		if err != nil {
+			return nil, err
+		}
+		levels[i].Teams = teams
 	}
 
 	return levels, nil
@@ -273,6 +279,49 @@ func (r *EscalationRepository) loadLevelUsers(ctx context.Context, levelID uuid.
 	return users, rows.Err()
 }
 
+// loadLevelTeams returns all teams for an escalation level with on-call info.
+func (r *EscalationRepository) loadLevelTeams(ctx context.Context, levelID uuid.UUID) ([]model.EscalationLevelTeam, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT t.id, t.name,
+		        CASE WHEN oc.id IS NOT NULL THEN true ELSE false END AS has_oncall,
+		        oc.current_user_id,
+		        u.display_name
+		 FROM escalation_level_teams elt
+		 JOIN teams t ON t.id = elt.team_id
+		 LEFT JOIN oncall_rotations oc ON oc.team_id = t.id
+		 LEFT JOIN users u ON u.id = oc.current_user_id
+		 WHERE elt.escalation_level_id = $1
+		 ORDER BY t.name`, levelID)
+	if err != nil {
+		return nil, fmt.Errorf("querying escalation level teams: %w", err)
+	}
+	defer rows.Close()
+
+	var teams []model.EscalationLevelTeam
+	for rows.Next() {
+		var t model.EscalationLevelTeam
+		var oncallUserID sql.NullString
+		var oncallUserName sql.NullString
+		if err := rows.Scan(&t.TeamID, &t.Name, &t.HasOncall, &oncallUserID, &oncallUserName); err != nil {
+			return nil, fmt.Errorf("scanning escalation level team row: %w", err)
+		}
+		if oncallUserID.Valid {
+			id, _ := uuid.Parse(oncallUserID.String)
+			t.OncallUserID = &id
+		}
+		if oncallUserName.Valid {
+			t.OncallUserName = oncallUserName.String
+		}
+		teams = append(teams, t)
+	}
+	return teams, rows.Err()
+}
+
+// ListTeamsByLevel returns all teams assigned to a specific escalation level.
+func (r *EscalationRepository) ListTeamsByLevel(ctx context.Context, levelID uuid.UUID) ([]model.EscalationLevelTeam, error) {
+	return r.loadLevelTeams(ctx, levelID)
+}
+
 // insertLevels inserts levels and their users into the database within a transaction.
 func insertLevels(ctx context.Context, tx *sql.Tx, el *model.EscalationList) error {
 	for i := range el.Levels {
@@ -295,6 +344,15 @@ func insertLevels(ctx context.Context, tx *sql.Tx, el *model.EscalationList) err
 				 VALUES ($1, $2)`,
 				lv.ID, u.UserID); err != nil {
 				return fmt.Errorf("inserting escalation level user: %w", err)
+			}
+		}
+
+		for _, t := range lv.Teams {
+			if _, err := tx.ExecContext(ctx,
+				`INSERT INTO escalation_level_teams (escalation_level_id, team_id)
+				 VALUES ($1, $2)`,
+				lv.ID, t.TeamID); err != nil {
+				return fmt.Errorf("inserting escalation level team: %w", err)
 			}
 		}
 	}

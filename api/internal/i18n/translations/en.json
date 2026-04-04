@@ -44,5 +44,8 @@
   "email.sla_breach.level": "Escalation Level: <strong>{{level}}</strong>",
   "email.sla_breach.status": "Status: <strong>{{statusName}}</strong>",
   "email.sla_breach.cta": "View Work Item",
-  "email.sla_breach.footer": "You received this email because you are on the escalation list for this project. You can change your notification preferences in your Taskwondo settings."
+  "email.sla_breach.footer": "You received this email because you are on the escalation list for this project. You can change your notification preferences in your Taskwondo settings.",
+
+  "email.oncall.incoming.subject": "You are now on-call for {{teamName}}",
+  "email.oncall.outgoing.subject": "Your on-call shift for {{teamName}} has ended"
 }
