@@ -15,6 +15,7 @@ import { Tooltip } from '@/components/ui/Tooltip'
 import { Check, Trash2, Copy, Link, AlertTriangle, ArrowRightLeft, ChevronDown } from 'lucide-react'
 import { useNamespaceContext } from '@/contexts/NamespaceContext'
 import { useMigrateProject } from '@/hooks/useNamespaces'
+import { clearLastProjectKey } from '@/hooks/useLastProjectKey'
 import { NamespaceIcon } from '@/components/NamespaceIcon'
 import { UserSearchInput } from '@/components/UserSearchInput'
 import { MentionSearchModal } from '@/components/ui/MentionSearchModal'
@@ -204,7 +205,7 @@ export function ProjectSettingsPage() {
   function handleDelete() {
     deleteMutation.mutate(undefined, {
       onSuccess: () => {
-        localStorage.removeItem('taskwondo_last_project_key')
+        clearLastProjectKey()
         navigate(p('/projects'), { replace: true })
       },
       onError: (err) => {
@@ -990,7 +991,7 @@ export function ProjectSettingsPage() {
                 {
                   onSuccess: () => {
                     setShowTransferModal(false)
-                    localStorage.removeItem('taskwondo_last_project_key')
+                    clearLastProjectKey()
                     navigate(p('/projects'), { replace: true })
                   },
                   onError: (err) => {

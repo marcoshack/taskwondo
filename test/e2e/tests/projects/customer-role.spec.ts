@@ -224,4 +224,39 @@ test.describe('Customer role — project creation restriction', () => {
     // Cleanup
     await api.deactivateUser(request, adminToken, user.id).catch(() => {});
   });
+
+  test('customer with direct namespace membership sees regular shell (not portal-only)', async ({ page, request }) => {
+    const adminToken = getAdminToken();
+    const user = await createReadyUser(request, adminToken);
+
+    // Create a namespace and add the user as a direct member
+    const suffix = randomUUID().slice(0, 3).toLowerCase();
+    const nsSlug = `ns-nsmem-${suffix}`;
+    await api.createNamespace(request, adminToken, nsSlug, `NS Member Test ${suffix}`);
+    await api.addNamespaceMember(request, adminToken, nsSlug, user.id, 'member');
+
+    // Create a project owned by admin and add the user as customer
+    // (using default namespace so the user has no project memberships under nsSlug)
+    const projKey = `N${suffix.toUpperCase()}`;
+    await api.createProject(request, adminToken, projKey, `NS Mem Proj ${suffix}`);
+    await api.addMember(request, adminToken, projKey, user.id, 'customer');
+
+    // /me should report namespace_member_count > 0
+    const finalLogin = await api.login(request, user.email, user.password);
+    const me = await api.getMe(request, finalLogin.token);
+    expect(me.total_project_count).toBe(1);
+    expect(me.portal_projects?.length).toBe(1);
+    expect(me.namespace_member_count).toBeGreaterThanOrEqual(1);
+
+    // Login in the browser — should NOT auto-redirect to /portal because the user
+    // has broader access through namespace membership
+    await loginAs(page, page.context(), user.email, user.password);
+    await page.waitForLoadState('domcontentloaded');
+    await expect(page).not.toHaveURL(/\/portal\//, { timeout: 10000 });
+
+    // Cleanup
+    await api.removeNamespaceMember(request, adminToken, nsSlug, user.id).catch(() => {});
+    await api.deleteNamespace(request, adminToken, nsSlug).catch(() => {});
+    await api.deactivateUser(request, adminToken, user.id).catch(() => {});
+  });
 });

@@ -260,7 +260,7 @@ func testSetup(t *testing.T) (*AuthHandler, *service.AuthService, string) {
 		t.Fatal(err)
 	}
 
-	h := NewAuthHandler(authSvc, nil, nil)
+	h := NewAuthHandler(authSvc, nil, nil, nil)
 	return h, authSvc, token
 }
 
@@ -349,6 +349,97 @@ func TestMeHandler(t *testing.T) {
 	data := resp["data"].(map[string]interface{})
 	if data["email"] != "admin@test.com" {
 		t.Fatalf("expected email admin@test.com, got %v", data["email"])
+	}
+}
+
+// mockProjectMemberResolver implements PortalProjectResolver for tests.
+type mockProjectMemberResolver struct {
+	memberships []model.ProjectMemberWithProject
+}
+
+func (m *mockProjectMemberResolver) ListByUser(_ context.Context, _ uuid.UUID) ([]model.ProjectMemberWithProject, error) {
+	return m.memberships, nil
+}
+
+// mockNamespaceMemberResolver implements NamespaceMemberResolver for tests.
+type mockNamespaceMemberResolver struct {
+	count int
+}
+
+func (m *mockNamespaceMemberResolver) CountByUser(_ context.Context, _ uuid.UUID) (int, error) {
+	return m.count, nil
+}
+
+func TestPopulatePortalProjects_NamespaceMemberCount(t *testing.T) {
+	userID := uuid.New()
+
+	tests := []struct {
+		name                 string
+		memberships          []model.ProjectMemberWithProject
+		namespaceMemberCount int
+		wantPortalProjects   int
+		wantTotalProjects    int
+		wantNamespaceCount   int
+	}{
+		{
+			name: "customer in one project, no namespace memberships — portal-only",
+			memberships: []model.ProjectMemberWithProject{
+				{
+					ProjectMember: model.ProjectMember{Role: model.ProjectRoleCustomer},
+					ProjectKey:    "SUPPORT",
+					ProjectName:   "Support",
+					NamespaceSlug: "acme",
+				},
+			},
+			namespaceMemberCount: 0,
+			wantPortalProjects:   1,
+			wantTotalProjects:    1,
+			wantNamespaceCount:   0,
+		},
+		{
+			name: "customer in one project, also direct namespace member — not portal-only",
+			memberships: []model.ProjectMemberWithProject{
+				{
+					ProjectMember: model.ProjectMember{Role: model.ProjectRoleCustomer},
+					ProjectKey:    "SUPPORT",
+					ProjectName:   "Support",
+					NamespaceSlug: "acme",
+				},
+			},
+			namespaceMemberCount: 1,
+			wantPortalProjects:   1,
+			wantTotalProjects:    1,
+			wantNamespaceCount:   1,
+		},
+		{
+			name:                 "no project memberships, direct namespace member",
+			memberships:          nil,
+			namespaceMemberCount: 2,
+			wantPortalProjects:   0,
+			wantTotalProjects:    0,
+			wantNamespaceCount:   2,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			h := &AuthHandler{
+				memberRepo:   &mockProjectMemberResolver{memberships: tc.memberships},
+				nsMemberRepo: &mockNamespaceMemberResolver{count: tc.namespaceMemberCount},
+			}
+			var resp userResponse
+			h.populatePortalProjects(context.Background(), userID, &resp)
+
+			if len(resp.PortalProjects) != tc.wantPortalProjects {
+				t.Errorf("PortalProjects: got %d, want %d", len(resp.PortalProjects), tc.wantPortalProjects)
+			}
+			if resp.TotalProjectCount != tc.wantTotalProjects {
+				t.Errorf("TotalProjectCount: got %d, want %d", resp.TotalProjectCount, tc.wantTotalProjects)
+			}
+			if resp.NamespaceMemberCount != tc.wantNamespaceCount {
+				t.Errorf("NamespaceMemberCount: got %d, want %d", resp.NamespaceMemberCount, tc.wantNamespaceCount)
+			}
+		})
 	}
 }
 
@@ -863,7 +954,7 @@ func testSetupWithEmail(t *testing.T) (*AuthHandler, *service.AuthService, *hand
 	sender := &handlerMockEmailSender{}
 	authSvc.SetEmailVerification(verifRepo, settings, sender, "http://localhost:5173")
 
-	h := NewAuthHandler(authSvc, nil, nil)
+	h := NewAuthHandler(authSvc, nil, nil, nil)
 	return h, authSvc, settings
 }
 

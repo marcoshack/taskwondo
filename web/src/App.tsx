@@ -25,10 +25,11 @@ import { ProfilePage } from '@/pages/ProfilePage'
 import { useAuth } from '@/contexts/AuthContext'
 
 /** True when the user is a portal-only customer (single customer project, no other memberships). */
-function isPortalOnly(user: { portal_projects?: { project_key: string; namespace?: string }[]; total_project_count?: number } | null): boolean {
+function isPortalOnly(user: { portal_projects?: { project_key: string; namespace?: string }[]; total_project_count?: number; namespace_member_count?: number } | null): boolean {
   const pp = user?.portal_projects ?? []
   const total = user?.total_project_count ?? 0
-  return pp.length === 1 && total === 1
+  const nsMembers = user?.namespace_member_count ?? 0
+  return pp.length === 1 && total === 1 && nsMembers === 0
 }
 
 /** Redirect to stored namespace or default — portal-only users go to portal */

@@ -1658,7 +1658,7 @@ export async function deleteProject(
 export async function getMe(
   request: APIRequestContext,
   token: string,
-): Promise<{ id: string; email: string; global_role: string; portal_projects?: { project_key: string; namespace?: string }[]; total_project_count?: number }> {
+): Promise<{ id: string; email: string; global_role: string; portal_projects?: { project_key: string; namespace?: string }[]; total_project_count?: number; namespace_member_count?: number }> {
   const res = await request.get(`${BASE_URL}/api/v1/auth/me`, {
     headers: { Authorization: `Bearer ${token}` },
   });

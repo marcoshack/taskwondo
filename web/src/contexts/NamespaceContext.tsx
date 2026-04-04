@@ -7,6 +7,7 @@ import { usePublicSettings } from '@/hooks/useSystemSettings'
 import { useNamespaces } from '@/hooks/useNamespaces'
 import { setNamespaceSlug } from '@/api/client'
 import { toUrlSegment } from '@/hooks/useNamespacePath'
+import { clearLastProjectKey } from '@/hooks/useLastProjectKey'
 import type { Namespace } from '@/api/namespaces'
 
 const NAMESPACE_KEY = 'taskwondo_namespace'
@@ -82,7 +83,7 @@ export function NamespaceProvider({ children }: { children: ReactNode }) {
       setNamespaceSlug(isDefault ? null : slug)
 
       // Clear last project so the nav doesn't show a stale project from the old namespace
-      localStorage.removeItem('taskwondo_last_project_key')
+      clearLastProjectKey()
 
       // Remove namespace-scoped query cache so the new namespace starts fresh
       // (loading state instead of stale data/errors from the old namespace)

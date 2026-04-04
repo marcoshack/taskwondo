@@ -145,6 +145,18 @@ func (r *NamespaceMemberRepository) CountOwnedByUser(ctx context.Context, userID
 	return count, nil
 }
 
+// CountByUser returns the total number of direct namespace memberships for a user.
+func (r *NamespaceMemberRepository) CountByUser(ctx context.Context, userID uuid.UUID) (int, error) {
+	var count int
+	err := r.db.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM namespace_members WHERE user_id = $1`,
+		userID).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("counting namespace memberships for user: %w", err)
+	}
+	return count, nil
+}
+
 // CountByRole returns the number of members with a given role in a namespace.
 func (r *NamespaceMemberRepository) CountByRole(ctx context.Context, namespaceID uuid.UUID, role string) (int, error) {
 	var count int

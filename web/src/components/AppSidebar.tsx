@@ -6,6 +6,7 @@ import { useSidebar } from '@/contexts/SidebarContext'
 import { useNavigationGuard } from '@/contexts/NavigationGuardContext'
 import { useNamespacePath, toUrlSegment } from '@/hooks/useNamespacePath'
 import { useNamespaceContext } from '@/contexts/NamespaceContext'
+import { useLastProjectKey, setLastProjectKey } from '@/hooks/useLastProjectKey'
 import { NamespaceIcon } from '@/components/NamespaceIcon'
 import { CreateNamespaceModal } from '@/components/CreateNamespaceModal'
 import { useInboxCount } from '@/hooks/useInbox'
@@ -44,8 +45,6 @@ interface NavItem {
   badge?: number
 }
 
-const LAST_PROJECT_KEY = 'taskwondo_last_project_key'
-
 export function AppSidebar({ projectKey, customerProject, mobileOnly }: AppSidebarProps) {
   const { t } = useTranslation()
   const { p } = useNamespacePath()
@@ -70,19 +69,18 @@ export function AppSidebar({ projectKey, customerProject, mobileOnly }: AppSideb
     return () => document.removeEventListener('mousedown', handler)
   }, [nsDropdownOpen])
 
-  // Remember the last active project so sidebar persists on /projects and /user pages
-  const [lastProjectKey, setLastProjectKey] = useState<string | undefined>(
-    () => projectKey ?? localStorage.getItem(LAST_PROJECT_KEY) ?? undefined,
-  )
+  // Remember the last active project so sidebar persists on /projects and /user pages.
+  // Backed by useSyncExternalStore in useLastProjectKey so all components stay in sync
+  // when the stored key is cleared (e.g. the remembered project no longer exists).
+  const storedLastProjectKey = useLastProjectKey()
 
   useEffect(() => {
-    if (projectKey) {
+    if (projectKey && projectKey !== storedLastProjectKey) {
       setLastProjectKey(projectKey)
-      localStorage.setItem(LAST_PROJECT_KEY, projectKey)
     }
-  }, [projectKey])
+  }, [projectKey, storedLastProjectKey])
 
-  const activeProjectKey = projectKey ?? lastProjectKey
+  const activeProjectKey = projectKey ?? storedLastProjectKey ?? undefined
   const { user } = useAuth()
 
   // Detect customer project: explicit prop or derived from portal_projects for the remembered project

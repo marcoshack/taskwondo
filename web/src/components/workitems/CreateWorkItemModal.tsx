@@ -5,6 +5,7 @@ import { WorkItemForm } from '@/components/workitems/WorkItemForm'
 import { useAllProjects, useMembers } from '@/hooks/useProjects'
 import { useCreateWorkItem } from '@/hooks/useWorkItems'
 import { useMilestones } from '@/hooks/useMilestones'
+import { useLastProjectKey } from '@/hooks/useLastProjectKey'
 import { getLocalizedError } from '@/utils/apiError'
 
 interface CreateWorkItemModalProps {
@@ -18,8 +19,9 @@ interface CreateWorkItemModalProps {
 
 export function CreateWorkItemModal({ open, onClose, lockedProjectKey, onCreated }: CreateWorkItemModalProps) {
   const { t } = useTranslation()
+  const lastProjectKey = useLastProjectKey()
   const [selectedProjectKey, setSelectedProjectKey] = useState(
-    lockedProjectKey ?? localStorage.getItem('taskwondo_last_project_key') ?? '',
+    lockedProjectKey ?? lastProjectKey ?? '',
   )
   const activeProjectKey = lockedProjectKey ?? selectedProjectKey
 
@@ -33,7 +35,7 @@ export function CreateWorkItemModal({ open, onClose, lockedProjectKey, onCreated
 
   function handleClose() {
     createMutation.reset()
-    setSelectedProjectKey(lockedProjectKey ?? localStorage.getItem('taskwondo_last_project_key') ?? '')
+    setSelectedProjectKey(lockedProjectKey ?? lastProjectKey ?? '')
     onClose()
   }
 

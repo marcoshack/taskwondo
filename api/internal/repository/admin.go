@@ -70,7 +70,9 @@ WHERE p.deleted_at IS NULL
 	}
 	defer rows.Close()
 
-	var items []model.AdminProject
+	// Initialize as empty (non-nil) slice so JSON marshals to [] instead of null
+	// when there are no projects — the frontend expects an array.
+	items := make([]model.AdminProject, 0)
 	for rows.Next() {
 		var p model.AdminProject
 		if err := rows.Scan(
@@ -141,7 +143,9 @@ WHERE ($1 = '' OR n.slug ILIKE '%' || $1 || '%' OR n.display_name ILIKE '%' || $
 	}
 	defer rows.Close()
 
-	var items []model.AdminNamespace
+	// Initialize as empty (non-nil) slice so JSON marshals to [] instead of null
+	// when there are no namespaces — the frontend expects an array.
+	items := make([]model.AdminNamespace, 0)
 	for rows.Next() {
 		var ns model.AdminNamespace
 		if err := rows.Scan(

@@ -9,6 +9,7 @@ import { useNamespaceContext } from '@/contexts/NamespaceContext'
 import { useSidebar } from '@/contexts/SidebarContext'
 import { useNavigationGuard } from '@/contexts/NavigationGuardContext'
 import { useProject, useAllProjects } from '@/hooks/useProjects'
+import { useLastProjectKey, clearLastProjectKey } from '@/hooks/useLastProjectKey'
 import { Avatar } from '@/components/ui/Avatar'
 import { Modal } from '@/components/ui/Modal'
 import { ProjectKeyBadge } from '@/components/ui/ProjectKeyBadge'
@@ -66,9 +67,19 @@ export function AppShell() {
   const adminMatch = useMatch('/admin/*')
   const preferencesMatch = useMatch('/preferences/*')
   const routeProjectKey = projectMatch?.params.projectKey
-  const lastProjectKey = localStorage.getItem('taskwondo_last_project_key') ?? undefined
+  const lastProjectKey = useLastProjectKey() ?? undefined
   const activeProjectKey = routeProjectKey ?? lastProjectKey
-  const { data: activeProject } = useProject(activeProjectKey ?? '')
+  const { data: activeProject, error: activeProjectError } = useProject(activeProjectKey ?? '')
+
+  // If the remembered project no longer exists (e.g. deleted or DB reset), clear
+  // the stored key so the sidebar and top bar don't show a stale reference.
+  useEffect(() => {
+    if (routeProjectKey || !lastProjectKey || !activeProjectError) return
+    const status = (activeProjectError as { response?: { status?: number } })?.response?.status
+    if (status === 404 || status === 403) {
+      clearLastProjectKey()
+    }
+  }, [routeProjectKey, lastProjectKey, activeProjectError])
 
   useEffect(() => {
     if (!menuOpen && !nsDropdownOpen) return

@@ -26,16 +26,22 @@ type PortalProjectResolver interface {
 	ListByUser(ctx context.Context, userID uuid.UUID) ([]model.ProjectMemberWithProject, error)
 }
 
+// NamespaceMemberResolver looks up a user's direct namespace memberships.
+type NamespaceMemberResolver interface {
+	CountByUser(ctx context.Context, userID uuid.UUID) (int, error)
+}
+
 // AuthHandler handles authentication endpoints.
 type AuthHandler struct {
-	auth       *service.AuthService
-	invites    InviteAcceptor
-	memberRepo PortalProjectResolver
+	auth         *service.AuthService
+	invites      InviteAcceptor
+	memberRepo   PortalProjectResolver
+	nsMemberRepo NamespaceMemberResolver
 }
 
 // NewAuthHandler creates a new AuthHandler.
-func NewAuthHandler(auth *service.AuthService, invites InviteAcceptor, memberRepo PortalProjectResolver) *AuthHandler {
-	return &AuthHandler{auth: auth, invites: invites, memberRepo: memberRepo}
+func NewAuthHandler(auth *service.AuthService, invites InviteAcceptor, memberRepo PortalProjectResolver, nsMemberRepo NamespaceMemberResolver) *AuthHandler {
+	return &AuthHandler{auth: auth, invites: invites, memberRepo: memberRepo, nsMemberRepo: nsMemberRepo}
 }
 
 type loginRequest struct {
@@ -50,13 +56,14 @@ type portalProjectInfo struct {
 }
 
 type userResponse struct {
-	ID                uuid.UUID          `json:"id"`
-	Email             string             `json:"email"`
-	DisplayName       string             `json:"display_name"`
-	GlobalRole        string             `json:"global_role"`
-	AvatarURL         *string            `json:"avatar_url,omitempty"`
-	PortalProjects    []portalProjectInfo `json:"portal_projects,omitempty"`
-	TotalProjectCount int                `json:"total_project_count,omitempty"`
+	ID                   uuid.UUID           `json:"id"`
+	Email                string              `json:"email"`
+	DisplayName          string              `json:"display_name"`
+	GlobalRole           string              `json:"global_role"`
+	AvatarURL            *string             `json:"avatar_url,omitempty"`
+	PortalProjects       []portalProjectInfo `json:"portal_projects,omitempty"`
+	TotalProjectCount    int                 `json:"total_project_count,omitempty"`
+	NamespaceMemberCount int                 `json:"namespace_member_count,omitempty"`
 }
 
 func toUserResponse(u *model.User) userResponse {
@@ -153,27 +160,33 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 	writeData(w, http.StatusOK, resp)
 }
 
-// populatePortalProjects adds customer-role project memberships and total project count to the user response.
+// populatePortalProjects adds customer-role project memberships, total project count, and
+// direct namespace membership count to the user response. These fields are used by the
+// frontend to decide whether the user should see the portal-only view or the regular shell.
 func (h *AuthHandler) populatePortalProjects(ctx context.Context, userID uuid.UUID, resp *userResponse) {
-	if h.memberRepo == nil {
-		return
-	}
-	memberships, err := h.memberRepo.ListByUser(ctx, userID)
-	if err != nil {
-		return
-	}
-	resp.TotalProjectCount = len(memberships)
-	for _, m := range memberships {
-		if m.Role == model.ProjectRoleCustomer {
-			ns := m.NamespaceSlug
-			if ns == "default" {
-				ns = "d"
+	if h.memberRepo != nil {
+		memberships, err := h.memberRepo.ListByUser(ctx, userID)
+		if err == nil {
+			resp.TotalProjectCount = len(memberships)
+			for _, m := range memberships {
+				if m.Role == model.ProjectRoleCustomer {
+					ns := m.NamespaceSlug
+					if ns == "default" {
+						ns = "d"
+					}
+					resp.PortalProjects = append(resp.PortalProjects, portalProjectInfo{
+						ProjectKey:  m.ProjectKey,
+						ProjectName: m.ProjectName,
+						Namespace:   ns,
+					})
+				}
 			}
-			resp.PortalProjects = append(resp.PortalProjects, portalProjectInfo{
-				ProjectKey:  m.ProjectKey,
-				ProjectName: m.ProjectName,
-				Namespace:   ns,
-			})
+		}
+	}
+
+	if h.nsMemberRepo != nil {
+		if count, err := h.nsMemberRepo.CountByUser(ctx, userID); err == nil {
+			resp.NamespaceMemberCount = count
 		}
 	}
 }

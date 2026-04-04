@@ -14,6 +14,7 @@ export interface User {
   avatar_url?: string
   portal_projects?: PortalProject[]
   total_project_count?: number
+  namespace_member_count?: number
 }
 
 interface LoginResponse {
