@@ -37,8 +37,8 @@ interface DataResponse<T> {
   data: T
 }
 
-export async function listMilestones(projectKey: string) {
-  const res = await api.get<DataResponse<Milestone[]>>(`${nsPrefix()}/projects/${projectKey}/milestones`)
+export async function listMilestones(projectKey: string, namespaceSlug?: string) {
+  const res = await api.get<DataResponse<Milestone[]>>(`${nsPrefix(namespaceSlug)}/projects/${projectKey}/milestones`)
   return res.data.data
 }
 

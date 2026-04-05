@@ -144,8 +144,21 @@ export default function WatchlistPage() {
     (projects ?? []).map((p) => ({ value: p.key, label: p.name })),
   [projects])
 
-  // Use first selected project (or first available) for project-scoped data (statuses, members, milestones)
-  const primaryProject = selectedProjects[0] || (projects?.[0]?.key ?? '')
+  // Use the first selected project (or first available) for project-scoped
+  // data (statuses, members, milestones). Customer-role projects must be
+  // skipped here — the /members, /milestones, and /workflows endpoints are
+  // blocked by the ExcludeCustomer middleware and return 404 for them, which
+  // would spam the console with errors for users who are customers in some
+  // of their current-namespace projects.
+  const primaryProject = useMemo(() => {
+    const list = projects ?? []
+    const firstSelected = selectedProjects[0]
+    if (firstSelected) {
+      const proj = list.find((p) => p.key === firstSelected)
+      if (proj && proj.member_role !== 'customer') return firstSelected
+    }
+    return list.find((p) => p.member_role !== 'customer')?.key ?? ''
+  }, [projects, selectedProjects])
   const isSingleProject = selectedProjects.length === 1
 
   // Project-scoped data

@@ -10,10 +10,16 @@ import {
   type UpdateMilestoneInput,
 } from '@/api/milestones'
 
-export function useMilestones(projectKey: string) {
+export function useMilestones(projectKey: string, namespaceSlug?: string) {
   return useQuery({
-    queryKey: ['projects', projectKey, 'milestones'],
-    queryFn: () => listMilestones(projectKey),
+    // Scope the cache by namespace when provided so two projects that happen
+    // to share the same key in different namespaces don't collide. Keep the
+    // short key shape when no override is passed to preserve existing
+    // invalidations.
+    queryKey: namespaceSlug
+      ? ['projects', namespaceSlug, projectKey, 'milestones']
+      : ['projects', projectKey, 'milestones'],
+    queryFn: () => listMilestones(projectKey, namespaceSlug),
     enabled: !!projectKey,
   })
 }

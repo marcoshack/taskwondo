@@ -51,10 +51,13 @@ export function useWorkItem(projectKey: string, itemNumber: number) {
   })
 }
 
-export function useCreateWorkItem(projectKey: string) {
+export function useCreateWorkItem(projectKey: string, namespaceSlug?: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: CreateWorkItemInput) => createWorkItem(projectKey, input),
+    // `namespaceSlug` is required when the target project lives in a namespace
+    // other than the currently active one — e.g. the cross-namespace picker in
+    // the Inbox "New Item" modal.
+    mutationFn: (input: CreateWorkItemInput) => createWorkItem(projectKey, input, namespaceSlug),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['projects', projectKey, 'items'] })
     },

@@ -191,8 +191,8 @@ export async function getWorkItem(projectKey: string, itemNumber: number) {
   return res.data.data
 }
 
-export async function createWorkItem(projectKey: string, input: CreateWorkItemInput) {
-  const res = await api.post<DataResponse<WorkItem>>(`${nsPrefix()}/projects/${projectKey}/items`, input)
+export async function createWorkItem(projectKey: string, input: CreateWorkItemInput, namespaceSlug?: string) {
+  const res = await api.post<DataResponse<WorkItem>>(`${nsPrefix(namespaceSlug)}/projects/${projectKey}/items`, input)
   return res.data.data
 }
 

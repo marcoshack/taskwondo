@@ -63,10 +63,16 @@ export function useProject(projectKey: string) {
   })
 }
 
-export function useMembers(projectKey: string) {
+export function useMembers(projectKey: string, namespaceSlug?: string) {
   const query = useQuery({
-    queryKey: ['projects', projectKey, 'members'],
-    queryFn: () => listMembers(projectKey),
+    // Scope the cache by namespace when provided so two projects that happen
+    // to share the same key in different namespaces don't collide. Keep the
+    // short key shape when no override is passed to preserve existing
+    // invalidations.
+    queryKey: namespaceSlug
+      ? ['projects', namespaceSlug, projectKey, 'members']
+      : ['projects', projectKey, 'members'],
+    queryFn: () => listMembers(projectKey, namespaceSlug),
     enabled: !!projectKey,
   })
   return {

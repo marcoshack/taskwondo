@@ -16,9 +16,16 @@ export function getNamespaceSlug(): string | null {
   return activeNamespaceSlug
 }
 
-/** Returns the namespace path prefix for project-scoped API routes. */
-export function nsPrefix(): string {
-  return `/${activeNamespaceSlug || 'default'}`
+/**
+ * Returns the namespace path prefix for project-scoped API routes.
+ *
+ * Pass an explicit `slug` when the target project lives in a namespace other
+ * than the currently active one (e.g. the cross-namespace project picker in
+ * the Inbox "New Item" modal). Without the override, requests would use the
+ * currently selected namespace and hit the wrong URL.
+ */
+export function nsPrefix(slug?: string): string {
+  return `/${slug || activeNamespaceSlug || 'default'}`
 }
 
 export const api = axios.create({
