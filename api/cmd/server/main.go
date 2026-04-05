@@ -430,113 +430,9 @@ func main() {
 				r.Get("/", projects.List)
 				r.Post("/", projects.Create)
 				r.Route("/{projectKey}", func(r chi.Router) {
-					r.Use(middleware.ExcludeCustomer(projectRepo, projectMemberRepo))
-					r.Get("/", projects.Get)
-					r.Patch("/", projects.Update)
-					r.Delete("/", projects.Delete)
-					r.Route("/"+handler.PathMembers, func(r chi.Router) {
-						r.Get("/", projects.ListMembers)
-						r.Post("/", projects.AddMember)
-						r.Patch("/{userId}", projects.UpdateMemberRole)
-						r.Delete("/{userId}", projects.RemoveMember)
-					})
-					r.Route("/"+handler.PathInvites, func(r chi.Router) {
-						r.Get("/", projects.ListInvites)
-						r.Post("/", projects.CreateInvite)
-						r.Delete("/{inviteId}", projects.DeleteInvite)
-					})
-					r.Route("/"+handler.PathTypeWorkflows, func(r chi.Router) {
-						r.Get("/", projects.ListTypeWorkflows)
-						r.Put("/{type}", projects.UpdateTypeWorkflow)
-					})
-					r.Route("/"+handler.PathWorkflows, func(r chi.Router) {
-						r.Get("/", workflows.ListProjectWorkflows)
-						r.Get("/statuses", workflows.ListAvailableStatuses)
-						r.Post("/", workflows.CreateProjectWorkflow)
-						r.Route("/{workflowId}", func(r chi.Router) {
-							r.Get("/", workflows.GetProjectWorkflow)
-							r.Patch("/", workflows.UpdateProjectWorkflow)
-							r.Delete("/", workflows.DeleteProjectWorkflow)
-						})
-					})
-					r.Route("/"+handler.PathQueues, func(r chi.Router) {
-						r.Get("/", queues.List)
-						r.Post("/", queues.Create)
-						r.Route("/{queueId}", func(r chi.Router) {
-							r.Get("/", queues.Get)
-							r.Patch("/", queues.Update)
-							r.Delete("/", queues.Delete)
-							r.Route("/categories", func(r chi.Router) {
-								r.Get("/", queues.ListCategories)
-								r.Post("/", queues.CreateCategory)
-								r.Route("/{categoryId}", func(r chi.Router) {
-									r.Patch("/", queues.UpdateCategory)
-									r.Delete("/", queues.DeleteCategory)
-								})
-							})
-							r.Route("/teams", func(r chi.Router) {
-								r.Get("/", queues.ListQueueTeams)
-								r.Post("/", queues.AssignQueueTeam)
-								r.Delete("/{teamId}", queues.UnassignQueueTeam)
-							})
-						})
-					})
-					r.Route("/"+handler.PathTeams, func(r chi.Router) {
-						r.Get("/", teams.List)
-						r.Post("/", teams.Create)
-						r.Route("/{teamId}", func(r chi.Router) {
-							r.Get("/", teams.Get)
-							r.Patch("/", teams.Update)
-							r.Delete("/", teams.Delete)
-							r.Route("/members", func(r chi.Router) {
-								r.Get("/", teams.ListMembers)
-								r.Post("/", teams.AddMember)
-								r.Delete("/{userId}", teams.RemoveMember)
-							})
-							r.Route("/"+handler.PathOncall, func(r chi.Router) {
-								r.Get("/", oncall.Get)
-								r.Post("/", oncall.Create)
-								r.Patch("/", oncall.Update)
-								r.Delete("/", oncall.Delete)
-								r.Get("/history", oncall.ListHistory)
-							})
-						})
-					})
-					r.Route("/"+handler.PathSavedSearches, func(r chi.Router) {
-						r.Get("/", savedSearches.List)
-						r.Post("/", savedSearches.Create)
-						r.Route("/{searchId}", func(r chi.Router) {
-							r.Patch("/", savedSearches.Update)
-							r.Delete("/", savedSearches.Delete)
-						})
-					})
-					r.Route("/"+handler.PathSLATargets, func(r chi.Router) {
-						r.Get("/", sla.List)
-						r.Put("/", sla.BulkUpsert)
-						r.Delete("/{targetId}", sla.Delete)
-					})
-					r.Route("/"+handler.PathEscalationLists, func(r chi.Router) {
-						r.Get("/", escalations.List)
-						r.Post("/", escalations.Create)
-						r.Get("/mappings", escalations.ListMappings)
-						r.Put("/mappings/{type}", escalations.UpdateMapping)
-						r.Delete("/mappings/{type}", escalations.DeleteMapping)
-						r.Route("/{listId}", func(r chi.Router) {
-							r.Get("/", escalations.Get)
-							r.Put("/", escalations.Update)
-							r.Delete("/", escalations.Delete)
-						})
-					})
-					r.Route("/"+handler.PathMilestones, func(r chi.Router) {
-						r.Get("/", milestones.List)
-						r.Post("/", milestones.Create)
-						r.Route("/{milestoneId}", func(r chi.Router) {
-							r.Get("/", milestones.Get)
-							r.Patch("/", milestones.Update)
-							r.Delete("/", milestones.Delete)
-							r.Get("/stats", milestones.Stats)
-						})
-					})
+					// User settings (e.g. notifications preferences) must be accessible
+					// to every project member, including users with the customer role,
+					// so they are registered outside the ExcludeCustomer group below.
 					r.Route("/"+handler.PathUserSettings, func(r chi.Router) {
 						r.Get("/", userSettings.List)
 						r.Route("/{key}", func(r chi.Router) {
@@ -545,47 +441,158 @@ func main() {
 							r.Delete("/", userSettings.Delete)
 						})
 					})
-					r.Route("/"+handler.PathStats, func(r chi.Router) {
-						r.Get("/timeline", stats.Timeline)
-					})
-					r.Route("/"+handler.PathItems, func(r chi.Router) {
-						r.Get("/", items.List)
-						r.Post("/", items.Create)
-						r.Route("/{itemNumber}", func(r chi.Router) {
-							r.Get("/", items.Get)
-							r.Patch("/", items.Update)
-							r.Delete("/", items.Delete)
-							r.Route("/"+handler.PathComments, func(r chi.Router) {
-								r.Get("/", items.ListComments)
-								r.Post("/", items.CreateComment)
-								r.Patch("/{commentId}", items.UpdateComment)
-								r.Delete("/{commentId}", items.DeleteComment)
+
+					// All other project-scoped routes exclude customer role users.
+					r.Group(func(r chi.Router) {
+						r.Use(middleware.ExcludeCustomer(projectRepo, projectMemberRepo))
+						r.Get("/", projects.Get)
+						r.Patch("/", projects.Update)
+						r.Delete("/", projects.Delete)
+						r.Route("/"+handler.PathMembers, func(r chi.Router) {
+							r.Get("/", projects.ListMembers)
+							r.Post("/", projects.AddMember)
+							r.Patch("/{userId}", projects.UpdateMemberRole)
+							r.Delete("/{userId}", projects.RemoveMember)
+						})
+						r.Route("/"+handler.PathInvites, func(r chi.Router) {
+							r.Get("/", projects.ListInvites)
+							r.Post("/", projects.CreateInvite)
+							r.Delete("/{inviteId}", projects.DeleteInvite)
+						})
+						r.Route("/"+handler.PathTypeWorkflows, func(r chi.Router) {
+							r.Get("/", projects.ListTypeWorkflows)
+							r.Put("/{type}", projects.UpdateTypeWorkflow)
+						})
+						r.Route("/"+handler.PathWorkflows, func(r chi.Router) {
+							r.Get("/", workflows.ListProjectWorkflows)
+							r.Get("/statuses", workflows.ListAvailableStatuses)
+							r.Post("/", workflows.CreateProjectWorkflow)
+							r.Route("/{workflowId}", func(r chi.Router) {
+								r.Get("/", workflows.GetProjectWorkflow)
+								r.Patch("/", workflows.UpdateProjectWorkflow)
+								r.Delete("/", workflows.DeleteProjectWorkflow)
 							})
-							r.Route("/"+handler.PathRelations, func(r chi.Router) {
-								r.Get("/", items.ListRelations)
-								r.Post("/", items.CreateRelation)
-								r.Delete("/{relationId}", items.DeleteRelation)
+						})
+						r.Route("/"+handler.PathQueues, func(r chi.Router) {
+							r.Get("/", queues.List)
+							r.Post("/", queues.Create)
+							r.Route("/{queueId}", func(r chi.Router) {
+								r.Get("/", queues.Get)
+								r.Patch("/", queues.Update)
+								r.Delete("/", queues.Delete)
+								r.Route("/categories", func(r chi.Router) {
+									r.Get("/", queues.ListCategories)
+									r.Post("/", queues.CreateCategory)
+									r.Route("/{categoryId}", func(r chi.Router) {
+										r.Patch("/", queues.UpdateCategory)
+										r.Delete("/", queues.DeleteCategory)
+									})
+								})
+								r.Route("/teams", func(r chi.Router) {
+									r.Get("/", queues.ListQueueTeams)
+									r.Post("/", queues.AssignQueueTeam)
+									r.Delete("/{teamId}", queues.UnassignQueueTeam)
+								})
 							})
-							r.Route("/"+handler.PathAttachments, func(r chi.Router) {
-								r.Get("/", items.ListAttachments)
-								r.Post("/", items.UploadAttachment)
-								r.Get("/{attachmentId}", items.DownloadAttachment)
-								r.Patch("/{attachmentId}", items.UpdateAttachmentComment)
-								r.Delete("/{attachmentId}", items.DeleteAttachment)
+						})
+						r.Route("/"+handler.PathTeams, func(r chi.Router) {
+							r.Get("/", teams.List)
+							r.Post("/", teams.Create)
+							r.Route("/{teamId}", func(r chi.Router) {
+								r.Get("/", teams.Get)
+								r.Patch("/", teams.Update)
+								r.Delete("/", teams.Delete)
+								r.Route("/members", func(r chi.Router) {
+									r.Get("/", teams.ListMembers)
+									r.Post("/", teams.AddMember)
+									r.Delete("/{userId}", teams.RemoveMember)
+								})
+								r.Route("/"+handler.PathOncall, func(r chi.Router) {
+									r.Get("/", oncall.Get)
+									r.Post("/", oncall.Create)
+									r.Patch("/", oncall.Update)
+									r.Delete("/", oncall.Delete)
+									r.Get("/history", oncall.ListHistory)
+								})
 							})
-							r.Route("/"+handler.PathTimeEntries, func(r chi.Router) {
-								r.Get("/", items.ListTimeEntries)
-								r.Post("/", items.CreateTimeEntry)
-								r.Patch("/{timeEntryId}", items.UpdateTimeEntry)
-								r.Delete("/{timeEntryId}", items.DeleteTimeEntry)
+						})
+						r.Route("/"+handler.PathSavedSearches, func(r chi.Router) {
+							r.Get("/", savedSearches.List)
+							r.Post("/", savedSearches.Create)
+							r.Route("/{searchId}", func(r chi.Router) {
+								r.Patch("/", savedSearches.Update)
+								r.Delete("/", savedSearches.Delete)
 							})
-							r.Route("/"+handler.PathWatchers, func(r chi.Router) {
-								r.Get("/", items.ListWatchers)
-								r.Post("/", items.AddWatcher)
-								r.Delete("/{userId}", items.RemoveWatcher)
+						})
+						r.Route("/"+handler.PathSLATargets, func(r chi.Router) {
+							r.Get("/", sla.List)
+							r.Put("/", sla.BulkUpsert)
+							r.Delete("/{targetId}", sla.Delete)
+						})
+						r.Route("/"+handler.PathEscalationLists, func(r chi.Router) {
+							r.Get("/", escalations.List)
+							r.Post("/", escalations.Create)
+							r.Get("/mappings", escalations.ListMappings)
+							r.Put("/mappings/{type}", escalations.UpdateMapping)
+							r.Delete("/mappings/{type}", escalations.DeleteMapping)
+							r.Route("/{listId}", func(r chi.Router) {
+								r.Get("/", escalations.Get)
+								r.Put("/", escalations.Update)
+								r.Delete("/", escalations.Delete)
 							})
-							r.Post("/watch", items.ToggleWatch)
-							r.Get("/"+handler.PathEvents, items.ListEvents)
+						})
+						r.Route("/"+handler.PathMilestones, func(r chi.Router) {
+							r.Get("/", milestones.List)
+							r.Post("/", milestones.Create)
+							r.Route("/{milestoneId}", func(r chi.Router) {
+								r.Get("/", milestones.Get)
+								r.Patch("/", milestones.Update)
+								r.Delete("/", milestones.Delete)
+								r.Get("/stats", milestones.Stats)
+							})
+						})
+						r.Route("/"+handler.PathStats, func(r chi.Router) {
+							r.Get("/timeline", stats.Timeline)
+						})
+						r.Route("/"+handler.PathItems, func(r chi.Router) {
+							r.Get("/", items.List)
+							r.Post("/", items.Create)
+							r.Route("/{itemNumber}", func(r chi.Router) {
+								r.Get("/", items.Get)
+								r.Patch("/", items.Update)
+								r.Delete("/", items.Delete)
+								r.Route("/"+handler.PathComments, func(r chi.Router) {
+									r.Get("/", items.ListComments)
+									r.Post("/", items.CreateComment)
+									r.Patch("/{commentId}", items.UpdateComment)
+									r.Delete("/{commentId}", items.DeleteComment)
+								})
+								r.Route("/"+handler.PathRelations, func(r chi.Router) {
+									r.Get("/", items.ListRelations)
+									r.Post("/", items.CreateRelation)
+									r.Delete("/{relationId}", items.DeleteRelation)
+								})
+								r.Route("/"+handler.PathAttachments, func(r chi.Router) {
+									r.Get("/", items.ListAttachments)
+									r.Post("/", items.UploadAttachment)
+									r.Get("/{attachmentId}", items.DownloadAttachment)
+									r.Patch("/{attachmentId}", items.UpdateAttachmentComment)
+									r.Delete("/{attachmentId}", items.DeleteAttachment)
+								})
+								r.Route("/"+handler.PathTimeEntries, func(r chi.Router) {
+									r.Get("/", items.ListTimeEntries)
+									r.Post("/", items.CreateTimeEntry)
+									r.Patch("/{timeEntryId}", items.UpdateTimeEntry)
+									r.Delete("/{timeEntryId}", items.DeleteTimeEntry)
+								})
+								r.Route("/"+handler.PathWatchers, func(r chi.Router) {
+									r.Get("/", items.ListWatchers)
+									r.Post("/", items.AddWatcher)
+									r.Delete("/{userId}", items.RemoveWatcher)
+								})
+								r.Post("/watch", items.ToggleWatch)
+								r.Get("/"+handler.PathEvents, items.ListEvents)
+							})
 						})
 					})
 				})
