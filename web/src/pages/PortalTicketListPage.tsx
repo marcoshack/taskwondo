@@ -17,6 +17,12 @@ import { Plus, Search, CalendarPlus, History, Settings } from 'lucide-react'
 
 const PRIORITIES = ['low', 'medium', 'high', 'critical'] as const
 
+function getDescriptionPreview(description: string): string {
+  const line = description.split('\n').find(l => l.trim() !== '')
+  if (!line) return ''
+  return line.trim().replace(/^#+\s+/, '').replace(/[*_~`[\]]/g, '')
+}
+
 export function PortalTicketListPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -85,7 +91,8 @@ export function PortalTicketListPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      {/* Mobile header */}
+      <div className="flex sm:hidden items-center justify-between mb-6">
         <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
           {t('portal.myTickets')}
         </h1>
@@ -144,9 +151,12 @@ export function PortalTicketListPage() {
         </form>
       </Modal>
 
-      {/* Desktop toolbar */}
+      {/* Desktop header + toolbar (single row) */}
       <div className="hidden sm:flex items-center gap-3 mb-4">
-        <div className="relative w-1/2">
+        <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
+          {t('portal.myTickets')}
+        </h1>
+        <div className="relative flex-1 mx-3">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
             placeholder={t('common.search')}
@@ -155,33 +165,37 @@ export function PortalTicketListPage() {
             className="pl-9"
           />
         </div>
-        <div className="flex items-center gap-3 ml-auto">
-          <label className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 cursor-pointer select-none whitespace-nowrap">
-            {t('portal.hideCompleted')}
-            <button
-              type="button"
-              role="switch"
-              aria-checked={hideCompleted}
-              onClick={() => setPreferenceMutation.mutate({ key: 'portal_hide_completed', value: !hideCompleted })}
-              className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors ${
-                hideCompleted ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-600'
-              }`}
-            >
-              <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow ring-0 transition-transform ${
-                hideCompleted ? 'translate-x-4' : 'translate-x-0'
-              }`} />
-            </button>
-          </label>
-          <RefreshButton
-            interval={refreshInterval}
-            onIntervalChange={(val) => {
-              setRefreshInterval(val)
-              setPreferenceMutation.mutate({ key: 'portal_refresh_interval', value: val })
-            }}
-            onRefresh={() => refetch()}
-            isRefreshing={isFetching}
-          />
-        </div>
+        <label className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 cursor-pointer select-none whitespace-nowrap">
+          {t('portal.hideCompleted')}
+          <button
+            type="button"
+            role="switch"
+            aria-checked={hideCompleted}
+            onClick={() => setPreferenceMutation.mutate({ key: 'portal_hide_completed', value: !hideCompleted })}
+            className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors ${
+              hideCompleted ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-600'
+            }`}
+          >
+            <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow ring-0 transition-transform ${
+              hideCompleted ? 'translate-x-4' : 'translate-x-0'
+            }`} />
+          </button>
+        </label>
+        <RefreshButton
+          interval={refreshInterval}
+          onIntervalChange={(val) => {
+            setRefreshInterval(val)
+            setPreferenceMutation.mutate({ key: 'portal_refresh_interval', value: val })
+          }}
+          onRefresh={() => refetch()}
+          isRefreshing={isFetching}
+        />
+        {hasPublicQueue && (
+          <Button onClick={() => setCreateOpen(true)}>
+            <Plus className="h-4 w-4 mr-1" />
+            {t('portal.createTicket')}
+          </Button>
+        )}
       </div>
 
       {/* Mobile toolbar */}
@@ -251,33 +265,63 @@ export function PortalTicketListPage() {
                 to={`${ticket.item_number}`}
                 className="block rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors"
               >
-                {/* Row 1: Display ID + badges */}
-                <ScrollableRow contentClassName="gap-2" gradientFrom="from-white dark:from-gray-800">
-                  <span className={`shrink-0 font-mono text-sm font-semibold ${isCompleted ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'}`}>{ticket.display_id}</span>
+                {/* Desktop: single row */}
+                <div className="hidden sm:flex sm:items-center sm:gap-4">
+                  <span className={`shrink-0 font-mono text-sm font-semibold ${isCompleted ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'}`}>
+                    {ticket.display_id}
+                  </span>
+                  <p className={`flex-1 min-w-0 truncate text-sm ${!isCompleted && ticket.description ? 'text-gray-400 dark:text-gray-500' : ''}`}>
+                    <span className={isCompleted ? 'line-through text-gray-400 dark:text-gray-500' : 'font-medium text-gray-900 dark:text-gray-100'}>
+                      {ticket.title}
+                    </span>
+                    {ticket.description && !isCompleted && (
+                      <span className="font-normal text-xs"> – {getDescriptionPreview(ticket.description)}</span>
+                    )}
+                  </p>
                   <span className="shrink-0 inline-flex"><StatusBadge status={ticket.status} /></span>
                   <span className={`shrink-0 inline-flex ${isCompleted ? 'opacity-40' : ''}`}><PriorityBadge priority={ticket.priority} /></span>
-                </ScrollableRow>
-                {/* Row 2: Dates */}
-                <ScrollableRow className="mt-1.5" contentClassName={`gap-4 text-xs ${isCompleted ? 'text-gray-300 dark:text-gray-600' : 'text-gray-400 dark:text-gray-500'}`} gradientFrom="from-white dark:from-gray-800">
-                  <span className="inline-flex items-center gap-1 shrink-0">
-                    <CalendarPlus className="h-3.5 w-3.5" />
-                    {new Date(ticket.created_at).toLocaleString()}
-                  </span>
-                  <span className="inline-flex items-center gap-1 shrink-0">
-                    <History className="h-3.5 w-3.5" />
-                    {new Date(ticket.updated_at).toLocaleString()}
-                  </span>
-                </ScrollableRow>
-                {/* Row 3: Title */}
-                <p className={`mt-1.5 text-base font-medium truncate ${isCompleted ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'}`}>
-                  {ticket.title}
-                </p>
-                {/* Row 4: Description preview */}
-                {ticket.description && (
-                  <p className={`mt-0.5 text-xs truncate ${isCompleted ? 'text-gray-300 dark:text-gray-600' : 'text-gray-500 dark:text-gray-400'}`}>
-                    {ticket.description}
+                  <div className={`shrink-0 flex items-center gap-3 text-xs ${isCompleted ? 'text-gray-300 dark:text-gray-600' : 'text-gray-400 dark:text-gray-500'}`}>
+                    <span className="inline-flex items-center gap-1" title={new Date(ticket.created_at).toLocaleString()}>
+                      <CalendarPlus className="h-3.5 w-3.5" />
+                      {new Date(ticket.created_at).toLocaleDateString()}
+                    </span>
+                    <span className="inline-flex items-center gap-1" title={new Date(ticket.updated_at).toLocaleString()}>
+                      <History className="h-3.5 w-3.5" />
+                      {new Date(ticket.updated_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Mobile: stacked layout */}
+                <div className="sm:hidden">
+                  {/* Row 1: Display ID + badges */}
+                  <ScrollableRow contentClassName="gap-2" gradientFrom="from-white dark:from-gray-800">
+                    <span className={`shrink-0 font-mono text-sm font-semibold ${isCompleted ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'}`}>{ticket.display_id}</span>
+                    <span className="shrink-0 inline-flex"><StatusBadge status={ticket.status} /></span>
+                    <span className={`shrink-0 inline-flex ${isCompleted ? 'opacity-40' : ''}`}><PriorityBadge priority={ticket.priority} /></span>
+                  </ScrollableRow>
+                  {/* Row 2: Dates */}
+                  <ScrollableRow className="mt-1.5" contentClassName={`gap-4 text-xs ${isCompleted ? 'text-gray-300 dark:text-gray-600' : 'text-gray-400 dark:text-gray-500'}`} gradientFrom="from-white dark:from-gray-800">
+                    <span className="inline-flex items-center gap-1 shrink-0">
+                      <CalendarPlus className="h-3.5 w-3.5" />
+                      {new Date(ticket.created_at).toLocaleString()}
+                    </span>
+                    <span className="inline-flex items-center gap-1 shrink-0">
+                      <History className="h-3.5 w-3.5" />
+                      {new Date(ticket.updated_at).toLocaleString()}
+                    </span>
+                  </ScrollableRow>
+                  {/* Row 3: Title */}
+                  <p className={`mt-1.5 text-base font-medium truncate ${isCompleted ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'}`}>
+                    {ticket.title}
                   </p>
-                )}
+                  {/* Row 4: Description preview */}
+                  {ticket.description && (
+                    <p className={`mt-0.5 text-xs truncate ${isCompleted ? 'text-gray-300 dark:text-gray-600' : 'text-gray-500 dark:text-gray-400'}`}>
+                      {ticket.description}
+                    </p>
+                  )}
+                </div>
               </Link>
             )
           })}

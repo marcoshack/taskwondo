@@ -69,17 +69,30 @@ export function AppShell() {
   const routeProjectKey = projectMatch?.params.projectKey
   const lastProjectKey = useLastProjectKey() ?? undefined
   const activeProjectKey = routeProjectKey ?? lastProjectKey
-  const { data: activeProject, error: activeProjectError } = useProject(activeProjectKey ?? '')
+
+  // Customer projects are blocked by the ExcludeCustomer middleware on /api/v1/projects/:key,
+  // so resolving them via useProject would return 403 and cause the clear-on-error effect
+  // below to wipe the remembered project. Short-circuit those via portal_projects instead.
+  const customerActiveProject = activeProjectKey
+    ? (user?.portal_projects ?? []).find((pp) => pp.project_key === activeProjectKey)
+    : undefined
+  const { data: fetchedActiveProject, error: activeProjectError } = useProject(
+    customerActiveProject ? '' : (activeProjectKey ?? '')
+  )
+  const activeProject = customerActiveProject
+    ? { key: customerActiveProject.project_key, name: customerActiveProject.project_name }
+    : fetchedActiveProject
 
   // If the remembered project no longer exists (e.g. deleted or DB reset), clear
   // the stored key so the sidebar and top bar don't show a stale reference.
+  // Skip this for customer projects — we didn't fetch them, so there's no error to act on.
   useEffect(() => {
-    if (routeProjectKey || !lastProjectKey || !activeProjectError) return
+    if (routeProjectKey || !lastProjectKey || customerActiveProject || !activeProjectError) return
     const status = (activeProjectError as { response?: { status?: number } })?.response?.status
     if (status === 404 || status === 403) {
       clearLastProjectKey()
     }
-  }, [routeProjectKey, lastProjectKey, activeProjectError])
+  }, [routeProjectKey, lastProjectKey, customerActiveProject, activeProjectError])
 
   useEffect(() => {
     if (!menuOpen && !nsDropdownOpen) return
