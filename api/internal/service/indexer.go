@@ -48,6 +48,12 @@ type IndexerAttachmentRepository interface {
 	ListAllIDs(ctx context.Context, limit, offset int) ([]uuid.UUID, error)
 }
 
+// IndexerTeamRepository is the minimal interface for fetching teams for indexing.
+type IndexerTeamRepository interface {
+	GetByID(ctx context.Context, id uuid.UUID) (*model.Team, error)
+	ListAllIDs(ctx context.Context, limit, offset int) ([]uuid.UUID, error)
+}
+
 // IndexerEmbeddingRepository is the minimal interface for embedding persistence.
 type IndexerEmbeddingRepository interface {
 	Upsert(ctx context.Context, e *model.Embedding) error
@@ -64,6 +70,7 @@ type IndexerService struct {
 	milestones   IndexerMilestoneRepository
 	queues       IndexerQueueRepository
 	attachments  IndexerAttachmentRepository
+	teams        IndexerTeamRepository
 }
 
 // NewIndexerService creates a new IndexerService.
@@ -76,6 +83,7 @@ func NewIndexerService(
 	milestones IndexerMilestoneRepository,
 	queues IndexerQueueRepository,
 	attachments IndexerAttachmentRepository,
+	teams IndexerTeamRepository,
 ) *IndexerService {
 	return &IndexerService{
 		embedding:   embedding,
@@ -86,6 +94,7 @@ func NewIndexerService(
 		milestones:  milestones,
 		queues:      queues,
 		attachments: attachments,
+		teams:       teams,
 	}
 }
 
@@ -201,6 +210,17 @@ func (s *IndexerService) BackfillAll(ctx context.Context) (int64, error) {
 				return &item.ProjectID
 			},
 		},
+		{
+			name:    model.EntityTypeTeam,
+			listIDs: s.teams.ListAllIDs,
+			getProj: func(ctx context.Context, id uuid.UUID) *uuid.UUID {
+				t, err := s.teams.GetByID(ctx, id)
+				if err != nil {
+					return nil
+				}
+				return &t.ProjectID
+			},
+		},
 	}
 
 	for _, t := range types {
@@ -285,6 +305,13 @@ func (s *IndexerService) extractText(ctx context.Context, entityType string, ent
 		}
 		return extractAttachmentText(a), nil
 
+	case model.EntityTypeTeam:
+		t, err := s.teams.GetByID(ctx, entityID)
+		if err != nil {
+			return "", err
+		}
+		return extractTeamText(t), nil
+
 	default:
 		return "", fmt.Errorf("unknown entity type: %s", entityType)
 	}
@@ -327,6 +354,15 @@ func extractQueueText(q *model.Queue) string {
 	fmt.Fprintf(&b, "Queue %s (%s)", q.Name, q.QueueType)
 	if q.Description != nil && *q.Description != "" {
 		fmt.Fprintf(&b, "\n\n%s", *q.Description)
+	}
+	return b.String()
+}
+
+func extractTeamText(t *model.Team) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "Team: %s", t.Name)
+	if t.Description != nil && *t.Description != "" {
+		fmt.Fprintf(&b, "\n\n%s", *t.Description)
 	}
 	return b.String()
 }

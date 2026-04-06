@@ -14,6 +14,7 @@ const (
 	EntityTypeMilestone  = "milestone"
 	EntityTypeQueue      = "queue"
 	EntityTypeAttachment = "attachment"
+	EntityTypeTeam       = "team"
 )
 
 // Embedding represents a vector embedding stored in the database.

@@ -59,6 +59,7 @@ func main() {
 	milestoneRepo := repository.NewMilestoneRepository(db)
 	queueRepo := repository.NewQueueRepository(db)
 	attachmentRepo := repository.NewAttachmentRepository(db)
+	teamRepo := repository.NewTeamRepository(db)
 	embeddingRepo := repository.NewEmbeddingRepository(db)
 	escalationRepo := repository.NewEscalationRepository(db)
 	slaNotificationRepo := repository.NewSLANotificationRepository(db)
@@ -70,7 +71,7 @@ func main() {
 	embeddingService := service.NewEmbeddingService(cfg.OllamaURL, cfg.OllamaModel)
 	indexerService := service.NewIndexerService(
 		embeddingService, embeddingRepo,
-		workItemRepo, commentRepo, projectRepo, milestoneRepo, queueRepo, attachmentRepo,
+		workItemRepo, commentRepo, projectRepo, milestoneRepo, queueRepo, attachmentRepo, teamRepo,
 	)
 
 	// Initialize encryption (same derivation as API server)
@@ -235,7 +236,6 @@ func main() {
 
 	// On-call rotation: periodic scan for due rotations
 	oncallRepo := repository.NewOncallRotationRepository(db)
-	teamRepo := repository.NewTeamRepository(db)
 	oncallService := service.NewOncallService(oncallRepo, teamRepo, projectRepo, memberRepo)
 	oncallTask := workers.NewOncallRotationTask(
 		oncallRepo, oncallService, teamRepo, projectRepo, eventPublisher, log.Logger,

@@ -6,6 +6,8 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
+
 	"github.com/marcoshack/taskwondo/internal/model"
 )
 
@@ -22,6 +24,59 @@ func NewQueueRepository(db *sql.DB) *QueueRepository {
 // ListAllIDs returns all queue IDs with pagination (for backfill).
 func (r *QueueRepository) ListAllIDs(ctx context.Context, limit, offset int) ([]uuid.UUID, error) {
 	return listAllIDsNoSoftDelete(ctx, r.db, "queues", limit, offset)
+}
+
+// SearchFTS performs a full-text search on queues filtered by accessible project IDs.
+func (r *QueueRepository) SearchFTS(ctx context.Context, query string, fullProjectIDs []uuid.UUID, limit int) ([]model.SearchResult, error) {
+	if len(fullProjectIDs) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT q.id, q.project_id, q.name, q.queue_type,
+		        p.key AS project_key,
+		        COALESCE(n.slug, 'default') AS namespace_slug,
+		        ts_rank(q.search_vector, plainto_tsquery('english', $1)) +
+		        ts_rank(q.search_vector, plainto_tsquery('simple', $1)) AS rank
+		 FROM queues q
+		 JOIN projects p ON p.id = q.project_id
+		 LEFT JOIN namespaces n ON n.id = p.namespace_id
+		 WHERE (q.search_vector @@ plainto_tsquery('english', $1)
+		     OR q.search_vector @@ plainto_tsquery('simple', $1))
+		   AND q.project_id = ANY($2)
+		 ORDER BY rank DESC, q.updated_at DESC
+		 LIMIT $3`,
+		query, pq.Array(fullProjectIDs), limit)
+	if err != nil {
+		return nil, fmt.Errorf("fts search queues: %w", err)
+	}
+	defer rows.Close()
+
+	var results []model.SearchResult
+	for rows.Next() {
+		var (
+			id            uuid.UUID
+			projectID     uuid.UUID
+			name          string
+			queueType     string
+			projectKey    string
+			namespaceSlug string
+			rank          float64
+		)
+		if err := rows.Scan(&id, &projectID, &name, &queueType, &projectKey, &namespaceSlug, &rank); err != nil {
+			return nil, fmt.Errorf("scanning queue fts result: %w", err)
+		}
+		_ = rank
+		results = append(results, model.SearchResult{
+			EntityType:    model.EntityTypeQueue,
+			EntityID:      id,
+			ProjectID:     &projectID,
+			Content:       fmt.Sprintf("Queue: %s (%s)", name, queueType),
+			ProjectKey:    projectKey,
+			NamespaceSlug: namespaceSlug,
+		})
+	}
+	return results, rows.Err()
 }
 
 // Create inserts a new queue.

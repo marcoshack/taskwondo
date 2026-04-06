@@ -120,6 +120,9 @@ func (r *EmbeddingRepository) SearchByVector(ctx context.Context, vector []float
 
 	conditions = append(conditions, "("+strings.Join(accessClauses, " OR ")+")")
 
+	// Similarity threshold: only return results with cosine similarity > 0.5
+	conditions = append(conditions, fmt.Sprintf("1 - (e.embedding <=> $%d::vector) > 0.5", vectorArg))
+
 	// Entity type filter
 	if len(filter.EntityTypes) > 0 {
 		placeholders := make([]string, len(filter.EntityTypes))

@@ -6,6 +6,8 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
+
 	"github.com/marcoshack/taskwondo/internal/model"
 )
 
@@ -17,6 +19,63 @@ type TeamRepository struct {
 // NewTeamRepository creates a new TeamRepository.
 func NewTeamRepository(db *sql.DB) *TeamRepository {
 	return &TeamRepository{db: db}
+}
+
+// ListAllIDs returns all team IDs with pagination (for backfill).
+func (r *TeamRepository) ListAllIDs(ctx context.Context, limit, offset int) ([]uuid.UUID, error) {
+	return listAllIDsNoSoftDelete(ctx, r.db, "teams", limit, offset)
+}
+
+// SearchFTS performs a full-text search on teams filtered by accessible project IDs.
+func (r *TeamRepository) SearchFTS(ctx context.Context, query string, fullProjectIDs []uuid.UUID, limit int) ([]model.SearchResult, error) {
+	if len(fullProjectIDs) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT t.id, t.project_id, t.name,
+		        p.key AS project_key,
+		        COALESCE(n.slug, 'default') AS namespace_slug,
+		        ts_rank(t.search_vector, plainto_tsquery('english', $1)) +
+		        ts_rank(t.search_vector, plainto_tsquery('simple', $1)) AS rank
+		 FROM teams t
+		 JOIN projects p ON p.id = t.project_id
+		 LEFT JOIN namespaces n ON n.id = p.namespace_id
+		 WHERE (t.search_vector @@ plainto_tsquery('english', $1)
+		     OR t.search_vector @@ plainto_tsquery('simple', $1))
+		   AND t.project_id = ANY($2)
+		 ORDER BY rank DESC, t.updated_at DESC
+		 LIMIT $3`,
+		query, pq.Array(fullProjectIDs), limit)
+	if err != nil {
+		return nil, fmt.Errorf("fts search teams: %w", err)
+	}
+	defer rows.Close()
+
+	var results []model.SearchResult
+	for rows.Next() {
+		var (
+			id            uuid.UUID
+			projectID     uuid.UUID
+			name          string
+			projectKey    string
+			namespaceSlug string
+			rank          float64
+		)
+		if err := rows.Scan(&id, &projectID, &name, &projectKey, &namespaceSlug, &rank); err != nil {
+			return nil, fmt.Errorf("scanning team fts result: %w", err)
+		}
+		_ = rank
+		results = append(results, model.SearchResult{
+			EntityType:    model.EntityTypeTeam,
+			EntityID:      id,
+			ProjectID:     &projectID,
+			Content:       fmt.Sprintf("Team: %s", name),
+			ProjectKey:    projectKey,
+			NamespaceSlug: namespaceSlug,
+		})
+	}
+	return results, rows.Err()
 }
 
 // Create inserts a new team.

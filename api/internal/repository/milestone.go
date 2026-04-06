@@ -6,6 +6,8 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
+
 	"github.com/marcoshack/taskwondo/internal/model"
 )
 
@@ -22,6 +24,60 @@ func NewMilestoneRepository(db *sql.DB) *MilestoneRepository {
 // ListAllIDs returns all milestone IDs with pagination (for backfill).
 func (r *MilestoneRepository) ListAllIDs(ctx context.Context, limit, offset int) ([]uuid.UUID, error) {
 	return listAllIDsNoSoftDelete(ctx, r.db, "milestones", limit, offset)
+}
+
+// SearchFTS performs a full-text search on milestones filtered by accessible project IDs.
+func (r *MilestoneRepository) SearchFTS(ctx context.Context, query string, fullProjectIDs []uuid.UUID, limit int) ([]model.SearchResult, error) {
+	if len(fullProjectIDs) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT m.id, m.project_id, m.name, m.status,
+		        p.key AS project_key,
+		        COALESCE(n.slug, 'default') AS namespace_slug,
+		        ts_rank(m.search_vector, plainto_tsquery('english', $1)) +
+		        ts_rank(m.search_vector, plainto_tsquery('simple', $1)) AS rank
+		 FROM milestones m
+		 JOIN projects p ON p.id = m.project_id
+		 LEFT JOIN namespaces n ON n.id = p.namespace_id
+		 WHERE (m.search_vector @@ plainto_tsquery('english', $1)
+		     OR m.search_vector @@ plainto_tsquery('simple', $1))
+		   AND m.project_id = ANY($2)
+		 ORDER BY rank DESC, m.updated_at DESC
+		 LIMIT $3`,
+		query, pq.Array(fullProjectIDs), limit)
+	if err != nil {
+		return nil, fmt.Errorf("fts search milestones: %w", err)
+	}
+	defer rows.Close()
+
+	var results []model.SearchResult
+	for rows.Next() {
+		var (
+			id            uuid.UUID
+			projectID     uuid.UUID
+			name          string
+			status        string
+			projectKey    string
+			namespaceSlug string
+			rank          float64
+		)
+		if err := rows.Scan(&id, &projectID, &name, &status, &projectKey, &namespaceSlug, &rank); err != nil {
+			return nil, fmt.Errorf("scanning milestone fts result: %w", err)
+		}
+		_ = rank
+		results = append(results, model.SearchResult{
+			EntityType:    model.EntityTypeMilestone,
+			EntityID:      id,
+			ProjectID:     &projectID,
+			Content:       fmt.Sprintf("Milestone: %s", name),
+			ProjectKey:    projectKey,
+			NamespaceSlug: namespaceSlug,
+			Status:        status,
+		})
+	}
+	return results, rows.Err()
 }
 
 // Create inserts a new milestone.

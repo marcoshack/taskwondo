@@ -38,9 +38,11 @@ type UpdateTeamInput struct {
 
 // TeamService handles team business logic and authorization.
 type TeamService struct {
-	teams    TeamRepository
-	projects ProjectRepository
-	members  ProjectMemberRepository
+	teams      TeamRepository
+	projects   ProjectRepository
+	members    ProjectMemberRepository
+	publisher  EventPublisher
+	embedCache *FeatureFlagCache
 }
 
 // NewTeamService creates a new TeamService.
@@ -50,6 +52,16 @@ func NewTeamService(teams TeamRepository, projects ProjectRepository, members Pr
 		projects: projects,
 		members:  members,
 	}
+}
+
+// SetPublisher sets the event publisher for embed indexing.
+func (s *TeamService) SetPublisher(p EventPublisher) {
+	s.publisher = p
+}
+
+// SetEmbedCache sets the feature flag cache for embed indexing.
+func (s *TeamService) SetEmbedCache(cache *FeatureFlagCache) {
+	s.embedCache = cache
 }
 
 // Create creates a new team in the given project.
@@ -83,6 +95,9 @@ func (s *TeamService) Create(ctx context.Context, info *model.AuthInfo, projectK
 		Str("project_key", projectKey).
 		Str("name", t.Name).
 		Msg("team created")
+
+	// Publish embed.index event for semantic search
+	publishEmbedIndex(ctx, s.publisher, s.embedCache, model.EntityTypeTeam, t.ID, &project.ID)
 
 	return s.teams.GetByID(ctx, t.ID)
 }
@@ -162,6 +177,9 @@ func (s *TeamService) Update(ctx context.Context, info *model.AuthInfo, projectK
 		return nil, fmt.Errorf("updating team: %w", err)
 	}
 
+	// Reindex team embedding
+	publishEmbedIndex(ctx, s.publisher, s.embedCache, model.EntityTypeTeam, t.ID, &project.ID)
+
 	return s.teams.GetByID(ctx, t.ID)
 }
 
@@ -185,7 +203,14 @@ func (s *TeamService) Delete(ctx context.Context, info *model.AuthInfo, projectK
 		return model.ErrNotFound
 	}
 
-	return s.teams.Delete(ctx, teamID)
+	if err := s.teams.Delete(ctx, teamID); err != nil {
+		return err
+	}
+
+	// Delete team embedding
+	publishEmbedDelete(ctx, s.publisher, s.embedCache, model.EntityTypeTeam, teamID)
+
+	return nil
 }
 
 // ListMembers returns all members of a team with user details.

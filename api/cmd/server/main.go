@@ -168,7 +168,7 @@ func main() {
 
 	// Initialize embedding and search services
 	embeddingService := service.NewEmbeddingService(cfg.OllamaURL, cfg.OllamaModel)
-	searchService := service.NewSearchService(embeddingService, embeddingRepo, workItemRepo, projectMemberRepo, systemSettingRepo)
+	searchService := service.NewSearchService(embeddingService, embeddingRepo, workItemRepo, teamRepo, queueRepo, milestoneRepo, projectMemberRepo, systemSettingRepo)
 
 	// Seed admin user if configured
 	if cfg.AdminEmail != "" && cfg.AdminPassword != "" {
@@ -253,6 +253,7 @@ func main() {
 	queueService.SetPublisher(publisher)
 	systemSettingService.SetPublisher(publisher)
 	oncallService.SetPublisher(publisher)
+	teamService.SetPublisher(publisher)
 
 	// Wire SLA notification repository for clearing notifications on status transitions
 	slaNotificationRepo := repository.NewSLANotificationRepository(db)
@@ -264,6 +265,7 @@ func main() {
 	projectService.SetEmbedCache(embedCache)
 	milestoneService.SetEmbedCache(embedCache)
 	queueService.SetEmbedCache(embedCache)
+	teamService.SetEmbedCache(embedCache)
 
 	// Start Ollama availability probe (background goroutine)
 	go func() {

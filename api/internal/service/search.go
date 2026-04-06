@@ -20,6 +20,11 @@ type SearchWorkItemRepository interface {
 	SearchFTS(ctx context.Context, query string, access model.SearchAccess, limit int) ([]model.SearchResult, error)
 }
 
+// SearchEntityFTSRepository is the interface for FTS search on non-work-item entities (teams, queues, milestones).
+type SearchEntityFTSRepository interface {
+	SearchFTS(ctx context.Context, query string, fullProjectIDs []uuid.UUID, limit int) ([]model.SearchResult, error)
+}
+
 // SearchMemberRepository is the minimal interface for listing a user's project memberships.
 type SearchMemberRepository interface {
 	ListByUser(ctx context.Context, userID uuid.UUID) ([]model.ProjectMemberWithProject, error)
@@ -35,6 +40,9 @@ type SearchService struct {
 	embedding  *EmbeddingService
 	embeddings SearchEmbeddingRepository
 	workItems  SearchWorkItemRepository
+	teams      SearchEntityFTSRepository
+	queues     SearchEntityFTSRepository
+	milestones SearchEntityFTSRepository
 	members    SearchMemberRepository
 	settings   SearchSettingsRepository
 }
@@ -44,6 +52,9 @@ func NewSearchService(
 	embedding *EmbeddingService,
 	embeddings SearchEmbeddingRepository,
 	workItems SearchWorkItemRepository,
+	teams SearchEntityFTSRepository,
+	queues SearchEntityFTSRepository,
+	milestones SearchEntityFTSRepository,
 	members SearchMemberRepository,
 	settings SearchSettingsRepository,
 ) *SearchService {
@@ -51,6 +62,9 @@ func NewSearchService(
 		embedding:  embedding,
 		embeddings: embeddings,
 		workItems:  workItems,
+		teams:      teams,
+		queues:     queues,
+		milestones: milestones,
 		members:    members,
 		settings:   settings,
 	}
@@ -65,12 +79,53 @@ func (s *SearchService) Search(ctx context.Context, info *model.AuthInfo, filter
 }
 
 // SearchFTS performs a cross-project full-text search with RBAC filtering.
+// Queries work items, teams, queues, and milestones and merges results.
 func (s *SearchService) SearchFTS(ctx context.Context, info *model.AuthInfo, filter *model.SearchFilter) ([]model.SearchResult, error) {
 	access, err := s.resolveAccess(ctx, info.UserID, filter.ProjectIDs)
 	if err != nil {
 		return nil, err
 	}
-	return s.workItems.SearchFTS(ctx, filter.Query, access, filter.Limit)
+
+	// Determine which entity types to search. If no filter, search all.
+	typeSet := make(map[string]bool, len(filter.EntityTypes))
+	for _, et := range filter.EntityTypes {
+		typeSet[et] = true
+	}
+	searchAll := len(typeSet) == 0
+
+	var results []model.SearchResult
+
+	// Work items (always included unless explicitly filtered out)
+	if searchAll || typeSet[model.EntityTypeWorkItem] {
+		wiResults, err := s.workItems.SearchFTS(ctx, filter.Query, access, filter.Limit)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, wiResults...)
+	}
+
+	// Teams, queues, milestones — only visible to full-access members (not customers)
+	entityRepos := []struct {
+		entityType string
+		repo       SearchEntityFTSRepository
+	}{
+		{model.EntityTypeTeam, s.teams},
+		{model.EntityTypeQueue, s.queues},
+		{model.EntityTypeMilestone, s.milestones},
+	}
+
+	for _, er := range entityRepos {
+		if !searchAll && !typeSet[er.entityType] {
+			continue
+		}
+		entityResults, err := er.repo.SearchFTS(ctx, filter.Query, access.FullProjectIDs, filter.Limit)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, entityResults...)
+	}
+
+	return results, nil
 }
 
 // SearchSemantic performs a semantic (vector) search with RBAC filtering.

@@ -31,6 +31,12 @@ func (m *mockSearchWorkItemRepo) SearchFTS(_ context.Context, _ string, _ model.
 	return m.results, m.err
 }
 
+type mockSearchEntityFTSRepo struct{}
+
+func (m *mockSearchEntityFTSRepo) SearchFTS(_ context.Context, _ string, _ []uuid.UUID, _ int) ([]model.SearchResult, error) {
+	return nil, nil
+}
+
 type mockSearchMemberRepo struct {
 	memberships []model.ProjectMemberWithProject
 }
@@ -67,6 +73,7 @@ func newTestSearchHandler(workItemResults []model.SearchResult, semanticEnabled 
 		&service.EmbeddingService{},
 		&mockSearchEmbeddingRepo{},
 		&mockSearchWorkItemRepo{results: workItemResults},
+		&mockSearchEntityFTSRepo{}, &mockSearchEntityFTSRepo{}, &mockSearchEntityFTSRepo{},
 		&mockSearchMemberRepo{},
 		&mockSearchSettingsRepo{settings: settings},
 	)

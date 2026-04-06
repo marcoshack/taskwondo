@@ -1220,6 +1220,7 @@
   "search.semanticError": "Couldn't load related results",
   "search.entityType.project": "Projects",
   "search.entityType.work_item": "Work Items",
+  "search.entityType.team": "Teams",
   "search.entityType.milestone": "Milestones",
   "search.entityType.queue": "Queues",
   "search.entityType.comment": "Comments",

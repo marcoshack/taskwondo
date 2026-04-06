@@ -306,6 +306,10 @@ func enrichResourcePaths(results []model.SearchResult) {
 			if r.ProjectKey != "" {
 				r.ResourcePath = fmt.Sprintf("%s/%s/%s", base, PathQueues, r.EntityID)
 			}
+		case model.EntityTypeTeam:
+			if r.ProjectKey != "" {
+				r.ResourcePath = fmt.Sprintf("%s/%s/%s", base, PathTeams, r.EntityID)
+			}
 		}
 	}
 }

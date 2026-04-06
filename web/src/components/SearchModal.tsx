@@ -11,6 +11,7 @@ import {
   Milestone,
   Layers,
   Paperclip,
+  Users,
   Loader2,
   SearchX,
   AlertCircle,
@@ -26,6 +27,7 @@ import type { SearchResult } from '@/api/search'
 const ENTITY_TYPE_ORDER = [
   'project',
   'work_item',
+  'team',
   'milestone',
   'queue',
   'comment',
@@ -42,6 +44,8 @@ function entityIcon(type: string) {
       return Milestone
     case 'queue':
       return Layers
+    case 'team':
+      return Users
     case 'comment':
       return MessageSquare
     case 'attachment':
@@ -135,7 +139,11 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
   } = useSearch({ query: debouncedQuery, limit })
 
   const ftsGroups = useMemo(() => groupResults(ftsResults), [ftsResults])
-  const semanticGroups = useMemo(() => groupResults(semanticResults), [semanticResults])
+  const semanticGroups = useMemo(() => {
+    const ftsKeys = new Set(ftsResults.map((r) => `${r.entity_type}:${r.entity_id}`))
+    const deduped = semanticResults.filter((r) => !ftsKeys.has(`${r.entity_type}:${r.entity_id}`))
+    return groupResults(deduped)
+  }, [semanticResults, ftsResults])
   const flatFts = useMemo(() => flattenGroups(ftsGroups), [ftsGroups])
   const flatSemantic = useMemo(() => flattenGroups(semanticGroups), [semanticGroups])
   const allFlat = useMemo(() => [...flatFts, ...flatSemantic], [flatFts, flatSemantic])
@@ -220,6 +228,10 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
         case 'queue':
           // Customers have no access to queues; fall back to support list.
           if (key) navigate(prefix(isCustomerProject ? `/projects/${key}/support` : `/projects/${key}/queues`))
+          break
+        case 'team':
+          // Customers have no access to teams; fall back to support list.
+          if (key) navigate(prefix(isCustomerProject ? `/projects/${key}/support` : `/projects/${key}/teams/${result.entity_id}`))
           break
       }
     },
