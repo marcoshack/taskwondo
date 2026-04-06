@@ -1065,6 +1065,8 @@
   "workflows.createWorkflow": "Workflow erstellen",
   "workflows.definitionsDescription": "Definieren und verwalten Sie die verfügbaren Workflows in diesem Projekt.",
   "workflows.definitionsTitle": "Workflow-Definitionen",
+  "workflows.tab.workflow": "Arbeitsablauf",
+  "workflows.tab.escalation": "Eskalation",
   "workflows.deleteConfirmBody": "Möchten Sie den Workflow \"{{name}}\" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
   "workflows.deleteConfirmTitle": "Workflow löschen",
   "workflows.deleteError": "Workflow konnte nicht gelöscht werden.",

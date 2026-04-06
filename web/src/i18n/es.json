@@ -1065,6 +1065,8 @@
   "workflows.createWorkflow": "Crear Flujo de Trabajo",
   "workflows.definitionsDescription": "Defina y administre los flujos de trabajo disponibles en este proyecto.",
   "workflows.definitionsTitle": "Definiciones de flujo de trabajo",
+  "workflows.tab.workflow": "Flujo de trabajo",
+  "workflows.tab.escalation": "Escalamiento",
   "workflows.deleteConfirmBody": "¿Está seguro de eliminar el flujo de trabajo \"{{name}}\"? Esta acción no se puede deshacer.",
   "workflows.deleteConfirmTitle": "Eliminar Flujo de Trabajo",
   "workflows.deleteError": "Error al eliminar el flujo de trabajo.",

@@ -1065,6 +1065,8 @@
   "workflows.createWorkflow": "إنشاء سير عمل",
   "workflows.definitionsDescription": "قم بتعريف وإدارة سير العمل المتاحة في هذا المشروع.",
   "workflows.definitionsTitle": "تعريفات سير العمل",
+  "workflows.tab.workflow": "سير العمل",
+  "workflows.tab.escalation": "التصعيد",
   "workflows.deleteConfirmBody": "هل أنت متأكد من حذف سير العمل \"{{name}}\"؟ لا يمكن التراجع عن هذا الإجراء.",
   "workflows.deleteConfirmTitle": "حذف سير العمل",
   "workflows.deleteError": "فشل في حذف سير العمل.",

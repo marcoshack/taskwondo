@@ -1065,6 +1065,8 @@
   "workflows.createWorkflow": "ワークフローを作成",
   "workflows.definitionsDescription": "このプロジェクトで利用可能なワークフローを定義・管理します。",
   "workflows.definitionsTitle": "ワークフロー定義",
+  "workflows.tab.workflow": "ワークフロー",
+  "workflows.tab.escalation": "エスカレーション",
   "workflows.deleteConfirmBody": "ワークフロー「{{name}}」を削除しますか？この操作は元に戻せません。",
   "workflows.deleteConfirmTitle": "ワークフローを削除",
   "workflows.deleteError": "ワークフローの削除に失敗しました。",

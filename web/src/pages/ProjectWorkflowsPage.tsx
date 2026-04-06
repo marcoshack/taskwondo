@@ -25,6 +25,7 @@ import { TimezoneSelect } from '@/components/ui/TimezoneSelect'
 import { Modal } from '@/components/ui/Modal'
 import { Spinner } from '@/components/ui/Spinner'
 import { Badge } from '@/components/ui/Badge'
+import { Tabs } from '@/components/ui/Tabs'
 import { Lock, Plus, Pencil, Trash2, ArrowRight, Check, Eye, Clock, ChevronDown, ChevronRight, ChevronLeft, AlertTriangle } from 'lucide-react'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { SLAConfigModal } from '@/components/SLAConfigModal'
@@ -50,6 +51,8 @@ export function ProjectWorkflowsPage() {
   const { data: typeWorkflows } = useTypeWorkflows(projectKey ?? '')
   const updateTypeWorkflowMutation = useUpdateTypeWorkflow(projectKey ?? '')
   const { data: slaTargets } = useSLATargets(projectKey ?? '')
+
+  const [activeTab, setActiveTab] = useState('workflow')
 
   const [editorOpen, setEditorOpen] = useState(false)
   const [editingWorkflowId, setEditingWorkflowId] = useState<string | null>(null)
@@ -133,8 +136,22 @@ export function ProjectWorkflowsPage() {
     setEditorOpen(true)
   }
 
+  const tabs = [
+    { key: 'workflow', label: t('workflows.tab.workflow') },
+    { key: 'escalation', label: t('workflows.tab.escalation') },
+  ]
+
   return (
     <div className="max-w-3xl space-y-8">
+      {/* Page Header */}
+      <div>
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{t('workflows.title')}</h2>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('workflows.description')}</p>
+      </div>
+
+      <Tabs tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
+
+      {activeTab === 'workflow' && (<>
       {/* Workflow Definitions */}
       <div>
         <div className="flex items-center justify-between">
@@ -301,7 +318,9 @@ export function ProjectWorkflowsPage() {
           )
         })}
       </div>
+      </>)}
 
+      {activeTab === 'escalation' && (<>
       {/* Escalation Lists */}
       <div>
         <div className="flex items-center justify-between">
@@ -662,6 +681,7 @@ export function ProjectWorkflowsPage() {
           </div>
         </>
       )}
+      </>)}
 
       {/* Escalation List Modal */}
       {escalationEditorOpen && (

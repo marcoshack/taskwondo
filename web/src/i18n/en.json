@@ -913,7 +913,9 @@
   "workitems.filters.noMilestone": "No milestone",
 
   "workflows.title": "Workflows",
-  "workflows.description": "Manage workflows for this project. System workflows are read-only.",
+  "workflows.description": "Manage workflows, escalation rules, and SLA settings for this project.",
+  "workflows.tab.workflow": "Workflow",
+  "workflows.tab.escalation": "Escalation",
   "workflows.definitionsTitle": "Workflow Definitions",
   "workflows.definitionsDescription": "Define and manage the workflows available in this project.",
   "workflows.mappingTitle": "Workflow Mapping",

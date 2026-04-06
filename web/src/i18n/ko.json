@@ -1065,6 +1065,8 @@
   "workflows.createWorkflow": "워크플로 생성",
   "workflows.definitionsDescription": "이 프로젝트에서 사용 가능한 워크플로를 정의하고 관리합니다.",
   "workflows.definitionsTitle": "워크플로 정의",
+  "workflows.tab.workflow": "워크플로",
+  "workflows.tab.escalation": "에스컬레이션",
   "workflows.deleteConfirmBody": "워크플로 \"{{name}}\"을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
   "workflows.deleteConfirmTitle": "워크플로 삭제",
   "workflows.deleteError": "워크플로 삭제에 실패했습니다.",

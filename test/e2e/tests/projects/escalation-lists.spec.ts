@@ -23,6 +23,13 @@ async function createHelperUser(
   return { id: finalLogin.user.id, name };
 }
 
+/** Navigate to the workflows page and switch to the Escalation tab. */
+async function gotoEscalationTab(page: any, projectKey: string) {
+  await page.goto(`/d/projects/${projectKey}/workflows`);
+  await page.waitForLoadState('networkidle');
+  await page.getByRole('button', { name: 'Escalation' }).click();
+}
+
 test.describe('Escalation Lists', () => {
 
   test('CRUD lifecycle: create via API, edit and delete via UI', async ({ page, request, testUser, testProject }) => {
@@ -33,8 +40,7 @@ test.describe('Escalation Lists', () => {
       levels: [{ threshold_pct: 75, user_ids: [helper.id] }],
     });
 
-    await page.goto(`/d/projects/${testProject.key}/workflows`);
-    await page.waitForLoadState('networkidle');
+    await gotoEscalationTab(page, testProject.key);
 
     // The escalation list card should appear
     const listCard = page.getByRole('button', { name: /Critical Escalation/ });
@@ -75,8 +81,7 @@ test.describe('Escalation Lists', () => {
   test('create escalation list via UI modal with user search', async ({ page, request, testUser, testProject }) => {
     const helper = await createHelperUser(request, testUser.token, testProject.key);
 
-    await page.goto(`/d/projects/${testProject.key}/workflows`);
-    await page.waitForLoadState('networkidle');
+    await gotoEscalationTab(page, testProject.key);
 
     await page.getByRole('button', { name: 'New Escalation List' }).click();
 
@@ -114,8 +119,7 @@ test.describe('Escalation Lists', () => {
       levels: [{ threshold_pct: 80, user_ids: [helper.id] }],
     });
 
-    await page.goto(`/d/projects/${testProject.key}/workflows`);
-    await page.waitForLoadState('networkidle');
+    await gotoEscalationTab(page, testProject.key);
 
     await page.getByText('Escalation Mapping').scrollIntoViewIfNeeded();
 
@@ -134,8 +138,7 @@ test.describe('Escalation Lists', () => {
   });
 
   test('validation: name, levels, thresholds', async ({ page, testProject }) => {
-    await page.goto(`/d/projects/${testProject.key}/workflows`);
-    await page.waitForLoadState('networkidle');
+    await gotoEscalationTab(page, testProject.key);
 
     await page.getByRole('button', { name: 'New Escalation List' }).click();
     const dialog = page.getByRole('dialog');
@@ -170,8 +173,7 @@ test.describe('Escalation Lists', () => {
       levels: [{ threshold_pct: 80, user_ids: [helper.id] }],
     });
 
-    await page.goto(`/d/projects/${testProject.key}/workflows`);
-    await page.waitForLoadState('networkidle');
+    await gotoEscalationTab(page, testProject.key);
 
     // Warning should be visible for unmapped list
     const warningText = page.getByText("SLA notifications won't trigger", { exact: false });
@@ -197,8 +199,11 @@ test.describe('Escalation Lists', () => {
     await page.goto(`/d/projects/${testProject.key}/workflows`);
     await page.waitForLoadState('networkidle');
 
-    // "Workflow Mapping" heading (renamed from "Mapping and SLA")
+    // Workflow tab is active by default — "Workflow Mapping" heading should be visible
     await expect(page.getByText('Workflow Mapping', { exact: true })).toBeVisible();
+
+    // Switch to Escalation tab
+    await page.getByRole('button', { name: 'Escalation' }).click();
 
     // "Escalation Mapping and SLA" heading (renamed from "Escalation Mapping")
     await expect(page.getByText('Escalation Mapping and SLA', { exact: true })).toBeVisible();
@@ -211,8 +216,7 @@ test.describe('Escalation Lists', () => {
       levels: [{ threshold_pct: 80, user_ids: [helper.id] }],
     });
 
-    await page.goto(`/d/projects/${testProject.key}/workflows`);
-    await page.waitForLoadState('networkidle');
+    await gotoEscalationTab(page, testProject.key);
 
     // Scroll to escalation mapping section and find the clock button on the first row
     await page.getByText('Escalation Mapping and SLA').scrollIntoViewIfNeeded();
@@ -246,8 +250,7 @@ test.describe('Escalation Lists', () => {
     // Assign escalation list to 'task' type without SLA targets
     await api.setEscalationMapping(request, testUser.token, testProject.key, 'task', list.id);
 
-    await page.goto(`/d/projects/${testProject.key}/workflows`);
-    await page.waitForLoadState('networkidle');
+    await gotoEscalationTab(page, testProject.key);
 
     await page.getByText('Escalation Mapping and SLA').scrollIntoViewIfNeeded();
 
@@ -265,6 +268,7 @@ test.describe('Escalation Lists', () => {
     // Reload to pick up the new SLA targets
     await page.reload();
     await page.waitForLoadState('networkidle');
+    await page.getByRole('button', { name: 'Escalation' }).click();
     await page.getByText('Escalation Mapping and SLA').scrollIntoViewIfNeeded();
     await expect(page.getByText("breach detection won't trigger", { exact: false }).first()).not.toBeVisible({ timeout: 5000 });
 
@@ -281,8 +285,7 @@ test.describe('Escalation Lists', () => {
     });
     await api.setEscalationMapping(request, testUser.token, testProject.key, 'task', list.id);
 
-    await page.goto(`/d/projects/${testProject.key}/workflows`);
-    await page.waitForLoadState('networkidle');
+    await gotoEscalationTab(page, testProject.key);
 
     const listCard = page.getByRole('button', { name: /Assigned List/ });
     await expect(listCard).toBeVisible();

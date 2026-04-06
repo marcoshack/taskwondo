@@ -1065,6 +1065,8 @@
   "workflows.createWorkflow": "创建工作流",
   "workflows.definitionsDescription": "定义和管理此项目中可用的工作流。",
   "workflows.definitionsTitle": "工作流定义",
+  "workflows.tab.workflow": "工作流",
+  "workflows.tab.escalation": "升级",
   "workflows.deleteConfirmBody": "确定要删除工作流「{{name}}」吗？此操作不可撤销。",
   "workflows.deleteConfirmTitle": "删除工作流",
   "workflows.deleteError": "删除工作流失败。",

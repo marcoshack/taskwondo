@@ -1065,6 +1065,8 @@
   "workflows.createWorkflow": "Créer un Workflow",
   "workflows.definitionsDescription": "Définissez et gérez les workflows disponibles dans ce projet.",
   "workflows.definitionsTitle": "Définitions des workflows",
+  "workflows.tab.workflow": "Flux de travail",
+  "workflows.tab.escalation": "Escalade",
   "workflows.deleteConfirmBody": "Voulez-vous vraiment supprimer le workflow \"{{name}}\" ? Cette action est irréversible.",
   "workflows.deleteConfirmTitle": "Supprimer le Workflow",
   "workflows.deleteError": "Échec de la suppression du workflow.",
