@@ -172,6 +172,17 @@ func main() {
 	)
 	dispatcher.Register(notifyOncallRotation)
 
+	// Register on-call override notification tasks
+	notifyOncallOverrideCreated := workers.NewNotificationOncallOverrideCreatedTask(
+		userRepo, emailSender, log.Logger,
+	)
+	dispatcher.Register(notifyOncallOverrideCreated)
+
+	notifyOncallOverrideCancelled := workers.NewNotificationOncallOverrideCancelledTask(
+		userRepo, emailSender, log.Logger,
+	)
+	dispatcher.Register(notifyOncallOverrideCancelled)
+
 	// Register embedding tasks
 	embedIndex := workers.NewEmbedIndexTask(indexerService, systemSettingRepo, log.Logger)
 	dispatcher.Register(embedIndex)

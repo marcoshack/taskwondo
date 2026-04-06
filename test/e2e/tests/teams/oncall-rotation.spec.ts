@@ -82,10 +82,41 @@ test.describe('Oncall rotation', () => {
     // Submit
     await page.getByRole('button', { name: 'Create', exact: true }).click();
 
-    // Verify rotation summary appears
-    await expect(page.getByText('Currently on-call')).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText('Active')).toBeVisible();
-    await expect(page.getByText('Every 7 days')).toBeVisible();
+    // Verify rotation details appear in sidebar
+    await expect(page.getByText('Every 7 days')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Active', { exact: true })).toBeVisible();
+  });
+
+  test('edit oncall rotation via UI', async ({ request, testUser, testProject, page }) => {
+    const { team, user2 } = await setupTeamWithMembers(request, testUser, testProject);
+
+    const today = new Date().toISOString().slice(0, 10);
+    await api.createOncallRotation(request, testUser.token, testProject.key, team.id, {
+      period_days: 7,
+      rotation_time: '12:00:00',
+      timezone: 'UTC',
+      start_date: today,
+      member_ids: [testUser.id, user2.id],
+    });
+
+    await page.goto(`/d/projects/${testProject.key}/teams/${team.id}`);
+    await page.getByRole('button', { name: 'On-Call', exact: true }).click();
+    await expect(page.getByText('Every 7 days')).toBeVisible({ timeout: 10000 });
+
+    // Open Edit Rotation modal
+    await page.getByRole('button', { name: 'Edit Rotation' }).click();
+    await expect(page.getByRole('heading', { name: 'Edit Rotation' })).toBeVisible();
+
+    // Change period to 14 days
+    const periodInput = page.getByLabel('Period (days)');
+    await periodInput.clear();
+    await periodInput.fill('14');
+
+    // Save
+    await page.getByRole('button', { name: 'Save', exact: true }).click();
+
+    // Verify updated
+    await expect(page.getByText('Every 14 days')).toBeVisible({ timeout: 10000 });
   });
 
   test('create oncall rotation via API and verify on page', async ({ request, testUser, testProject, page }) => {
@@ -103,9 +134,8 @@ test.describe('Oncall rotation', () => {
     await page.goto(`/d/projects/${testProject.key}/teams/${team.id}`);
     await page.getByRole('button', { name: 'On-Call', exact: true }).click();
 
-    // Verify summary shows correct info
-    await expect(page.getByText('Currently on-call')).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText('Every 14 days')).toBeVisible();
+    // Verify rotation details in sidebar
+    await expect(page.getByText('Every 14 days')).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('UTC')).toBeVisible();
   });
 
@@ -123,11 +153,15 @@ test.describe('Oncall rotation', () => {
 
     await page.goto(`/d/projects/${testProject.key}/teams/${team.id}`);
     await page.getByRole('button', { name: 'On-Call', exact: true }).click();
-    await expect(page.getByText('Currently on-call')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Every 7 days')).toBeVisible({ timeout: 10000 });
 
-    // Click delete button (trash icon with text-red-500 in the rotation summary)
-    const summary = page.locator('div').filter({ hasText: 'Currently on-call' }).first();
-    await summary.locator('button').filter({ has: page.locator('.text-red-500') }).click();
+    // Open Edit Rotation modal
+    await page.getByRole('button', { name: 'Edit Rotation' }).click();
+    await expect(page.getByRole('heading', { name: 'Edit Rotation' })).toBeVisible();
+
+    // Click the delete (trash icon) button inside the edit modal form footer
+    const modal = page.getByRole('dialog')
+    await modal.locator('button').filter({ has: page.locator('.text-red-500') }).click();
 
     // Confirm deletion
     await expect(page.getByRole('heading', { name: 'Delete On-Call Rotation' })).toBeVisible();

@@ -27,6 +27,17 @@ type OncallRotationRepository interface {
 	ListDueRotations(ctx context.Context) ([]model.OncallRotation, error)
 }
 
+// OncallOverrideRepository defines persistence operations for on-call overrides.
+type OncallOverrideRepository interface {
+	Create(ctx context.Context, o *model.OncallOverride) (*model.OncallOverride, error)
+	GetByID(ctx context.Context, id uuid.UUID) (*model.OncallOverride, error)
+	Update(ctx context.Context, o *model.OncallOverride) (*model.OncallOverride, error)
+	Delete(ctx context.Context, id uuid.UUID) error
+	ListByRotation(ctx context.Context, rotationID uuid.UUID) ([]model.OncallOverrideWithUser, error)
+	GetActiveOverride(ctx context.Context, rotationID uuid.UUID) (*model.OncallOverride, error)
+	ListOverridesInRange(ctx context.Context, rotationID uuid.UUID, from, to time.Time) ([]model.OncallOverrideWithUser, error)
+}
+
 // CreateOncallRotationInput holds the input for creating an on-call rotation.
 type CreateOncallRotationInput struct {
 	PeriodDays   int
@@ -48,7 +59,25 @@ type UpdateOncallRotationInput struct {
 // OncallRotationResult is returned by GetRotation with members included.
 type OncallRotationResult struct {
 	model.OncallRotation
-	Members []model.OncallRotationMemberWithUser `json:"members"`
+	Members        []model.OncallRotationMemberWithUser `json:"members"`
+	ActiveOverride *model.OncallOverride                `json:"active_override,omitempty"`
+}
+
+// CreateOncallOverrideInput holds the input for creating an on-call override.
+type CreateOncallOverrideInput struct {
+	OverrideUserID uuid.UUID
+	StartAt        time.Time
+	EndAt          time.Time
+	Reason         *string
+}
+
+// UpdateOncallOverrideInput holds the input for updating an on-call override.
+type UpdateOncallOverrideInput struct {
+	OverrideUserID *uuid.UUID
+	StartAt        *time.Time
+	EndAt          *time.Time
+	Reason         *string
+	ClearReason    bool
 }
 
 // AdvanceResult holds the old and new user IDs after a rotation advance.
@@ -62,10 +91,12 @@ type AdvanceResult struct {
 
 // OncallService handles on-call rotation business logic and authorization.
 type OncallService struct {
-	oncall   OncallRotationRepository
-	teams    TeamRepository
-	projects ProjectRepository
-	members  ProjectMemberRepository
+	oncall    OncallRotationRepository
+	overrides OncallOverrideRepository
+	teams     TeamRepository
+	projects  ProjectRepository
+	members   ProjectMemberRepository
+	publisher EventPublisher
 }
 
 // NewOncallService creates a new OncallService.
@@ -81,6 +112,16 @@ func NewOncallService(
 		projects: projects,
 		members:  members,
 	}
+}
+
+// SetOverrideRepository sets the override repository (optional dependency).
+func (s *OncallService) SetOverrideRepository(repo OncallOverrideRepository) {
+	s.overrides = repo
+}
+
+// SetPublisher sets the event publisher for override notifications.
+func (s *OncallService) SetPublisher(p EventPublisher) {
+	s.publisher = p
 }
 
 // CreateRotation creates a new on-call rotation for a team.
@@ -432,6 +473,357 @@ func (s *OncallService) AdvanceRotation(ctx context.Context, rotationID uuid.UUI
 	}, nil
 }
 
+// --- Override methods ---
+
+// CreateOverride creates a new on-call override for a team's rotation.
+func (s *OncallService) CreateOverride(ctx context.Context, info *model.AuthInfo, projectKey string, teamID uuid.UUID, input CreateOncallOverrideInput) (*model.OncallOverride, error) {
+	if s.overrides == nil {
+		return nil, fmt.Errorf("override repository not configured")
+	}
+
+	project, err := s.projects.GetByKey(ctx, projectKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.requireMembership(ctx, info, project.ID); err != nil {
+		return nil, err
+	}
+
+	team, err := s.teams.GetByID(ctx, teamID)
+	if err != nil {
+		return nil, err
+	}
+	if team.ProjectID != project.ID {
+		return nil, model.ErrNotFound
+	}
+
+	rot, err := s.oncall.GetByTeamID(ctx, teamID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Validate time range
+	if !input.StartAt.Before(input.EndAt) {
+		return nil, fmt.Errorf("start_at must be before end_at: %w", model.ErrValidation)
+	}
+	if input.EndAt.Before(time.Now()) {
+		return nil, fmt.Errorf("override end_at must be in the future: %w", model.ErrValidation)
+	}
+
+	// Authorization: admins/owners can create for anyone, members only for themselves
+	isAdmin := info.GlobalRole == model.RoleAdmin
+	if !isAdmin {
+		member, err := s.members.GetByProjectAndUser(ctx, project.ID, info.UserID)
+		if err != nil {
+			if err == model.ErrNotFound {
+				return nil, model.ErrNotFound
+			}
+			return nil, fmt.Errorf("checking membership: %w", err)
+		}
+		isAdmin = member.Role == model.ProjectRoleOwner || member.Role == model.ProjectRoleAdmin
+	}
+
+	if !isAdmin && input.OverrideUserID != info.UserID {
+		return nil, model.ErrForbidden
+	}
+
+	// Customers cannot be override users
+	overrideMember, err := s.members.GetByProjectAndUser(ctx, project.ID, input.OverrideUserID)
+	if err != nil {
+		if err == model.ErrNotFound {
+			return nil, fmt.Errorf("override user is not a project member: %w", model.ErrValidation)
+		}
+		return nil, fmt.Errorf("checking override user membership: %w", err)
+	}
+	if overrideMember.Role == model.ProjectRoleCustomer {
+		return nil, fmt.Errorf("customers cannot be assigned as on-call override: %w", model.ErrValidation)
+	}
+
+	override := &model.OncallOverride{
+		ID:             uuid.Must(uuid.NewV7()),
+		RotationID:     rot.ID,
+		OverrideUserID: input.OverrideUserID,
+		StartAt:        input.StartAt,
+		EndAt:          input.EndAt,
+		Reason:         input.Reason,
+		CreatedBy:      info.UserID,
+	}
+
+	result, err := s.overrides.Create(ctx, override)
+	if err != nil {
+		return nil, fmt.Errorf("creating oncall override: %w", err)
+	}
+
+	log.Ctx(ctx).Info().
+		Str("override_id", result.ID.String()).
+		Str("rotation_id", rot.ID.String()).
+		Str("override_user_id", input.OverrideUserID.String()).
+		Msg("oncall override created")
+
+	// Publish event for notifications
+	if s.publisher != nil {
+		scheduledUserID := uuid.Nil
+		if rot.CurrentUserID != nil {
+			scheduledUserID = *rot.CurrentUserID
+		}
+		evt := model.OncallOverrideCreatedEvent{
+			OverrideID:     result.ID,
+			RotationID:     rot.ID,
+			TeamID:         teamID,
+			TeamName:       team.Name,
+			OverrideUserID: input.OverrideUserID,
+			ScheduledUser:  scheduledUserID,
+			StartAt:        input.StartAt,
+			EndAt:          input.EndAt,
+			Reason:         input.Reason,
+		}
+		if err := s.publisher.Publish("oncall.override.created", evt); err != nil {
+			log.Ctx(ctx).Error().Err(err).Msg("failed to publish oncall override created event")
+		}
+	}
+
+	return result, nil
+}
+
+// ListOverrides returns active and upcoming overrides for a team's rotation.
+func (s *OncallService) ListOverrides(ctx context.Context, info *model.AuthInfo, projectKey string, teamID uuid.UUID) ([]model.OncallOverrideWithUser, error) {
+	if s.overrides == nil {
+		return nil, nil
+	}
+
+	project, err := s.projects.GetByKey(ctx, projectKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.requireMembership(ctx, info, project.ID); err != nil {
+		return nil, err
+	}
+
+	team, err := s.teams.GetByID(ctx, teamID)
+	if err != nil {
+		return nil, err
+	}
+	if team.ProjectID != project.ID {
+		return nil, model.ErrNotFound
+	}
+
+	rot, err := s.oncall.GetByTeamID(ctx, teamID)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.overrides.ListByRotation(ctx, rot.ID)
+}
+
+// UpdateOverride modifies an existing on-call override.
+func (s *OncallService) UpdateOverride(ctx context.Context, info *model.AuthInfo, projectKey string, teamID uuid.UUID, overrideID uuid.UUID, input UpdateOncallOverrideInput) (*model.OncallOverride, error) {
+	if s.overrides == nil {
+		return nil, fmt.Errorf("override repository not configured")
+	}
+
+	project, err := s.projects.GetByKey(ctx, projectKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.requireMembership(ctx, info, project.ID); err != nil {
+		return nil, err
+	}
+
+	team, err := s.teams.GetByID(ctx, teamID)
+	if err != nil {
+		return nil, err
+	}
+	if team.ProjectID != project.ID {
+		return nil, model.ErrNotFound
+	}
+
+	override, err := s.overrides.GetByID(ctx, overrideID)
+	if err != nil {
+		return nil, err
+	}
+
+	rot, err := s.oncall.GetByTeamID(ctx, teamID)
+	if err != nil {
+		return nil, err
+	}
+	if override.RotationID != rot.ID {
+		return nil, model.ErrNotFound
+	}
+
+	// Authorization: creator or admins/owners can update
+	if override.CreatedBy != info.UserID {
+		if err := s.requireRole(ctx, info, project.ID, model.ProjectRoleOwner, model.ProjectRoleAdmin); err != nil {
+			return nil, err
+		}
+	}
+
+	if input.OverrideUserID != nil {
+		// Validate new override user is not a customer
+		overrideMember, err := s.members.GetByProjectAndUser(ctx, project.ID, *input.OverrideUserID)
+		if err != nil {
+			if err == model.ErrNotFound {
+				return nil, fmt.Errorf("override user is not a project member: %w", model.ErrValidation)
+			}
+			return nil, fmt.Errorf("checking override user membership: %w", err)
+		}
+		if overrideMember.Role == model.ProjectRoleCustomer {
+			return nil, fmt.Errorf("customers cannot be assigned as on-call override: %w", model.ErrValidation)
+		}
+		override.OverrideUserID = *input.OverrideUserID
+	}
+	if input.StartAt != nil {
+		override.StartAt = *input.StartAt
+	}
+	if input.EndAt != nil {
+		override.EndAt = *input.EndAt
+	}
+	if input.ClearReason {
+		override.Reason = nil
+	} else if input.Reason != nil {
+		override.Reason = input.Reason
+	}
+
+	// Validate time range
+	if !override.StartAt.Before(override.EndAt) {
+		return nil, fmt.Errorf("start_at must be before end_at: %w", model.ErrValidation)
+	}
+
+	result, err := s.overrides.Update(ctx, override)
+	if err != nil {
+		return nil, fmt.Errorf("updating oncall override: %w", err)
+	}
+
+	log.Ctx(ctx).Info().
+		Str("override_id", overrideID.String()).
+		Msg("oncall override updated")
+
+	return result, nil
+}
+
+// DeleteOverride cancels an on-call override.
+func (s *OncallService) DeleteOverride(ctx context.Context, info *model.AuthInfo, projectKey string, teamID uuid.UUID, overrideID uuid.UUID) error {
+	if s.overrides == nil {
+		return fmt.Errorf("override repository not configured")
+	}
+
+	project, err := s.projects.GetByKey(ctx, projectKey)
+	if err != nil {
+		return err
+	}
+
+	if err := s.requireMembership(ctx, info, project.ID); err != nil {
+		return err
+	}
+
+	team, err := s.teams.GetByID(ctx, teamID)
+	if err != nil {
+		return err
+	}
+	if team.ProjectID != project.ID {
+		return model.ErrNotFound
+	}
+
+	override, err := s.overrides.GetByID(ctx, overrideID)
+	if err != nil {
+		return err
+	}
+
+	// Verify the override belongs to this team's rotation
+	rot, err := s.oncall.GetByTeamID(ctx, teamID)
+	if err != nil {
+		return err
+	}
+	if override.RotationID != rot.ID {
+		return model.ErrNotFound
+	}
+
+	// Authorization: creator or admins/owners can cancel
+	if override.CreatedBy != info.UserID {
+		if err := s.requireRole(ctx, info, project.ID, model.ProjectRoleOwner, model.ProjectRoleAdmin); err != nil {
+			return err
+		}
+	}
+
+	if err := s.overrides.Delete(ctx, overrideID); err != nil {
+		return err
+	}
+
+	log.Ctx(ctx).Info().
+		Str("override_id", overrideID.String()).
+		Msg("oncall override cancelled")
+
+	// Publish event for notifications
+	if s.publisher != nil {
+		scheduledUserID := uuid.Nil
+		if rot.CurrentUserID != nil {
+			scheduledUserID = *rot.CurrentUserID
+		}
+		evt := model.OncallOverrideCancelledEvent{
+			OverrideID:     overrideID,
+			RotationID:     rot.ID,
+			TeamID:         teamID,
+			TeamName:       team.Name,
+			OverrideUserID: override.OverrideUserID,
+			ScheduledUser:  scheduledUserID,
+			StartAt:        override.StartAt,
+			EndAt:          override.EndAt,
+		}
+		if err := s.publisher.Publish("oncall.override.cancelled", evt); err != nil {
+			log.Ctx(ctx).Error().Err(err).Msg("failed to publish oncall override cancelled event")
+		}
+	}
+
+	return nil
+}
+
+// GetActiveOverride returns the currently active override for a team's rotation (if any).
+func (s *OncallService) GetActiveOverride(ctx context.Context, teamID uuid.UUID) (*model.OncallOverride, error) {
+	if s.overrides == nil {
+		return nil, nil
+	}
+
+	rot, err := s.oncall.GetByTeamID(ctx, teamID)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.overrides.GetActiveOverride(ctx, rot.ID)
+}
+
+// ListOverridesInRange returns overrides for a rotation within a time range (for calendar view).
+func (s *OncallService) ListOverridesInRange(ctx context.Context, info *model.AuthInfo, projectKey string, teamID uuid.UUID, from, to time.Time) ([]model.OncallOverrideWithUser, error) {
+	if s.overrides == nil {
+		return nil, nil
+	}
+
+	project, err := s.projects.GetByKey(ctx, projectKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.requireMembership(ctx, info, project.ID); err != nil {
+		return nil, err
+	}
+
+	team, err := s.teams.GetByID(ctx, teamID)
+	if err != nil {
+		return nil, err
+	}
+	if team.ProjectID != project.ID {
+		return nil, model.ErrNotFound
+	}
+
+	rot, err := s.oncall.GetByTeamID(ctx, teamID)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.overrides.ListOverridesInRange(ctx, rot.ID, from, to)
+}
+
 // --- helpers ---
 
 func (s *OncallService) validateMembers(ctx context.Context, teamID uuid.UUID, memberIDs []uuid.UUID) error {
@@ -460,10 +852,22 @@ func (s *OncallService) getRotationResult(ctx context.Context, rot *model.Oncall
 		return nil, fmt.Errorf("listing rotation members: %w", err)
 	}
 
-	return &OncallRotationResult{
+	result := &OncallRotationResult{
 		OncallRotation: *rot,
 		Members:        members,
-	}, nil
+	}
+
+	// Include active override if available
+	if s.overrides != nil {
+		active, err := s.overrides.GetActiveOverride(ctx, rot.ID)
+		if err != nil {
+			log.Ctx(ctx).Warn().Err(err).Msg("failed to check active override")
+		} else {
+			result.ActiveOverride = active
+		}
+	}
+
+	return result, nil
 }
 
 func (s *OncallService) requireMembership(ctx context.Context, info *model.AuthInfo, projectID uuid.UUID) error {

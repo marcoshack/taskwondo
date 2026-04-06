@@ -2,7 +2,8 @@ import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import type { OncallRotation, OncallRotationMember } from '@/api/oncall'
+import { useOncallOverrides } from '@/hooks/useOncall'
+import type { OncallRotation, OncallRotationMember, OncallOverride } from '@/api/oncall'
 
 const BAR_COLORS = [
   'bg-indigo-200 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-200',
@@ -36,15 +37,21 @@ interface WeekSpan {
   continuesToNext: boolean
 }
 
+const OVERRIDE_COLOR = 'bg-red-200 dark:bg-red-900/50 text-red-800 dark:text-red-200'
+const OVERRIDE_DOT_COLOR = 'bg-red-500'
+
 interface OncallCalendarProps {
   rotation: OncallRotation
   members: OncallRotationMember[]
+  projectKey: string
+  teamId: string
 }
 
-export function OncallCalendar({ rotation, members }: OncallCalendarProps) {
+export function OncallCalendar({ rotation, members, projectKey, teamId }: OncallCalendarProps) {
   const { t } = useTranslation()
   const today = new Date()
   const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1))
+  const { data: overrides } = useOncallOverrides(projectKey, teamId)
 
   const sortedMembers = useMemo(
     () => [...members].sort((a, b) => a.position - b.position),
@@ -126,13 +133,36 @@ export function OncallCalendar({ rotation, members }: OncallCalendarProps) {
     })
   }, [calendarSlots, sortedMembers, rotation.start_date, rotation.period_days, rotation.rotation_time])
 
+  // Compute which calendar slots have an override active
+  const overrideAssignments = useMemo(() => {
+    if (!overrides || overrides.length === 0) {
+      return calendarSlots.map(() => null as OncallOverride | null)
+    }
+    return calendarSlots.map((slot) => {
+      const dayStart = new Date(slot.date.getFullYear(), slot.date.getMonth(), slot.date.getDate())
+      const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000)
+      // Find the latest-created override that overlaps this day
+      let latest: OncallOverride | null = null
+      for (const ov of overrides) {
+        const ovStart = new Date(ov.start_at)
+        const ovEnd = new Date(ov.end_at)
+        if (ovStart < dayEnd && ovEnd > dayStart) {
+          if (!latest || new Date(ov.created_at) > new Date(latest.created_at)) {
+            latest = ov
+          }
+        }
+      }
+      return latest
+    })
+  }, [calendarSlots, overrides])
+
   const numWeeks = calendarSlots.length / 7
 
   // Build continuous spans per week (Google Calendar-style multi-day bars).
   // Top row: primary assignments (outgoing member's bar extends through transition day).
-  // Bottom row: secondary assignments (incoming member, only on transition days).
+  // Bottom row: secondary assignments (incoming member, only on transition days) OR override bars.
   const weekSpanRows = useMemo(() => {
-    const result: { topSpans: WeekSpan[]; bottomSpans: WeekSpan[] }[] = []
+    const result: { topSpans: WeekSpan[]; bottomSpans: WeekSpan[]; overrideSpans: WeekSpan[] }[] = []
     for (let wi = 0; wi < numWeeks; wi++) {
       const ws = wi * 7
 
@@ -182,10 +212,36 @@ export function OncallCalendar({ rotation, members }: OncallCalendarProps) {
         }
       }
 
-      result.push({ topSpans, bottomSpans })
+      // Override spans (continuous bars for overridden days)
+      const overrideSpans: WeekSpan[] = []
+      let ovStart: number | null = null
+      let ovId: string | null = null
+      let ovName = ''
+      for (let di = 0; di <= 7; di++) {
+        const ov = di < 7 ? overrideAssignments[ws + di] : null
+        const sameOv = ov && ovId && ov.id === ovId
+        if (!sameOv) {
+          if (ovId && ovStart !== null) {
+            overrideSpans.push({
+              memberId: ovId,
+              memberName: ovName,
+              colorIdx: -1, // override color
+              startCol: ovStart,
+              endCol: di - 1,
+              continuesFromPrev: false,
+              continuesToNext: false,
+            })
+          }
+          ovStart = ov ? di : null
+          ovId = ov ? ov.id : null
+          ovName = ov ? ov.override_user_name : ''
+        }
+      }
+
+      result.push({ topSpans, bottomSpans, overrideSpans })
     }
     return result
-  }, [dayAssignments, numWeeks, colorMap])
+  }, [dayAssignments, overrideAssignments, numWeeks, colorMap])
 
   const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month
   const todayDate = today.getDate()
@@ -302,6 +358,18 @@ export function OncallCalendar({ rotation, members }: OncallCalendarProps) {
                     {span.memberName}
                   </div>
                 ))}
+                {weekSpanRows[wi].overrideSpans.map((span, si) => (
+                  <div
+                    key={`ov-${si}`}
+                    className={`h-6 flex items-center px-1.5 text-[0.65rem] font-medium leading-none truncate ${OVERRIDE_COLOR} rounded-md mt-0.5`}
+                    style={{
+                      gridColumn: `${span.startCol + 1} / ${span.endCol + 2}`,
+                      gridRow: 3,
+                    }}
+                  >
+                    ⚡ {span.memberName}
+                  </div>
+                ))}
               </div>
             </div>
           )
@@ -319,6 +387,12 @@ export function OncallCalendar({ rotation, members }: OncallCalendarProps) {
             </div>
           )
         })}
+        {overrides && overrides.length > 0 && (
+          <div className="flex items-center gap-1.5">
+            <span className={`h-2.5 w-2.5 rounded-full ${OVERRIDE_DOT_COLOR}`} />
+            <span className="text-xs text-gray-700 dark:text-gray-300">{t('teams.oncall.override.title')}</span>
+          </div>
+        )}
       </div>
     </div>
   )

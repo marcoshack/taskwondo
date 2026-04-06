@@ -47,5 +47,9 @@
   "email.sla_breach.footer": "You received this email because you are on the escalation list for this project. You can change your notification preferences in your Taskwondo settings.",
 
   "email.oncall.incoming.subject": "You are now on-call for {{teamName}}",
-  "email.oncall.outgoing.subject": "Your on-call shift for {{teamName}} has ended"
+  "email.oncall.outgoing.subject": "Your on-call shift for {{teamName}} has ended",
+
+  "email.oncall.override.created.subject": "On-call override assigned for {{teamName}}",
+  "email.oncall.override.covered.subject": "Your on-call shift for {{teamName}} has been covered",
+  "email.oncall.override.cancelled.subject": "On-call override cancelled for {{teamName}}"
 }

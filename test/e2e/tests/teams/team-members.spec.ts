@@ -37,14 +37,11 @@ test.describe('Team members', () => {
     // Members tab is active by default — should show empty state
     await expect(page.getByText('No members in this team.')).toBeVisible({ timeout: 10000 });
 
-    // Click Add member
-    await page.getByRole('button', { name: 'Add member' }).click();
-
-    // Search for the second user
+    // Search for the second user to narrow the available list
     await page.getByPlaceholder(/search/i).fill(user2.displayName);
 
-    // Click the user in the dropdown
-    await page.getByText(user2.displayName).click();
+    // Click the user in the dropdown to add them
+    await page.locator('ul').getByText(user2.displayName).click();
 
     // Verify the user appears in the members list
     await expect(page.getByText(user2.displayName)).toBeVisible({ timeout: 10000 });
@@ -107,11 +104,9 @@ test.describe('Team members', () => {
     });
 
     await page.goto(`/d/projects/${testProject.key}/teams/${team.id}`);
+    await expect(page.getByText('No members in this team.')).toBeVisible({ timeout: 10000 });
 
-    // Open add member dropdown
-    await page.getByRole('button', { name: 'Add member' }).click();
-
-    // Search for viewer — should not be available
+    // Search for viewer — should not be available (viewers are excluded)
     await page.getByPlaceholder(/search/i).fill(viewer.displayName);
     await expect(page.getByText('No results')).toBeVisible({ timeout: 5000 });
   });

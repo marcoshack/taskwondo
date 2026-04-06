@@ -284,12 +284,18 @@ func (r *EscalationRepository) loadLevelTeams(ctx context.Context, levelID uuid.
 	rows, err := r.db.QueryContext(ctx,
 		`SELECT t.id, t.name,
 		        CASE WHEN oc.id IS NOT NULL THEN true ELSE false END AS has_oncall,
-		        oc.current_user_id,
-		        u.display_name
+		        COALESCE(ov.override_user_id, oc.current_user_id),
+		        COALESCE(ov_u.display_name, u.display_name)
 		 FROM escalation_level_teams elt
 		 JOIN teams t ON t.id = elt.team_id
 		 LEFT JOIN oncall_rotations oc ON oc.team_id = t.id
 		 LEFT JOIN users u ON u.id = oc.current_user_id
+		 LEFT JOIN LATERAL (
+		     SELECT override_user_id FROM oncall_overrides
+		     WHERE rotation_id = oc.id AND start_at <= now() AND end_at > now()
+		     ORDER BY created_at DESC LIMIT 1
+		 ) ov ON true
+		 LEFT JOIN users ov_u ON ov_u.id = ov.override_user_id
 		 WHERE elt.escalation_level_id = $1
 		 ORDER BY t.name`, levelID)
 	if err != nil {

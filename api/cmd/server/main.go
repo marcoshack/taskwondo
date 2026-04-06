@@ -149,7 +149,9 @@ func main() {
 	queueService := service.NewQueueService(queueRepo, queueCategoryRepo, queueTeamRepo, projectRepo, projectMemberRepo)
 	teamService := service.NewTeamService(teamRepo, projectRepo, projectMemberRepo)
 	oncallRepo := repository.NewOncallRotationRepository(db)
+	oncallOverrideRepo := repository.NewOncallOverrideRepository(db)
 	oncallService := service.NewOncallService(oncallRepo, teamRepo, projectRepo, projectMemberRepo)
+	oncallService.SetOverrideRepository(oncallOverrideRepo)
 	savedSearchService := service.NewSavedSearchService(savedSearchRepo, projectRepo, projectMemberRepo)
 	milestoneService := service.NewMilestoneService(milestoneRepo, projectRepo, projectMemberRepo)
 	slaService := service.NewSLAService(slaRepo, projectRepo, projectMemberRepo, workflowRepo)
@@ -250,6 +252,7 @@ func main() {
 	milestoneService.SetPublisher(publisher)
 	queueService.SetPublisher(publisher)
 	systemSettingService.SetPublisher(publisher)
+	oncallService.SetPublisher(publisher)
 
 	// Wire SLA notification repository for clearing notifications on status transitions
 	slaNotificationRepo := repository.NewSLANotificationRepository(db)
@@ -513,6 +516,14 @@ func main() {
 									r.Patch("/", oncall.Update)
 									r.Delete("/", oncall.Delete)
 									r.Get("/history", oncall.ListHistory)
+									r.Route("/overrides", func(r chi.Router) {
+										r.Post("/", oncall.CreateOverride)
+										r.Get("/", oncall.ListOverrides)
+										r.Route("/{overrideId}", func(r chi.Router) {
+											r.Patch("/", oncall.UpdateOverride)
+											r.Delete("/", oncall.DeleteOverride)
+										})
+									})
 								})
 							})
 						})

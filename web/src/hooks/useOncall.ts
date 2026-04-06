@@ -5,8 +5,14 @@ import {
   updateOncallRotation,
   deleteOncallRotation,
   getOncallHistory,
+  listOncallOverrides,
+  createOncallOverride,
+  updateOncallOverride,
+  deleteOncallOverride,
   type CreateOncallRotationInput,
   type UpdateOncallRotationInput,
+  type CreateOncallOverrideInput,
+  type UpdateOncallOverrideInput,
 } from '@/api/oncall'
 
 export function useOncallRotation(projectKey: string, teamId: string) {
@@ -54,6 +60,45 @@ export function useDeleteOncallRotation(projectKey: string, teamId: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: () => deleteOncallRotation(projectKey, teamId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['projects', projectKey, 'teams', teamId, 'oncall'] })
+    },
+  })
+}
+
+export function useOncallOverrides(projectKey: string, teamId: string) {
+  return useQuery({
+    queryKey: ['projects', projectKey, 'teams', teamId, 'oncall', 'overrides'],
+    queryFn: () => listOncallOverrides(projectKey, teamId),
+    enabled: !!projectKey && !!teamId,
+  })
+}
+
+export function useCreateOncallOverride(projectKey: string, teamId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: CreateOncallOverrideInput) => createOncallOverride(projectKey, teamId, input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['projects', projectKey, 'teams', teamId, 'oncall'] })
+    },
+  })
+}
+
+export function useUpdateOncallOverride(projectKey: string, teamId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ overrideId, input }: { overrideId: string; input: UpdateOncallOverrideInput }) =>
+      updateOncallOverride(projectKey, teamId, overrideId, input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['projects', projectKey, 'teams', teamId, 'oncall'] })
+    },
+  })
+}
+
+export function useDeleteOncallOverride(projectKey: string, teamId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (overrideId: string) => deleteOncallOverride(projectKey, teamId, overrideId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['projects', projectKey, 'teams', teamId, 'oncall'] })
     },

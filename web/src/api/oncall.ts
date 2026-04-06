@@ -38,6 +38,7 @@ export interface OncallRotationHistory {
 
 export interface OncallRotationWithMembers extends OncallRotation {
   members: OncallRotationMember[]
+  active_override: OncallActiveOverride | null
 }
 
 export interface CreateOncallRotationInput {
@@ -54,6 +55,42 @@ export interface UpdateOncallRotationInput {
   timezone?: string
   start_date?: string
   member_ids?: string[]
+}
+
+export interface OncallOverride {
+  id: string
+  rotation_id: string
+  override_user_id: string
+  override_user_name: string
+  override_avatar_url?: string
+  start_at: string
+  end_at: string
+  reason?: string
+  created_by: string
+  created_by_name: string
+  created_at: string
+}
+
+export interface OncallActiveOverride {
+  id: string
+  override_user_id: string
+  start_at: string
+  end_at: string
+  reason?: string
+}
+
+export interface CreateOncallOverrideInput {
+  override_user_id: string
+  start_at: string   // RFC3339
+  end_at: string     // RFC3339
+  reason?: string
+}
+
+export interface UpdateOncallOverrideInput {
+  override_user_id?: string
+  start_at?: string
+  end_at?: string
+  reason?: string | null
 }
 
 // --- API Functions ---
@@ -87,6 +124,33 @@ export async function updateOncallRotation(projectKey: string, teamId: string, i
 
 export async function deleteOncallRotation(projectKey: string, teamId: string) {
   await api.delete(`${nsPrefix()}/projects/${projectKey}/teams/${teamId}/oncall`)
+}
+
+export async function createOncallOverride(projectKey: string, teamId: string, input: CreateOncallOverrideInput) {
+  const res = await api.post<DataResponse<OncallOverride>>(
+    `${nsPrefix()}/projects/${projectKey}/teams/${teamId}/oncall/overrides`,
+    input,
+  )
+  return res.data.data
+}
+
+export async function listOncallOverrides(projectKey: string, teamId: string) {
+  const res = await api.get<DataResponse<OncallOverride[]>>(
+    `${nsPrefix()}/projects/${projectKey}/teams/${teamId}/oncall/overrides`,
+  )
+  return res.data.data
+}
+
+export async function updateOncallOverride(projectKey: string, teamId: string, overrideId: string, input: UpdateOncallOverrideInput) {
+  const res = await api.patch<DataResponse<OncallOverride>>(
+    `${nsPrefix()}/projects/${projectKey}/teams/${teamId}/oncall/overrides/${overrideId}`,
+    input,
+  )
+  return res.data.data
+}
+
+export async function deleteOncallOverride(projectKey: string, teamId: string, overrideId: string) {
+  await api.delete(`${nsPrefix()}/projects/${projectKey}/teams/${teamId}/oncall/overrides/${overrideId}`)
 }
 
 export async function getOncallHistory(projectKey: string, teamId: string, limit?: number, offset?: number) {

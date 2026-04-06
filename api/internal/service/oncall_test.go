@@ -586,6 +586,369 @@ func TestOncallUpdate_StartDateResetsRotation(t *testing.T) {
 	}
 }
 
+// --- Mock oncall override repository ---
+
+type mockOncallOverrideRepo struct {
+	overrides map[uuid.UUID]*model.OncallOverride
+}
+
+func newMockOncallOverrideRepo() *mockOncallOverrideRepo {
+	return &mockOncallOverrideRepo{
+		overrides: make(map[uuid.UUID]*model.OncallOverride),
+	}
+}
+
+func (m *mockOncallOverrideRepo) Create(_ context.Context, o *model.OncallOverride) (*model.OncallOverride, error) {
+	o.CreatedAt = time.Now()
+	m.overrides[o.ID] = o
+	return o, nil
+}
+
+func (m *mockOncallOverrideRepo) GetByID(_ context.Context, id uuid.UUID) (*model.OncallOverride, error) {
+	o, ok := m.overrides[id]
+	if !ok {
+		return nil, model.ErrNotFound
+	}
+	return o, nil
+}
+
+func (m *mockOncallOverrideRepo) Update(_ context.Context, o *model.OncallOverride) (*model.OncallOverride, error) {
+	if _, ok := m.overrides[o.ID]; !ok {
+		return nil, model.ErrNotFound
+	}
+	m.overrides[o.ID] = o
+	return o, nil
+}
+
+func (m *mockOncallOverrideRepo) Delete(_ context.Context, id uuid.UUID) error {
+	if _, ok := m.overrides[id]; !ok {
+		return model.ErrNotFound
+	}
+	delete(m.overrides, id)
+	return nil
+}
+
+func (m *mockOncallOverrideRepo) ListByRotation(_ context.Context, rotationID uuid.UUID) ([]model.OncallOverrideWithUser, error) {
+	now := time.Now()
+	var result []model.OncallOverrideWithUser
+	for _, o := range m.overrides {
+		if o.RotationID == rotationID && o.EndAt.After(now) {
+			result = append(result, model.OncallOverrideWithUser{
+				OncallOverride:   *o,
+				OverrideUserName: "Override User",
+				CreatedByName:    "Creator",
+			})
+		}
+	}
+	return result, nil
+}
+
+func (m *mockOncallOverrideRepo) GetActiveOverride(_ context.Context, rotationID uuid.UUID) (*model.OncallOverride, error) {
+	now := time.Now()
+	var latest *model.OncallOverride
+	for _, o := range m.overrides {
+		if o.RotationID == rotationID && !o.StartAt.After(now) && o.EndAt.After(now) {
+			if latest == nil || o.CreatedAt.After(latest.CreatedAt) {
+				oCopy := *o
+				latest = &oCopy
+			}
+		}
+	}
+	return latest, nil
+}
+
+func (m *mockOncallOverrideRepo) ListOverridesInRange(_ context.Context, rotationID uuid.UUID, from, to time.Time) ([]model.OncallOverrideWithUser, error) {
+	var result []model.OncallOverrideWithUser
+	for _, o := range m.overrides {
+		if o.RotationID == rotationID && o.StartAt.Before(to) && o.EndAt.After(from) {
+			result = append(result, model.OncallOverrideWithUser{
+				OncallOverride:   *o,
+				OverrideUserName: "Override User",
+				CreatedByName:    "Creator",
+			})
+		}
+	}
+	return result, nil
+}
+
+func newTestOncallServiceWithOverrides() (*OncallService, *mockOncallRotationRepo, *mockOncallOverrideRepo, *mockTeamRepo, *mockProjectRepo, *mockProjectMemberRepo) {
+	oncallRepo := newMockOncallRotationRepo()
+	overrideRepo := newMockOncallOverrideRepo()
+	teamRepo := newMockTeamRepo()
+	projectRepo := newMockProjectRepo()
+	memberRepo := newMockProjectMemberRepo()
+	svc := NewOncallService(oncallRepo, teamRepo, projectRepo, memberRepo)
+	svc.SetOverrideRepository(overrideRepo)
+	return svc, oncallRepo, overrideRepo, teamRepo, projectRepo, memberRepo
+}
+
+func TestOncallOverrideCreate_Success(t *testing.T) {
+	svc, _, _, teamRepo, projectRepo, memberRepo := newTestOncallServiceWithOverrides()
+	info := userAuthInfo()
+	_, team, memberIDs := setupOncallProject(t, projectRepo, memberRepo, teamRepo, info, model.ProjectRoleAdmin)
+
+	_, err := svc.CreateRotation(context.Background(), info, "TEST", team.ID, validCreateOncallInput(memberIDs))
+	if err != nil {
+		t.Fatalf("create rotation failed: %v", err)
+	}
+
+	overrideInput := CreateOncallOverrideInput{
+		OverrideUserID: memberIDs[1],
+		StartAt:        time.Now().Add(1 * time.Hour),
+		EndAt:          time.Now().Add(25 * time.Hour),
+	}
+
+	result, err := svc.CreateOverride(context.Background(), info, "TEST", team.ID, overrideInput)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if result.OverrideUserID != memberIDs[1] {
+		t.Fatalf("expected override_user_id %s, got %s", memberIDs[1], result.OverrideUserID)
+	}
+}
+
+func TestOncallOverrideCreate_MemberCanCreateForSelf(t *testing.T) {
+	svc, _, _, teamRepo, projectRepo, memberRepo := newTestOncallServiceWithOverrides()
+	info := userAuthInfo()
+	_, team, memberIDs := setupOncallProject(t, projectRepo, memberRepo, teamRepo, info, model.ProjectRoleMember)
+
+	// Create rotation as admin first
+	adminInfo := &model.AuthInfo{UserID: uuid.New(), GlobalRole: model.RoleAdmin}
+	_, err := svc.CreateRotation(context.Background(), adminInfo, "TEST", team.ID, validCreateOncallInput(memberIDs))
+	if err != nil {
+		t.Fatalf("create rotation failed: %v", err)
+	}
+
+	// Member can create override for themselves
+	overrideInput := CreateOncallOverrideInput{
+		OverrideUserID: info.UserID,
+		StartAt:        time.Now().Add(1 * time.Hour),
+		EndAt:          time.Now().Add(25 * time.Hour),
+	}
+
+	_, err = svc.CreateOverride(context.Background(), info, "TEST", team.ID, overrideInput)
+	if err != nil {
+		t.Fatalf("expected no error for self-override, got %v", err)
+	}
+}
+
+func TestOncallOverrideCreate_MemberCannotCreateForOther(t *testing.T) {
+	svc, _, _, teamRepo, projectRepo, memberRepo := newTestOncallServiceWithOverrides()
+	info := userAuthInfo()
+	_, team, memberIDs := setupOncallProject(t, projectRepo, memberRepo, teamRepo, info, model.ProjectRoleMember)
+
+	adminInfo := &model.AuthInfo{UserID: uuid.New(), GlobalRole: model.RoleAdmin}
+	_, err := svc.CreateRotation(context.Background(), adminInfo, "TEST", team.ID, validCreateOncallInput(memberIDs))
+	if err != nil {
+		t.Fatalf("create rotation failed: %v", err)
+	}
+
+	// Member cannot create override for someone else
+	overrideInput := CreateOncallOverrideInput{
+		OverrideUserID: memberIDs[1],
+		StartAt:        time.Now().Add(1 * time.Hour),
+		EndAt:          time.Now().Add(25 * time.Hour),
+	}
+
+	_, err = svc.CreateOverride(context.Background(), info, "TEST", team.ID, overrideInput)
+	if !errors.Is(err, model.ErrForbidden) {
+		t.Fatalf("expected ErrForbidden, got %v", err)
+	}
+}
+
+func TestOncallOverrideCreate_InvalidTimeRange(t *testing.T) {
+	svc, _, _, teamRepo, projectRepo, memberRepo := newTestOncallServiceWithOverrides()
+	info := userAuthInfo()
+	_, team, memberIDs := setupOncallProject(t, projectRepo, memberRepo, teamRepo, info, model.ProjectRoleAdmin)
+
+	_, err := svc.CreateRotation(context.Background(), info, "TEST", team.ID, validCreateOncallInput(memberIDs))
+	if err != nil {
+		t.Fatalf("create rotation failed: %v", err)
+	}
+
+	// start_at after end_at
+	overrideInput := CreateOncallOverrideInput{
+		OverrideUserID: memberIDs[1],
+		StartAt:        time.Now().Add(25 * time.Hour),
+		EndAt:          time.Now().Add(1 * time.Hour),
+	}
+
+	_, err = svc.CreateOverride(context.Background(), info, "TEST", team.ID, overrideInput)
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation, got %v", err)
+	}
+}
+
+func TestOncallOverrideCreate_PastEndTime(t *testing.T) {
+	svc, _, _, teamRepo, projectRepo, memberRepo := newTestOncallServiceWithOverrides()
+	info := userAuthInfo()
+	_, team, memberIDs := setupOncallProject(t, projectRepo, memberRepo, teamRepo, info, model.ProjectRoleAdmin)
+
+	_, err := svc.CreateRotation(context.Background(), info, "TEST", team.ID, validCreateOncallInput(memberIDs))
+	if err != nil {
+		t.Fatalf("create rotation failed: %v", err)
+	}
+
+	overrideInput := CreateOncallOverrideInput{
+		OverrideUserID: memberIDs[1],
+		StartAt:        time.Now().Add(-48 * time.Hour),
+		EndAt:          time.Now().Add(-24 * time.Hour),
+	}
+
+	_, err = svc.CreateOverride(context.Background(), info, "TEST", team.ID, overrideInput)
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation for past end_at, got %v", err)
+	}
+}
+
+func TestOncallOverrideList_Success(t *testing.T) {
+	svc, _, _, teamRepo, projectRepo, memberRepo := newTestOncallServiceWithOverrides()
+	info := userAuthInfo()
+	_, team, memberIDs := setupOncallProject(t, projectRepo, memberRepo, teamRepo, info, model.ProjectRoleAdmin)
+
+	_, err := svc.CreateRotation(context.Background(), info, "TEST", team.ID, validCreateOncallInput(memberIDs))
+	if err != nil {
+		t.Fatalf("create rotation failed: %v", err)
+	}
+
+	// Create two overrides
+	for i := 0; i < 2; i++ {
+		_, err = svc.CreateOverride(context.Background(), info, "TEST", team.ID, CreateOncallOverrideInput{
+			OverrideUserID: memberIDs[1],
+			StartAt:        time.Now().Add(time.Duration(i+1) * 24 * time.Hour),
+			EndAt:          time.Now().Add(time.Duration(i+2) * 24 * time.Hour),
+		})
+		if err != nil {
+			t.Fatalf("create override %d failed: %v", i, err)
+		}
+	}
+
+	list, err := svc.ListOverrides(context.Background(), info, "TEST", team.ID)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(list) != 2 {
+		t.Fatalf("expected 2 overrides, got %d", len(list))
+	}
+}
+
+func TestOncallOverrideDelete_CreatorCanDelete(t *testing.T) {
+	svc, _, _, teamRepo, projectRepo, memberRepo := newTestOncallServiceWithOverrides()
+	info := userAuthInfo()
+	_, team, memberIDs := setupOncallProject(t, projectRepo, memberRepo, teamRepo, info, model.ProjectRoleAdmin)
+
+	_, err := svc.CreateRotation(context.Background(), info, "TEST", team.ID, validCreateOncallInput(memberIDs))
+	if err != nil {
+		t.Fatalf("create rotation failed: %v", err)
+	}
+
+	override, err := svc.CreateOverride(context.Background(), info, "TEST", team.ID, CreateOncallOverrideInput{
+		OverrideUserID: memberIDs[1],
+		StartAt:        time.Now().Add(1 * time.Hour),
+		EndAt:          time.Now().Add(25 * time.Hour),
+	})
+	if err != nil {
+		t.Fatalf("create override failed: %v", err)
+	}
+
+	err = svc.DeleteOverride(context.Background(), info, "TEST", team.ID, override.ID)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+}
+
+func TestOncallOverrideDelete_NonCreatorMemberForbidden(t *testing.T) {
+	svc, _, _, teamRepo, projectRepo, memberRepo := newTestOncallServiceWithOverrides()
+	adminInfo := &model.AuthInfo{UserID: uuid.New(), GlobalRole: model.RoleAdmin}
+	info := userAuthInfo()
+	_, team, memberIDs := setupOncallProject(t, projectRepo, memberRepo, teamRepo, info, model.ProjectRoleMember)
+
+	_, err := svc.CreateRotation(context.Background(), adminInfo, "TEST", team.ID, validCreateOncallInput(memberIDs))
+	if err != nil {
+		t.Fatalf("create rotation failed: %v", err)
+	}
+
+	// Admin creates override
+	override, err := svc.CreateOverride(context.Background(), adminInfo, "TEST", team.ID, CreateOncallOverrideInput{
+		OverrideUserID: memberIDs[1],
+		StartAt:        time.Now().Add(1 * time.Hour),
+		EndAt:          time.Now().Add(25 * time.Hour),
+	})
+	if err != nil {
+		t.Fatalf("create override failed: %v", err)
+	}
+
+	// Regular member (non-creator) cannot delete
+	err = svc.DeleteOverride(context.Background(), info, "TEST", team.ID, override.ID)
+	if !errors.Is(err, model.ErrForbidden) {
+		t.Fatalf("expected ErrForbidden, got %v", err)
+	}
+}
+
+func TestOncallOverrideActiveOverride(t *testing.T) {
+	svc, _, _, teamRepo, projectRepo, memberRepo := newTestOncallServiceWithOverrides()
+	info := userAuthInfo()
+	_, team, memberIDs := setupOncallProject(t, projectRepo, memberRepo, teamRepo, info, model.ProjectRoleAdmin)
+
+	_, err := svc.CreateRotation(context.Background(), info, "TEST", team.ID, validCreateOncallInput(memberIDs))
+	if err != nil {
+		t.Fatalf("create rotation failed: %v", err)
+	}
+
+	// Create an active override (starts in the past, ends in the future)
+	_, err = svc.CreateOverride(context.Background(), info, "TEST", team.ID, CreateOncallOverrideInput{
+		OverrideUserID: memberIDs[2],
+		StartAt:        time.Now().Add(-1 * time.Hour),
+		EndAt:          time.Now().Add(23 * time.Hour),
+	})
+	if err != nil {
+		t.Fatalf("create override failed: %v", err)
+	}
+
+	active, err := svc.GetActiveOverride(context.Background(), team.ID)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if active == nil {
+		t.Fatal("expected active override, got nil")
+	}
+	if active.OverrideUserID != memberIDs[2] {
+		t.Fatalf("expected override_user_id %s, got %s", memberIDs[2], active.OverrideUserID)
+	}
+}
+
+func TestOncallOverrideGetRotation_IncludesActiveOverride(t *testing.T) {
+	svc, _, _, teamRepo, projectRepo, memberRepo := newTestOncallServiceWithOverrides()
+	info := userAuthInfo()
+	_, team, memberIDs := setupOncallProject(t, projectRepo, memberRepo, teamRepo, info, model.ProjectRoleAdmin)
+
+	_, err := svc.CreateRotation(context.Background(), info, "TEST", team.ID, validCreateOncallInput(memberIDs))
+	if err != nil {
+		t.Fatalf("create rotation failed: %v", err)
+	}
+
+	// Create an active override
+	_, err = svc.CreateOverride(context.Background(), info, "TEST", team.ID, CreateOncallOverrideInput{
+		OverrideUserID: memberIDs[2],
+		StartAt:        time.Now().Add(-1 * time.Hour),
+		EndAt:          time.Now().Add(23 * time.Hour),
+	})
+	if err != nil {
+		t.Fatalf("create override failed: %v", err)
+	}
+
+	result, err := svc.GetRotation(context.Background(), info, "TEST", team.ID)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if result.ActiveOverride == nil {
+		t.Fatal("expected active_override in rotation result, got nil")
+	}
+	if result.ActiveOverride.OverrideUserID != memberIDs[2] {
+		t.Fatalf("expected override_user_id %s, got %s", memberIDs[2], result.ActiveOverride.OverrideUserID)
+	}
+}
+
 func TestOncallUpdate_SameStartDateNoReset(t *testing.T) {
 	svc, oncallRepo, teamRepo, projectRepo, memberRepo := newTestOncallService()
 	info := userAuthInfo()

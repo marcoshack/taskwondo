@@ -1608,6 +1608,49 @@ export async function getOncallHistory(
   return body.data;
 }
 
+export async function createOncallOverride(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  teamId: string,
+  data: { override_user_id: string; start_at: string; end_at: string; reason?: string },
+): Promise<{ id: string; rotation_id: string; override_user_id: string; start_at: string; end_at: string; reason?: string }> {
+  const res = await request.post(`${BASE_URL}/api/v1/default/projects/${projectKey}/teams/${teamId}/oncall/overrides`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data,
+  });
+  if (!res.ok()) throw new Error(`Create oncall override failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function listOncallOverrides(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  teamId: string,
+): Promise<{ id: string; override_user_id: string; override_user_name: string; start_at: string; end_at: string; reason?: string }[]> {
+  const res = await request.get(`${BASE_URL}/api/v1/default/projects/${projectKey}/teams/${teamId}/oncall/overrides`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`List oncall overrides failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function deleteOncallOverride(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  teamId: string,
+  overrideId: string,
+): Promise<void> {
+  const res = await request.delete(`${BASE_URL}/api/v1/default/projects/${projectKey}/teams/${teamId}/oncall/overrides/${overrideId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`Delete oncall override failed (${res.status()}): ${await res.text()}`);
+}
+
 export async function uploadPortalAttachment(
   request: APIRequestContext,
   token: string,

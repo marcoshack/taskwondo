@@ -6,8 +6,13 @@ import {
   useCreateOncallRotation,
   useUpdateOncallRotation,
   useDeleteOncallRotation,
+  useOncallOverrides,
+  useCreateOncallOverride,
+  useUpdateOncallOverride,
+  useDeleteOncallOverride,
 } from '@/hooks/useOncall'
 import { useTeamMembers } from '@/hooks/useTeams'
+import { useMembers } from '@/hooks/useProjects'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
@@ -16,8 +21,9 @@ import { Spinner } from '@/components/ui/Spinner'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import { Tooltip } from '@/components/ui/Tooltip'
-import { Clock, Plus, Pencil, Trash2, Shuffle, GripVertical } from 'lucide-react'
-import type { OncallRotationWithMembers, CreateOncallRotationInput, UpdateOncallRotationInput } from '@/api/oncall'
+import { UserPicker } from '@/components/ui/UserPicker'
+import { Clock, Plus, Pencil, Trash2, Shuffle, GripVertical, ShieldAlert } from 'lucide-react'
+import type { OncallRotationWithMembers, OncallOverride, CreateOncallRotationInput, UpdateOncallRotationInput, CreateOncallOverrideInput, UpdateOncallOverrideInput } from '@/api/oncall'
 import type { TeamMemberWithUser } from '@/api/teams'
 import { OncallCalendar } from '@/components/OncallCalendar'
 import { getLocalizedError } from '@/utils/apiError'
@@ -52,7 +58,7 @@ export function OncallTab({
 
   const [createOpen, setCreateOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
-  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [overrideOpen, setOverrideOpen] = useState(false)
   const [error, setError] = useState('')
 
   // 404 means no rotation configured — that's expected
@@ -63,10 +69,8 @@ export function OncallTab({
   function handleDelete() {
     setError('')
     deleteMutation.mutate(undefined, {
-      onSuccess: () => setDeleteOpen(false),
       onError: (err) => {
         setError(getLocalizedError(err, t, 'teams.oncall.deleteError'))
-        setDeleteOpen(false)
       },
     })
   }
@@ -81,7 +85,7 @@ export function OncallTab({
 
   if (noRotation) {
     return (
-      <div className="space-y-4">
+      <div className="max-w-3xl space-y-4">
         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
         <div className="border border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-12 text-center">
           <Clock className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
@@ -108,28 +112,42 @@ export function OncallTab({
     <div className="space-y-6">
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
-      {/* Summary card */}
+      {/* Two-column layout: 70% calendar/history | 30% details */}
       {hasRotation && (
-        <RotationSummary
-          data={rotationData}
-          canManage={canManage}
-          onEdit={() => setEditOpen(true)}
-          onDelete={() => setDeleteOpen(true)}
-        />
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Left column — calendar + history */}
+          <div className="lg:w-[70%] space-y-6 min-w-0">
+            <OncallCalendar
+              rotation={rotationData}
+              members={rotationData.members}
+              projectKey={projectKey}
+              teamId={teamId}
+            />
+            <HistoryLog projectKey={projectKey} teamId={teamId} />
+          </div>
+
+          {/* Right column — details sidebar */}
+          <div className="lg:w-[30%] space-y-4">
+            {canManage && (
+              <div className="flex items-center gap-2">
+                <Button className="flex-1" onClick={() => setEditOpen(true)}>
+                  <Pencil className="h-4 w-4 mr-1.5" />
+                  {t('teams.oncall.editRotation')}
+                </Button>
+                <Button variant="secondary" className="flex-1" onClick={() => setOverrideOpen(true)}>
+                  <ShieldAlert className="h-4 w-4 mr-1.5" />
+                  {t('teams.oncall.override.add')}
+                </Button>
+              </div>
+            )}
+            <RotationDetailsCard data={rotationData} />
+            <RotationMembersPanel data={rotationData} />
+            <OverridePanel projectKey={projectKey} teamId={teamId} canManage={canManage} />
+          </div>
+        </div>
       )}
 
-      {/* Calendar */}
-      {hasRotation && (
-        <OncallCalendar
-          rotation={rotationData}
-          members={rotationData.members}
-        />
-      )}
-
-      {/* History */}
-      <HistoryLog projectKey={projectKey} teamId={teamId} />
-
-      {/* Edit modal */}
+      {/* Edit modal (includes delete) */}
       {hasRotation && (
         <EditRotationModal
           open={editOpen}
@@ -137,91 +155,79 @@ export function OncallTab({
           projectKey={projectKey}
           teamId={teamId}
           data={rotationData}
+          onDelete={handleDelete}
+          isDeleting={deleteMutation.isPending}
         />
       )}
 
-      {/* Delete confirmation */}
-      <Modal open={deleteOpen} onClose={() => setDeleteOpen(false)} title={t('teams.oncall.deleteConfirmTitle')}>
-        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">{t('teams.oncall.deleteConfirmBody')}</p>
-        <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={() => setDeleteOpen(false)}>
-            {t('common.cancel')}
-          </Button>
-          <Button variant="danger" disabled={deleteMutation.isPending} onClick={handleDelete}>
-            {deleteMutation.isPending ? t('common.deleting') : t('common.delete')}
-          </Button>
-        </div>
-      </Modal>
+      {/* Create override modal */}
+      {hasRotation && (
+        <CreateOverrideModal
+          open={overrideOpen}
+          onClose={() => setOverrideOpen(false)}
+          projectKey={projectKey}
+          teamId={teamId}
+        />
+      )}
     </div>
   )
 }
 
-// --- Rotation Summary ---
+// --- Rotation Details Card (sidebar) ---
 
-function RotationSummary({
-  data,
-  canManage,
-  onEdit,
-  onDelete,
-}: {
-  data: OncallRotationWithMembers
-  canManage: boolean
-  onEdit: () => void
-  onDelete: () => void
-}) {
+function RotationDetailsCard({ data }: { data: OncallRotationWithMembers }) {
   const { t } = useTranslation()
-  const currentMember = data.members.find((m) => m.user_id === data.current_user_id)
 
   return (
     <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3">
-      {/* Row 1: label + action buttons */}
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-          {t('teams.oncall.currentlyOncall')}
-        </p>
-        {canManage && (
-          <>
-            {/* Mobile: small ghost icon buttons */}
-            <div className="flex items-center gap-1 sm:hidden">
-              <Button variant="ghost" size="sm" onClick={onEdit}>
-                <Pencil className="h-3.5 w-3.5" />
-              </Button>
-              <Button variant="ghost" size="sm" onClick={onDelete}>
-                <Trash2 className="h-3.5 w-3.5 text-red-500" />
-              </Button>
-            </div>
-            {/* Desktop: styled buttons */}
-            <div className="hidden sm:flex items-center gap-2">
-              <Button className="h-10" onClick={onEdit}>
-                <Pencil className="h-4 w-4 mr-1.5" />
-                {t('teams.oncall.editRotation')}
-              </Button>
-              <Button variant="secondary" className="h-10 px-3" onClick={onDelete}>
-                <Trash2 className="h-4 w-4 text-red-500" />
-              </Button>
-            </div>
-          </>
+      <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+        {t('teams.oncall.title')}
+      </p>
+      <div className="space-y-1 text-xs text-gray-500 dark:text-gray-400">
+        <div className="flex justify-between">
+          <span>{t('teams.oncall.periodDays')}</span>
+          <span className="text-gray-700 dark:text-gray-300">{t('teams.oncall.period', { days: data.period_days })}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>{t('teams.oncall.timezone')}</span>
+          <span className="text-gray-700 dark:text-gray-300">{data.timezone}</span>
+        </div>
+        {data.next_rotation_at && (
+          <div className="flex justify-between">
+            <span>{t('teams.oncall.nextRotationLabel')}</span>
+            <span className="text-gray-700 dark:text-gray-300">
+              {new Date(data.next_rotation_at).toLocaleDateString()}{' '}
+              {(() => { const match = data.rotation_time?.match(/T(\d{2}:\d{2})/); return match ? match[1] : data.rotation_time?.slice(0, 5) })()}
+            </span>
+          </div>
         )}
       </div>
+    </div>
+  )
+}
 
-      {/* Row 2: current member */}
-      {currentMember ? (
-        <div className="flex items-center gap-2">
-          <Avatar name={currentMember.display_name} avatarUrl={currentMember.avatar_url} size="sm" />
-          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{currentMember.display_name}</span>
-          <Badge color="green">{t('teams.oncall.active')}</Badge>
-        </div>
-      ) : (
-        <span className="text-sm text-gray-400 dark:text-gray-500">{t('teams.oncall.noOneOncall')}</span>
-      )}
+// --- Rotation Members Panel (sidebar) ---
 
-      {/* Row 3: rotation details */}
-      <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-        <span>{t('teams.oncall.period', { days: data.period_days })}</span>
-        <span>{data.timezone}</span>
-        {data.next_rotation_at && (
-          <span>{t('teams.oncall.nextRotation', { date: new Date(data.next_rotation_at).toLocaleDateString() })}</span>
-        )}
+function RotationMembersPanel({ data }: { data: OncallRotationWithMembers }) {
+  const { t } = useTranslation()
+  const sortedMembers = [...data.members].sort((a, b) => a.position - b.position)
+
+  return (
+    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3">
+      <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+        {t('teams.oncall.participants')}
+      </p>
+      <div className="space-y-2">
+        {sortedMembers.map((member, idx) => (
+          <div key={member.user_id} className="flex items-center gap-2">
+            <span className="text-xs text-gray-400 w-4 text-right shrink-0">{idx + 1}</span>
+            <Avatar name={member.display_name} avatarUrl={member.avatar_url} size="xs" />
+            <span className="text-sm text-gray-900 dark:text-gray-100">{member.display_name}</span>
+            {member.user_id === data.current_user_id && !data.active_override && (
+              <Badge color="green">{t('teams.oncall.active')}</Badge>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   )
@@ -276,17 +282,22 @@ function EditRotationModal({
   projectKey,
   teamId,
   data,
+  onDelete,
+  isDeleting,
 }: {
   open: boolean
   onClose: () => void
   projectKey: string
   teamId: string
   data: OncallRotationWithMembers
+  onDelete: () => void
+  isDeleting: boolean
 }) {
   const { t } = useTranslation()
   const updateMutation = useUpdateOncallRotation(projectKey, teamId)
   const { data: teamMembers } = useTeamMembers(projectKey, teamId)
   const [error, setError] = useState('')
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
   function handleSubmit(input: CreateOncallRotationInput) {
     setError('')
@@ -306,16 +317,31 @@ function EditRotationModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={t('teams.oncall.editRotation')}>
-      {error && <p className="text-sm text-red-600 dark:text-red-400 mb-3">{error}</p>}
-      <RotationForm
-        teamMembers={teamMembers ?? []}
-        initial={data}
-        onSubmit={handleSubmit}
-        onCancel={onClose}
-        isPending={updateMutation.isPending}
-      />
-    </Modal>
+    <>
+      <Modal open={open} onClose={onClose} title={t('teams.oncall.editRotation')}>
+        {error && <p className="text-sm text-red-600 dark:text-red-400 mb-3">{error}</p>}
+        <RotationForm
+          teamMembers={teamMembers ?? []}
+          initial={data}
+          onSubmit={handleSubmit}
+          onCancel={onClose}
+          isPending={updateMutation.isPending}
+          onDelete={() => setDeleteOpen(true)}
+        />
+      </Modal>
+
+      <Modal open={deleteOpen} onClose={() => setDeleteOpen(false)} title={t('teams.oncall.deleteConfirmTitle')}>
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">{t('teams.oncall.deleteConfirmBody')}</p>
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={() => setDeleteOpen(false)}>
+            {t('common.cancel')}
+          </Button>
+          <Button variant="danger" disabled={isDeleting} onClick={() => { onDelete(); setDeleteOpen(false); onClose() }}>
+            {isDeleting ? t('common.deleting') : t('common.delete')}
+          </Button>
+        </div>
+      </Modal>
+    </>
   )
 }
 
@@ -327,12 +353,14 @@ function RotationForm({
   onSubmit,
   onCancel,
   isPending,
+  onDelete,
 }: {
   teamMembers: TeamMemberWithUser[]
   initial?: OncallRotationWithMembers
   onSubmit: (input: CreateOncallRotationInput) => void
   onCancel: () => void
   isPending: boolean
+  onDelete?: () => void
 }) {
   const { t } = useTranslation()
 
@@ -350,7 +378,12 @@ function RotationForm({
     return match ? match[1] : initial.rotation_time.slice(0, 5)
   })
   const [timezone, setTimezone] = useState(initial?.timezone ?? 'UTC')
-  const [startDate, setStartDate] = useState(initial?.start_date ?? new Date().toISOString().slice(0, 10))
+  const [startDate, setStartDate] = useState(() => {
+    if (!initial?.start_date) return new Date().toISOString().slice(0, 10)
+    // API may return "2026-04-06T00:00:00Z" — extract YYYY-MM-DD
+    const m = initial.start_date.match(/^(\d{4}-\d{2}-\d{2})/)
+    return m ? m[1] : initial.start_date
+  })
   const [validationError, setValidationError] = useState('')
   const [draggedIdx, setDraggedIdx] = useState<number | null>(null)
 
@@ -502,25 +535,27 @@ function RotationForm({
         </div>
       )}
 
-      {/* Rotation period */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="w-full">
-          <Input
-            label={t('teams.oncall.periodDays')}
-            type="number"
-            min={1}
-            value={periodDays}
-            onChange={(e) => setPeriodDays(e.target.value)}
-          />
-        </div>
-        <div className="w-full">
-          <Input
-            label={t('teams.oncall.rotationTime')}
-            type="time"
-            value={rotationTime}
-            onChange={(e) => setRotationTime(e.target.value)}
-          />
-        </div>
+      {/* Period, rotation time, start date */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <Input
+          label={t('teams.oncall.periodDays')}
+          type="number"
+          min={1}
+          value={periodDays}
+          onChange={(e) => setPeriodDays(e.target.value)}
+        />
+        <Input
+          label={t('teams.oncall.rotationTime')}
+          type="time"
+          value={rotationTime}
+          onChange={(e) => setRotationTime(e.target.value)}
+        />
+        <Input
+          label={t('teams.oncall.startDate')}
+          type="date"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+        />
       </div>
 
       {/* Timezone */}
@@ -534,31 +569,362 @@ function RotationForm({
         ))}
       </Select>
 
-      {/* Start date */}
-      <Input
-        label={t('teams.oncall.startDate')}
-        type="date"
-        value={startDate}
-        onChange={(e) => setStartDate(e.target.value)}
-      />
-
-      <div className="flex justify-end gap-3 pt-2">
-        <Button type="button" variant="secondary" onClick={onCancel}>{t('common.cancel')}</Button>
-        <Tooltip content={
-          !canSubmit && !isPending ? [
-            !isValidMembers ? t('teams.oncall.minMembers') : '',
-            !isValidPeriod ? t('teams.oncall.invalidPeriod') : '',
-            !isValidTime ? t('teams.oncall.invalidTime') : '',
-            !isValidStartDate ? t('teams.oncall.invalidStartDate') : '',
-          ].filter(Boolean).join(' ') || undefined : undefined
-        }>
-          <Button type="submit" disabled={!canSubmit}>
-            {isPending ? t('common.saving') : initial ? t('common.save') : t('common.create')}
+      <div className="flex items-center pt-2">
+        {onDelete && (
+          <Button type="button" variant="secondary" onClick={onDelete} className="mr-auto px-2.5">
+            <Trash2 className="h-4 w-4 text-red-500" />
           </Button>
-        </Tooltip>
+        )}
+        <div className="flex gap-3 ml-auto">
+          <Button type="button" variant="secondary" onClick={onCancel}>{t('common.cancel')}</Button>
+          <Tooltip content={
+            !canSubmit && !isPending ? [
+              !isValidMembers ? t('teams.oncall.minMembers') : '',
+              !isValidPeriod ? t('teams.oncall.invalidPeriod') : '',
+              !isValidTime ? t('teams.oncall.invalidTime') : '',
+              !isValidStartDate ? t('teams.oncall.invalidStartDate') : '',
+            ].filter(Boolean).join(' ') || undefined : undefined
+          }>
+            <Button type="submit" disabled={!canSubmit}>
+              {isPending ? t('common.saving') : initial ? t('common.save') : t('common.create')}
+            </Button>
+          </Tooltip>
+        </div>
       </div>
     </form>
   )
+}
+
+// --- Override Panel (sidebar) ---
+
+function OverridePanel({
+  projectKey,
+  teamId,
+  canManage,
+}: {
+  projectKey: string
+  teamId: string
+  canManage: boolean
+}) {
+  const { t } = useTranslation()
+  const { data: overrides } = useOncallOverrides(projectKey, teamId)
+  const deleteMutation = useDeleteOncallOverride(projectKey, teamId)
+  const [deleteTarget, setDeleteTarget] = useState<OncallOverride | null>(null)
+  const [editTarget, setEditTarget] = useState<OncallOverride | null>(null)
+  const [error, setError] = useState('')
+
+  const now = new Date()
+
+  function handleDelete() {
+    if (!deleteTarget) return
+    setError('')
+    deleteMutation.mutate(deleteTarget.id, {
+      onSuccess: () => setDeleteTarget(null),
+      onError: (err) => {
+        setError(getLocalizedError(err, t, 'teams.oncall.override.deleteError'))
+        setDeleteTarget(null)
+      },
+    })
+  }
+
+  return (
+    <>
+      <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3">
+        <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+          {t('teams.oncall.override.title')}
+        </p>
+        {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+        {overrides && overrides.length > 0 ? (
+          <div className="space-y-2">
+            {overrides.map((override) => {
+              const isActive = new Date(override.start_at) <= now && new Date(override.end_at) > now
+              return (
+                <div key={override.id} className="space-y-1">
+                  {/* First row: name + badge + actions */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {override.override_user_name}
+                    </span>
+                    <Badge color={isActive ? 'yellow' : 'blue'}>
+                      {isActive ? t('teams.oncall.override.active') : t('teams.oncall.override.upcoming')}
+                    </Badge>
+                    {canManage && (
+                      <div className="flex items-center gap-0.5 ml-auto">
+                        <Button variant="ghost" size="sm" onClick={() => setEditTarget(override)}>
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(override)}>
+                          <Trash2 className="h-3 w-3 text-red-500" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                  {/* Second row: time range */}
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    {new Date(override.start_at).toLocaleString()} — {new Date(override.end_at).toLocaleString()}
+                  </div>
+                  {override.reason && (
+                    <div className="text-xs text-gray-400 dark:text-gray-500">{override.reason}</div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <p className="text-xs text-gray-400 dark:text-gray-500">{t('teams.oncall.override.empty')}</p>
+        )}
+      </div>
+
+      {/* Edit override modal */}
+      {editTarget && (
+        <EditOverrideModal
+          open={!!editTarget}
+          onClose={() => setEditTarget(null)}
+          projectKey={projectKey}
+          teamId={teamId}
+          override={editTarget}
+        />
+      )}
+
+      {/* Delete confirmation */}
+      <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} title={t('teams.oncall.override.deleteConfirmTitle')}>
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">{t('teams.oncall.override.deleteConfirmBody')}</p>
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={() => setDeleteTarget(null)}>{t('common.cancel')}</Button>
+          <Button variant="danger" disabled={deleteMutation.isPending} onClick={handleDelete}>
+            {deleteMutation.isPending ? t('common.deleting') : t('common.delete')}
+          </Button>
+        </div>
+      </Modal>
+    </>
+  )
+}
+
+// --- Create Override Modal ---
+
+function CreateOverrideModal({
+  open,
+  onClose,
+  projectKey,
+  teamId,
+}: {
+  open: boolean
+  onClose: () => void
+  projectKey: string
+  teamId: string
+}) {
+  const { t } = useTranslation()
+  const createMutation = useCreateOncallOverride(projectKey, teamId)
+  const { data: projectMembers } = useMembers(projectKey)
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
+  const [startAt, setStartAt] = useState('')
+  const [endAt, setEndAt] = useState('')
+  const [reason, setReason] = useState('')
+  const [error, setError] = useState('')
+
+  // Filter out customers and viewers
+  const eligibleMembers = (projectMembers ?? []).filter(
+    (m) => m.role !== 'customer' && m.role !== 'viewer',
+  )
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+
+    if (!selectedUserId) return
+    if (!startAt || !endAt) return
+    if (new Date(endAt) <= new Date(startAt)) {
+      setError(t('teams.oncall.override.invalidTimeRange'))
+      return
+    }
+
+    const input: CreateOncallOverrideInput = {
+      override_user_id: selectedUserId,
+      start_at: new Date(startAt).toISOString(),
+      end_at: new Date(endAt).toISOString(),
+      reason: reason || undefined,
+    }
+
+    createMutation.mutate(input, {
+      onSuccess: () => {
+        setSelectedUserId(null)
+        setStartAt('')
+        setEndAt('')
+        setReason('')
+        onClose()
+      },
+      onError: (err) => {
+        setError(getLocalizedError(err, t, 'teams.oncall.override.createError'))
+      },
+    })
+  }
+
+  const canSubmit = !!selectedUserId && !!startAt && !!endAt && !createMutation.isPending
+
+  return (
+    <Modal open={open} onClose={onClose} title={t('teams.oncall.override.createTitle')}>
+      {error && <p className="text-sm text-red-600 dark:text-red-400 mb-3">{error}</p>}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {t('teams.oncall.override.coveringMember')}
+          </label>
+          <UserPicker
+            members={eligibleMembers}
+            value={selectedUserId}
+            onChange={(id) => setSelectedUserId(id)}
+            placeholder={t('teams.oncall.override.selectMember')}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Input
+            label={t('teams.oncall.override.startAt')}
+            type="datetime-local"
+            value={startAt}
+            onChange={(e) => setStartAt(e.target.value)}
+          />
+          <Input
+            label={t('teams.oncall.override.endAt')}
+            type="datetime-local"
+            value={endAt}
+            onChange={(e) => setEndAt(e.target.value)}
+          />
+        </div>
+
+        <Input
+          label={t('teams.oncall.override.reason')}
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder={t('teams.oncall.override.reasonPlaceholder')}
+        />
+
+        <div className="flex justify-end gap-3 pt-2">
+          <Button type="button" variant="secondary" onClick={onClose}>{t('common.cancel')}</Button>
+          <Button type="submit" disabled={!canSubmit}>
+            {createMutation.isPending ? t('common.saving') : t('common.create')}
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  )
+}
+
+// --- Edit Override Modal ---
+
+function EditOverrideModal({
+  open,
+  onClose,
+  projectKey,
+  teamId,
+  override,
+}: {
+  open: boolean
+  onClose: () => void
+  projectKey: string
+  teamId: string
+  override: OncallOverride
+}) {
+  const { t } = useTranslation()
+  const updateMutation = useUpdateOncallOverride(projectKey, teamId)
+  const { data: projectMembers } = useMembers(projectKey)
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(override.override_user_id)
+  const [startAt, setStartAt] = useState(() => toDatetimeLocal(override.start_at))
+  const [endAt, setEndAt] = useState(() => toDatetimeLocal(override.end_at))
+  const [reason, setReason] = useState(override.reason ?? '')
+  const [error, setError] = useState('')
+
+  const eligibleMembers = (projectMembers ?? []).filter(
+    (m) => m.role !== 'customer' && m.role !== 'viewer',
+  )
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+
+    if (!selectedUserId || !startAt || !endAt) return
+    if (new Date(endAt) <= new Date(startAt)) {
+      setError(t('teams.oncall.override.invalidTimeRange'))
+      return
+    }
+
+    const input: UpdateOncallOverrideInput = {
+      override_user_id: selectedUserId,
+      start_at: new Date(startAt).toISOString(),
+      end_at: new Date(endAt).toISOString(),
+      reason: reason || undefined,
+    }
+
+    updateMutation.mutate(
+      { overrideId: override.id, input },
+      {
+        onSuccess: () => onClose(),
+        onError: (err) => {
+          setError(getLocalizedError(err, t, 'teams.oncall.override.updateError'))
+        },
+      },
+    )
+  }
+
+  const canSubmit = !!selectedUserId && !!startAt && !!endAt && !updateMutation.isPending
+
+  return (
+    <Modal open={open} onClose={onClose} title={t('teams.oncall.override.editTitle')}>
+      {error && <p className="text-sm text-red-600 dark:text-red-400 mb-3">{error}</p>}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {t('teams.oncall.override.coveringMember')}
+          </label>
+          <UserPicker
+            members={eligibleMembers}
+            value={selectedUserId}
+            onChange={(id) => setSelectedUserId(id)}
+            placeholder={t('teams.oncall.override.selectMember')}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Input
+            label={t('teams.oncall.override.startAt')}
+            type="datetime-local"
+            value={startAt}
+            onChange={(e) => setStartAt(e.target.value)}
+          />
+          <Input
+            label={t('teams.oncall.override.endAt')}
+            type="datetime-local"
+            value={endAt}
+            onChange={(e) => setEndAt(e.target.value)}
+          />
+        </div>
+
+        <Input
+          label={t('teams.oncall.override.reason')}
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder={t('teams.oncall.override.reasonPlaceholder')}
+        />
+
+        <div className="flex justify-end gap-3 pt-2">
+          <Button type="button" variant="secondary" onClick={onClose}>{t('common.cancel')}</Button>
+          <Button type="submit" disabled={!canSubmit}>
+            {updateMutation.isPending ? t('common.saving') : t('common.save')}
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  )
+}
+
+function toDatetimeLocal(iso: string): string {
+  const d = new Date(iso)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  const h = String(d.getHours()).padStart(2, '0')
+  const min = String(d.getMinutes()).padStart(2, '0')
+  return `${y}-${m}-${day}T${h}:${min}`
 }
 
 // --- History Log ---

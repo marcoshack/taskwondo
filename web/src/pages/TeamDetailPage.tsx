@@ -59,8 +59,8 @@ export function TeamDetailPage() {
   ]
 
   return (
-    <div className="max-w-3xl space-y-6">
-      <div>
+    <div className="space-y-6">
+      <div className="max-w-3xl">
         <Link
           to={p(`/projects/${projectKey}/settings?tab=teams`)}
           className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
@@ -75,14 +75,17 @@ export function TeamDetailPage() {
       <Tabs tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
 
       <div className="mt-4">
-        {activeTab === 'members' && (
-          <MembersTab projectKey={projectKey ?? ''} teamId={teamId ?? ''} canManage={canManage} />
-        )}
-        {activeTab === 'oncall' && (
+        {activeTab === 'oncall' ? (
           <OncallTab projectKey={projectKey ?? ''} teamId={teamId ?? ''} canManage={canManage} />
-        )}
-        {activeTab === 'settings' && (
-          <SettingsTab projectKey={projectKey ?? ''} team={team} canManage={canManage} />
+        ) : (
+          <div className="max-w-3xl">
+            {activeTab === 'members' && (
+              <MembersTab projectKey={projectKey ?? ''} teamId={teamId ?? ''} canManage={canManage} />
+            )}
+            {activeTab === 'settings' && (
+              <SettingsTab projectKey={projectKey ?? ''} team={team} canManage={canManage} />
+            )}
+          </div>
         )}
       </div>
     </div>
