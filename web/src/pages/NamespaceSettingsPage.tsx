@@ -187,7 +187,7 @@ export function NamespaceSettingsPage() {
     <div className={`${containerClass(true)} py-6`}>
       <div className={`flex transition-all duration-200 ${collapsed ? 'gap-4' : 'gap-8'}`}>
         <AppSidebar />
-        <div className="flex-1 min-w-0 max-w-3xl space-y-8">
+        <div className="flex-1 min-w-0 max-w-3xl space-y-6">
           {/* General section */}
           <div>
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('namespaces.settingsTitle')}</h2>

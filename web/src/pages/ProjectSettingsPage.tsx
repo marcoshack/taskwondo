@@ -417,7 +417,7 @@ export function ProjectSettingsPage() {
   const memberIds = members?.map((m) => m.user_id) ?? []
 
   return (
-    <div className="max-w-3xl space-y-6 overflow-hidden">
+    <div className="max-w-3xl space-y-6">
       {/* Page Header */}
       <div>
         <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{t('projects.settings.title')}</h2>
