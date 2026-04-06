@@ -25,7 +25,20 @@ export function useSetSystemSetting() {
   return useMutation({
     mutationFn: ({ key, value }: { key: string; value: unknown }) =>
       setSystemSetting(key, value),
-    onSuccess: (_data, { key }) => {
+    onMutate: async ({ key, value }) => {
+      await qc.cancelQueries({ queryKey: ['public-settings'] })
+      const previous = qc.getQueryData<Record<string, unknown>>(['public-settings'])
+      if (previous) {
+        qc.setQueryData(['public-settings'], { ...previous, [key]: value })
+      }
+      return { previous }
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        qc.setQueryData(['public-settings'], context.previous)
+      }
+    },
+    onSettled: (_data, _err, { key }) => {
       qc.invalidateQueries({ queryKey: ['system-settings'] })
       qc.invalidateQueries({ queryKey: ['system-settings', key] })
       qc.invalidateQueries({ queryKey: ['public-settings'] })

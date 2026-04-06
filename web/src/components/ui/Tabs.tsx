@@ -14,7 +14,7 @@ interface TabsProps {
 
 export function Tabs({ tabs, activeTab, onTabChange }: TabsProps) {
   return (
-    <div className="flex border-b border-gray-200 dark:border-gray-700">
+    <div className="flex overflow-x-auto border-b border-gray-200 dark:border-gray-700">
       {tabs.map((tab) => {
         const isActive = tab.key === activeTab
         const Icon = tab.icon
@@ -22,7 +22,7 @@ export function Tabs({ tabs, activeTab, onTabChange }: TabsProps) {
           <button
             key={tab.key}
             onClick={() => onTabChange(tab.key)}
-            className={`px-4 py-2 text-sm font-medium transition-colors -mb-px inline-flex items-center gap-1.5 ${
+            className={`px-4 py-2 text-sm font-medium transition-colors -mb-px inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
               isActive
                 ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400 font-semibold'
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 border-b-2 border-transparent'
