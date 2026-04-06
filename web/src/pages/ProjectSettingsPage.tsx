@@ -114,6 +114,19 @@ function RoleSelect({
     ? 'px-2 py-1 text-xs'
     : 'px-3 py-2 text-sm'
 
+  const getMenuPosition = () => {
+    const btn = buttonRef.current?.getBoundingClientRect()
+    const menu = menuRef.current
+    if (!btn) return { top: 0, left: 0 }
+    const menuHeight = menu?.offsetHeight ?? 320
+    const spaceBelow = window.innerHeight - btn.bottom - 4
+    const openAbove = spaceBelow < menuHeight && btn.top > spaceBelow
+    return {
+      top: openAbove ? btn.top - menuHeight - 4 : btn.bottom + 4,
+      left: Math.min(btn.right - 288, window.innerWidth - 296),
+    }
+  }
+
   return (
     <div ref={ref} className="relative">
       <button
@@ -128,38 +141,69 @@ function RoleSelect({
         <ChevronDown className="h-3 w-3 text-gray-400 shrink-0" />
       </button>
       {open && createPortal(
-        <div
-          ref={menuRef}
-          className="fixed z-[9999] w-72 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg py-1 max-h-80 overflow-y-auto"
-          style={{
-            top: (buttonRef.current?.getBoundingClientRect().bottom ?? 0) + 4,
-            left: Math.min(
-              (buttonRef.current?.getBoundingClientRect().right ?? 0) - 288,
-              window.innerWidth - 296,
-            ),
-          }}
-        >
-          {allRoles.map((role) => (
-            <button
-              key={role}
-              type="button"
-              onClick={() => { onChange(role); setOpen(false) }}
-              className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 ${
-                role === value
-                  ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-              }`}
-            >
-              <div className="flex-1 min-w-0">
-                <div className="font-medium">{t(`projects.settings.roles.${role}`)}</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">{t(`projects.settings.roles.${role}.description`)}</div>
-              </div>
-              <Info className="h-3.5 w-3.5 text-gray-400 shrink-0" />
-            </button>
-          ))}
-        </div>,
+        <RoleMenu
+          menuRef={menuRef}
+          getPosition={getMenuPosition}
+          allRoles={allRoles}
+          value={value}
+          onChange={onChange}
+          setOpen={setOpen}
+          t={t}
+        />,
         document.body,
       )}
+    </div>
+  )
+}
+
+function RoleMenu({
+  menuRef,
+  getPosition,
+  allRoles,
+  value,
+  onChange,
+  setOpen,
+  t,
+}: {
+  menuRef: React.RefObject<HTMLDivElement | null>
+  getPosition: () => { top: number; left: number }
+  allRoles: string[]
+  value: string
+  onChange: (role: string) => void
+  setOpen: (open: boolean) => void
+  t: (key: string) => string
+}) {
+  const [pos, setPos] = useState({ top: 0, left: 0 })
+
+  useEffect(() => {
+    // Defer position calc to after the menu is rendered and has a measured height
+    requestAnimationFrame(() => setPos(getPosition()))
+  }, [getPosition])
+
+  return (
+    <div
+      ref={menuRef}
+      className="fixed z-[9999] w-72 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg py-1 max-h-80 overflow-y-auto"
+      style={pos}
+    >
+      {allRoles.map((role) => (
+        <button
+          key={role}
+          type="button"
+          onClick={() => { onChange(role); setOpen(false) }}
+          className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 ${
+            role === value
+              ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
+              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+          }`}
+        >
+          <div className="flex-1 min-w-0">
+            <div className="font-medium">{t(`projects.settings.roles.${role}`)}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">{t(`projects.settings.roles.${role}.description`)}</div>
+          </div>
+          <Info className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+        </button>
+      ))}
     </div>
   )
 }
