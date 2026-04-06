@@ -60,17 +60,16 @@ export function TeamDetailPage() {
 
   return (
     <div className="max-w-3xl space-y-6">
-      <div className="flex items-center gap-3">
+      <div>
         <Link
           to={p(`/projects/${projectKey}/settings?tab=teams`)}
-          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
         >
-          <ArrowLeft className="h-5 w-5" />
+          <ArrowLeft className="h-3.5 w-3.5" />
+          {t('sidebar.settings')} / {t('teams.title')}
         </Link>
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{team.name}</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{t('teams.detail')}</p>
-        </div>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mt-1">{team.name}</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400">{t('teams.detail')}</p>
       </div>
 
       <Tabs tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
