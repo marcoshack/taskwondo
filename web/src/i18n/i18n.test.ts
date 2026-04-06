@@ -152,8 +152,7 @@ const SAME_VALUE_ALLOWED = new Set([
   // On-call: "Participants" is a cognate in French
   'teams.oncall.participants',
 
-  // Portal: "Portal", "Status", "Priority" are cognates in many languages
-  'portal.title',
+  // Portal: "Status", "Priority" are cognates in many languages
   'portal.status',
   'portal.priority',
   'portal.category',

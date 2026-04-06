@@ -62,6 +62,12 @@ export function AppShell() {
   }, [welcomeLoaded, welcomeNotFound, welcomeAutoShown, welcomeDismissed])
 
   const { data: inboxCount } = useInboxCount()
+
+  // Hide inbox/watchlist/feed when user is a customer in ALL their projects
+  const portalCount = user?.portal_projects?.length ?? 0
+  const totalCount = user?.total_project_count ?? 0
+  const isCustomerOnly = portalCount > 0 && portalCount === totalCount && user?.global_role !== 'admin'
+
   const { p } = useNamespacePath()
   const projectMatch = useMatch('/:namespace/projects/:projectKey/*')
   const adminMatch = useMatch('/admin/*')
@@ -213,18 +219,20 @@ export function AppShell() {
               >
                 <Search className="h-5 w-5" />
               </button>
-              <button
-                onClick={() => guardedNavigate('/user/inbox')}
-                className="relative p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
-                aria-label={t('inbox.title')}
-              >
-                <Inbox className="h-5 w-5" />
-                {inboxCount != null && inboxCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-indigo-600 px-1 text-[10px] font-bold text-white">
-                    {inboxCount > 99 ? '99+' : inboxCount}
-                  </span>
-                )}
-              </button>
+              {!isCustomerOnly && (
+                <button
+                  onClick={() => guardedNavigate('/user/inbox')}
+                  className="relative p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+                  aria-label={t('inbox.title')}
+                >
+                  <Inbox className="h-5 w-5" />
+                  {inboxCount != null && inboxCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-indigo-600 px-1 text-[10px] font-bold text-white">
+                      {inboxCount > 99 ? '99+' : inboxCount}
+                    </span>
+                  )}
+                </button>
+              )}
               {/* Namespace switcher — icon-only dropdown */}
               {showSwitcher && (
                 <div className="relative" ref={nsRef}>

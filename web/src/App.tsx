@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, Outlet, useParams } from 'react-router-dom'
+import { Routes, Route, Navigate, useParams } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { AdminRoute } from '@/components/AdminRoute'
 import { NamespaceGuard } from '@/components/NamespaceGuard'
@@ -16,58 +16,18 @@ import { RegisterPage } from '@/pages/RegisterPage'
 import { VerifyEmailPage } from '@/pages/VerifyEmailPage'
 import UserPage from '@/pages/InboxPage'
 import { NamespaceSettingsPage } from '@/pages/NamespaceSettingsPage'
-import { PortalShell } from '@/components/PortalShell'
-import { PortalTicketListPage } from '@/pages/PortalTicketListPage'
-import { PortalTicketDetailPage } from '@/pages/PortalTicketDetailPage'
-import { PortalPreferencesPage } from '@/pages/PortalPreferencesPage'
-import { PortalAppearancePage } from '@/pages/PortalAppearancePage'
-import { ProfilePage } from '@/pages/ProfilePage'
-import { useAuth } from '@/contexts/AuthContext'
 
-/** True when the user is a portal-only customer (single customer project, no other memberships). */
-function isPortalOnly(user: { portal_projects?: { project_key: string; namespace?: string }[]; total_project_count?: number; namespace_member_count?: number } | null): boolean {
-  const pp = user?.portal_projects ?? []
-  const total = user?.total_project_count ?? 0
-  const nsMembers = user?.namespace_member_count ?? 0
-  return pp.length === 1 && total === 1 && nsMembers === 0
-}
-
-/** Redirect to stored namespace or default — portal-only users go to portal */
+/** Redirect to stored namespace or default */
 function DefaultRedirect() {
-  const { user } = useAuth()
-
-  if (isPortalOnly(user)) {
-    const first = user!.portal_projects![0]
-    const segment = first.namespace || 'd'
-    return <Navigate to={`/portal/${segment}/projects/${first.project_key}/tickets`} replace />
-  }
-
   const stored = localStorage.getItem('taskwondo_namespace') || 'default'
   const segment = stored === 'default' ? 'd' : stored
   return <Navigate to={`/${segment}/projects`} state={{ autoRedirect: true }} replace />
 }
 
-/** Redirects non-portal-only users away from /portal routes to the AppShell equivalent */
-function PortalOnlyGuard() {
-  const { user } = useAuth()
+/** Legacy /portal URLs redirect to AppShell support view */
+function PortalRedirect() {
   const { namespace, projectKey } = useParams<{ namespace: string; projectKey: string }>()
-
-  if (!isPortalOnly(user)) {
-    return <Navigate to={`/${namespace}/projects/${projectKey}/support`} replace />
-  }
-  return <Outlet />
-}
-
-/** Blocks portal-only users from regular routes — redirects them to portal */
-function CustomerGuard() {
-  const { user } = useAuth()
-
-  if (isPortalOnly(user)) {
-    const first = user!.portal_projects![0]
-    const segment = first.namespace || 'd'
-    return <Navigate to={`/portal/${segment}/projects/${first.project_key}/tickets`} replace />
-  }
-  return <Outlet />
+  return <Navigate to={`/${namespace}/projects/${projectKey}/support`} replace />
 }
 
 export default function App() {
@@ -81,31 +41,18 @@ export default function App() {
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
       <Route element={<ProtectedRoute />}>
-        <Route element={<CustomerGuard />}>
-          <Route element={<AppShell />}>
-            <Route path="/:namespace" element={<NamespaceGuard />}>
-              <Route path="projects" element={<ProjectListPage />} />
-              <Route path="projects/:projectKey/*" element={<ProjectDetailPage />} />
-              <Route path="settings" element={<NamespaceSettingsPage />} />
-            </Route>
-            <Route path="/user/*" element={<UserPage />} />
-            <Route path="/preferences/*" element={<PreferencesPage />} />
-            <Route path="/admin/*" element={<AdminRoute><SystemSettingsPage /></AdminRoute>} />
+        <Route element={<AppShell />}>
+          <Route path="/:namespace" element={<NamespaceGuard />}>
+            <Route path="projects" element={<ProjectListPage />} />
+            <Route path="projects/:projectKey/*" element={<ProjectDetailPage />} />
+            <Route path="settings" element={<NamespaceSettingsPage />} />
           </Route>
+          <Route path="/user/*" element={<UserPage />} />
+          <Route path="/preferences/*" element={<PreferencesPage />} />
+          <Route path="/admin/*" element={<AdminRoute><SystemSettingsPage /></AdminRoute>} />
         </Route>
-      </Route>
-      <Route element={<ProtectedRoute />}>
-        <Route path="/portal/:namespace/projects/:projectKey" element={<PortalOnlyGuard />}>
-          <Route element={<PortalShell />}>
-            <Route path="tickets" element={<PortalTicketListPage />} />
-            <Route path="tickets/:itemNumber" element={<PortalTicketDetailPage />} />
-            <Route path="preferences" element={<PortalPreferencesPage />}>
-              <Route index element={<Navigate to="profile" replace />} />
-              <Route path="profile" element={<ProfilePage />} />
-              <Route path="appearance" element={<PortalAppearancePage />} />
-            </Route>
-          </Route>
-        </Route>
+        {/* Legacy /portal URLs redirect to AppShell support view */}
+        <Route path="/portal/:namespace/projects/:projectKey/*" element={<PortalRedirect />} />
       </Route>
       <Route path="*" element={<DefaultRedirect />} />
     </Routes>

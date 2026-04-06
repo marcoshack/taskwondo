@@ -156,7 +156,7 @@ test.describe('Customer role — project list and routing', () => {
     await expect(page).toHaveURL(new RegExp(`/projects/${custProjKey}/support`), { timeout: 10000 });
   });
 
-  test('non-portal-only user redirected from /portal to AppShell support', async ({ page, request, testUser, testProject }) => {
+  test('legacy /portal URL redirects to AppShell support', async ({ page, request, testUser, testProject }) => {
     const adminToken = getAdminToken();
 
     const suffix = randomUUID().slice(0, 4).toUpperCase();
@@ -164,12 +164,11 @@ test.describe('Customer role — project list and routing', () => {
     await api.createProject(request, adminToken, custProjKey, `Portal Guard ${suffix}`);
     await api.addMember(request, adminToken, custProjKey, testUser.id, 'customer');
 
-    // testUser owns testProject AND is customer of custProjKey → NOT portal-only
-    // Navigating to /portal should redirect to AppShell
+    // Navigating to a legacy /portal URL should redirect to AppShell support
     await page.goto(`/portal/d/projects/${custProjKey}/tickets`);
     await page.waitForLoadState('domcontentloaded');
 
-    // Should be redirected away from /portal to the regular support page
+    // Should be redirected to the regular support page
     await expect(page).toHaveURL(new RegExp(`/d/projects/${custProjKey}/support`), { timeout: 10000 });
   });
 });
@@ -200,26 +199,67 @@ test.describe('Customer role — project creation restriction', () => {
     await api.deactivateUser(request, adminToken, user.id).catch(() => {});
   });
 
-  test('portal-only user is redirected to portal on login and from AppShell', async ({ page, request }) => {
+  test('customer-only user lands on project list and can navigate to support view', async ({ page, request }) => {
     const adminToken = getAdminToken();
     const user = await createReadyUser(request, adminToken);
 
     // Create a project owned by admin and add user as customer
     const suffix = randomUUID().slice(0, 4).toUpperCase();
     const projKey = `B${suffix}`;
-    await api.createProject(request, adminToken, projKey, `Portal Redir ${suffix}`);
+    await api.createProject(request, adminToken, projKey, `Support View ${suffix}`);
     await api.addMember(request, adminToken, projKey, user.id, 'customer');
 
-    // Login as the portal-only user (single customer project, total_project_count=1)
+    // Login as the customer-only user (single customer project)
     await loginAs(page, page.context(), user.email, user.password);
 
-    // Should auto-redirect to the portal ticket list
-    await page.waitForURL(/\/portal\/.*\/tickets/, { timeout: 15000 });
-    expect(page.url()).toContain(projKey);
+    // Should land on project list (AppShell), NOT /portal/
+    await page.waitForURL(/\/projects/, { timeout: 15000 });
+    expect(page.url()).not.toContain('/portal/');
 
-    // Attempting to navigate to AppShell should redirect back to portal
-    await page.goto('/d/projects');
-    await page.waitForURL(/\/portal\//, { timeout: 10000 });
+    // Navigate to the customer project — should redirect to support view
+    await page.goto(`/d/projects/${projKey}`);
+    await expect(page).toHaveURL(new RegExp(`/d/projects/${projKey}/support`), { timeout: 10000 });
+
+    // Cleanup
+    await api.deactivateUser(request, adminToken, user.id).catch(() => {});
+  });
+
+  test('customer-only user sidebar hides inbox, watchlist and feed', async ({ page, request }) => {
+    const adminToken = getAdminToken();
+    const user = await createReadyUser(request, adminToken);
+
+    // Create a project owned by admin and add user as customer
+    const suffix = randomUUID().slice(0, 4).toUpperCase();
+    const projKey = `H${suffix}`;
+    await api.createProject(request, adminToken, projKey, `Hide Sidebar ${suffix}`);
+    await api.addMember(request, adminToken, projKey, user.id, 'customer');
+
+    // Ensure public queue for support view
+    await api.createQueue(request, adminToken, projKey, {
+      name: 'Public Queue',
+      queue_type: 'support',
+      is_public: true,
+    });
+
+    // Login and navigate to the support view (desktop)
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await loginAs(page, page.context(), user.email, user.password);
+    await page.waitForURL(/\/projects/, { timeout: 15000 });
+    await page.goto(`/d/projects/${projKey}/support`);
+    await page.waitForLoadState('domcontentloaded');
+
+    // Sidebar should show Support and Projects
+    const sidebar = page.locator('nav.hidden.sm\\:block');
+    await expect(sidebar.getByText('Support')).toBeVisible({ timeout: 5000 });
+    await expect(sidebar.getByText('Projects')).toBeVisible();
+
+    // Inbox, Watchlist, and Feed should NOT be visible in the sidebar
+    await expect(sidebar.getByText('Inbox')).not.toBeVisible();
+    await expect(sidebar.getByText('Watchlist')).not.toBeVisible();
+    await expect(sidebar.getByText('Feed')).not.toBeVisible();
+
+    // Top bar inbox button should also be hidden
+    await expect(page.locator('button[aria-label="Inbox"]')).not.toBeVisible();
 
     // Cleanup
     await api.deactivateUser(request, adminToken, user.id).catch(() => {});
@@ -248,11 +288,10 @@ test.describe('Customer role — project creation restriction', () => {
     expect(me.portal_projects?.length).toBe(1);
     expect(me.namespace_member_count).toBeGreaterThanOrEqual(1);
 
-    // Login in the browser — should NOT auto-redirect to /portal because the user
-    // has broader access through namespace membership
+    // Login in the browser — should land on the regular AppShell (projects list)
     await loginAs(page, page.context(), user.email, user.password);
-    await page.waitForLoadState('domcontentloaded');
-    await expect(page).not.toHaveURL(/\/portal\//, { timeout: 10000 });
+    await page.waitForURL(/\/projects/, { timeout: 15000 });
+    expect(page.url()).not.toContain('/portal/');
 
     // Cleanup
     await api.removeNamespaceMember(request, adminToken, nsSlug, user.id).catch(() => {});

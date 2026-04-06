@@ -88,6 +88,11 @@ export function AppSidebar({ projectKey, customerProject, mobileOnly }: AppSideb
     || (!projectKey && !!activeProjectKey && user?.global_role !== 'admin'
         && (user?.portal_projects ?? []).some((pp) => pp.project_key === activeProjectKey))
 
+  // Hide inbox/watchlist/feed when user is a customer in ALL their projects
+  const portalCount = user?.portal_projects?.length ?? 0
+  const totalCount = user?.total_project_count ?? 0
+  const isCustomerOnly = portalCount > 0 && portalCount === totalCount && user?.global_role !== 'admin'
+
   // Close mobile sidebar and namespace dropdown on route change
   useEffect(() => {
     closeMobile()
@@ -352,13 +357,17 @@ export function AppSidebar({ projectKey, customerProject, mobileOnly }: AppSideb
   function renderContent(showLabels: boolean) {
     return (
       <>
-        {/* User section */}
-        <ul className="space-y-1">
-          {userNavItems.map((item) => renderNavItem(item, showLabels))}
-        </ul>
+        {/* User section — hidden when user is customer in all projects */}
+        {!isCustomerOnly && (
+          <>
+            <ul className="space-y-1">
+              {userNavItems.map((item) => renderNavItem(item, showLabels))}
+            </ul>
 
-        {/* Separator */}
-        <div className="border-t border-gray-200 dark:border-gray-700 my-2" />
+            {/* Separator */}
+            <div className="border-t border-gray-200 dark:border-gray-700 my-2" />
+          </>
+        )}
 
         {/* Namespace banner */}
         {renderNamespaceBanner(showLabels)}

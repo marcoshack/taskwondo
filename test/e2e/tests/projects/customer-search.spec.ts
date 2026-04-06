@@ -428,10 +428,6 @@ test.describe('Customer role — search UI', () => {
     // Defensive regression test: even if someone sends a stale /items/:num link
     // to a customer user (e.g. old bookmark or legacy notification), the catch-all
     // must redirect to /support exactly once, not build up /support/support/...
-    //
-    // The testProject fixture is included so testUser is NOT portal-only
-    // (otherwise CustomerGuard would redirect them to /portal/... before we
-    // even reach the ProjectDetailPage catch-all being tested here).
     const adminToken = getAdminToken();
     const suffix = randomUUID().slice(0, 4).toUpperCase();
 

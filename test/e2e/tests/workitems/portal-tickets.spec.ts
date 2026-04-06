@@ -73,13 +73,14 @@ test.describe('Portal tickets — comments and attachments', () => {
     const portalComments = await api.listPortalComments(request, customer.token, testProject.key, ticket.item_number);
     expect(portalComments.length).toBe(0);
 
-    // Verify via UI — customer logs in and navigates to portal ticket
+    // Verify via UI — customer logs in and navigates to support ticket
     await loginAs(page, page.context(), customer.email, customer.password);
+    await page.waitForURL(/\/projects/, { timeout: 15000 });
 
-    // Should redirect to portal
-    await page.waitForURL(/\/portal\//);
-    await page.getByText('Internal comment test').click();
-    await page.waitForURL(/\/tickets\/\d+/);
+    // Navigate to the customer support view
+    await page.goto(`/d/projects/${testProject.key}/support`);
+    await page.getByText('Internal comment test').first().click();
+    await page.waitForURL(/\/support\/\d+/);
 
     // Comments section should show no comments
     await expect(page.getByText('Internal note for team only')).not.toBeVisible();
@@ -104,9 +105,10 @@ test.describe('Portal tickets — comments and attachments', () => {
 
     // Verify via UI
     await loginAs(page, page.context(), customer.email, customer.password);
-    await page.waitForURL(/\/portal\//);
-    await page.getByText('Public comment test').click();
-    await page.waitForURL(/\/tickets\/\d+/);
+    await page.waitForURL(/\/projects/, { timeout: 15000 });
+    await page.goto(`/d/projects/${testProject.key}/support`);
+    await page.getByText('Public comment test').first().click();
+    await page.waitForURL(/\/support\/\d+/);
 
     await expect(page.getByText('Hello customer, we are looking into it.')).toBeVisible();
   });
@@ -151,11 +153,12 @@ test.describe('Portal tickets — comments and attachments', () => {
       title: 'Customer attachment test',
     });
 
-    // Customer logs in to portal
+    // Customer logs in and navigates to support view
     await loginAs(page, page.context(), customer.email, customer.password);
-    await page.waitForURL(/\/portal\//);
-    await page.getByText('Customer attachment test').click();
-    await page.waitForURL(/\/tickets\/\d+/);
+    await page.waitForURL(/\/projects/, { timeout: 15000 });
+    await page.goto(`/d/projects/${testProject.key}/support`);
+    await page.getByText('Customer attachment test').first().click();
+    await page.waitForURL(/\/support\/\d+/);
 
     // Switch to Attachments tab
     await page.getByRole('button', { name: /Attachments/ }).click();
@@ -269,27 +272,28 @@ test.describe('Portal tickets — hide completed and auto-refresh', () => {
     await api.updateWorkItem(request, testUser.token, testProject.key, doneTicket.item_number, { status: 'investigating' });
     await api.updateWorkItem(request, testUser.token, testProject.key, doneTicket.item_number, { status: 'resolved' });
 
-    // Customer logs in to portal — desktop viewport
+    // Customer logs in and navigates to support view — desktop viewport
     await page.setViewportSize({ width: 1280, height: 720 });
     await loginAs(page, page.context(), customer.email, customer.password);
-    await page.waitForURL(/\/portal\//);
+    await page.waitForURL(/\/projects/, { timeout: 15000 });
+    await page.goto(`/d/projects/${testProject.key}/support`);
 
     // Both tickets should be visible initially
-    await expect(page.getByText('Open ticket for filter')).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText('Done ticket for filter')).toBeVisible();
+    await expect(page.getByText('Open ticket for filter').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Done ticket for filter').first()).toBeVisible();
 
     // Toggle "Hide completed"
     await page.getByRole('switch').click();
 
     // Done ticket should disappear, open ticket should remain
-    await expect(page.getByText('Done ticket for filter')).not.toBeVisible({ timeout: 5000 });
-    await expect(page.getByText('Open ticket for filter')).toBeVisible();
+    await expect(page.getByText('Done ticket for filter').first()).not.toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Open ticket for filter').first()).toBeVisible();
 
     // Toggle back off
     await page.getByRole('switch').click();
 
     // Both should be visible again
-    await expect(page.getByText('Done ticket for filter')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Done ticket for filter').first()).toBeVisible({ timeout: 5000 });
   });
 
   test('mobile: hide completed toggle in settings modal', async ({ page, request, testUser, testProject }) => {
@@ -311,10 +315,11 @@ test.describe('Portal tickets — hide completed and auto-refresh', () => {
     // Mobile viewport
     await page.setViewportSize({ width: 375, height: 667 });
     await loginAs(page, page.context(), customer.email, customer.password);
-    await page.waitForURL(/\/portal\//);
+    await page.waitForURL(/\/projects/, { timeout: 15000 });
+    await page.goto(`/d/projects/${testProject.key}/support`);
 
-    await expect(page.getByText('Mobile open ticket')).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText('Mobile done ticket')).toBeVisible();
+    await expect(page.getByText('Mobile open ticket').last()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Mobile done ticket').last()).toBeVisible();
 
     // Open settings modal via gear icon
     await page.getByRole('button', { name: 'Settings' }).click();
@@ -328,8 +333,8 @@ test.describe('Portal tickets — hide completed and auto-refresh', () => {
     await dialog.locator('button').first().click();
 
     // Done ticket should be hidden
-    await expect(page.getByText('Mobile done ticket')).not.toBeVisible({ timeout: 5000 });
-    await expect(page.getByText('Mobile open ticket')).toBeVisible();
+    await expect(page.getByText('Mobile done ticket').last()).not.toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Mobile open ticket').last()).toBeVisible();
   });
 
   test('desktop: hide completed persists across page reloads', async ({ page, request, testUser, testProject }) => {
@@ -350,20 +355,21 @@ test.describe('Portal tickets — hide completed and auto-refresh', () => {
 
     await page.setViewportSize({ width: 1280, height: 720 });
     await loginAs(page, page.context(), customer.email, customer.password);
-    await page.waitForURL(/\/portal\//);
+    await page.waitForURL(/\/projects/, { timeout: 15000 });
+    await page.goto(`/d/projects/${testProject.key}/support`);
 
-    await expect(page.getByText('Persist open ticket')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Persist open ticket').first()).toBeVisible({ timeout: 10000 });
 
     // Enable hide completed
     await page.getByRole('switch').click();
-    await expect(page.getByText('Persist done ticket')).not.toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Persist done ticket').first()).not.toBeVisible({ timeout: 5000 });
 
     // Reload the page
     await page.reload();
 
     // Hide completed should still be active after reload
-    await expect(page.getByText('Persist open ticket')).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText('Persist done ticket')).not.toBeVisible();
+    await expect(page.getByText('Persist open ticket').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Persist done ticket').first()).not.toBeVisible();
   });
 
   test('desktop: auto-refresh dropdown opens and allows selecting interval', async ({ page, request, testUser, testProject }) => {
@@ -377,9 +383,10 @@ test.describe('Portal tickets — hide completed and auto-refresh', () => {
 
     await page.setViewportSize({ width: 1280, height: 720 });
     await loginAs(page, page.context(), customer.email, customer.password);
-    await page.waitForURL(/\/portal\//);
+    await page.waitForURL(/\/projects/, { timeout: 15000 });
+    await page.goto(`/d/projects/${testProject.key}/support`);
 
-    await expect(page.getByText('Auto-refresh test ticket')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Auto-refresh test ticket').first()).toBeVisible({ timeout: 10000 });
 
     // Click the dropdown chevron
     const dropdownToggle = page.getByRole('button', { name: 'Auto-refresh' });
@@ -409,9 +416,10 @@ test.describe('Portal tickets — hide completed and auto-refresh', () => {
 
     await page.setViewportSize({ width: 1280, height: 720 });
     await loginAs(page, page.context(), customer.email, customer.password);
-    await page.waitForURL(/\/portal\//);
+    await page.waitForURL(/\/projects/, { timeout: 15000 });
+    await page.goto(`/d/projects/${testProject.key}/support`);
 
-    await expect(page.getByText('Persist refresh ticket')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Persist refresh ticket').first()).toBeVisible({ timeout: 10000 });
 
     // Set interval to 1m
     await page.getByRole('button', { name: 'Auto-refresh' }).click();
@@ -421,7 +429,7 @@ test.describe('Portal tickets — hide completed and auto-refresh', () => {
     await page.reload();
 
     // Should still show 1m
-    await expect(page.getByText('Persist refresh ticket')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Persist refresh ticket').first()).toBeVisible({ timeout: 10000 });
     await expect(page.getByRole('button', { name: 'Refresh', exact: true }).getByText('1m', { exact: true })).toBeVisible({ timeout: 5000 });
   });
 
@@ -436,9 +444,10 @@ test.describe('Portal tickets — hide completed and auto-refresh', () => {
 
     await page.setViewportSize({ width: 375, height: 667 });
     await loginAs(page, page.context(), customer.email, customer.password);
-    await page.waitForURL(/\/portal\//);
+    await page.waitForURL(/\/projects/, { timeout: 15000 });
+    await page.goto(`/d/projects/${testProject.key}/support`);
 
-    await expect(page.getByText('Mobile refresh ticket')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Mobile refresh ticket').last()).toBeVisible({ timeout: 10000 });
 
     // RefreshButton should be visible on mobile
     const dropdownToggle = page.getByRole('button', { name: 'Auto-refresh' });
