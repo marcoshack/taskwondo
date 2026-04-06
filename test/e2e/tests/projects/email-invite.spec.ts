@@ -84,8 +84,8 @@ test.describe('Email-based Project Invites', () => {
     // Create email invite via API
     await api.createEmailInvite(request, adminToken, testProject.key, inviteeEmail, 'member');
 
-    // Navigate to project settings
-    await page.goto(`/d/projects/${testProject.key}/settings`);
+    // Navigate to project settings invites tab
+    await page.goto(`/d/projects/${testProject.key}/settings?tab=invites`);
     await page.waitForLoadState('networkidle');
 
     // The invitee email should appear in the invite list
@@ -93,8 +93,8 @@ test.describe('Email-based Project Invites', () => {
   });
 
   test('invite by email form works in the UI', async ({ page, testProject }) => {
-    // Navigate to project settings
-    await page.goto(`/d/projects/${testProject.key}/settings`);
+    // Navigate to project settings users tab (email invite form is in Add user section)
+    await page.goto(`/d/projects/${testProject.key}/settings?tab=users`);
     await page.waitForLoadState('networkidle');
 
     // Find the email invite input

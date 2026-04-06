@@ -3,7 +3,7 @@ import * as api from '../../lib/api';
 
 test.describe('Team CRUD', () => {
   test('create team via UI and verify in list', async ({ request, testUser, testProject, page }) => {
-    await page.goto(`/d/projects/${testProject.key}/teams`);
+    await page.goto(`/d/projects/${testProject.key}/settings?tab=teams`);
 
     // Empty state should be shown
     await expect(page.getByText('No teams yet.')).toBeVisible({ timeout: 10000 });
@@ -29,7 +29,7 @@ test.describe('Team CRUD', () => {
       description: 'Created via API',
     });
 
-    await page.goto(`/d/projects/${testProject.key}/teams`);
+    await page.goto(`/d/projects/${testProject.key}/settings?tab=teams`);
     await expect(page.getByText('API Team')).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('Created via API')).toBeVisible();
   });
@@ -70,7 +70,7 @@ test.describe('Team CRUD', () => {
       name: 'Doomed Team',
     });
 
-    await page.goto(`/d/projects/${testProject.key}/teams`);
+    await page.goto(`/d/projects/${testProject.key}/settings?tab=teams`);
     await expect(page.getByText('Doomed Team')).toBeVisible({ timeout: 10000 });
 
     // Click the delete (trash) button on the team card
@@ -102,8 +102,8 @@ test.describe('Team CRUD', () => {
     await expect(page.getByRole('heading', { name: 'Delete Team' })).toBeVisible();
     await page.getByRole('button', { name: 'Delete', exact: true }).click();
 
-    // Should redirect back to teams list
-    await expect(page).toHaveURL(/\/teams/, { timeout: 10000 });
+    // Should redirect back to teams list (in settings tab)
+    await expect(page).toHaveURL(/\/settings\?tab=teams/, { timeout: 10000 });
   });
 
   test('team detail page shows correct tabs', async ({ request, testUser, testProject, page }) => {

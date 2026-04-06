@@ -753,7 +753,7 @@
   "projects.settings.deleteError": "프로젝트 삭제에 실패했습니다.",
   "projects.settings.deleteInviteConfirmBody": "이 초대 링크는 즉시 무효화됩니다. 아직 사용하지 않은 사람은 더 이상 참여할 수 없습니다.",
   "projects.settings.deleteInviteConfirmTitle": "초대 링크 취소",
-  "projects.settings.deleteProject": "프로젝트 삭제",
+  "projects.settings.deleteProject": "삭제",
   "projects.settings.deleteThisProject": "이 프로젝트 삭제",
   "projects.settings.deleteWarning": "이 프로젝트의 모든 항목, 댓글, 관계가 영구 삭제됩니다.",
   "projects.settings.description": "프로젝트 설정을 관리합니다.",
@@ -1256,7 +1256,6 @@
   "teams.createError": "팀 생성에 실패했습니다.",
   "teams.updateError": "팀 업데이트에 실패했습니다.",
   "teams.deleteError": "팀 삭제에 실패했습니다.",
-
   "teams.oncall.title": "온콜",
   "teams.oncall.noRotation": "이 팀에 온콜 로테이션이 설정되지 않았습니다.",
   "teams.oncall.setUp": "온콜 설정",
@@ -1377,5 +1376,18 @@
   "portal.changedField": "{{field}}을(를) 변경했습니다",
   "portal.errorTitleRequired": "제목은 필수입니다.",
   "portal.errorQueueRequired": "큐를 선택해주세요.",
-  "portal.errorCreateFailed": "티켓 생성에 실패했습니다."
+  "portal.errorCreateFailed": "티켓 생성에 실패했습니다.",
+  "projects.settings.title": "설정",
+  "projects.settings.subtitle": "프로젝트 설정을 관리합니다.",
+  "projects.settings.tab.general": "일반",
+  "projects.settings.tab.users": "사용자",
+  "projects.settings.tab.teams": "팀",
+  "projects.settings.tab.invites": "초대",
+  "projects.settings.tab.workItems": "작업 항목",
+  "projects.settings.roles.owner.description": "설정 및 멤버 관리를 포함한 프로젝트 전체 제어 권한.",
+  "projects.settings.roles.admin.description": "멤버, 설정 및 모든 작업 항목을 관리할 수 있습니다.",
+  "projects.settings.roles.member.description": "할당된 작업 항목을 생성하고 편집할 수 있습니다.",
+  "projects.settings.roles.viewer.description": "프로젝트와 작업 항목에 대한 읽기 전용 액세스.",
+  "projects.settings.roles.customer.description": "지원 포털에만 액세스할 수 있는 외부 사용자.",
+  "projects.settings.addUser": "사용자 추가"
 }

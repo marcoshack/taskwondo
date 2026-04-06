@@ -753,7 +753,7 @@
   "projects.settings.deleteError": "فشل حذف المشروع.",
   "projects.settings.deleteInviteConfirmBody": "سيتوقف رابط الدعوة هذا عن العمل فوراً. أي شخص لم يستخدمه بعد لن يتمكن من الانضمام.",
   "projects.settings.deleteInviteConfirmTitle": "إلغاء رابط الدعوة",
-  "projects.settings.deleteProject": "حذف المشروع",
+  "projects.settings.deleteProject": "حذف",
   "projects.settings.deleteThisProject": "حذف هذا المشروع",
   "projects.settings.deleteWarning": "سيتم حذف جميع العناصر والتعليقات والعلاقات في هذا المشروع نهائياً.",
   "projects.settings.description": "إدارة إعدادات المشروع.",
@@ -1256,7 +1256,6 @@
   "teams.createError": "فشل إنشاء الفريق.",
   "teams.updateError": "فشل تح��يث الفريق.",
   "teams.deleteError": "فشل حذف الفريق.",
-
   "teams.oncall.title": "المناوبة",
   "teams.oncall.noRotation": "لم يتم تكوين مناوبة استدعاء لهذا الفريق.",
   "teams.oncall.setUp": "إعداد المناوبة",
@@ -1377,5 +1376,18 @@
   "portal.changedField": "غيّر {{field}}",
   "portal.errorTitleRequired": "العنوان مطلوب.",
   "portal.errorQueueRequired": "يرجى اختيار قائمة.",
-  "portal.errorCreateFailed": "فشل إنشاء التذكرة."
+  "portal.errorCreateFailed": "فشل إنشاء التذكرة.",
+  "projects.settings.title": "الإعدادات",
+  "projects.settings.subtitle": "إدارة إعدادات المشروع.",
+  "projects.settings.tab.general": "عام",
+  "projects.settings.tab.users": "المستخدمون",
+  "projects.settings.tab.teams": "الفرق",
+  "projects.settings.tab.invites": "الدعوات",
+  "projects.settings.tab.workItems": "عناصر العمل",
+  "projects.settings.roles.owner.description": "تحكم كامل في المشروع، بما في ذلك الإعدادات وإدارة الأعضاء.",
+  "projects.settings.roles.admin.description": "يمكنه إدارة الأعضاء والإعدادات وجميع عناصر العمل.",
+  "projects.settings.roles.member.description": "يمكنه إنشاء وتعديل عناصر العمل المخصصة له.",
+  "projects.settings.roles.viewer.description": "وصول للقراءة فقط إلى المشروع وعناصر العمل.",
+  "projects.settings.roles.customer.description": "مستخدم خارجي مع وصول إلى بوابة الدعم فقط.",
+  "projects.settings.addUser": "إضافة مستخدم"
 }

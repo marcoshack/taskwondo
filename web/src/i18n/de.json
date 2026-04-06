@@ -753,7 +753,7 @@
   "projects.settings.deleteError": "Projekt konnte nicht gelöscht werden.",
   "projects.settings.deleteInviteConfirmBody": "Dieser Einladungslink wird sofort ungültig. Personen, die ihn noch nicht verwendet haben, können nicht mehr beitreten.",
   "projects.settings.deleteInviteConfirmTitle": "Einladungslink widerrufen",
-  "projects.settings.deleteProject": "Projekt löschen",
+  "projects.settings.deleteProject": "Löschen",
   "projects.settings.deleteThisProject": "Dieses Projekt löschen",
   "projects.settings.deleteWarning": "Alle Elemente, Kommentare und Verknüpfungen in diesem Projekt werden dauerhaft gelöscht.",
   "projects.settings.description": "Projekteinstellungen verwalten.",
@@ -1256,7 +1256,6 @@
   "teams.createError": "Team konnte nicht erstellt werden.",
   "teams.updateError": "Team konnte nicht aktualisiert werden.",
   "teams.deleteError": "Team konnte nicht gelöscht werden.",
-
   "teams.oncall.title": "Rufbereitschaft",
   "teams.oncall.noRotation": "Keine Rufbereitschaftsrotation für dieses Team konfiguriert.",
   "teams.oncall.setUp": "Rufbereitschaft einrichten",
@@ -1377,5 +1376,18 @@
   "portal.changedField": "hat {{field}} geändert",
   "portal.errorTitleRequired": "Titel ist erforderlich.",
   "portal.errorQueueRequired": "Bitte wählen Sie eine Warteschlange.",
-  "portal.errorCreateFailed": "Ticket konnte nicht erstellt werden."
+  "portal.errorCreateFailed": "Ticket konnte nicht erstellt werden.",
+  "projects.settings.title": "Einstellungen",
+  "projects.settings.subtitle": "Projekteinstellungen verwalten.",
+  "projects.settings.tab.general": "Allgemein",
+  "projects.settings.tab.users": "Benutzer",
+  "projects.settings.tab.teams": "Teams",
+  "projects.settings.tab.invites": "Einladungen",
+  "projects.settings.tab.workItems": "Arbeitselemente",
+  "projects.settings.roles.owner.description": "Volle Kontrolle über das Projekt, einschließlich Einstellungen und Mitgliederverwaltung.",
+  "projects.settings.roles.admin.description": "Kann Mitglieder, Einstellungen und alle Arbeitselemente verwalten.",
+  "projects.settings.roles.member.description": "Kann zugewiesene Arbeitselemente erstellen und bearbeiten.",
+  "projects.settings.roles.viewer.description": "Nur-Lese-Zugriff auf das Projekt und seine Arbeitselemente.",
+  "projects.settings.roles.customer.description": "Externer Benutzer mit Zugang nur zum Support-Portal.",
+  "projects.settings.addUser": "Benutzer hinzufügen"
 }

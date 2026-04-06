@@ -15,7 +15,6 @@ import { MilestonesPage } from './MilestonesPage'
 import { MilestoneDashboardPage } from './MilestoneDashboardPage'
 import { QueuesPage } from './QueuesPage'
 import { QueueSettingsPage } from './QueueSettingsPage'
-import { TeamsPage } from './TeamsPage'
 import { TeamDetailPage } from './TeamDetailPage'
 import { QueueWorkItemsPage } from './QueueWorkItemsPage'
 import { PortalTicketListPage } from './PortalTicketListPage'
@@ -88,7 +87,7 @@ export function ProjectDetailPage() {
             <Route path="queues" element={<QueuesPage />} />
             <Route path="queues/:queueId" element={<QueueSettingsPage />} />
             <Route path="queues/:queueId/items" element={<QueueWorkItemsPage />} />
-            <Route path="teams" element={<TeamsPage />} />
+            <Route path="teams" element={<Navigate to="../settings?tab=teams" replace />} />
             <Route path="teams/:teamId" element={<TeamDetailPage />} />
             <Route path="milestones" element={<MilestonesPage />} />
             <Route path="milestones/:milestoneId" element={<MilestoneDashboardPage />} />

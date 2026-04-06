@@ -753,7 +753,7 @@
   "projects.settings.deleteError": "プロジェクトの削除に失敗しました。",
   "projects.settings.deleteInviteConfirmBody": "この招待リンクは直ちに無効になります。まだ使用していない人はプロジェクトに参加できなくなります。",
   "projects.settings.deleteInviteConfirmTitle": "招待リンクを取り消す",
-  "projects.settings.deleteProject": "プロジェクトを削除",
+  "projects.settings.deleteProject": "削除",
   "projects.settings.deleteThisProject": "このプロジェクトを削除",
   "projects.settings.deleteWarning": "このプロジェクトのすべてのアイテム、コメント、関連が完全に削除されます。",
   "projects.settings.description": "プロジェクト設定を管理します。",
@@ -1256,7 +1256,6 @@
   "teams.createError": "チームの作成に失敗しました。",
   "teams.updateError": "チームの更新に失敗しました。",
   "teams.deleteError": "チームの削除に失敗しました。",
-
   "teams.oncall.title": "オンコール",
   "teams.oncall.noRotation": "このチームにはオンコールローテーションが設定されていません。",
   "teams.oncall.setUp": "オンコールを設定",
@@ -1377,5 +1376,18 @@
   "portal.changedField": "{{field}}を変更しました",
   "portal.errorTitleRequired": "タイトルは必須です。",
   "portal.errorQueueRequired": "キューを選択してください。",
-  "portal.errorCreateFailed": "チケットの作成に失敗しました。"
+  "portal.errorCreateFailed": "チケットの作成に失敗しました。",
+  "projects.settings.title": "設定",
+  "projects.settings.subtitle": "プロジェクト設定を管理します。",
+  "projects.settings.tab.general": "一般",
+  "projects.settings.tab.users": "ユーザー",
+  "projects.settings.tab.teams": "チーム",
+  "projects.settings.tab.invites": "招待",
+  "projects.settings.tab.workItems": "作業項目",
+  "projects.settings.roles.owner.description": "設定やメンバー管理を含むプロジェクトの完全な制御権限。",
+  "projects.settings.roles.admin.description": "メンバー、設定、すべての作業項目を管理できます。",
+  "projects.settings.roles.member.description": "割り当てられた作業項目を作成・編集できます。",
+  "projects.settings.roles.viewer.description": "プロジェクトと作業項目への読み取り専用アクセス。",
+  "projects.settings.roles.customer.description": "サポートポータルのみにアクセスできる外部ユーザー。",
+  "projects.settings.addUser": "ユーザーを追加"
 }

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Trans, useTranslation } from 'react-i18next'
 import { useNamespacePath } from '@/hooks/useNamespacePath'
 import { useProject, useUpdateProject, useDeleteProject, useMembers, useAddMember, useUpdateMemberRole, useRemoveMember, useInvites, useCreateInvite, useDeleteInvite } from '@/hooks/useProjects'
@@ -12,7 +12,8 @@ import { Spinner } from '@/components/ui/Spinner'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import { Tooltip } from '@/components/ui/Tooltip'
-import { Check, Trash2, Copy, Link, AlertTriangle, ArrowRightLeft, ChevronDown } from 'lucide-react'
+import { Tabs } from '@/components/ui/Tabs'
+import { Check, Trash2, Copy, Link, AlertTriangle, ArrowRightLeft, ChevronDown, Info } from 'lucide-react'
 import { useNamespaceContext } from '@/contexts/NamespaceContext'
 import { useMigrateProject } from '@/hooks/useNamespaces'
 import { clearLastProjectKey } from '@/hooks/useLastProjectKey'
@@ -21,6 +22,7 @@ import { UserSearchInput } from '@/components/UserSearchInput'
 import { MentionSearchModal } from '@/components/ui/MentionSearchModal'
 import { useMentionAutocomplete } from '@/hooks/useMentionAutocomplete'
 import { getLocalizedError } from '@/utils/apiError'
+import { TeamsPage } from './TeamsPage'
 import type { UserSearchResult } from '@/api/users'
 
 function TruncatedName({ name, className }: { name: string; className?: string }) {
@@ -68,11 +70,106 @@ const ROLE_BADGE_COLORS: Record<string, 'indigo' | 'blue' | 'green' | 'gray' | '
   customer: 'yellow',
 }
 
+// --- Custom role dropdown with info icon and descriptions ---
+
+function RoleSelect({
+  value,
+  onChange,
+  roles,
+  isOwner,
+  disabled,
+  size = 'md',
+}: {
+  value: string
+  onChange: (role: string) => void
+  roles: string[]
+  isOwner: boolean
+  disabled?: boolean
+  size?: 'sm' | 'md'
+}) {
+  const { t } = useTranslation()
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    function handleClick(e: MouseEvent) {
+      const target = e.target as Node
+      if (
+        ref.current && !ref.current.contains(target) &&
+        menuRef.current && !menuRef.current.contains(target)
+      ) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [open])
+
+  const allRoles = isOwner ? ['owner', ...roles] : roles
+
+  const sizeClasses = size === 'sm'
+    ? 'px-2 py-1 text-xs'
+    : 'px-3 py-2 text-sm'
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => !disabled && setOpen(!open)}
+        disabled={disabled}
+        className={`flex items-center gap-1.5 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap ${sizeClasses}`}
+        ref={buttonRef}
+      >
+        <span>{t(`projects.settings.roles.${value}`)}</span>
+        <Info className="h-3 w-3 text-gray-400 shrink-0" />
+        <ChevronDown className="h-3 w-3 text-gray-400 shrink-0" />
+      </button>
+      {open && createPortal(
+        <div
+          ref={menuRef}
+          className="fixed z-[9999] w-72 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg py-1 max-h-80 overflow-y-auto"
+          style={{
+            top: (buttonRef.current?.getBoundingClientRect().bottom ?? 0) + 4,
+            left: Math.min(
+              (buttonRef.current?.getBoundingClientRect().right ?? 0) - 288,
+              window.innerWidth - 296,
+            ),
+          }}
+        >
+          {allRoles.map((role) => (
+            <button
+              key={role}
+              type="button"
+              onClick={() => { onChange(role); setOpen(false) }}
+              className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 ${
+                role === value
+                  ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+              }`}
+            >
+              <div className="flex-1 min-w-0">
+                <div className="font-medium">{t(`projects.settings.roles.${role}`)}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">{t(`projects.settings.roles.${role}.description`)}</div>
+              </div>
+              <Info className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+            </button>
+          ))}
+        </div>,
+        document.body,
+      )}
+    </div>
+  )
+}
+
 export function ProjectSettingsPage() {
   const { t } = useTranslation()
   const { p } = useNamespacePath()
   const { projectKey } = useParams<{ projectKey: string }>()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { user } = useAuth()
   const { data: project, isLoading } = useProject(projectKey ?? '')
   const updateMutation = useUpdateProject(projectKey ?? '')
@@ -152,6 +249,18 @@ export function ProjectSettingsPage() {
     setTimeout(() => setSaved((prev) => ({ ...prev, [key]: false })), 2000)
   }
 
+  // Tab state from URL search params
+  const activeTab = searchParams.get('tab') || 'general'
+  function setActiveTab(tab: string) {
+    const params = new URLSearchParams(searchParams)
+    if (tab === 'general') {
+      params.delete('tab')
+    } else {
+      params.set('tab', tab)
+    }
+    setSearchParams(params, { replace: true })
+  }
+
   if (isLoading || !project) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -172,6 +281,19 @@ export function ProjectSettingsPage() {
   const currentUserRole = currentUserMember?.role ?? (user?.global_role === 'admin' ? 'owner' : null)
   const canManageMembers = currentUserRole === 'owner' || currentUserRole === 'admin' || user?.global_role === 'admin'
   const isOwner = currentUserRole === 'owner' || user?.global_role === 'admin'
+
+  const tabs = [
+    { key: 'general', label: t('projects.settings.tab.general') },
+    { key: 'users', label: t('projects.settings.tab.users') },
+    { key: 'teams', label: t('projects.settings.tab.teams') },
+    ...(canManageMembers ? [
+      { key: 'invites', label: t('projects.settings.tab.invites') },
+      { key: 'workItems', label: t('projects.settings.tab.workItems') },
+    ] : []),
+  ]
+
+  // Fallback to General if the current tab is not available (e.g. permission-gated tabs before data loads)
+  const effectiveTab = tabs.some((tb) => tb.key === activeTab) ? activeTab : 'general'
 
   function handleSave(e: React.FormEvent) {
     e.preventDefault()
@@ -295,223 +417,260 @@ export function ProjectSettingsPage() {
   const memberIds = members?.map((m) => m.user_id) ?? []
 
   return (
-    <div className="max-w-3xl space-y-8 overflow-hidden">
-      {/* General section */}
+    <div className="max-w-3xl space-y-6 overflow-hidden">
+      {/* Page Header */}
       <div>
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('projects.settings.general')}</h2>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('projects.settings.description')}</p>
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{t('projects.settings.title')}</h2>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('projects.settings.subtitle')}</p>
       </div>
 
-      <form onSubmit={handleSave} className="space-y-4">
-        <Input label={t('projects.settings.projectKey')} value={project.key} disabled className="bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed" />
+      <Tabs tabs={tabs} activeTab={effectiveTab} onTabChange={setActiveTab} />
 
-        <Input
-          label={t('projects.settings.projectName')}
-          value={currentName}
-          onChange={(e) => setName(e.target.value)}
-          required
-          disabled={!canManageMembers}
-        />
-
-        <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            {t('common.description')}
-          </label>
-          <textarea
-            ref={descRef}
-            id="description"
-            rows={12}
-            className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed"
-            value={currentDescription}
-            onChange={(e) => setDescription(e.target.value)}
-            onKeyDown={descMention.onMentionKeyDown}
-            disabled={!canManageMembers}
-          />
-          <MentionSearchModal
-            open={descMention.mentionModalOpen}
-            position={descMention.dropdownPosition}
-            onClose={descMention.onMentionClose}
-            onSelect={descMention.onMentionSelect}
-          />
-        </div>
-
-        {saveError && <p className="text-sm text-red-600 dark:text-red-400">{saveError}</p>}
-
-        {canManageMembers && (
-          <div className="flex items-center gap-2">
-            <Button type="submit" disabled={!hasChanges || updateMutation.isPending}>
-              {updateMutation.isPending ? t('common.saving') : t('projects.settings.saveChanges')}
-            </Button>
-            {saved.general && (
-              <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
-            )}
-          </div>
-        )}
-      </form>
-
-      {/* Members section */}
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('projects.settings.members')}</h2>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('projects.settings.membersDescription')}</p>
-      </div>
-
-      {memberError && <p className="text-sm text-red-600 dark:text-red-400">{memberError}</p>}
-
-      {/* Add member form */}
-      {canManageMembers && (
-        <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3">
-          <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('projects.settings.addMember')}</h3>
-          <div className="flex gap-2 items-end">
-            {selectedUser ? (
-              <div className="flex-1 min-w-0 flex items-center gap-2 rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm bg-white dark:bg-gray-800">
-                <span className="shrink-0"><Avatar name={selectedUser.display_name} avatarUrl={selectedUser.avatar_url} size="xs" /></span>
-                <span className="truncate text-gray-900 dark:text-gray-100">{selectedUser.display_name}</span>
-                <span className="truncate text-gray-400 text-xs hidden sm:inline">{selectedUser.email}</span>
-                <button
-                  type="button"
-                  className="shrink-0 ml-auto text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                  onClick={() => setSelectedUser(null)}
-                >
-                  &times;
-                </button>
+      {/* ───── General tab ───── */}
+      {effectiveTab === 'general' && (
+        <div className="space-y-8">
+          <form onSubmit={handleSave} className="space-y-4">
+            <div className="flex gap-4">
+              <div className="w-[30%]">
+                <Input label={t('projects.settings.projectKey')} value={project.key} disabled className="bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed" />
               </div>
-            ) : (
-              <UserSearchInput
-                excludeUserIds={memberIds}
-                onSelect={setSelectedUser}
+              <div className="w-[70%]">
+                <Input
+                  label={t('projects.settings.projectName')}
+                  value={currentName}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  disabled={!canManageMembers}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                {t('common.description')}
+              </label>
+              <textarea
+                ref={descRef}
+                id="description"
+                rows={12}
+                className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                value={currentDescription}
+                onChange={(e) => setDescription(e.target.value)}
+                onKeyDown={descMention.onMentionKeyDown}
+                disabled={!canManageMembers}
               />
-            )}
-            <select
-              className="shrink-0 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              value={newMemberRole}
-              onChange={(e) => setNewMemberRole(e.target.value)}
-            >
-              {isOwner && <option value="owner">{t('projects.settings.roles.owner')}</option>}
-              {assignableRoles.map((role) => (
-                <option key={role} value={role}>{t(`projects.settings.roles.${role}`)}</option>
-              ))}
-            </select>
-            <Button
-              disabled={!selectedUser || addMemberMutation.isPending}
-              onClick={handleAddMember}
-            >
-              {addMemberMutation.isPending ? t('common.saving') : t('common.add')}
-            </Button>
-            {saved.addMember && (
-              <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
-            )}
-          </div>
-          <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500">
-            <div className="flex-1 border-t border-gray-200 dark:border-gray-700" />
-            <span>{t('common.or')}</span>
-            <div className="flex-1 border-t border-gray-200 dark:border-gray-700" />
-          </div>
-          <div className="flex gap-2 items-end">
-            <div className="flex-1 min-w-0">
-              <Input
-                placeholder={t('projects.settings.emailInvitePlaceholder')}
-                value={emailInput}
-                onChange={(e) => setEmailInput(e.target.value)}
-                type="email"
+              <MentionSearchModal
+                open={descMention.mentionModalOpen}
+                position={descMention.dropdownPosition}
+                onClose={descMention.onMentionClose}
+                onSelect={descMention.onMentionSelect}
               />
             </div>
-            <select
-              className="shrink-0 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              value={emailInviteRole}
-              onChange={(e) => setEmailInviteRole(e.target.value)}
-            >
-              {assignableRoles.map((role) => (
-                <option key={role} value={role}>{t(`projects.settings.roles.${role}`)}</option>
-              ))}
-            </select>
-            <Button
-              disabled={!emailInput.trim() || createInviteMutation.isPending}
-              onClick={() => setShowEmailInviteModal(true)}
-            >
-              {createInviteMutation.isPending ? t('common.saving') : t('projects.settings.emailInviteButton')}
-            </Button>
-            {saved.emailInvite && (
-              <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
-            )}
-          </div>
-        </div>
-      )}
 
-      {/* Member list */}
-      {members && members.length > 0 && (
-        <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
-          {members.map((member) => {
-            const isSelf = member.user_id === user?.id
-            const memberIsOwner = member.role === 'owner'
-            const ownerCount = members.filter((m) => m.role === 'owner').length
-            const isLastOwner = memberIsOwner && ownerCount <= 1
-            const canEditRole = canManageMembers && (!memberIsOwner || isOwner)
+            {saveError && <p className="text-sm text-red-600 dark:text-red-400">{saveError}</p>}
 
-            return (
-              <div key={member.user_id} className="flex flex-wrap items-center justify-between gap-2 p-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <Avatar name={member.display_name} avatarUrl={member.avatar_url} size="sm" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                      {member.display_name}
-                      {isSelf && <span className="ml-1 text-xs text-gray-400">({t('common.you')})</span>}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{member.email}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
-                  {canEditRole ? (
-                    <>
-                      {saved[`role:${member.user_id}`] && (
-                        <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
-                      )}
-                      <Tooltip content={isLastOwner ? t('projects.settings.lastOwnerTooltip') : undefined}>
-                        <select
-                          className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                          value={member.role}
-                          onChange={(e) => handleRoleChange(member.user_id, e.target.value)}
-                          disabled={updateRoleMutation.isPending || isLastOwner}
-                        >
-                          {isOwner && <option value="owner">{t('projects.settings.roles.owner')}</option>}
-                          {assignableRoles.map((role) => (
-                            <option key={role} value={role}>{t(`projects.settings.roles.${role}`)}</option>
-                          ))}
-                        </select>
-                      </Tooltip>
-                      <Tooltip content={isLastOwner ? t('projects.settings.lastOwnerTooltip') : undefined}>
-                        <button
-                          className={`p-1 ${isLastOwner ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' : 'text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300'}`}
-                          onClick={() => !isLastOwner && setRemoveTarget({ userId: member.user_id, name: member.display_name })}
-                          disabled={isLastOwner}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </Tooltip>
-                    </>
-                  ) : (
-                    <Badge color={ROLE_BADGE_COLORS[member.role] ?? 'gray'}>
-                      {t(`projects.settings.roles.${member.role}`)}
-                    </Badge>
-                  )}
-                </div>
+            {canManageMembers && (
+              <div className="flex items-center gap-2">
+                <Button type="submit" disabled={!hasChanges || updateMutation.isPending}>
+                  {updateMutation.isPending ? t('common.saving') : t('projects.settings.saveChanges')}
+                </Button>
+                {saved.general && (
+                  <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
+                )}
               </div>
-            )
-          })}
-          {membersTotalCount != null && membersTotalCount > members.length && (
-            <div className="py-2 text-sm text-gray-500 dark:text-gray-400 pl-[60px]">
-              {t('projects.settings.hiddenMembers', { count: membersTotalCount - members.length })}
+            )}
+          </form>
+
+          {/* Danger Zone */}
+          {canManageMembers && (
+            <div className="border border-red-300 dark:border-red-800 rounded-lg">
+              <div className="px-4 py-3 border-b border-red-300 dark:border-red-800">
+                <h3 className="text-base font-semibold text-red-600">{t('projects.settings.dangerZone')}</h3>
+              </div>
+              {hasMultipleNamespaces && (
+                <div className="p-4 flex items-center justify-between border-b border-red-200 dark:border-red-900">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('projects.settings.transferNamespace')}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{t('projects.settings.transferNamespaceDescription')}</p>
+                  </div>
+                  <Button variant="danger" className="min-w-[7.5rem] h-10" onClick={() => { setTransferTarget(''); setTransferConfirm(''); setTransferError(''); setShowTransferModal(true) }}>
+                    <ArrowRightLeft className="h-4 w-4 mr-1" />
+                    {t('projects.settings.transfer')}
+                  </Button>
+                </div>
+              )}
+              <div className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('projects.settings.deleteThisProject')}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {t('projects.settings.deleteWarning')}
+                  </p>
+                </div>
+                <Button variant="danger" className="min-w-[7.5rem] h-10" onClick={() => setShowDeleteModal(true)}>
+                  {t('projects.settings.deleteProject')}
+                </Button>
+              </div>
             </div>
           )}
         </div>
       )}
 
-      {/* Invite Links section */}
-      {canManageMembers && (
-        <>
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('projects.settings.invites')}</h2>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('projects.settings.invitesDescription')}</p>
-          </div>
+      {/* ───── Users tab ───── */}
+      {effectiveTab === 'users' && (
+        <div className="space-y-6">
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t('projects.settings.membersDescription')}</p>
+
+          {memberError && <p className="text-sm text-red-600 dark:text-red-400">{memberError}</p>}
+
+          {/* Add user form */}
+          {canManageMembers && (
+            <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3">
+              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('projects.settings.addUser')}</h3>
+              <div className="flex gap-2 items-end">
+                {selectedUser ? (
+                  <div className="flex-1 min-w-0 flex items-center gap-2 rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm bg-white dark:bg-gray-800">
+                    <span className="shrink-0"><Avatar name={selectedUser.display_name} avatarUrl={selectedUser.avatar_url} size="xs" /></span>
+                    <span className="truncate text-gray-900 dark:text-gray-100">{selectedUser.display_name}</span>
+                    <span className="truncate text-gray-400 text-xs hidden sm:inline">{selectedUser.email}</span>
+                    <button
+                      type="button"
+                      className="shrink-0 ml-auto text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                      onClick={() => setSelectedUser(null)}
+                    >
+                      &times;
+                    </button>
+                  </div>
+                ) : (
+                  <UserSearchInput
+                    excludeUserIds={memberIds}
+                    onSelect={setSelectedUser}
+                  />
+                )}
+                <RoleSelect
+                  value={newMemberRole}
+                  onChange={setNewMemberRole}
+                  roles={assignableRoles}
+                  isOwner={isOwner}
+                />
+                <Button
+                  disabled={!selectedUser || addMemberMutation.isPending}
+                  onClick={handleAddMember}
+                >
+                  {addMemberMutation.isPending ? t('common.saving') : t('common.add')}
+                </Button>
+                {saved.addMember && (
+                  <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
+                )}
+              </div>
+              <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500">
+                <div className="flex-1 border-t border-gray-200 dark:border-gray-700" />
+                <span>{t('common.or')}</span>
+                <div className="flex-1 border-t border-gray-200 dark:border-gray-700" />
+              </div>
+              <div className="flex gap-2 items-end">
+                <div className="flex-1 min-w-0">
+                  <Input
+                    placeholder={t('projects.settings.emailInvitePlaceholder')}
+                    value={emailInput}
+                    onChange={(e) => setEmailInput(e.target.value)}
+                    type="email"
+                  />
+                </div>
+                <RoleSelect
+                  value={emailInviteRole}
+                  onChange={setEmailInviteRole}
+                  roles={assignableRoles}
+                  isOwner={false}
+                />
+                <Button
+                  disabled={!emailInput.trim() || createInviteMutation.isPending}
+                  onClick={() => setShowEmailInviteModal(true)}
+                >
+                  {createInviteMutation.isPending ? t('common.saving') : t('projects.settings.emailInviteButton')}
+                </Button>
+                {saved.emailInvite && (
+                  <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Member list */}
+          {members && members.length > 0 && (
+            <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
+              {members.map((member) => {
+                const isSelf = member.user_id === user?.id
+                const memberIsOwner = member.role === 'owner'
+                const ownerCount = members.filter((m) => m.role === 'owner').length
+                const isLastOwner = memberIsOwner && ownerCount <= 1
+                const canEditRole = canManageMembers && (!memberIsOwner || isOwner)
+
+                return (
+                  <div key={member.user_id} className="flex flex-wrap items-center justify-between gap-2 p-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <Avatar name={member.display_name} avatarUrl={member.avatar_url} size="sm" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                          {member.display_name}
+                          {isSelf && <span className="ml-1 text-xs text-gray-400">({t('common.you')})</span>}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{member.email}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
+                      {canEditRole ? (
+                        <>
+                          {saved[`role:${member.user_id}`] && (
+                            <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
+                          )}
+                          <Tooltip content={isLastOwner ? t('projects.settings.lastOwnerTooltip') : undefined}>
+                            <span>
+                              <RoleSelect
+                                value={member.role}
+                                onChange={(role) => handleRoleChange(member.user_id, role)}
+                                roles={assignableRoles}
+                                isOwner={isOwner}
+                                disabled={updateRoleMutation.isPending || isLastOwner}
+                                size="sm"
+                              />
+                            </span>
+                          </Tooltip>
+                          <Tooltip content={isLastOwner ? t('projects.settings.lastOwnerTooltip') : undefined}>
+                            <button
+                              className={`p-1 ${isLastOwner ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' : 'text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300'}`}
+                              onClick={() => !isLastOwner && setRemoveTarget({ userId: member.user_id, name: member.display_name })}
+                              disabled={isLastOwner}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </Tooltip>
+                        </>
+                      ) : (
+                        <Badge color={ROLE_BADGE_COLORS[member.role] ?? 'gray'}>
+                          {t(`projects.settings.roles.${member.role}`)}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+              {membersTotalCount != null && membersTotalCount > members.length && (
+                <div className="py-2 text-sm text-gray-500 dark:text-gray-400 pl-[60px]">
+                  {t('projects.settings.hiddenMembers', { count: membersTotalCount - members.length })}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ───── Teams tab ───── */}
+      {effectiveTab === 'teams' && <TeamsPage />}
+
+      {/* ───── Invites tab ───── */}
+      {effectiveTab === 'invites' && (
+        <div className="space-y-6">
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t('projects.settings.invitesDescription')}</p>
 
           {inviteError && <p className="text-sm text-red-600 dark:text-red-400">{inviteError}</p>}
 
@@ -689,16 +848,13 @@ export function ProjectSettingsPage() {
           ) : (
             <p className="text-sm text-gray-500 dark:text-gray-400">{t('projects.settings.noInvites')}</p>
           )}
-        </>
+        </div>
       )}
 
-      {/* Complexity section */}
-      {canManageMembers && (
-        <>
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('projects.settings.complexity')}</h2>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('projects.settings.complexityDescription')}</p>
-          </div>
+      {/* ───── Work Items tab ───── */}
+      {effectiveTab === 'workItems' && (
+        <div className="space-y-6">
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t('projects.settings.complexityDescription')}</p>
 
           {complexityError && <p className="text-sm text-red-600 dark:text-red-400">{complexityError}</p>}
 
@@ -759,38 +915,10 @@ export function ProjectSettingsPage() {
               )}
             </div>
           </div>
-        </>
+        </div>
       )}
 
-      {/* Danger Zone */}
-      {canManageMembers && <div className="border border-red-300 dark:border-red-800 rounded-lg mt-8">
-        <div className="px-4 py-3 border-b border-red-300 dark:border-red-800">
-          <h3 className="text-base font-semibold text-red-600">{t('projects.settings.dangerZone')}</h3>
-        </div>
-        {hasMultipleNamespaces && (
-          <div className="p-4 flex items-center justify-between border-b border-red-200 dark:border-red-900">
-            <div>
-              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('projects.settings.transferNamespace')}</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">{t('projects.settings.transferNamespaceDescription')}</p>
-            </div>
-            <Button variant="danger" size="sm" onClick={() => { setTransferTarget(''); setTransferConfirm(''); setTransferError(''); setShowTransferModal(true) }}>
-              <ArrowRightLeft className="h-4 w-4 mr-1" />
-              {t('projects.settings.transfer')}
-            </Button>
-          </div>
-        )}
-        <div className="p-4 flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('projects.settings.deleteThisProject')}</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {t('projects.settings.deleteWarning')}
-            </p>
-          </div>
-          <Button variant="danger" size="sm" onClick={() => setShowDeleteModal(true)}>
-            {t('projects.settings.deleteProject')}
-          </Button>
-        </div>
-      </div>}
+      {/* ───── Modals ───── */}
 
       {/* Delete confirmation modal */}
       <Modal open={showDeleteModal} onClose={() => setShowDeleteModal(false)} title={t('projects.settings.deleteConfirmTitle')}>

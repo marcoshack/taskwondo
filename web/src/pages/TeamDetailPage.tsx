@@ -62,7 +62,7 @@ export function TeamDetailPage() {
     <div className="max-w-3xl space-y-6">
       <div className="flex items-center gap-3">
         <Link
-          to={p(`/projects/${projectKey}/teams`)}
+          to={p(`/projects/${projectKey}/settings?tab=teams`)}
           className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
         >
           <ArrowLeft className="h-5 w-5" />
@@ -302,7 +302,7 @@ function SettingsTab({
     setError('')
     deleteMutation.mutate(team.id, {
       onSuccess: () => {
-        navigate(p(`/projects/${projectKey}/teams`))
+        navigate(p(`/projects/${projectKey}/settings?tab=teams`))
       },
       onError: (err) => {
         setError(getLocalizedError(err, t, 'teams.deleteError'))

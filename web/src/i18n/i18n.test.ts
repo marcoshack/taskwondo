@@ -136,6 +136,8 @@ const SAME_VALUE_ALLOWED = new Set([
 
   // Teams/Queues: "Teams"/"Name" identical in German; "Support"/"Feedback"/"General"/"Type"/"Public"/"Position" are cognates
   'sidebar.teams',
+  'projects.settings.tab.general',
+  'projects.settings.tab.teams',
   'teams.title',
   'teams.name',
   'queues.name',

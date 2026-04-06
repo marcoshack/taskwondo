@@ -17,7 +17,7 @@ test.describe('Project members mobile', () => {
     }
 
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto(`/d/projects/${testProject.key}/settings`);
+    await page.goto(`/d/projects/${testProject.key}/settings?tab=users`);
 
     // Wait for member list to render
     await expect(page.getByText('Mobile Member').first()).toBeVisible({ timeout: 10000 });

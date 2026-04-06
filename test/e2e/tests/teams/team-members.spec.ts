@@ -91,7 +91,7 @@ test.describe('Team members', () => {
     await api.addTeamMember(request, testUser.token, testProject.key, team.id, testUser.id);
     await api.addTeamMember(request, testUser.token, testProject.key, team.id, user2.id);
 
-    await page.goto(`/d/projects/${testProject.key}/teams`);
+    await page.goto(`/d/projects/${testProject.key}/settings?tab=teams`);
 
     // Verify the member count badge shows 2
     await expect(page.getByText('Count Team')).toBeVisible({ timeout: 10000 });

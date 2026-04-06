@@ -753,7 +753,7 @@
   "projects.settings.deleteError": "删除项目失败。",
   "projects.settings.deleteInviteConfirmBody": "此邀请链接将立即失效。尚未使用的人将无法再加入。",
   "projects.settings.deleteInviteConfirmTitle": "撤销邀请链接",
-  "projects.settings.deleteProject": "删除项目",
+  "projects.settings.deleteProject": "删除",
   "projects.settings.deleteThisProject": "删除此项目",
   "projects.settings.deleteWarning": "该项目的所有条目、评论和关联将被永久删除。",
   "projects.settings.description": "管理项目设置。",
@@ -1256,7 +1256,6 @@
   "teams.createError": "创建团队失败。",
   "teams.updateError": "更新团队失败。",
   "teams.deleteError": "删除团队失败。",
-
   "teams.oncall.title": "值班",
   "teams.oncall.noRotation": "此团队未配置值班轮换。",
   "teams.oncall.setUp": "设置值班",
@@ -1377,5 +1376,18 @@
   "portal.changedField": "更改了{{field}}",
   "portal.errorTitleRequired": "标题为必填项。",
   "portal.errorQueueRequired": "请选择一个队列。",
-  "portal.errorCreateFailed": "创建工单失败。"
+  "portal.errorCreateFailed": "创建工单失败。",
+  "projects.settings.title": "设置",
+  "projects.settings.subtitle": "管理项目设置。",
+  "projects.settings.tab.general": "常规",
+  "projects.settings.tab.users": "用户",
+  "projects.settings.tab.teams": "团队",
+  "projects.settings.tab.invites": "邀请",
+  "projects.settings.tab.workItems": "工作项",
+  "projects.settings.roles.owner.description": "对项目的完全控制权，包括设置和成员管理。",
+  "projects.settings.roles.admin.description": "可以管理成员、设置和所有工作项。",
+  "projects.settings.roles.member.description": "可以创建和编辑分配给自己的工作项。",
+  "projects.settings.roles.viewer.description": "对项目及其工作项的只读访问权限。",
+  "projects.settings.roles.customer.description": "仅可访问支持门户的外部用户。",
+  "projects.settings.addUser": "添加用户"
 }

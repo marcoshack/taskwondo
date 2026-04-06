@@ -753,7 +753,7 @@
   "projects.settings.deleteError": "Falha ao excluir projeto.",
   "projects.settings.deleteInviteConfirmBody": "Este link de convite deixará de funcionar imediatamente. Qualquer pessoa que ainda não o tenha usado não poderá mais entrar.",
   "projects.settings.deleteInviteConfirmTitle": "Revogar Link de Convite",
-  "projects.settings.deleteProject": "Excluir projeto",
+  "projects.settings.deleteProject": "Excluir",
   "projects.settings.deleteThisProject": "Excluir este projeto",
   "projects.settings.deleteWarning": "Todos os itens, comentários e relações deste projeto serão excluídos permanentemente.",
   "projects.settings.description": "Gerencie as configurações do projeto.",
@@ -1256,7 +1256,6 @@
   "teams.createError": "Falha ao criar equipe.",
   "teams.updateError": "Falha ao atualizar equipe.",
   "teams.deleteError": "Falha ao excluir equipe.",
-
   "teams.oncall.title": "Plantão",
   "teams.oncall.noRotation": "Nenhuma rotação de plantão configurada para esta equipe.",
   "teams.oncall.setUp": "Configurar plantão",
@@ -1377,5 +1376,18 @@
   "portal.changedField": "alterou {{field}}",
   "portal.errorTitleRequired": "O título é obrigatório.",
   "portal.errorQueueRequired": "Por favor, selecione uma fila.",
-  "portal.errorCreateFailed": "Falha ao criar ticket."
+  "portal.errorCreateFailed": "Falha ao criar ticket.",
+  "projects.settings.title": "Configurações",
+  "projects.settings.subtitle": "Gerenciar configurações do projeto.",
+  "projects.settings.tab.general": "Geral",
+  "projects.settings.tab.users": "Usuários",
+  "projects.settings.tab.teams": "Equipes",
+  "projects.settings.tab.invites": "Convites",
+  "projects.settings.tab.workItems": "Itens de trabalho",
+  "projects.settings.roles.owner.description": "Controle total do projeto, incluindo configurações e gerenciamento de membros.",
+  "projects.settings.roles.admin.description": "Pode gerenciar membros, configurações e todos os itens de trabalho.",
+  "projects.settings.roles.member.description": "Pode criar e editar itens de trabalho atribuídos.",
+  "projects.settings.roles.viewer.description": "Acesso somente leitura ao projeto e seus itens de trabalho.",
+  "projects.settings.roles.customer.description": "Usuário externo com acesso apenas ao portal de suporte.",
+  "projects.settings.addUser": "Adicionar usuário"
 }

@@ -753,7 +753,7 @@
   "projects.settings.deleteError": "Échec de la suppression du projet.",
   "projects.settings.deleteInviteConfirmBody": "Ce lien d'invitation cessera de fonctionner immédiatement. Toute personne ne l'ayant pas encore utilisé ne pourra plus rejoindre le projet.",
   "projects.settings.deleteInviteConfirmTitle": "Révoquer le lien d'invitation",
-  "projects.settings.deleteProject": "Supprimer le projet",
+  "projects.settings.deleteProject": "Supprimer",
   "projects.settings.deleteThisProject": "Supprimer ce projet",
   "projects.settings.deleteWarning": "Tous les éléments, commentaires et relations de ce projet seront supprimés définitivement.",
   "projects.settings.description": "Gérez les paramètres du projet.",
@@ -1256,7 +1256,6 @@
   "teams.createError": "Échec de la création de l'équipe.",
   "teams.updateError": "Échec de la mise à jour de l'équipe.",
   "teams.deleteError": "Échec de la suppression de l'équipe.",
-
   "teams.oncall.title": "Astreinte",
   "teams.oncall.noRotation": "Aucune rotation d'astreinte configurée pour cette équipe.",
   "teams.oncall.setUp": "Configurer l'astreinte",
@@ -1377,5 +1376,18 @@
   "portal.changedField": "a modifié {{field}}",
   "portal.errorTitleRequired": "Le titre est requis.",
   "portal.errorQueueRequired": "Veuillez sélectionner une file.",
-  "portal.errorCreateFailed": "Échec de la création du ticket."
+  "portal.errorCreateFailed": "Échec de la création du ticket.",
+  "projects.settings.title": "Paramètres",
+  "projects.settings.subtitle": "Gérer les paramètres du projet.",
+  "projects.settings.tab.general": "Général",
+  "projects.settings.tab.users": "Utilisateurs",
+  "projects.settings.tab.teams": "Équipes",
+  "projects.settings.tab.invites": "Invitations",
+  "projects.settings.tab.workItems": "Éléments de travail",
+  "projects.settings.roles.owner.description": "Contrôle total du projet, y compris les paramètres et la gestion des membres.",
+  "projects.settings.roles.admin.description": "Peut gérer les membres, les paramètres et tous les éléments de travail.",
+  "projects.settings.roles.member.description": "Peut créer et modifier les éléments de travail qui lui sont assignés.",
+  "projects.settings.roles.viewer.description": "Accès en lecture seule au projet et à ses éléments de travail.",
+  "projects.settings.roles.customer.description": "Utilisateur externe avec accès uniquement au portail de support.",
+  "projects.settings.addUser": "Ajouter un utilisateur"
 }
