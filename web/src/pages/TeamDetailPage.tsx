@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { Trans, useTranslation } from 'react-i18next'
 import {
@@ -18,7 +18,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Spinner } from '@/components/ui/Spinner'
 import { Tabs } from '@/components/ui/Tabs'
 import { Avatar } from '@/components/ui/Avatar'
-import { ArrowLeft, UserPlus, Trash2, Check, X } from 'lucide-react'
+import { ArrowLeft, UserPlus, Trash2, Check } from 'lucide-react'
 import { getLocalizedError } from '@/utils/apiError'
 import type { UpdateTeamInput } from '@/api/teams'
 import { OncallTab } from '@/components/OncallTab'
@@ -105,10 +105,21 @@ function MembersTab({
   const { data: projectMembers } = useMembers(projectKey)
   const addMutation = useAddTeamMember(projectKey, teamId)
   const removeMutation = useRemoveTeamMember(projectKey, teamId)
-  const [addOpen, setAddOpen] = useState(false)
   const [search, setSearch] = useState('')
+  const [dropdownOpen, setDropdownOpen] = useState(false)
   const [savedUserId, setSavedUserId] = useState<string | null>(null)
   const [removeTarget, setRemoveTarget] = useState<{ userId: string; displayName: string } | null>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   function flashSaved(userId: string) {
     setSavedUserId(userId)
@@ -117,7 +128,7 @@ function MembersTab({
 
   const teamMemberIds = new Set(teamMembers?.map((m) => m.user_id) ?? [])
   const availableMembers = (projectMembers ?? []).filter(
-    (pm) => !teamMemberIds.has(pm.user_id) && pm.role !== 'viewer',
+    (pm) => !teamMemberIds.has(pm.user_id) && pm.role !== 'viewer' && pm.role !== 'customer',
   )
   const filteredAvailable = availableMembers.filter((pm) => {
     if (!search) return true
@@ -129,7 +140,7 @@ function MembersTab({
     addMutation.mutate(userId, {
       onSuccess: () => {
         flashSaved(userId)
-        setAddOpen(false)
+        setDropdownOpen(false)
         setSearch('')
       },
     })
@@ -150,58 +161,52 @@ function MembersTab({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('teams.members')}</h3>
-        {canManage && (
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => setAddOpen(!addOpen)}
-          >
-            <UserPlus className="h-3.5 w-3.5 mr-1" />
-            {t('teams.addMember')}
-          </Button>
-        )}
-      </div>
+      <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('teams.members')}</h3>
 
-      {/* Add member dropdown */}
-      {addOpen && (
-        <div className="border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800">
-          <div className="p-2">
+      {canManage && (
+        <div className="flex items-center gap-2" ref={dropdownRef}>
+          <div className="relative flex-1">
             <Input
               placeholder={t('teams.searchMembersPlaceholder')}
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              autoFocus
+              onChange={(e) => { setSearch(e.target.value); setDropdownOpen(true) }}
+              onFocus={() => setDropdownOpen(true)}
+              className="h-10"
             />
-          </div>
-          <ul className="max-h-40 overflow-auto">
-            {filteredAvailable.map((pm) => (
-              <li key={pm.user_id}>
-                <button
-                  type="button"
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
-                  onClick={() => handleAdd(pm.user_id)}
-                  disabled={addMutation.isPending}
-                >
-                  <Avatar name={pm.display_name} avatarUrl={pm.avatar_url} size="xs" />
-                  <div className="min-w-0 flex-1">
-                    <div className="font-medium text-gray-900 dark:text-gray-100">{pm.display_name}</div>
-                    <div className="text-xs text-gray-400">{pm.email}</div>
-                  </div>
-                </button>
-              </li>
-            ))}
-            {filteredAvailable.length === 0 && (
-              <li className="px-3 py-2 text-sm text-gray-400 dark:text-gray-500">{t('common.noResults')}</li>
+            {dropdownOpen && search && (
+              <div className="absolute z-10 mt-1 w-full border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 shadow-lg">
+                <ul className="max-h-48 overflow-auto py-1">
+                  {filteredAvailable.map((pm) => (
+                    <li key={pm.user_id}>
+                      <button
+                        type="button"
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+                        onClick={() => handleAdd(pm.user_id)}
+                        disabled={addMutation.isPending}
+                      >
+                        <Avatar name={pm.display_name} avatarUrl={pm.avatar_url} size="xs" />
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium text-gray-900 dark:text-gray-100">{pm.display_name}</div>
+                          <div className="text-xs text-gray-400">{pm.email}</div>
+                        </div>
+                      </button>
+                    </li>
+                  ))}
+                  {filteredAvailable.length === 0 && (
+                    <li className="px-3 py-2 text-sm text-gray-400 dark:text-gray-500">{t('common.noResults')}</li>
+                  )}
+                </ul>
+              </div>
             )}
-          </ul>
-          <div className="border-t border-gray-100 dark:border-gray-700 p-2 flex justify-end">
-            <Button size="sm" variant="ghost" onClick={() => { setAddOpen(false); setSearch('') }}>
-              <X className="h-3.5 w-3.5 mr-1" />
-              {t('common.close')}
-            </Button>
           </div>
+          <Button
+            className="h-10 shrink-0"
+            onClick={() => { if (filteredAvailable.length === 1) handleAdd(filteredAvailable[0].user_id) }}
+            disabled={addMutation.isPending || filteredAvailable.length !== 1}
+          >
+            <UserPlus className="h-4 w-4 sm:mr-1.5" />
+            <span className="hidden sm:inline">{t('teams.addMember')}</span>
+          </Button>
         </div>
       )}
 

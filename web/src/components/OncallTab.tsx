@@ -173,40 +173,54 @@ function RotationSummary({
   const currentMember = data.members.find((m) => m.user_id === data.current_user_id)
 
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-3">
-          <div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
-              {t('teams.oncall.currentlyOncall')}
-            </p>
-            {currentMember ? (
-              <div className="flex items-center gap-2">
-                <Avatar name={currentMember.display_name} avatarUrl={currentMember.avatar_url} size="sm" />
-                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{currentMember.display_name}</span>
-                <Badge color="green">{t('teams.oncall.active')}</Badge>
-              </div>
-            ) : (
-              <span className="text-sm text-gray-400 dark:text-gray-500">{t('teams.oncall.noOneOncall')}</span>
-            )}
-          </div>
-          <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-            <span>{t('teams.oncall.period', { days: data.period_days })}</span>
-            <span>{data.timezone}</span>
-            {data.next_rotation_at && (
-              <span>{t('teams.oncall.nextRotation', { date: new Date(data.next_rotation_at).toLocaleDateString() })}</span>
-            )}
-          </div>
-        </div>
+    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3">
+      {/* Row 1: label + action buttons */}
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+          {t('teams.oncall.currentlyOncall')}
+        </p>
         {canManage && (
-          <div className="flex items-center gap-1 shrink-0">
-            <Button variant="ghost" size="sm" onClick={onEdit}>
-              <Pencil className="h-3.5 w-3.5" />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={onDelete}>
-              <Trash2 className="h-3.5 w-3.5 text-red-500" />
-            </Button>
-          </div>
+          <>
+            {/* Mobile: small ghost icon buttons */}
+            <div className="flex items-center gap-1 sm:hidden">
+              <Button variant="ghost" size="sm" onClick={onEdit}>
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+              <Button variant="ghost" size="sm" onClick={onDelete}>
+                <Trash2 className="h-3.5 w-3.5 text-red-500" />
+              </Button>
+            </div>
+            {/* Desktop: styled buttons */}
+            <div className="hidden sm:flex items-center gap-2">
+              <Button className="h-10" onClick={onEdit}>
+                <Pencil className="h-4 w-4 mr-1.5" />
+                {t('teams.oncall.editRotation')}
+              </Button>
+              <Button variant="secondary" className="h-10 px-3" onClick={onDelete}>
+                <Trash2 className="h-4 w-4 text-red-500" />
+              </Button>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Row 2: current member */}
+      {currentMember ? (
+        <div className="flex items-center gap-2">
+          <Avatar name={currentMember.display_name} avatarUrl={currentMember.avatar_url} size="sm" />
+          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{currentMember.display_name}</span>
+          <Badge color="green">{t('teams.oncall.active')}</Badge>
+        </div>
+      ) : (
+        <span className="text-sm text-gray-400 dark:text-gray-500">{t('teams.oncall.noOneOncall')}</span>
+      )}
+
+      {/* Row 3: rotation details */}
+      <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+        <span>{t('teams.oncall.period', { days: data.period_days })}</span>
+        <span>{data.timezone}</span>
+        {data.next_rotation_at && (
+          <span>{t('teams.oncall.nextRotation', { date: new Date(data.next_rotation_at).toLocaleDateString() })}</span>
         )}
       </div>
     </div>

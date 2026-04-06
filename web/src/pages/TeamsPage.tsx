@@ -88,8 +88,8 @@ export function TeamsPage() {
         </div>
         {canManage && (
           <Button onClick={() => setCreateOpen(true)} className="border border-transparent">
-            <Plus className="h-4 w-4 mr-1" />
-            {t('teams.create')}
+            <Plus className="h-4 w-4 sm:mr-1" />
+            <span className="hidden sm:inline">{t('teams.create')}</span>
           </Button>
         )}
       </div>
