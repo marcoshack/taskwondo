@@ -90,7 +90,10 @@ test.describe('Done effect on work item lists', () => {
       activeSearchSnapshot: null,
     });
 
-    await page.goto(`/d/projects/${testProject.key}/items`);
+    // Navigate with URL params so the page starts in board mode immediately,
+    // avoiding the race between default list mode and async settings load.
+    const statuses = 'backlog,open,in_progress,in_review,done,cancelled';
+    await page.goto(`/d/projects/${testProject.key}/items?view=board&status=${statuses}`);
     await expect(page.getByText('Board open task')).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('Board done task')).toBeVisible();
 

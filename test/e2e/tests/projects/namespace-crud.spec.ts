@@ -234,35 +234,28 @@ test.describe('Namespace Project Isolation', () => {
 
   test('same project key in different namespaces', async ({ request }) => {
     const adminToken = getAdminToken();
-    const BASE_URL = process.env.BASE_URL || 'http://localhost:5173';
     const slug1 = `ns-iso-a-${Date.now().toString(36)}`;
     const slug2 = `ns-iso-b-${Date.now().toString(36)}`;
     const projKey = `ISO${Date.now().toString(36).slice(-2).toUpperCase()}`;
 
-    // Create two namespaces
+    // Guard each call — a parallel test may briefly toggle namespaces off.
+    await api.enableNamespaces(request, adminToken);
     await api.createNamespace(request, adminToken, slug1, 'Isolation A');
+    await api.enableNamespaces(request, adminToken);
     await api.createNamespace(request, adminToken, slug2, 'Isolation B');
 
     // Create project in namespace 1
-    const res1 = await request.post(`${BASE_URL}/api/v1/${slug1}/projects`, {
-      headers: { Authorization: `Bearer ${adminToken}` },
-      data: { key: projKey, name: 'Isolation Project A' },
-    });
-    expect(res1.ok()).toBe(true);
+    await api.enableNamespaces(request, adminToken);
+    const proj1 = await api.createProject(request, adminToken, projKey, 'Isolation Project A', slug1);
 
     // Create project with SAME key in namespace 2 — should succeed
-    const res2 = await request.post(`${BASE_URL}/api/v1/${slug2}/projects`, {
-      headers: { Authorization: `Bearer ${adminToken}` },
-      data: { key: projKey, name: 'Isolation Project B' },
-    });
-    expect(res2.ok()).toBe(true);
+    await api.enableNamespaces(request, adminToken);
+    const proj2 = await api.createProject(request, adminToken, projKey, 'Isolation Project B', slug2);
 
     // Both projects exist with the same key but different namespaces
-    const body1 = await res1.json();
-    const body2 = await res2.json();
-    expect(body1.data.key).toBe(projKey);
-    expect(body2.data.key).toBe(projKey);
-    expect(body1.data.id).not.toBe(body2.data.id);
+    expect(proj1.key).toBe(projKey);
+    expect(proj2.key).toBe(projKey);
+    expect(proj1.id).not.toBe(proj2.id);
   });
 
   test('work items in same-key projects across namespaces are isolated', async ({ request }) => {
@@ -271,7 +264,8 @@ test.describe('Namespace Project Isolation', () => {
     const slug = `ns-wi-${Date.now().toString(36)}`;
     const projKey = `WI${Date.now().toString(36).slice(-3).toUpperCase()}`;
 
-    // Create a custom namespace
+    // Guard each call — a parallel test may briefly toggle namespaces off.
+    await api.enableNamespaces(request, adminToken);
     await api.createNamespace(request, adminToken, slug, 'Work Item Isolation');
 
     // Create project with same key in default and custom namespace
@@ -281,6 +275,7 @@ test.describe('Namespace Project Isolation', () => {
     });
     expect(defRes.ok()).toBe(true);
 
+    await api.enableNamespaces(request, adminToken);
     const customRes = await request.post(`${BASE_URL}/api/v1/${slug}/projects`, {
       headers: { Authorization: `Bearer ${adminToken}` },
       data: { key: projKey, name: 'Custom NS Project' },
@@ -370,18 +365,17 @@ test.describe('Namespace Project Isolation', () => {
     const dstSlug = `ns-mig-d-${Date.now().toString(36)}`;
     const projKey = `MIG${Date.now().toString(36).slice(-2).toUpperCase()}`;
 
-    // Create two namespaces
+    // Guard each namespace-scoped call with enableNamespaces — a parallel test
+    // (e.g. namespace-frontend.spec.ts) may briefly toggle the global setting off.
+    await api.enableNamespaces(request, adminToken);
     await api.createNamespace(request, adminToken, srcSlug, 'Migration Source');
+    await api.enableNamespaces(request, adminToken);
     await api.createNamespace(request, adminToken, dstSlug, 'Migration Dest');
-
-    // Create project in source namespace
-    const createRes = await request.post(`${BASE_URL}/api/v1/${srcSlug}/projects`, {
-      headers: { Authorization: `Bearer ${adminToken}` },
-      data: { key: projKey, name: 'Migration Test Project' },
-    });
-    expect(createRes.ok()).toBe(true);
+    await api.enableNamespaces(request, adminToken);
+    await api.createProject(request, adminToken, projKey, 'Migration Test Project', srcSlug);
 
     // Migrate project to destination
+    await api.enableNamespaces(request, adminToken);
     await api.migrateProject(request, adminToken, srcSlug, projKey, dstSlug);
 
     // Verify project is now accessible in destination namespace
@@ -410,17 +404,16 @@ test.describe('Namespace Project Isolation', () => {
     const dstSlug = `ns-col-d-${Date.now().toString(36)}`;
     const projKey = `COL${Date.now().toString(36).slice(-2).toUpperCase()}`;
 
-    // Create two namespaces
+    // Guard each call — a parallel test may briefly toggle namespaces off.
+    await api.enableNamespaces(request, adminToken);
     await api.createNamespace(request, adminToken, srcSlug, 'Collision Source');
+    await api.enableNamespaces(request, adminToken);
     await api.createNamespace(request, adminToken, dstSlug, 'Collision Dest');
 
     // Create project with same key in both namespaces
     for (const ns of [srcSlug, dstSlug]) {
-      const res = await request.post(`${BASE_URL}/api/v1/${ns}/projects`, {
-        headers: { Authorization: `Bearer ${adminToken}` },
-        data: { key: projKey, name: `Collision Project ${ns}` },
-      });
-      expect(res.ok()).toBe(true);
+      await api.enableNamespaces(request, adminToken);
+      await api.createProject(request, adminToken, projKey, `Collision Project ${ns}`, ns);
     }
 
     // Attempt migration — should fail due to key collision

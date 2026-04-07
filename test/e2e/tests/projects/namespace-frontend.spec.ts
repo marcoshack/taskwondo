@@ -62,7 +62,9 @@ test.describe('Namespace Feature Toggle', () => {
     await expect(toggle).toHaveAttribute('aria-checked', 'true', { timeout: 10000 });
     await attach(page, testInfo, '00-toggle-on');
 
-    // Verify the feature actually works: create a namespace via API
+    // Verify the feature actually works: create a namespace via API.
+    // Re-enable first in case a parallel test toggled it off after the UI click.
+    await api.enableNamespaces(request, adminToken);
     const slug = uniqueSlug();
     await api.createNamespace(request, adminToken, slug, 'Toggle Test NS');
 

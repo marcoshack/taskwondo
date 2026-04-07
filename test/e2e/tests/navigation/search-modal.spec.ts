@@ -439,6 +439,8 @@ test.describe('Search modal (g then k)', () => {
     await page.keyboard.press('g');
     await page.keyboard.press('k');
     await expect(searchInput).toBeVisible({ timeout: 3000 });
+    // Wait for the previous query to be restored before typing the replacement
+    await expect(searchInput).toHaveValue(firstTitle, { timeout: 3000 });
 
     // Type a new query — since text is selected, it should replace entirely
     await searchInput.pressSequentially(secondTitle);
