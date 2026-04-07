@@ -154,13 +154,14 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
   // Show section headers when semantic is available and there's something to show
   const showSectionHeaders = semanticAvailable && (hasFtsResults || hasSemanticResults || semanticStatus === 'pending')
 
-  // Reset state when modal opens
+  // Focus and select input when modal opens (preserve previous query & results)
   useEffect(() => {
     if (open) {
-      setQuery('')
       setSelectedIndex(0)
-      setLimit(20)
-      setTimeout(() => inputRef.current?.focus(), 0)
+      setTimeout(() => {
+        inputRef.current?.focus()
+        inputRef.current?.select()
+      }, 0)
     }
   }, [open])
 

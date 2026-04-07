@@ -323,6 +323,133 @@ test.describe('Search modal (g then k)', () => {
     await expect(hasResults.or(emptyState)).toBeVisible({ timeout: 10000 });
   });
 
+  test('query and results persist after closing with Escape', async ({
+    page,
+    request,
+    testUser,
+    testProject,
+  }) => {
+    const uniqueTitle = `PersistEsc${Date.now()}`;
+    await api.createWorkItem(request, testUser.token, testProject.key, {
+      title: uniqueTitle,
+      type: 'task',
+    });
+
+    await page.goto(`/d/projects/${testProject.key}/items`);
+    await dismissWelcomeModal(page);
+    await expect(page.getByRole('heading', { name: /items/i })).toBeVisible({ timeout: 5000 });
+
+    // Open search, type, wait for results
+    await page.keyboard.press('g');
+    await page.keyboard.press('k');
+    const searchInput = page.getByPlaceholder(/search across/i);
+    await searchInput.fill(uniqueTitle);
+
+    const result = page.locator('[data-search-item]').first();
+    await expect(result).toBeVisible({ timeout: 10000 });
+    await expect(result).toContainText(uniqueTitle);
+
+    // Close with Escape
+    await page.keyboard.press('Escape');
+    await expect(searchInput).not.toBeVisible({ timeout: 3000 });
+
+    // Reopen — query and results should still be there
+    await page.keyboard.press('g');
+    await page.keyboard.press('k');
+    await expect(searchInput).toBeVisible({ timeout: 3000 });
+    await expect(searchInput).toHaveValue(uniqueTitle);
+    await expect(searchInput).toBeFocused();
+    await expect(result).toBeVisible({ timeout: 5000 });
+    await expect(result).toContainText(uniqueTitle);
+  });
+
+  test('query and results persist after navigating to a result', async ({
+    page,
+    request,
+    testUser,
+    testProject,
+  }) => {
+    const uniqueTitle = `PersistNav${Date.now()}`;
+    const item = await api.createWorkItem(request, testUser.token, testProject.key, {
+      title: uniqueTitle,
+      type: 'task',
+    });
+
+    await page.goto(`/d/projects/${testProject.key}/items`);
+    await dismissWelcomeModal(page);
+    await expect(page.getByRole('heading', { name: /items/i })).toBeVisible({ timeout: 5000 });
+
+    // Open search, type, wait for results, press Enter to navigate
+    await page.keyboard.press('g');
+    await page.keyboard.press('k');
+    const searchInput = page.getByPlaceholder(/search across/i);
+    await searchInput.fill(uniqueTitle);
+
+    const result = page.locator('[data-search-item]').first();
+    await expect(result).toBeVisible({ timeout: 10000 });
+
+    await searchInput.press('Enter');
+    await expect(page).toHaveURL(
+      new RegExp(`/d/projects/${testProject.key}/items/${item.item_number}`),
+      { timeout: 5000 },
+    );
+
+    // Reopen search — previous query and results should persist
+    await page.keyboard.press('g');
+    await page.keyboard.press('k');
+    await expect(searchInput).toBeVisible({ timeout: 3000 });
+    await expect(searchInput).toHaveValue(uniqueTitle);
+    await expect(searchInput).toBeFocused();
+    await expect(result).toBeVisible({ timeout: 5000 });
+    await expect(result).toContainText(uniqueTitle);
+  });
+
+  test('input text is selected on reopen so typing replaces it', async ({
+    page,
+    request,
+    testUser,
+    testProject,
+  }) => {
+    const ts = Date.now();
+    const firstTitle = `ReplaceFirst${ts}`;
+    const secondTitle = `ReplaceSecond${ts}`;
+    await api.createWorkItem(request, testUser.token, testProject.key, {
+      title: firstTitle,
+      type: 'task',
+    });
+    await api.createWorkItem(request, testUser.token, testProject.key, {
+      title: secondTitle,
+      type: 'task',
+    });
+
+    await page.goto(`/d/projects/${testProject.key}/items`);
+    await dismissWelcomeModal(page);
+    await expect(page.getByRole('heading', { name: /items/i })).toBeVisible({ timeout: 5000 });
+
+    // First search
+    await page.keyboard.press('g');
+    await page.keyboard.press('k');
+    const searchInput = page.getByPlaceholder(/search across/i);
+    await searchInput.fill(firstTitle);
+    await expect(page.locator('[data-search-item]').first()).toBeVisible({ timeout: 10000 });
+
+    // Close and reopen
+    await page.keyboard.press('Escape');
+    await expect(searchInput).not.toBeVisible({ timeout: 3000 });
+    await page.keyboard.press('g');
+    await page.keyboard.press('k');
+    await expect(searchInput).toBeVisible({ timeout: 3000 });
+
+    // Type a new query — since text is selected, it should replace entirely
+    await searchInput.pressSequentially(secondTitle);
+    await expect(searchInput).toHaveValue(secondTitle);
+
+    // Results should now show second item, not first
+    const results = page.locator('[data-search-item]');
+    await expect(results.first()).toBeVisible({ timeout: 10000 });
+    await expect(results.first()).toContainText(secondTitle);
+  });
+
   test('cross-namespace search result navigates and fully loads work item', async ({
     page,
     request,
