@@ -888,6 +888,7 @@
   "search.entityType.milestone": "Hitos",
   "search.entityType.project": "Proyectos",
   "search.entityType.queue": "Colas",
+  "search.entityType.team": "Equipos",
   "search.entityType.work_item": "Elementos de trabajo",
   "search.ftsMode": "Búsqueda de texto",
   "search.hint": "Escribe al menos 2 caracteres para buscar",

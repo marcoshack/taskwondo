@@ -888,6 +888,7 @@
   "search.entityType.milestone": "Jalons",
   "search.entityType.project": "Projets",
   "search.entityType.queue": "Files d'attente",
+  "search.entityType.team": "Équipes",
   "search.entityType.work_item": "Éléments de travail",
   "search.ftsMode": "Recherche textuelle",
   "search.hint": "Saisissez au moins 2 caractères pour rechercher",

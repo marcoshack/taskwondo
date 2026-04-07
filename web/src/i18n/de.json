@@ -888,6 +888,7 @@
   "search.entityType.milestone": "Meilensteine",
   "search.entityType.project": "Projekte",
   "search.entityType.queue": "Warteschlangen",
+  "search.entityType.team": "Teams",
   "search.entityType.work_item": "Arbeitselemente",
   "search.ftsMode": "Textsuche",
   "search.hint": "Mindestens 2 Zeichen eingeben, um zu suchen",

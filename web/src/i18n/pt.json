@@ -888,6 +888,7 @@
   "search.entityType.milestone": "Marcos",
   "search.entityType.project": "Projetos",
   "search.entityType.queue": "Filas",
+  "search.entityType.team": "Equipes",
   "search.entityType.work_item": "Itens de trabalho",
   "search.ftsMode": "Pesquisa de texto",
   "search.hint": "Digite pelo menos 2 caracteres para pesquisar",

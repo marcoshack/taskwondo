@@ -24,6 +24,7 @@ const SAME_VALUE_ALLOWED = new Set([
   'admin.authentication.github.title',
   'admin.authentication.microsoft.title',
   'brand.name',
+  'search.entityType.team',
   'sidebar.support',
 
   // Placeholder examples (emails, domains, format strings)

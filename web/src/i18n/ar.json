@@ -888,6 +888,7 @@
   "search.entityType.milestone": "المراحل",
   "search.entityType.project": "المشاريع",
   "search.entityType.queue": "قوائم الانتظار",
+  "search.entityType.team": "الفرق",
   "search.entityType.work_item": "عناصر العمل",
   "search.ftsMode": "بحث نصي",
   "search.hint": "اكتب حرفين على الأقل للبحث",

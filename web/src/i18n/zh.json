@@ -888,6 +888,7 @@
   "search.entityType.milestone": "里程碑",
   "search.entityType.project": "项目",
   "search.entityType.queue": "队列",
+  "search.entityType.team": "团队",
   "search.entityType.work_item": "工作项",
   "search.ftsMode": "文本搜索",
   "search.hint": "输入至少2个字符进行搜索",

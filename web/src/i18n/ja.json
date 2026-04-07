@@ -888,6 +888,7 @@
   "search.entityType.milestone": "マイルストーン",
   "search.entityType.project": "プロジェクト",
   "search.entityType.queue": "キュー",
+  "search.entityType.team": "チーム",
   "search.entityType.work_item": "作業項目",
   "search.ftsMode": "テキスト検索",
   "search.hint": "2文字以上入力して検索",
