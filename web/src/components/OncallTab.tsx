@@ -118,7 +118,6 @@ export function OncallTab({
           {/* Left column — calendar + history */}
           <div className="lg:w-[70%] space-y-6 min-w-0">
             <OncallCalendar
-              rotation={rotationData}
               members={rotationData.members}
               projectKey={projectKey}
               teamId={teamId}

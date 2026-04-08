@@ -93,6 +93,36 @@ export interface UpdateOncallOverrideInput {
   reason?: string | null
 }
 
+// --- Schedule types ---
+
+export interface OncallScheduleShift {
+  user_id: string
+  display_name: string
+  email: string
+  avatar_url?: string
+  start_at: string   // RFC3339
+  end_at: string     // RFC3339
+  is_override: boolean
+  override_id?: string
+}
+
+export interface OncallScheduleResponse {
+  id: string
+  team_id: string
+  period_days: number
+  rotation_time: string
+  timezone: string
+  start_date: string
+  current_user_id: string | null
+  current_position: number
+  next_rotation_at: string | null
+  members: OncallRotationMember[]
+  shifts: OncallScheduleShift[]
+  overrides: OncallOverride[]
+  created_at: string
+  updated_at: string
+}
+
 // --- API Functions ---
 
 interface DataResponse<T> {
@@ -151,6 +181,14 @@ export async function updateOncallOverride(projectKey: string, teamId: string, o
 
 export async function deleteOncallOverride(projectKey: string, teamId: string, overrideId: string) {
   await api.delete(`${nsPrefix()}/projects/${projectKey}/teams/${teamId}/oncall/overrides/${overrideId}`)
+}
+
+export async function getOncallSchedule(projectKey: string, teamId: string, start: string, end: string) {
+  const res = await api.get<DataResponse<OncallScheduleResponse>>(
+    `${nsPrefix()}/projects/${projectKey}/teams/${teamId}/oncall/schedule`,
+    { params: { start, end } },
+  )
+  return res.data.data
 }
 
 export async function getOncallHistory(projectKey: string, teamId: string, limit?: number, offset?: number) {

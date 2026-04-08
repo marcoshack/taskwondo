@@ -1651,6 +1651,22 @@ export async function deleteOncallOverride(
   if (!res.ok()) throw new Error(`Delete oncall override failed (${res.status()}): ${await res.text()}`);
 }
 
+export async function getOncallSchedule(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  teamId: string,
+  start: string,
+  end: string,
+) {
+  const res = await request.get(`${BASE_URL}/api/v1/default/projects/${projectKey}/teams/${teamId}/oncall/schedule?start=${start}&end=${end}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`Get oncall schedule failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
 export async function uploadPortalAttachment(
   request: APIRequestContext,
   token: string,

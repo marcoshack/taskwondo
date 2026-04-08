@@ -518,6 +518,7 @@ func main() {
 									r.Patch("/", oncall.Update)
 									r.Delete("/", oncall.Delete)
 									r.Get("/history", oncall.ListHistory)
+									r.Get("/schedule", oncall.GetSchedule)
 									r.Route("/overrides", func(r chi.Router) {
 										r.Post("/", oncall.CreateOverride)
 										r.Get("/", oncall.ListOverrides)

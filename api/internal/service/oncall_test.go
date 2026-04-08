@@ -984,3 +984,331 @@ func TestOncallUpdate_SameStartDateNoReset(t *testing.T) {
 		t.Fatalf("expected 2 history entries, got %d", len(history))
 	}
 }
+
+// --- parseRotationEpoch tests ---
+
+func TestParseRotationEpoch_APIFormat(t *testing.T) {
+	// Raw API input format
+	result := parseRotationEpoch("2026-04-09", "12:00:00", "UTC")
+	expected := time.Date(2026, 4, 9, 12, 0, 0, 0, time.UTC)
+	if !result.Equal(expected) {
+		t.Errorf("expected %v, got %v", expected, result)
+	}
+}
+
+func TestParseRotationEpoch_PostgresFormat(t *testing.T) {
+	// Format returned by lib/pq when scanning DATE/TIME columns as strings
+	result := parseRotationEpoch("2026-04-09T00:00:00Z", "0000-01-01T12:00:00Z", "UTC")
+	expected := time.Date(2026, 4, 9, 12, 0, 0, 0, time.UTC)
+	if !result.Equal(expected) {
+		t.Errorf("expected %v, got %v", expected, result)
+	}
+}
+
+func TestParseRotationEpoch_Timezone(t *testing.T) {
+	result := parseRotationEpoch("2026-04-06", "12:00:00", "America/New_York")
+	// April 6 is during EDT (UTC-4)
+	expectedUTC := time.Date(2026, 4, 6, 16, 0, 0, 0, time.UTC)
+	if !result.UTC().Equal(expectedUTC) {
+		t.Errorf("expected UTC %v, got UTC %v", expectedUTC, result.UTC())
+	}
+}
+
+// --- Schedule projection tests ---
+
+func TestComputeRotationShifts_Basic(t *testing.T) {
+	rot := &model.OncallRotation{
+		StartDate:    "2026-04-01",
+		RotationTime: "12:00:00",
+		Timezone:     "UTC",
+		PeriodDays:   7,
+	}
+	userA := uuid.New()
+	userB := uuid.New()
+	members := []model.OncallRotationMemberWithUser{
+		{OncallRotationMember: model.OncallRotationMember{UserID: userA, Position: 0}, DisplayName: "Alice"},
+		{OncallRotationMember: model.OncallRotationMember{UserID: userB, Position: 1}, DisplayName: "Bob"},
+	}
+
+	// Request schedule for April 1-30
+	rangeStart := time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)
+	rangeEnd := time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)
+
+	shifts := computeRotationShifts(rot, members, rangeStart, rangeEnd)
+
+	// T0 = 2026-04-01 12:00 UTC
+	// Shift boundaries: Apr 1 12:00, Apr 8 12:00, Apr 15 12:00, Apr 22 12:00, Apr 29 12:00
+	// Clipped to range: [Apr 1 00:00, May 1 00:00]
+	// Expected shifts:
+	//   Alice: Apr 1 00:00 → Apr 1 12:00 (clipped from previous period)
+	//   Wait — actually Alice is member[0], period 0 starts at T0. Before T0 is period -1 = member[1] (Bob).
+	//   Let me re-check.
+
+	// The first shift boundary at or before rangeStart (Apr 1 00:00):
+	// T0 = Apr 1 12:00. rangeStart = Apr 1 00:00 is before T0.
+	// periodsElapsed = floor((00:00 - 12:00) / 7d) = floor(-12h / 168h) = -1
+	// shiftStart = T0 + (-1 * 7d) = Mar 25 12:00
+	// memberIdx = -1 % 2 = -1 + 2 = 1 → Bob
+	// Clipped: Apr 1 00:00 → Apr 1 12:00 (Bob)
+	// Then shift at T0: memberIdx = 0 → Alice: Apr 1 12:00 → Apr 8 12:00
+	// etc.
+
+	if len(shifts) < 4 {
+		t.Fatalf("expected at least 4 shifts, got %d", len(shifts))
+	}
+
+	// First shift should be Bob (from before T0, clipped to range start)
+	if shifts[0].UserID != userB {
+		t.Errorf("shift 0: expected Bob (%s), got %s", userB, shifts[0].UserID)
+	}
+	if !shifts[0].StartAt.Equal(rangeStart) {
+		t.Errorf("shift 0 start: expected %v, got %v", rangeStart, shifts[0].StartAt)
+	}
+	expectedT0 := time.Date(2026, 4, 1, 12, 0, 0, 0, time.UTC)
+	if !shifts[0].EndAt.Equal(expectedT0) {
+		t.Errorf("shift 0 end: expected %v, got %v", expectedT0, shifts[0].EndAt)
+	}
+
+	// Second shift should be Alice starting at T0
+	if shifts[1].UserID != userA {
+		t.Errorf("shift 1: expected Alice (%s), got %s", userA, shifts[1].UserID)
+	}
+	if !shifts[1].StartAt.Equal(expectedT0) {
+		t.Errorf("shift 1 start: expected %v, got %v", expectedT0, shifts[1].StartAt)
+	}
+}
+
+func TestComputeRotationShifts_FutureStartDate(t *testing.T) {
+	rot := &model.OncallRotation{
+		StartDate:    "2026-05-01",
+		RotationTime: "00:00:00",
+		Timezone:     "UTC",
+		PeriodDays:   3,
+	}
+	userA := uuid.New()
+	userB := uuid.New()
+	members := []model.OncallRotationMemberWithUser{
+		{OncallRotationMember: model.OncallRotationMember{UserID: userA, Position: 0}, DisplayName: "Alice"},
+		{OncallRotationMember: model.OncallRotationMember{UserID: userB, Position: 1}, DisplayName: "Bob"},
+	}
+
+	// Range fully after start date
+	rangeStart := time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)
+	rangeEnd := time.Date(2026, 5, 7, 0, 0, 0, 0, time.UTC)
+
+	shifts := computeRotationShifts(rot, members, rangeStart, rangeEnd)
+
+	// T0 = May 1 00:00 UTC. Period = 3 days, 2 members.
+	// May 1 → May 4: Alice (period 0, member 0)
+	// May 4 → May 7: Bob (period 1, member 1)
+	if len(shifts) != 2 {
+		t.Fatalf("expected 2 shifts, got %d", len(shifts))
+	}
+	if shifts[0].UserID != userA {
+		t.Errorf("shift 0: expected Alice, got %s", shifts[0].UserID)
+	}
+	if shifts[1].UserID != userB {
+		t.Errorf("shift 1: expected Bob, got %s", shifts[1].UserID)
+	}
+}
+
+func TestComputeRotationShifts_Timezone(t *testing.T) {
+	rot := &model.OncallRotation{
+		StartDate:    "2026-04-06",
+		RotationTime: "12:00:00",
+		Timezone:     "America/New_York",
+		PeriodDays:   7,
+	}
+	userA := uuid.New()
+	userB := uuid.New()
+	members := []model.OncallRotationMemberWithUser{
+		{OncallRotationMember: model.OncallRotationMember{UserID: userA, Position: 0}, DisplayName: "Hack"},
+		{OncallRotationMember: model.OncallRotationMember{UserID: userB, Position: 1}, DisplayName: "Hackzm"},
+	}
+
+	// This is the prod scenario: start_date=Apr 6, period=7d, rotation_time=12:00 EDT
+	// T0 = Apr 6 12:00 EDT = Apr 6 16:00 UTC
+	// Hack (member 0) is on-call from T0 to T0+7d = Apr 13 16:00 UTC
+	rangeStart := time.Date(2026, 4, 6, 0, 0, 0, 0, time.UTC)
+	rangeEnd := time.Date(2026, 4, 14, 0, 0, 0, 0, time.UTC)
+
+	shifts := computeRotationShifts(rot, members, rangeStart, rangeEnd)
+
+	// Before T0 (Apr 6 00:00 → Apr 6 16:00): should be Hackzm (prev period)
+	if shifts[0].UserID != userB {
+		t.Errorf("shift 0: expected Hackzm (prev period), got %s", shifts[0].DisplayName)
+	}
+	t0UTC := time.Date(2026, 4, 6, 16, 0, 0, 0, time.UTC)
+	if !shifts[0].EndAt.Equal(t0UTC) {
+		t.Errorf("shift 0 end: expected %v, got %v", t0UTC, shifts[0].EndAt)
+	}
+
+	// From T0: Hack is on-call
+	if shifts[1].UserID != userA {
+		t.Errorf("shift 1: expected Hack, got %s", shifts[1].DisplayName)
+	}
+	nextRotation := time.Date(2026, 4, 13, 16, 0, 0, 0, time.UTC)
+	if !shifts[1].EndAt.Equal(nextRotation) {
+		t.Errorf("shift 1 end: expected %v, got %v", nextRotation, shifts[1].EndAt)
+	}
+
+	// From Apr 13 16:00: Hackzm is on-call (clipped to range end)
+	if shifts[2].UserID != userB {
+		t.Errorf("shift 2: expected Hackzm, got %s", shifts[2].DisplayName)
+	}
+}
+
+func TestApplyOverrides_SplitsShift(t *testing.T) {
+	userA := uuid.New()
+	userC := uuid.New()
+
+	shifts := []ScheduleShift{
+		{
+			UserID:      userA,
+			DisplayName: "Alice",
+			StartAt:     time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC),
+			EndAt:       time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC),
+		},
+	}
+
+	overrides := []model.OncallOverrideWithUser{
+		{
+			OncallOverride: model.OncallOverride{
+				ID:             uuid.New(),
+				OverrideUserID: userC,
+				StartAt:        time.Date(2026, 4, 3, 0, 0, 0, 0, time.UTC),
+				EndAt:          time.Date(2026, 4, 5, 0, 0, 0, 0, time.UTC),
+				CreatedAt:      time.Now(),
+			},
+			OverrideUserName: "Charlie",
+		},
+	}
+
+	result := applyOverrides(shifts, overrides)
+
+	// Should produce: Alice(Apr 1-3), Charlie(Apr 3-5), Alice(Apr 5-8)
+	if len(result) != 3 {
+		t.Fatalf("expected 3 shifts, got %d", len(result))
+	}
+	if result[0].UserID != userA || result[0].IsOverride {
+		t.Errorf("shift 0: expected Alice (not override)")
+	}
+	if !result[0].EndAt.Equal(time.Date(2026, 4, 3, 0, 0, 0, 0, time.UTC)) {
+		t.Errorf("shift 0 end: expected Apr 3, got %v", result[0].EndAt)
+	}
+	if result[1].UserID != userC || !result[1].IsOverride {
+		t.Errorf("shift 1: expected Charlie (override)")
+	}
+	if result[2].UserID != userA || result[2].IsOverride {
+		t.Errorf("shift 2: expected Alice (not override)")
+	}
+}
+
+func TestApplyOverrides_MergesConsecutiveSameUser(t *testing.T) {
+	userA := uuid.New()
+
+	shifts := []ScheduleShift{
+		{
+			UserID:  userA,
+			StartAt: time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC),
+			EndAt:   time.Date(2026, 4, 4, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			UserID:  userA,
+			StartAt: time.Date(2026, 4, 4, 0, 0, 0, 0, time.UTC),
+			EndAt:   time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC),
+		},
+	}
+
+	// Override replaces same user — should still merge back
+	overrides := []model.OncallOverrideWithUser{
+		{
+			OncallOverride: model.OncallOverride{
+				ID:             uuid.New(),
+				OverrideUserID: userA,
+				StartAt:        time.Date(2026, 4, 2, 0, 0, 0, 0, time.UTC),
+				EndAt:          time.Date(2026, 4, 3, 0, 0, 0, 0, time.UTC),
+				CreatedAt:      time.Now(),
+			},
+			OverrideUserName: "Alice",
+		},
+	}
+
+	result := applyOverrides(shifts, overrides)
+
+	// After override: Alice(Apr 1-2 not-override), Alice(Apr 2-3 override), Alice(Apr 3-4 not-override), Alice(Apr 4-8 not-override)
+	// Consecutive non-override Alice shifts merge, but override Alice doesn't merge with non-override Alice
+	// So: Alice(Apr 1-2), Alice-override(Apr 2-3), Alice(Apr 3-8)
+	if len(result) != 3 {
+		t.Fatalf("expected 3 shifts (non-override, override, non-override), got %d", len(result))
+	}
+	if result[1].IsOverride != true {
+		t.Error("shift 1 should be an override")
+	}
+}
+
+func TestGetSchedule_Integration(t *testing.T) {
+	svc, oncallRepo, overrideRepo, teamRepo, projectRepo, memberRepo := newTestOncallServiceWithOverrides()
+	info := userAuthInfo()
+	_, team, memberIDs := setupOncallProject(t, projectRepo, memberRepo, teamRepo, info, model.ProjectRoleAdmin)
+
+	// Create rotation
+	_, err := svc.CreateRotation(context.Background(), info, "TEST", team.ID, validCreateOncallInput(memberIDs))
+	if err != nil {
+		t.Fatalf("create rotation failed: %v", err)
+	}
+
+	// Get schedule for April
+	rangeStart := time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)
+	rangeEnd := time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)
+
+	result, err := svc.GetSchedule(context.Background(), info, "TEST", team.ID, rangeStart, rangeEnd)
+	if err != nil {
+		t.Fatalf("get schedule failed: %v", err)
+	}
+
+	if len(result.Shifts) == 0 {
+		t.Fatal("expected shifts, got none")
+	}
+	if len(result.Members) != 3 {
+		t.Fatalf("expected 3 members, got %d", len(result.Members))
+	}
+	if result.PeriodDays != 7 {
+		t.Fatalf("expected period_days 7, got %d", result.PeriodDays)
+	}
+
+	// Add an override and verify it appears in schedule
+	rot := oncallRepo.byTeam[team.ID]
+	override := &model.OncallOverride{
+		ID:             uuid.Must(uuid.NewV7()),
+		RotationID:     rot.ID,
+		OverrideUserID: memberIDs[2],
+		StartAt:        time.Date(2026, 4, 10, 0, 0, 0, 0, time.UTC),
+		EndAt:          time.Date(2026, 4, 12, 0, 0, 0, 0, time.UTC),
+		CreatedBy:      info.UserID,
+		CreatedAt:      time.Now(),
+	}
+	overrideRepo.overrides[override.ID] = override
+
+	result, err = svc.GetSchedule(context.Background(), info, "TEST", team.ID, rangeStart, rangeEnd)
+	if err != nil {
+		t.Fatalf("get schedule with override failed: %v", err)
+	}
+
+	// Check that at least one shift is an override
+	hasOverride := false
+	for _, s := range result.Shifts {
+		if s.IsOverride {
+			hasOverride = true
+			break
+		}
+	}
+	if !hasOverride {
+		t.Error("expected at least one override shift in schedule")
+	}
+
+	// Check overrides list is populated
+	if len(result.Overrides) != 1 {
+		t.Fatalf("expected 1 override in result, got %d", len(result.Overrides))
+	}
+}

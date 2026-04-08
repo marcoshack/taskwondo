@@ -570,6 +570,142 @@ func (h *OncallHandler) DeleteOverride(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// --- Schedule DTOs ---
+
+type oncallScheduleShiftResponse struct {
+	UserID      uuid.UUID  `json:"user_id"`
+	DisplayName string     `json:"display_name"`
+	Email       string     `json:"email"`
+	AvatarURL   *string    `json:"avatar_url,omitempty"`
+	StartAt     time.Time  `json:"start_at"`
+	EndAt       time.Time  `json:"end_at"`
+	IsOverride  bool       `json:"is_override"`
+	OverrideID  *uuid.UUID `json:"override_id,omitempty"`
+}
+
+type oncallScheduleResponse struct {
+	ID              uuid.UUID                     `json:"id"`
+	TeamID          uuid.UUID                     `json:"team_id"`
+	PeriodDays      int                           `json:"period_days"`
+	RotationTime    string                        `json:"rotation_time"`
+	Timezone        string                        `json:"timezone"`
+	StartDate       string                        `json:"start_date"`
+	CurrentUserID   *uuid.UUID                    `json:"current_user_id"`
+	CurrentPosition int                           `json:"current_position"`
+	NextRotationAt  *time.Time                    `json:"next_rotation_at"`
+	Members         []oncallRotationMemberResp    `json:"members"`
+	Shifts          []oncallScheduleShiftResponse `json:"shifts"`
+	Overrides       []oncallOverrideResponse      `json:"overrides"`
+	CreatedAt       time.Time                     `json:"created_at"`
+	UpdatedAt       time.Time                     `json:"updated_at"`
+}
+
+func toOncallScheduleResponse(r *service.ScheduleResult) oncallScheduleResponse {
+	members := make([]oncallRotationMemberResp, len(r.Members))
+	for i, m := range r.Members {
+		members[i] = oncallRotationMemberResp{
+			ID:          m.ID,
+			UserID:      m.UserID,
+			Position:    m.Position,
+			Email:       m.Email,
+			DisplayName: m.DisplayName,
+			AvatarURL:   m.AvatarURL,
+		}
+	}
+
+	shifts := make([]oncallScheduleShiftResponse, len(r.Shifts))
+	for i, s := range r.Shifts {
+		shifts[i] = oncallScheduleShiftResponse{
+			UserID:      s.UserID,
+			DisplayName: s.DisplayName,
+			Email:       s.Email,
+			AvatarURL:   s.AvatarURL,
+			StartAt:     s.StartAt,
+			EndAt:       s.EndAt,
+			IsOverride:  s.IsOverride,
+			OverrideID:  s.OverrideID,
+		}
+	}
+
+	overrides := make([]oncallOverrideResponse, len(r.Overrides))
+	for i := range r.Overrides {
+		overrides[i] = toOncallOverrideResponse(&r.Overrides[i])
+	}
+
+	return oncallScheduleResponse{
+		ID:              r.ID,
+		TeamID:          r.TeamID,
+		PeriodDays:      r.PeriodDays,
+		RotationTime:    r.RotationTime,
+		Timezone:        r.Timezone,
+		StartDate:       r.StartDate,
+		CurrentUserID:   r.CurrentUserID,
+		CurrentPosition: r.CurrentPosition,
+		NextRotationAt:  r.NextRotationAt,
+		Members:         members,
+		Shifts:          shifts,
+		Overrides:       overrides,
+		CreatedAt:       r.CreatedAt,
+		UpdatedAt:       r.UpdatedAt,
+	}
+}
+
+// GetSchedule handles GET /teams/{teamId}/oncall/schedule?start=YYYY-MM-DD&end=YYYY-MM-DD
+func (h *OncallHandler) GetSchedule(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	projectKey := chi.URLParam(r, "projectKey")
+	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid team ID")
+		return
+	}
+
+	startStr := r.URL.Query().Get("start")
+	endStr := r.URL.Query().Get("end")
+	if startStr == "" || endStr == "" {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "start and end query parameters are required (YYYY-MM-DD)")
+		return
+	}
+
+	rangeStart, err := time.Parse("2006-01-02", startStr)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid start date: expected YYYY-MM-DD")
+		return
+	}
+	rangeEnd, err := time.Parse("2006-01-02", endStr)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid end date: expected YYYY-MM-DD")
+		return
+	}
+
+	// End date is exclusive: add one day so the full end date is included
+	rangeEnd = rangeEnd.AddDate(0, 0, 1)
+
+	if !rangeStart.Before(rangeEnd) {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "start must be before end")
+		return
+	}
+
+	// Cap range to 90 days
+	if rangeEnd.Sub(rangeStart) > 90*24*time.Hour {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "date range must not exceed 90 days")
+		return
+	}
+
+	result, err := h.oncall.GetSchedule(r.Context(), info, projectKey, teamID, rangeStart, rangeEnd)
+	if err != nil {
+		handleOncallError(w, r, err, "failed to get oncall schedule")
+		return
+	}
+
+	writeData(w, http.StatusOK, toOncallScheduleResponse(result))
+}
+
 // --- Helpers ---
 
 func parseUUIDs(strs []string) ([]uuid.UUID, error) {

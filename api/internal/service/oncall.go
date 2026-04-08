@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -87,6 +89,26 @@ type AdvanceResult struct {
 	RotationID     uuid.UUID
 	TeamID         uuid.UUID
 	NextRotationAt *time.Time
+}
+
+// ScheduleShift represents a single on-call shift in the projected schedule.
+type ScheduleShift struct {
+	UserID      uuid.UUID  `json:"user_id"`
+	DisplayName string     `json:"display_name"`
+	Email       string     `json:"email"`
+	AvatarURL   *string    `json:"avatar_url,omitempty"`
+	StartAt     time.Time  `json:"start_at"`
+	EndAt       time.Time  `json:"end_at"`
+	IsOverride  bool       `json:"is_override"`
+	OverrideID  *uuid.UUID `json:"override_id,omitempty"`
+}
+
+// ScheduleResult holds the full schedule response including rotation config, shifts, members, and overrides.
+type ScheduleResult struct {
+	model.OncallRotation
+	Members   []model.OncallRotationMemberWithUser `json:"members"`
+	Shifts    []ScheduleShift                      `json:"shifts"`
+	Overrides []model.OncallOverrideWithUser        `json:"overrides"`
 }
 
 // OncallService handles on-call rotation business logic and authorization.
@@ -918,19 +940,41 @@ func containsUserID(ids []uuid.UUID, target uuid.UUID) bool {
 	return slices.Contains(ids, target)
 }
 
-func computeNextRotation(startDate, rotationTime, timezone string, periodDays int) *time.Time {
+// parseRotationEpoch parses the rotation's start date and time into a time.Time.
+// Handles both API input formats ("2026-04-09", "12:00:00") and PostgreSQL/lib-pq
+// scanned formats ("2026-04-09T00:00:00Z", "0000-01-01T12:00:00Z").
+func parseRotationEpoch(startDate, rotationTime, timezone string) time.Time {
 	loc, err := time.LoadLocation(timezone)
 	if err != nil {
 		loc = time.UTC
 	}
 
-	// Parse start date and rotation time
-	t, err := time.ParseInLocation("2006-01-02 15:04:05", startDate+" "+rotationTime, loc)
+	// Normalize date: extract YYYY-MM-DD from possible "YYYY-MM-DDT..." format
+	dateStr := startDate
+	if idx := strings.IndexByte(dateStr, 'T'); idx > 0 {
+		dateStr = dateStr[:idx]
+	}
+
+	// Normalize time: extract HH:MM:SS from possible "0000-01-01THH:MM:SSZ" format
+	timeStr := rotationTime
+	if idx := strings.IndexByte(timeStr, 'T'); idx >= 0 {
+		timeStr = timeStr[idx+1:]
+	}
+	timeStr = strings.TrimSuffix(timeStr, "Z")
+	if len(timeStr) > 8 {
+		timeStr = timeStr[:8]
+	}
+
+	t, err := time.ParseInLocation("2006-01-02 15:04:05", dateStr+" "+timeStr, loc)
 	if err != nil {
-		// Fallback: just use start date at noon
-		t, _ = time.ParseInLocation("2006-01-02", startDate, loc)
+		t, _ = time.ParseInLocation("2006-01-02", dateStr, loc)
 		t = t.Add(12 * time.Hour)
 	}
+	return t
+}
+
+func computeNextRotation(startDate, rotationTime, timezone string, periodDays int) *time.Time {
+	t := parseRotationEpoch(startDate, rotationTime, timezone)
 
 	now := time.Now()
 
@@ -953,4 +997,192 @@ func computeNextRotation(startDate, rotationTime, timezone string, periodDays in
 func computeNextRotationFromNow(_ string, periodDays int) *time.Time {
 	next := time.Now().Add(time.Duration(periodDays) * 24 * time.Hour)
 	return &next
+}
+
+// GetSchedule returns the projected on-call schedule for a date range, with overrides applied.
+func (s *OncallService) GetSchedule(ctx context.Context, info *model.AuthInfo, projectKey string, teamID uuid.UUID, rangeStart, rangeEnd time.Time) (*ScheduleResult, error) {
+	project, err := s.projects.GetByKey(ctx, projectKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.requireMembership(ctx, info, project.ID); err != nil {
+		return nil, err
+	}
+
+	team, err := s.teams.GetByID(ctx, teamID)
+	if err != nil {
+		return nil, err
+	}
+	if team.ProjectID != project.ID {
+		return nil, model.ErrNotFound
+	}
+
+	rot, err := s.oncall.GetByTeamID(ctx, teamID)
+	if err != nil {
+		return nil, err
+	}
+
+	members, err := s.oncall.ListMembers(ctx, rot.ID)
+	if err != nil {
+		return nil, fmt.Errorf("listing rotation members: %w", err)
+	}
+
+	var shifts []ScheduleShift
+	if len(members) > 0 {
+		shifts = computeRotationShifts(rot, members, rangeStart, rangeEnd)
+	}
+
+	var overrides []model.OncallOverrideWithUser
+	if s.overrides != nil {
+		overrides, err = s.overrides.ListOverridesInRange(ctx, rot.ID, rangeStart, rangeEnd)
+		if err != nil {
+			return nil, fmt.Errorf("listing overrides in range: %w", err)
+		}
+		if len(overrides) > 0 {
+			shifts = applyOverrides(shifts, overrides)
+		}
+	}
+
+	return &ScheduleResult{
+		OncallRotation: *rot,
+		Members:        members,
+		Shifts:         shifts,
+		Overrides:      overrides,
+	}, nil
+}
+
+// computeRotationShifts projects the base rotation schedule (without overrides) for a time range.
+func computeRotationShifts(rot *model.OncallRotation, members []model.OncallRotationMemberWithUser, rangeStart, rangeEnd time.Time) []ScheduleShift {
+	t0 := parseRotationEpoch(rot.StartDate, rot.RotationTime, rot.Timezone)
+
+	period := time.Duration(rot.PeriodDays) * 24 * time.Hour
+	numMembers := len(members)
+
+	// Find the first shift boundary at or before rangeStart.
+	// elapsed periods = floor((rangeStart - t0) / period)
+	elapsed := rangeStart.Sub(t0)
+	periodsElapsed := int(elapsed / period)
+	if elapsed < 0 && elapsed%period != 0 {
+		periodsElapsed--
+	}
+
+	shiftStart := t0.Add(time.Duration(periodsElapsed) * period)
+
+	// Ensure we start at or before rangeStart
+	for shiftStart.After(rangeStart) {
+		shiftStart = shiftStart.Add(-period)
+		periodsElapsed--
+	}
+
+	var shifts []ScheduleShift
+	for shiftStart.Before(rangeEnd) {
+		shiftEnd := shiftStart.Add(period)
+
+		// Member index: periodsElapsed mod numMembers (handle negative)
+		memberIdx := periodsElapsed % numMembers
+		if memberIdx < 0 {
+			memberIdx += numMembers
+		}
+
+		// Clip to requested range
+		clippedStart := shiftStart
+		clippedEnd := shiftEnd
+		if clippedStart.Before(rangeStart) {
+			clippedStart = rangeStart
+		}
+		if clippedEnd.After(rangeEnd) {
+			clippedEnd = rangeEnd
+		}
+
+		member := members[memberIdx]
+		shifts = append(shifts, ScheduleShift{
+			UserID:      member.UserID,
+			DisplayName: member.DisplayName,
+			Email:       member.Email,
+			AvatarURL:   member.AvatarURL,
+			StartAt:     clippedStart,
+			EndAt:       clippedEnd,
+			IsOverride:  false,
+		})
+
+		shiftStart = shiftEnd
+		periodsElapsed++
+	}
+
+	return shifts
+}
+
+// applyOverrides splits base rotation shifts where overrides are active.
+// Overrides sorted by created_at ASC so later-created overrides take priority.
+func applyOverrides(shifts []ScheduleShift, overrides []model.OncallOverrideWithUser) []ScheduleShift {
+	sort.Slice(overrides, func(i, j int) bool {
+		return overrides[i].CreatedAt.Before(overrides[j].CreatedAt)
+	})
+
+	for _, ov := range overrides {
+		var newShifts []ScheduleShift
+		for _, shift := range shifts {
+			// No overlap: shift ends before override starts or shift starts at/after override ends
+			if !shift.StartAt.Before(ov.EndAt) || !ov.StartAt.Before(shift.EndAt) {
+				newShifts = append(newShifts, shift)
+				continue
+			}
+
+			// Before portion (part of shift before override starts)
+			if shift.StartAt.Before(ov.StartAt) {
+				before := shift
+				before.EndAt = ov.StartAt
+				newShifts = append(newShifts, before)
+			}
+
+			// Override portion
+			ovStart := shift.StartAt
+			if ov.StartAt.After(ovStart) {
+				ovStart = ov.StartAt
+			}
+			ovEnd := shift.EndAt
+			if ov.EndAt.Before(ovEnd) {
+				ovEnd = ov.EndAt
+			}
+			ovID := ov.ID
+			newShifts = append(newShifts, ScheduleShift{
+				UserID:      ov.OverrideUserID,
+				DisplayName: ov.OverrideUserName,
+				AvatarURL:   ov.OverrideAvatar,
+				StartAt:     ovStart,
+				EndAt:       ovEnd,
+				IsOverride:  true,
+				OverrideID:  &ovID,
+			})
+
+			// After portion (part of shift after override ends)
+			if shift.EndAt.After(ov.EndAt) {
+				after := shift
+				after.StartAt = ov.EndAt
+				newShifts = append(newShifts, after)
+			}
+		}
+		shifts = newShifts
+	}
+
+	// Merge consecutive shifts with the same user
+	return mergeConsecutiveShifts(shifts)
+}
+
+// mergeConsecutiveShifts merges adjacent shifts that have the same user and override status.
+func mergeConsecutiveShifts(shifts []ScheduleShift) []ScheduleShift {
+	if len(shifts) <= 1 {
+		return shifts
+	}
+	merged := []ScheduleShift{shifts[0]}
+	for _, s := range shifts[1:] {
+		last := &merged[len(merged)-1]
+		if last.UserID == s.UserID && last.IsOverride == s.IsOverride && last.EndAt.Equal(s.StartAt) {
+			last.EndAt = s.EndAt
+		} else {
+			merged = append(merged, s)
+		}
+	}
+	return merged
 }
