@@ -101,6 +101,7 @@ func main() {
 	escalationRepo := repository.NewEscalationRepository(db)
 	watcherRepo := repository.NewWatcherRepository(db)
 	emailVerificationRepo := repository.NewEmailVerificationRepository(db)
+	passwordResetRepo := repository.NewPasswordResetRepository(db)
 	statsRepo := repository.NewStatsRepository(db)
 	embeddingRepo := repository.NewEmbeddingRepository(db)
 	namespaceRepo := repository.NewNamespaceRepository(db)
@@ -234,6 +235,7 @@ func main() {
 
 	// Configure email verification on auth service
 	authService.SetEmailVerification(emailVerificationRepo, systemSettingRepo, emailSender, cfg.BaseURL)
+	authService.SetPasswordReset(passwordResetRepo)
 
 	// Configure encryptor on auth service (for decrypting OAuth secrets from DB)
 	authService.SetEncryptor(encryptor)
@@ -340,6 +342,8 @@ func main() {
 		r.With(authLimiter).Post("/auth/login", auth.Login)
 		r.With(authLimiter).Post("/auth/register", auth.Register)
 		r.With(authLimiter).Post("/auth/verify-email", auth.VerifyEmail)
+		r.With(authLimiter).Post("/auth/forgot-password", auth.ForgotPassword)
+		r.With(authLimiter).Post("/auth/reset-password", auth.ResetPassword)
 		r.Get("/auth/providers", auth.AuthProviders)
 		r.Get("/auth/{provider}", auth.OAuthAuth)
 		r.With(authLimiter).Post("/auth/{provider}/callback", auth.OAuthCallback)

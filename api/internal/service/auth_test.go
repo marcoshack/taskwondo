@@ -2244,3 +2244,261 @@ func TestAuthService_CreateSystemAPIKey_WithExpiration(t *testing.T) {
 		t.Fatal("expected expiry to be set")
 	}
 }
+
+// --- Password reset mock & tests ---
+
+type mockPasswordResetRepo struct {
+	tokens map[string]*model.PasswordResetToken
+}
+
+func newMockPasswordResetRepo() *mockPasswordResetRepo {
+	return &mockPasswordResetRepo{tokens: make(map[string]*model.PasswordResetToken)}
+}
+
+func (m *mockPasswordResetRepo) Create(_ context.Context, token *model.PasswordResetToken) error {
+	m.tokens[token.TokenHash] = token
+	return nil
+}
+
+func (m *mockPasswordResetRepo) GetByTokenHash(_ context.Context, tokenHash string) (*model.PasswordResetToken, error) {
+	t, ok := m.tokens[tokenHash]
+	if !ok || t.ExpiresAt.Before(time.Now()) {
+		return nil, model.ErrNotFound
+	}
+	return t, nil
+}
+
+func (m *mockPasswordResetRepo) DeleteByTokenHash(_ context.Context, tokenHash string) error {
+	delete(m.tokens, tokenHash)
+	return nil
+}
+
+func (m *mockPasswordResetRepo) DeleteByEmail(_ context.Context, email string) error {
+	for k, t := range m.tokens {
+		if t.Email == email {
+			delete(m.tokens, k)
+		}
+	}
+	return nil
+}
+
+func (m *mockPasswordResetRepo) DeleteExpired(_ context.Context) (int64, error) {
+	var count int64
+	for k, t := range m.tokens {
+		if t.ExpiresAt.Before(time.Now()) {
+			delete(m.tokens, k)
+			count++
+		}
+	}
+	return count, nil
+}
+
+func newTestAuthServiceWithPasswordReset() (*AuthService, *mockUserRepo, *mockPasswordResetRepo, *mockEmailSender) {
+	userRepo := newMockUserRepo()
+	apiKeyRepo := newMockAPIKeyRepo()
+	oauthRepo := newMockOAuthAccountRepo()
+	svc := NewAuthService(userRepo, apiKeyRepo, oauthRepo, "test-secret-at-least-32-chars!!", 24*time.Hour, nil)
+
+	settings := newMockSettingsReader()
+	sender := &mockEmailSender{}
+	emailVerifRepo := newMockEmailVerificationRepo()
+	svc.SetEmailVerification(emailVerifRepo, settings, sender, "http://localhost:5173")
+
+	resetRepo := newMockPasswordResetRepo()
+	svc.SetPasswordReset(resetRepo)
+
+	return svc, userRepo, resetRepo, sender
+}
+
+func TestRequestPasswordReset_Success(t *testing.T) {
+	svc, userRepo, _, sender := newTestAuthServiceWithPasswordReset()
+
+	// Create existing user with a password
+	hash, _ := bcrypt.GenerateFromPassword([]byte("OldPassword1!"), bcrypt.MinCost)
+	userRepo.Create(context.Background(), &model.User{
+		ID:           uuid.New(),
+		Email:        "reset@example.com",
+		DisplayName:  "Reset User",
+		PasswordHash: string(hash),
+		GlobalRole:   model.RoleUser,
+		IsActive:     true,
+	})
+
+	err := svc.RequestPasswordReset(context.Background(), "reset@example.com")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	if len(sender.sent) != 1 {
+		t.Fatalf("expected 1 email sent, got %d", len(sender.sent))
+	}
+	if sender.sent[0].to != "reset@example.com" {
+		t.Fatalf("expected email to reset@example.com, got %s", sender.sent[0].to)
+	}
+	if !strings.Contains(sender.sent[0].body, "reset-password?token=") {
+		t.Fatal("expected reset URL in email body")
+	}
+}
+
+func TestRequestPasswordReset_UnknownEmail(t *testing.T) {
+	svc, _, _, sender := newTestAuthServiceWithPasswordReset()
+
+	// Should not error (prevents enumeration)
+	err := svc.RequestPasswordReset(context.Background(), "unknown@example.com")
+	if err != nil {
+		t.Fatalf("expected no error for unknown email, got %v", err)
+	}
+
+	// Should not send any email
+	if len(sender.sent) != 0 {
+		t.Fatalf("expected no email sent for unknown user, got %d", len(sender.sent))
+	}
+}
+
+func TestRequestPasswordReset_OAuthOnlyUser(t *testing.T) {
+	svc, userRepo, _, sender := newTestAuthServiceWithPasswordReset()
+
+	// User without password (OAuth-only)
+	userRepo.Create(context.Background(), &model.User{
+		ID:           uuid.New(),
+		Email:        "oauth@example.com",
+		DisplayName:  "OAuth User",
+		PasswordHash: "",
+		GlobalRole:   model.RoleUser,
+		IsActive:     true,
+	})
+
+	err := svc.RequestPasswordReset(context.Background(), "oauth@example.com")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	// Should not send email for OAuth-only users
+	if len(sender.sent) != 0 {
+		t.Fatalf("expected no email for OAuth-only user, got %d", len(sender.sent))
+	}
+}
+
+func TestRequestPasswordReset_InvalidEmail(t *testing.T) {
+	svc, _, _, _ := newTestAuthServiceWithPasswordReset()
+
+	err := svc.RequestPasswordReset(context.Background(), "not-an-email")
+	if err == nil {
+		t.Fatal("expected error for invalid email")
+	}
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected validation error, got: %v", err)
+	}
+}
+
+func TestResetPasswordWithToken_Success(t *testing.T) {
+	svc, userRepo, _, sender := newTestAuthServiceWithPasswordReset()
+
+	// Create existing user
+	hash, _ := bcrypt.GenerateFromPassword([]byte("OldPassword1!"), bcrypt.MinCost)
+	userRepo.Create(context.Background(), &model.User{
+		ID:           uuid.New(),
+		Email:        "reset@example.com",
+		DisplayName:  "Reset User",
+		PasswordHash: string(hash),
+		GlobalRole:   model.RoleUser,
+		IsActive:     true,
+	})
+
+	// Request reset
+	err := svc.RequestPasswordReset(context.Background(), "reset@example.com")
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+
+	// Extract token from email body
+	body := sender.sent[0].body
+	idx := strings.Index(body, "reset-password?token=")
+	if idx == -1 {
+		t.Fatal("token not found in email")
+	}
+	tokenStart := idx + len("reset-password?token=")
+	tokenEnd := strings.IndexAny(body[tokenStart:], "\"' ")
+	rawToken := body[tokenStart : tokenStart+tokenEnd]
+
+	// Reset password
+	jwtToken, user, err := svc.ResetPasswordWithToken(context.Background(), rawToken, "NewSecurePass1!")
+	if err != nil {
+		t.Fatalf("reset failed: %v", err)
+	}
+	if jwtToken == "" {
+		t.Fatal("expected JWT token")
+	}
+	if user.Email != "reset@example.com" {
+		t.Fatalf("expected email reset@example.com, got %s", user.Email)
+	}
+
+	// Verify old password no longer works
+	u, _ := userRepo.GetByEmail(context.Background(), "reset@example.com")
+	if bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte("OldPassword1!")) == nil {
+		t.Fatal("old password should not work after reset")
+	}
+	if bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte("NewSecurePass1!")) != nil {
+		t.Fatal("new password should work after reset")
+	}
+}
+
+func TestResetPasswordWithToken_InvalidToken(t *testing.T) {
+	svc, _, _, _ := newTestAuthServiceWithPasswordReset()
+
+	_, _, err := svc.ResetPasswordWithToken(context.Background(), "nonexistent-token", "password123!")
+	if err == nil {
+		t.Fatal("expected error for invalid token")
+	}
+	if !errors.Is(err, model.ErrNotFound) {
+		t.Fatalf("expected not found error, got: %v", err)
+	}
+}
+
+func TestResetPasswordWithToken_WeakPassword(t *testing.T) {
+	svc, userRepo, resetRepo, _ := newTestAuthServiceWithPasswordReset()
+
+	// Create user
+	hash, _ := bcrypt.GenerateFromPassword([]byte("OldPassword1!"), bcrypt.MinCost)
+	userRepo.Create(context.Background(), &model.User{
+		ID:           uuid.New(),
+		Email:        "weak@example.com",
+		DisplayName:  "Weak User",
+		PasswordHash: string(hash),
+		GlobalRole:   model.RoleUser,
+		IsActive:     true,
+	})
+
+	// Manually insert a reset token
+	tokenHash := hashToken("test-reset-token")
+	resetRepo.tokens[tokenHash] = &model.PasswordResetToken{
+		ID:        uuid.New(),
+		Email:     "weak@example.com",
+		TokenHash: tokenHash,
+		ExpiresAt: time.Now().Add(time.Hour),
+	}
+
+	_, _, err := svc.ResetPasswordWithToken(context.Background(), "test-reset-token", "short")
+	if err == nil {
+		t.Fatal("expected error for weak password")
+	}
+	if !strings.Contains(err.Error(), "8 characters") {
+		t.Fatalf("expected password length error, got: %v", err)
+	}
+}
+
+func TestResetPasswordWithToken_NotConfigured(t *testing.T) {
+	userRepo := newMockUserRepo()
+	apiKeyRepo := newMockAPIKeyRepo()
+	oauthRepo := newMockOAuthAccountRepo()
+	svc := NewAuthService(userRepo, apiKeyRepo, oauthRepo, "test-secret-at-least-32-chars!!", 24*time.Hour, nil)
+	// Don't set password reset repo
+
+	_, _, err := svc.ResetPasswordWithToken(context.Background(), "any-token", "password123!")
+	if err == nil {
+		t.Fatal("expected error when not configured")
+	}
+	if !errors.Is(err, model.ErrForbidden) {
+		t.Fatalf("expected forbidden error, got: %v", err)
+	}
+}

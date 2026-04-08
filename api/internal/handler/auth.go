@@ -772,6 +772,88 @@ func (h *AuthHandler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	writeData(w, http.StatusOK, resp)
 }
 
+// Password reset handlers
+
+type forgotPasswordRequest struct {
+	Email string `json:"email"`
+}
+
+// ForgotPassword handles POST /api/v1/auth/forgot-password.
+func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
+	var req forgotPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		return
+	}
+
+	if req.Email == "" {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "email is required")
+		return
+	}
+
+	if err := h.auth.RequestPasswordReset(r.Context(), req.Email); err != nil {
+		if errors.Is(err, model.ErrForbidden) {
+			writeError(w, http.StatusForbidden, "FORBIDDEN", "password reset is not available")
+			return
+		}
+		if errors.Is(err, model.ErrValidation) {
+			writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
+			return
+		}
+		log.Ctx(r.Context()).Error().Err(err).Msg("password reset request failed")
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		return
+	}
+
+	// Always return the same message to prevent user enumeration
+	writeData(w, http.StatusOK, map[string]string{
+		"message": "if an account exists with this email, a password reset link has been sent",
+	})
+}
+
+type resetPasswordRequest struct {
+	Token    string `json:"token"`
+	Password string `json:"password"`
+}
+
+// ResetPassword handles POST /api/v1/auth/reset-password.
+func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	var req resetPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		return
+	}
+
+	if req.Token == "" || req.Password == "" {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "token and password are required")
+		return
+	}
+
+	token, user, err := h.auth.ResetPasswordWithToken(r.Context(), req.Token, req.Password)
+	if err != nil {
+		if errors.Is(err, model.ErrNotFound) {
+			writeError(w, http.StatusNotFound, "NOT_FOUND", "invalid or expired reset token")
+			return
+		}
+		if errors.Is(err, model.ErrValidation) {
+			writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
+			return
+		}
+		if errors.Is(err, model.ErrForbidden) {
+			writeError(w, http.StatusForbidden, "FORBIDDEN", "password reset is not available")
+			return
+		}
+		log.Ctx(r.Context()).Error().Err(err).Msg("password reset failed")
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		return
+	}
+
+	writeData(w, http.StatusOK, map[string]interface{}{
+		"token": token,
+		"user":  toUserResponse(user),
+	})
+}
+
 // Profile endpoints
 
 type updateProfileRequest struct {

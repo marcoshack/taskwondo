@@ -1395,3 +1395,152 @@ func TestAuthHandler_DeleteSystemAPIKey_InvalidKeyID(t *testing.T) {
 	}
 }
 
+// --- Password reset handler tests ---
+
+type handlerMockPasswordResetRepo struct {
+	tokens map[string]*model.PasswordResetToken
+}
+
+func newHandlerMockPasswordResetRepo() *handlerMockPasswordResetRepo {
+	return &handlerMockPasswordResetRepo{tokens: make(map[string]*model.PasswordResetToken)}
+}
+
+func (m *handlerMockPasswordResetRepo) Create(_ context.Context, token *model.PasswordResetToken) error {
+	m.tokens[token.TokenHash] = token
+	return nil
+}
+
+func (m *handlerMockPasswordResetRepo) GetByTokenHash(_ context.Context, tokenHash string) (*model.PasswordResetToken, error) {
+	t, ok := m.tokens[tokenHash]
+	if !ok || t.ExpiresAt.Before(time.Now()) {
+		return nil, model.ErrNotFound
+	}
+	return t, nil
+}
+
+func (m *handlerMockPasswordResetRepo) DeleteByTokenHash(_ context.Context, tokenHash string) error {
+	delete(m.tokens, tokenHash)
+	return nil
+}
+
+func (m *handlerMockPasswordResetRepo) DeleteByEmail(_ context.Context, email string) error {
+	for k, t := range m.tokens {
+		if t.Email == email {
+			delete(m.tokens, k)
+		}
+	}
+	return nil
+}
+
+func (m *handlerMockPasswordResetRepo) DeleteExpired(_ context.Context) (int64, error) {
+	return 0, nil
+}
+
+func testSetupWithPasswordReset(t *testing.T) (*AuthHandler, *service.AuthService, *mockUserRepo) {
+	t.Helper()
+
+	userRepo := newMockUserRepo()
+	apiKeyRepo := newMockAPIKeyRepo()
+	oauthRepo := newMockOAuthAccountRepo()
+	authSvc := service.NewAuthService(userRepo, apiKeyRepo, oauthRepo,
+		"test-secret-that-is-at-least-32!", 1*time.Hour, nil)
+
+	verifRepo := newHandlerMockEmailVerifRepo()
+	settings := newHandlerMockSettingsReader()
+	sender := &handlerMockEmailSender{}
+	authSvc.SetEmailVerification(verifRepo, settings, sender, "http://localhost:5173")
+
+	resetRepo := newHandlerMockPasswordResetRepo()
+	authSvc.SetPasswordReset(resetRepo)
+
+	h := NewAuthHandler(authSvc, nil, nil, nil)
+	return h, authSvc, userRepo
+}
+
+func TestForgotPasswordHandler_Success(t *testing.T) {
+	h, _, userRepo := testSetupWithPasswordReset(t)
+
+	// Create a user with password
+	userRepo.users["existing@example.com"] = &model.User{
+		ID:           uuid.New(),
+		Email:        "existing@example.com",
+		DisplayName:  "Existing User",
+		PasswordHash: "$2a$10$fakehash",
+		GlobalRole:   model.RoleUser,
+		IsActive:     true,
+	}
+	userRepo.byID[userRepo.users["existing@example.com"].ID] = userRepo.users["existing@example.com"]
+
+	body := `{"email":"existing@example.com"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/forgot-password", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	h.ForgotPassword(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestForgotPasswordHandler_UnknownEmail(t *testing.T) {
+	h, _, _ := testSetupWithPasswordReset(t)
+
+	// Unknown email should still return 200 (prevent enumeration)
+	body := `{"email":"unknown@example.com"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/forgot-password", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	h.ForgotPassword(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 even for unknown email, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestForgotPasswordHandler_MissingEmail(t *testing.T) {
+	h, _, _ := testSetupWithPasswordReset(t)
+
+	body := `{}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/forgot-password", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	h.ForgotPassword(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestResetPasswordHandler_MissingFields(t *testing.T) {
+	h, _, _ := testSetupWithPasswordReset(t)
+
+	body := `{"token":"abc"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/reset-password", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	h.ResetPassword(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestResetPasswordHandler_InvalidToken(t *testing.T) {
+	h, _, _ := testSetupWithPasswordReset(t)
+
+	body := `{"token":"nonexistent","password":"password123!"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/reset-password", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	h.ResetPassword(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d: %s", w.Code, w.Body.String())
+	}
+}
+

@@ -14,6 +14,8 @@ import { InviteAcceptPage } from '@/pages/InviteAcceptPage'
 import { CliAuthorizePage } from '@/pages/CliAuthorizePage'
 import { RegisterPage } from '@/pages/RegisterPage'
 import { VerifyEmailPage } from '@/pages/VerifyEmailPage'
+import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage'
+import { ResetPasswordPage } from '@/pages/ResetPasswordPage'
 import UserPage from '@/pages/InboxPage'
 import { NamespaceSettingsPage } from '@/pages/NamespaceSettingsPage'
 
@@ -40,6 +42,8 @@ export default function App() {
       <Route path="/auth/cli/authorize" element={<CliAuthorizePage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route element={<ProtectedRoute />}>
         <Route element={<AppShell />}>
           <Route path="/:namespace" element={<NamespaceGuard />}>

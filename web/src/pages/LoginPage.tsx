@@ -155,6 +155,15 @@ export function LoginPage() {
               {loading ? t('login.submitting') : t('login.submit')}
             </Button>
 
+            <p className="text-center text-sm">
+              <Link
+                to="/forgot-password"
+                className="text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
+              >
+                {t('login.forgotPassword')}
+              </Link>
+            </p>
+
             {emailRegistrationEnabled && (
               <p className="text-center text-sm text-gray-600 dark:text-gray-400">
                 {t('login.noAccount')}{' '}

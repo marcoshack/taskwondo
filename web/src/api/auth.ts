@@ -180,6 +180,21 @@ export async function verifyEmail(token: string, password: string) {
   return res.data.data
 }
 
+// Password reset
+
+export async function forgotPassword(email: string) {
+  const res = await api.post<{ data: { message: string } }>('/auth/forgot-password', { email })
+  return res.data.data
+}
+
+export async function resetPassword(token: string, password: string) {
+  const res = await api.post<{ data: { token: string; user: User } }>('/auth/reset-password', {
+    token,
+    password,
+  })
+  return res.data.data
+}
+
 // Password management
 
 export async function changePassword(oldPassword: string, newPassword: string) {

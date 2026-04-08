@@ -73,6 +73,15 @@ type EmailVerificationRepo interface {
 	DeleteExpired(ctx context.Context) (int64, error)
 }
 
+// PasswordResetRepo defines persistence operations for password reset tokens.
+type PasswordResetRepo interface {
+	Create(ctx context.Context, token *model.PasswordResetToken) error
+	GetByTokenHash(ctx context.Context, tokenHash string) (*model.PasswordResetToken, error)
+	DeleteByTokenHash(ctx context.Context, tokenHash string) error
+	DeleteByEmail(ctx context.Context, email string) error
+	DeleteExpired(ctx context.Context) (int64, error)
+}
+
 // AuthSettingsReader loads system settings by key for auth decisions.
 type AuthSettingsReader interface {
 	Get(ctx context.Context, key string) (*model.SystemSetting, error)
@@ -94,6 +103,7 @@ type Claims struct {
 const oauthStateExpiry = 10 * time.Minute
 
 const emailVerificationTokenExpiry = 24 * time.Hour
+const passwordResetTokenExpiry = 1 * time.Hour
 
 // AuthService handles authentication and authorization.
 type AuthService struct {
@@ -101,6 +111,7 @@ type AuthService struct {
 	apiKeys            APIKeyRepository
 	oauthAccounts      OAuthAccountRepository
 	emailVerifications EmailVerificationRepo
+	passwordResets     PasswordResetRepo
 	settings           AuthSettingsReader
 	emailSender        EmailSender
 	encryptor          *crypto.Encryptor
@@ -140,6 +151,11 @@ func (s *AuthService) SetEmailVerification(repo EmailVerificationRepo, settings 
 	s.settings = settings
 	s.emailSender = sender
 	s.baseURL = baseURL
+}
+
+// SetPasswordReset configures the password reset repository.
+func (s *AuthService) SetPasswordReset(repo PasswordResetRepo) {
+	s.passwordResets = repo
 }
 
 // SetStorage configures the storage backend for avatar uploads.
@@ -766,6 +782,129 @@ func (s *AuthService) VerifyEmailAndCreateUser(ctx context.Context, rawToken, pa
 	}, nil
 }
 
+// RequestPasswordReset generates a password reset token and sends an email.
+// It always returns nil to prevent user enumeration — even if the email doesn't exist.
+func (s *AuthService) RequestPasswordReset(ctx context.Context, email string) error {
+	if s.passwordResets == nil || s.emailSender == nil {
+		return fmt.Errorf("%w: password reset is not configured", model.ErrForbidden)
+	}
+
+	email = strings.TrimSpace(email)
+	addr, err := mail.ParseAddress(email)
+	if err != nil || addr.Address != email {
+		return fmt.Errorf("%w: valid email is required", model.ErrValidation)
+	}
+	email = addr.Address
+
+	// Look up the user — if not found, silently return to prevent enumeration
+	user, err := s.users.GetByEmail(ctx, email)
+	if err != nil {
+		if errors.Is(err, model.ErrNotFound) {
+			log.Ctx(ctx).Info().Str("email", email).Msg("password reset requested for unknown email")
+			return nil
+		}
+		return fmt.Errorf("looking up user: %w", err)
+	}
+
+	// Only allow reset for users with a password (not OAuth-only users)
+	if user.PasswordHash == "" {
+		log.Ctx(ctx).Info().Str("email", email).Msg("password reset requested for user without password")
+		return nil
+	}
+
+	// Clean up existing tokens for this email
+	if err := s.passwordResets.DeleteByEmail(ctx, email); err != nil {
+		return fmt.Errorf("cleaning up old tokens: %w", err)
+	}
+
+	// Generate random token
+	rawBytes := make([]byte, 32)
+	if _, err := rand.Read(rawBytes); err != nil {
+		return fmt.Errorf("generating random token: %w", err)
+	}
+	rawToken := hex.EncodeToString(rawBytes)
+	tokenHash := hashToken(rawToken)
+
+	token := &model.PasswordResetToken{
+		ID:        uuid.New(),
+		Email:     email,
+		TokenHash: tokenHash,
+		ExpiresAt: time.Now().Add(passwordResetTokenExpiry),
+	}
+	if err := s.passwordResets.Create(ctx, token); err != nil {
+		return fmt.Errorf("storing password reset token: %w", err)
+	}
+
+	resetURL := strings.TrimRight(s.baseURL, "/") + "/reset-password?token=" + rawToken
+	htmlBody := passwordResetEmailHTML(user.DisplayName, resetURL)
+
+	if err := s.emailSender.Send(ctx, email, "Reset your password", htmlBody); err != nil {
+		log.Ctx(ctx).Error().Err(err).Str("email", email).Msg("failed to send password reset email")
+		return fmt.Errorf("sending password reset email: %w", err)
+	}
+
+	log.Ctx(ctx).Info().Str("email", email).Msg("password reset email sent")
+	return nil
+}
+
+// ResetPasswordWithToken validates a password reset token and sets a new password.
+func (s *AuthService) ResetPasswordWithToken(ctx context.Context, rawToken, password string) (string, *model.User, error) {
+	if s.passwordResets == nil {
+		return "", nil, fmt.Errorf("%w: password reset is not configured", model.ErrForbidden)
+	}
+
+	tokenHash := hashToken(rawToken)
+	resetToken, err := s.passwordResets.GetByTokenHash(ctx, tokenHash)
+	if err != nil {
+		if errors.Is(err, model.ErrNotFound) {
+			return "", nil, fmt.Errorf("%w: invalid or expired reset token", model.ErrNotFound)
+		}
+		return "", nil, fmt.Errorf("looking up reset token: %w", err)
+	}
+
+	// Validate password
+	if len(password) < 8 {
+		return "", nil, fmt.Errorf("%w: password must be at least 8 characters", model.ErrValidation)
+	}
+	if len(password) > 72 {
+		return "", nil, fmt.Errorf("%w: password must be 72 characters or fewer", model.ErrValidation)
+	}
+
+	// Look up user
+	user, err := s.users.GetByEmail(ctx, resetToken.Email)
+	if err != nil {
+		return "", nil, fmt.Errorf("looking up user: %w", err)
+	}
+
+	// Hash new password and update
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return "", nil, fmt.Errorf("hashing password: %w", err)
+	}
+
+	if err := s.users.UpdatePasswordHash(ctx, user.ID, string(hash), false); err != nil {
+		return "", nil, fmt.Errorf("updating password: %w", err)
+	}
+
+	// Delete the used token
+	if err := s.passwordResets.DeleteByTokenHash(ctx, tokenHash); err != nil {
+		log.Ctx(ctx).Warn().Err(err).Msg("failed to delete used password reset token")
+	}
+
+	// Generate JWT
+	jwtToken, err := s.generateJWT(user)
+	if err != nil {
+		return "", nil, fmt.Errorf("generating token: %w", err)
+	}
+
+	if err := s.users.UpdateLastLogin(ctx, user.ID); err != nil {
+		log.Ctx(ctx).Warn().Err(err).Msg("failed to update last login")
+	}
+
+	log.Ctx(ctx).Info().Str("email", user.Email).Msg("password reset completed")
+	return jwtToken, user, nil
+}
+
 func hashToken(raw string) string {
 	h := sha256.Sum256([]byte(raw))
 	return hex.EncodeToString(h[:])
@@ -786,6 +925,23 @@ func verificationEmailHTML(displayName, verifyURL string) string {
 </div>
 </body>
 </html>`, html.EscapeString(displayName), verifyURL)
+}
+
+func passwordResetEmailHTML(displayName, resetURL string) string {
+	return fmt.Sprintf(`<!DOCTYPE html>
+<html>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #f9fafb;">
+<div style="max-width: 480px; margin: 0 auto; background: #fff; border-radius: 8px; padding: 32px; border: 1px solid #e5e7eb;">
+<h2 style="margin: 0 0 16px;">Reset your password</h2>
+<p>Hi %s,</p>
+<p>We received a request to reset your password. Click the button below to choose a new password:</p>
+<p style="text-align: center; margin: 24px 0;">
+<a href="%s" style="display: inline-block; padding: 12px 24px; background: #4f46e5; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 600;">Reset password</a>
+</p>
+<p style="color: #6b7280; font-size: 14px;">This link expires in 1 hour. If you didn't request this, you can safely ignore this email.</p>
+</div>
+</body>
+</html>`, html.EscapeString(displayName), resetURL)
 }
 
 // OAuthURL generates the authorization URL for the given provider.
