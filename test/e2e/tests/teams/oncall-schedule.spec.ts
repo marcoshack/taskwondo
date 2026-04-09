@@ -201,16 +201,16 @@ test.describe('Oncall schedule endpoint', () => {
       member_ids: [testUser.id],
     });
 
-    // Missing params
+    // Only start param (missing end) — should return 400
     const res1 = await request.get(
-      `${process.env.BASE_URL || 'http://localhost:5173'}/api/v1/default/projects/${testProject.key}/teams/${team.id}/oncall/schedule`,
+      `${process.env.BASE_URL || 'http://localhost:5173'}/api/v1/default/projects/${testProject.key}/teams/${team.id}/oncall?start=2026-01-01`,
       { headers: { Authorization: `Bearer ${testUser.token}` } },
     );
     expect(res1.status()).toBe(400);
 
     // Range > 90 days
     const res2 = await request.get(
-      `${process.env.BASE_URL || 'http://localhost:5173'}/api/v1/default/projects/${testProject.key}/teams/${team.id}/oncall/schedule?start=2026-01-01&end=2026-12-31`,
+      `${process.env.BASE_URL || 'http://localhost:5173'}/api/v1/default/projects/${testProject.key}/teams/${team.id}/oncall?start=2026-01-01&end=2026-12-31`,
       { headers: { Authorization: `Bearer ${testUser.token}` } },
     );
     expect(res2.status()).toBe(400);

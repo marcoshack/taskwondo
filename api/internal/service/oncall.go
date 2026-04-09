@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"slices"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -38,6 +37,7 @@ type OncallOverrideRepository interface {
 	ListByRotation(ctx context.Context, rotationID uuid.UUID) ([]model.OncallOverrideWithUser, error)
 	GetActiveOverride(ctx context.Context, rotationID uuid.UUID) (*model.OncallOverride, error)
 	ListOverridesInRange(ctx context.Context, rotationID uuid.UUID, from, to time.Time) ([]model.OncallOverrideWithUser, error)
+	ListStaleOverrideRotations(ctx context.Context) ([]model.OverrideTransition, error)
 }
 
 // CreateOncallRotationInput holds the input for creating an on-call rotation.
@@ -61,8 +61,9 @@ type UpdateOncallRotationInput struct {
 // OncallRotationResult is returned by GetRotation with members included.
 type OncallRotationResult struct {
 	model.OncallRotation
-	Members        []model.OncallRotationMemberWithUser `json:"members"`
-	ActiveOverride *model.OncallOverride                `json:"active_override,omitempty"`
+	Members   []model.OncallRotationMemberWithUser `json:"members"`
+	Overrides []model.OncallOverrideWithUser       `json:"overrides,omitempty"`
+	Shifts    []ScheduleShift                      `json:"shifts,omitempty"`
 }
 
 // CreateOncallOverrideInput holds the input for creating an on-call override.
@@ -93,22 +94,11 @@ type AdvanceResult struct {
 
 // ScheduleShift represents a single on-call shift in the projected schedule.
 type ScheduleShift struct {
-	UserID      uuid.UUID  `json:"user_id"`
-	DisplayName string     `json:"display_name"`
-	Email       string     `json:"email"`
-	AvatarURL   *string    `json:"avatar_url,omitempty"`
-	StartAt     time.Time  `json:"start_at"`
-	EndAt       time.Time  `json:"end_at"`
-	IsOverride  bool       `json:"is_override"`
-	OverrideID  *uuid.UUID `json:"override_id,omitempty"`
-}
-
-// ScheduleResult holds the full schedule response including rotation config, shifts, members, and overrides.
-type ScheduleResult struct {
-	model.OncallRotation
-	Members   []model.OncallRotationMemberWithUser `json:"members"`
-	Shifts    []ScheduleShift                      `json:"shifts"`
-	Overrides []model.OncallOverrideWithUser        `json:"overrides"`
+	UserID     uuid.UUID  `json:"user_id"`
+	StartAt    time.Time  `json:"start_at"`
+	EndAt      time.Time  `json:"end_at"`
+	IsOverride bool       `json:"is_override"`
+	OverrideID *uuid.UUID `json:"override_id,omitempty"`
 }
 
 // OncallService handles on-call rotation business logic and authorization.
@@ -184,16 +174,25 @@ func (s *OncallService) CreateRotation(ctx context.Context, info *model.AuthInfo
 		return nil, fmt.Errorf("period_days must be greater than 0: %w", model.ErrValidation)
 	}
 
+	startDate, err := parseDate(input.StartDate)
+	if err != nil {
+		return nil, fmt.Errorf("invalid start_date %q: %w", input.StartDate, model.ErrValidation)
+	}
+	rotationTime, err := parseTimeOfDay(input.RotationTime)
+	if err != nil {
+		return nil, fmt.Errorf("invalid rotation_time %q: %w", input.RotationTime, model.ErrValidation)
+	}
+
 	firstUserID := input.MemberIDs[0]
-	nextRotation := computeNextRotation(input.StartDate, input.RotationTime, input.Timezone, input.PeriodDays)
+	nextRotation := computeNextRotation(startDate, rotationTime, input.Timezone, input.PeriodDays)
 
 	rot := &model.OncallRotation{
 		ID:              uuid.New(),
 		TeamID:          teamID,
 		PeriodDays:      input.PeriodDays,
-		RotationTime:    input.RotationTime,
+		RotationTime:    rotationTime,
 		Timezone:        input.Timezone,
-		StartDate:       input.StartDate,
+		StartDate:       startDate,
 		CurrentUserID:   &firstUserID,
 		CurrentPosition: 0,
 		NextRotationAt:  nextRotation,
@@ -229,7 +228,8 @@ func (s *OncallService) CreateRotation(ctx context.Context, info *model.AuthInfo
 }
 
 // GetRotation returns the on-call rotation for a team with members.
-func (s *OncallService) GetRotation(ctx context.Context, info *model.AuthInfo, projectKey string, teamID uuid.UUID) (*OncallRotationResult, error) {
+// When rangeStart and rangeEnd are provided, it also computes the projected schedule shifts.
+func (s *OncallService) GetRotation(ctx context.Context, info *model.AuthInfo, projectKey string, teamID uuid.UUID, rangeStart, rangeEnd *time.Time) (*OncallRotationResult, error) {
 	project, err := s.projects.GetByKey(ctx, projectKey)
 	if err != nil {
 		return nil, err
@@ -252,7 +252,29 @@ func (s *OncallService) GetRotation(ctx context.Context, info *model.AuthInfo, p
 		return nil, err
 	}
 
-	return s.getRotationResult(ctx, rot)
+	result, err := s.getRotationResult(ctx, rot)
+	if err != nil {
+		return nil, err
+	}
+
+	// Compute schedule shifts when a date range is requested
+	if rangeStart != nil && rangeEnd != nil && len(result.Members) > 0 {
+		shifts := computeRotationShifts(rot, result.Members, *rangeStart, *rangeEnd)
+
+		if s.overrides != nil {
+			overridesInRange, err := s.overrides.ListOverridesInRange(ctx, rot.ID, *rangeStart, *rangeEnd)
+			if err != nil {
+				return nil, fmt.Errorf("listing overrides in range: %w", err)
+			}
+			if len(overridesInRange) > 0 {
+				shifts = applyOverrides(shifts, overridesInRange)
+			}
+		}
+
+		result.Shifts = shifts
+	}
+
+	return result, nil
 }
 
 // UpdateRotation modifies an on-call rotation.
@@ -286,7 +308,11 @@ func (s *OncallService) UpdateRotation(ctx context.Context, info *model.AuthInfo
 		rot.PeriodDays = *input.PeriodDays
 	}
 	if input.RotationTime != nil {
-		rot.RotationTime = *input.RotationTime
+		rt, err := parseTimeOfDay(*input.RotationTime)
+		if err != nil {
+			return nil, fmt.Errorf("invalid rotation_time %q: %w", *input.RotationTime, model.ErrValidation)
+		}
+		rot.RotationTime = rt
 	}
 	if input.Timezone != nil {
 		if _, err := time.LoadLocation(*input.Timezone); err != nil {
@@ -295,9 +321,15 @@ func (s *OncallService) UpdateRotation(ctx context.Context, info *model.AuthInfo
 		rot.Timezone = *input.Timezone
 	}
 	startDateChanged := false
-	if input.StartDate != nil && *input.StartDate != rot.StartDate {
-		rot.StartDate = *input.StartDate
-		startDateChanged = true
+	if input.StartDate != nil {
+		sd, err := parseDate(*input.StartDate)
+		if err != nil {
+			return nil, fmt.Errorf("invalid start_date %q: %w", *input.StartDate, model.ErrValidation)
+		}
+		if !sd.Equal(rot.StartDate) {
+			rot.StartDate = sd
+			startDateChanged = true
+		}
 	}
 
 	if input.MemberIDs != nil {
@@ -427,8 +459,10 @@ func (s *OncallService) ListHistory(ctx context.Context, info *model.AuthInfo, p
 	return s.oncall.ListHistory(ctx, rot.ID, limit, offset)
 }
 
-// AdvanceRotation advances the rotation to the next member.
-// Returns the old and new user IDs for notification purposes.
+// AdvanceRotation advances the rotation to the correct member based on the
+// current time. If multiple periods have elapsed since the last rotation
+// (e.g. the worker was down), it skips ahead to the right position rather
+// than advancing one step at a time.
 func (s *OncallService) AdvanceRotation(ctx context.Context, rotationID uuid.UUID) (*AdvanceResult, error) {
 	rot, err := s.oncall.GetByID(ctx, rotationID)
 	if err != nil {
@@ -449,8 +483,18 @@ func (s *OncallService) AdvanceRotation(ctx context.Context, rotationID uuid.UUI
 		oldUserID = *rot.CurrentUserID
 	}
 
-	// Advance position (wrapping)
-	newPosition := (rot.CurrentPosition + 1) % len(members)
+	// Compute how many periods have elapsed since next_rotation_at.
+	// If the worker was late or down, we may need to skip multiple positions.
+	periodsToAdvance := 1
+	if rot.NextRotationAt != nil {
+		period := time.Duration(rot.PeriodDays) * 24 * time.Hour
+		elapsed := time.Since(*rot.NextRotationAt)
+		if elapsed > 0 {
+			periodsToAdvance = 1 + int(elapsed/period)
+		}
+	}
+
+	newPosition := (rot.CurrentPosition + periodsToAdvance) % len(members)
 	newUserID := members[newPosition].UserID
 
 	// End current history
@@ -469,11 +513,25 @@ func (s *OncallService) AdvanceRotation(ctx context.Context, rotationID uuid.UUI
 		return nil, fmt.Errorf("creating history: %w", err)
 	}
 
-	// Update rotation state
+	// Update rotation state — compute next_rotation_at aligned to the
+	// rotation schedule (start_date + rotation_time in timezone), not
+	// relative to now, to prevent time drift.
 	rot.CurrentPosition = newPosition
 	rot.CurrentUserID = &newUserID
-	nextRotation := computeNextRotationFromNow(rot.Timezone, rot.PeriodDays)
-	rot.NextRotationAt = nextRotation
+	rot.IsOverride = false
+	rot.NextRotationAt = computeNextRotation(rot.StartDate, rot.RotationTime, rot.Timezone, rot.PeriodDays)
+
+	// Check for active override — if one exists, current_user_id should be the
+	// override user, but position still advances.
+	if s.overrides != nil {
+		active, err := s.overrides.GetActiveOverride(ctx, rotationID)
+		if err != nil {
+			log.Ctx(ctx).Warn().Err(err).Msg("failed to check active override during rotation advance")
+		} else if active != nil {
+			rot.CurrentUserID = &active.OverrideUserID
+			rot.IsOverride = true
+		}
+	}
 
 	if _, err := s.oncall.Update(ctx, rot); err != nil {
 		return nil, fmt.Errorf("updating rotation: %w", err)
@@ -484,6 +542,7 @@ func (s *OncallService) AdvanceRotation(ctx context.Context, rotationID uuid.UUI
 		Str("old_user_id", oldUserID.String()).
 		Str("new_user_id", newUserID.String()).
 		Int("new_position", newPosition).
+		Int("periods_advanced", periodsToAdvance).
 		Msg("oncall rotation advanced")
 
 	return &AdvanceResult{
@@ -582,6 +641,15 @@ func (s *OncallService) CreateOverride(ctx context.Context, info *model.AuthInfo
 		Str("rotation_id", rot.ID.String()).
 		Str("override_user_id", input.OverrideUserID.String()).
 		Msg("oncall override created")
+
+	// If override is immediately active, update rotation state
+	if !input.StartAt.After(time.Now()) {
+		rot.CurrentUserID = &input.OverrideUserID
+		rot.IsOverride = true
+		if _, err := s.oncall.Update(ctx, rot); err != nil {
+			log.Ctx(ctx).Error().Err(err).Msg("failed to update rotation after creating active override")
+		}
+	}
 
 	// Publish event for notifications
 	if s.publisher != nil {
@@ -722,6 +790,44 @@ func (s *OncallService) UpdateOverride(ctx context.Context, info *model.AuthInfo
 		Str("override_id", overrideID.String()).
 		Msg("oncall override updated")
 
+	// Reconcile rotation state after update
+	now := time.Now()
+	overrideIsActive := !override.StartAt.After(now) && override.EndAt.After(now)
+
+	if overrideIsActive {
+		// This override is now active — set override user
+		rot.CurrentUserID = &override.OverrideUserID
+		rot.IsOverride = true
+		if _, err := s.oncall.Update(ctx, rot); err != nil {
+			log.Ctx(ctx).Error().Err(err).Msg("failed to update rotation after override update")
+		}
+	} else if rot.IsOverride {
+		// Override was moved out of active window — check for other active overrides
+		active, err := s.overrides.GetActiveOverride(ctx, rot.ID)
+		if err != nil {
+			log.Ctx(ctx).Error().Err(err).Msg("failed to check active override after update")
+		} else if active != nil {
+			rot.CurrentUserID = &active.OverrideUserID
+			rot.IsOverride = true
+			if _, err := s.oncall.Update(ctx, rot); err != nil {
+				log.Ctx(ctx).Error().Err(err).Msg("failed to update rotation with fallback override")
+			}
+		} else {
+			// No active override — restore scheduled user
+			members, err := s.oncall.ListMembers(ctx, rot.ID)
+			if err != nil {
+				log.Ctx(ctx).Error().Err(err).Msg("failed to list members for scheduled user restore")
+			} else if len(members) > 0 {
+				scheduledUser := computeScheduledUserNow(rot, members)
+				rot.CurrentUserID = &scheduledUser
+				rot.IsOverride = false
+				if _, err := s.oncall.Update(ctx, rot); err != nil {
+					log.Ctx(ctx).Error().Err(err).Msg("failed to restore scheduled user after override update")
+				}
+			}
+		}
+	}
+
 	return result, nil
 }
 
@@ -769,6 +875,10 @@ func (s *OncallService) DeleteOverride(ctx context.Context, info *model.AuthInfo
 		}
 	}
 
+	// Check if the override was active before deleting it
+	now := time.Now()
+	wasActive := !override.StartAt.After(now) && override.EndAt.After(now)
+
 	if err := s.overrides.Delete(ctx, overrideID); err != nil {
 		return err
 	}
@@ -776,6 +886,34 @@ func (s *OncallService) DeleteOverride(ctx context.Context, info *model.AuthInfo
 	log.Ctx(ctx).Info().
 		Str("override_id", overrideID.String()).
 		Msg("oncall override cancelled")
+
+	// If the deleted override was active, reconcile rotation state
+	if wasActive {
+		active, err := s.overrides.GetActiveOverride(ctx, rot.ID)
+		if err != nil {
+			log.Ctx(ctx).Error().Err(err).Msg("failed to check active override after delete")
+		} else if active != nil {
+			// Another override is still active
+			rot.CurrentUserID = &active.OverrideUserID
+			rot.IsOverride = true
+			if _, err := s.oncall.Update(ctx, rot); err != nil {
+				log.Ctx(ctx).Error().Err(err).Msg("failed to update rotation with fallback override")
+			}
+		} else {
+			// No active override — restore scheduled user
+			members, err := s.oncall.ListMembers(ctx, rot.ID)
+			if err != nil {
+				log.Ctx(ctx).Error().Err(err).Msg("failed to list members for scheduled user restore")
+			} else if len(members) > 0 {
+				scheduledUser := computeScheduledUserNow(rot, members)
+				rot.CurrentUserID = &scheduledUser
+				rot.IsOverride = false
+				if _, err := s.oncall.Update(ctx, rot); err != nil {
+					log.Ctx(ctx).Error().Err(err).Msg("failed to restore scheduled user after override delete")
+				}
+			}
+		}
+	}
 
 	// Publish event for notifications
 	if s.publisher != nil {
@@ -801,49 +939,69 @@ func (s *OncallService) DeleteOverride(ctx context.Context, info *model.AuthInfo
 	return nil
 }
 
-// GetActiveOverride returns the currently active override for a team's rotation (if any).
-func (s *OncallService) GetActiveOverride(ctx context.Context, teamID uuid.UUID) (*model.OncallOverride, error) {
+// ReconcileOverrides is called by the worker to fix rotations where is_override
+// is stale (override started or ended without synchronous update).
+func (s *OncallService) ReconcileOverrides(ctx context.Context) error {
 	if s.overrides == nil {
-		return nil, nil
+		return nil
 	}
 
-	rot, err := s.oncall.GetByTeamID(ctx, teamID)
+	transitions, err := s.overrides.ListStaleOverrideRotations(ctx)
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("listing stale override rotations: %w", err)
 	}
 
-	return s.overrides.GetActiveOverride(ctx, rot.ID)
-}
-
-// ListOverridesInRange returns overrides for a rotation within a time range (for calendar view).
-func (s *OncallService) ListOverridesInRange(ctx context.Context, info *model.AuthInfo, projectKey string, teamID uuid.UUID, from, to time.Time) ([]model.OncallOverrideWithUser, error) {
-	if s.overrides == nil {
-		return nil, nil
+	if len(transitions) == 0 {
+		return nil
 	}
 
-	project, err := s.projects.GetByKey(ctx, projectKey)
-	if err != nil {
-		return nil, err
+	log.Ctx(ctx).Info().Int("transitions", len(transitions)).Msg("reconciling stale override rotations")
+
+	for _, t := range transitions {
+		rot, err := s.oncall.GetByID(ctx, t.RotationID)
+		if err != nil {
+			log.Ctx(ctx).Error().Err(err).
+				Str("rotation_id", t.RotationID.String()).
+				Msg("failed to load rotation for override reconciliation")
+			continue
+		}
+
+		switch t.Type {
+		case "ended":
+			// Override ended — restore scheduled user
+			members, err := s.oncall.ListMembers(ctx, rot.ID)
+			if err != nil {
+				log.Ctx(ctx).Error().Err(err).
+					Str("rotation_id", rot.ID.String()).
+					Msg("failed to list members for override reconciliation")
+				continue
+			}
+			if len(members) > 0 {
+				scheduledUser := computeScheduledUserNow(rot, members)
+				rot.CurrentUserID = &scheduledUser
+				rot.IsOverride = false
+				if _, err := s.oncall.Update(ctx, rot); err != nil {
+					log.Ctx(ctx).Error().Err(err).
+						Str("rotation_id", rot.ID.String()).
+						Msg("failed to restore scheduled user during reconciliation")
+				}
+			}
+
+		case "started":
+			// Override started — set override user
+			if t.OverrideUserID != nil {
+				rot.CurrentUserID = t.OverrideUserID
+				rot.IsOverride = true
+				if _, err := s.oncall.Update(ctx, rot); err != nil {
+					log.Ctx(ctx).Error().Err(err).
+						Str("rotation_id", rot.ID.String()).
+						Msg("failed to set override user during reconciliation")
+				}
+			}
+		}
 	}
 
-	if err := s.requireMembership(ctx, info, project.ID); err != nil {
-		return nil, err
-	}
-
-	team, err := s.teams.GetByID(ctx, teamID)
-	if err != nil {
-		return nil, err
-	}
-	if team.ProjectID != project.ID {
-		return nil, model.ErrNotFound
-	}
-
-	rot, err := s.oncall.GetByTeamID(ctx, teamID)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.overrides.ListOverridesInRange(ctx, rot.ID, from, to)
+	return nil
 }
 
 // --- helpers ---
@@ -879,13 +1037,34 @@ func (s *OncallService) getRotationResult(ctx context.Context, rot *model.Oncall
 		Members:        members,
 	}
 
-	// Include active override if available
+	// Include overrides (active + upcoming) if available
 	if s.overrides != nil {
-		active, err := s.overrides.GetActiveOverride(ctx, rot.ID)
+		overrides, err := s.overrides.ListByRotation(ctx, rot.ID)
 		if err != nil {
-			log.Ctx(ctx).Warn().Err(err).Msg("failed to check active override")
+			log.Ctx(ctx).Warn().Err(err).Msg("failed to list overrides")
 		} else {
-			result.ActiveOverride = active
+			result.Overrides = overrides
+
+			// Add override users to members list if not already present
+			memberSet := make(map[uuid.UUID]bool, len(members))
+			for _, m := range members {
+				memberSet[m.UserID] = true
+			}
+			for _, ov := range overrides {
+				if !memberSet[ov.OverrideUserID] {
+					memberSet[ov.OverrideUserID] = true
+					result.Members = append(result.Members, model.OncallRotationMemberWithUser{
+						OncallRotationMember: model.OncallRotationMember{
+							ID:         ov.ID, // use override ID as a synthetic member ID
+							RotationID: rot.ID,
+							UserID:     ov.OverrideUserID,
+							Position:   -1,
+						},
+						DisplayName: ov.OverrideUserName,
+						AvatarURL:   ov.OverrideAvatar,
+					})
+				}
+			}
 		}
 	}
 
@@ -940,41 +1119,43 @@ func containsUserID(ids []uuid.UUID, target uuid.UUID) bool {
 	return slices.Contains(ids, target)
 }
 
-// parseRotationEpoch parses the rotation's start date and time into a time.Time.
-// Handles both API input formats ("2026-04-09", "12:00:00") and PostgreSQL/lib-pq
-// scanned formats ("2026-04-09T00:00:00Z", "0000-01-01T12:00:00Z").
-func parseRotationEpoch(startDate, rotationTime, timezone string) time.Time {
+// rotationEpoch combines a rotation's start date and time-of-day into a single
+// time.Time in the rotation's configured timezone.
+func rotationEpoch(startDate, rotationTime time.Time, timezone string) time.Time {
 	loc, err := time.LoadLocation(timezone)
 	if err != nil {
 		loc = time.UTC
 	}
-
-	// Normalize date: extract YYYY-MM-DD from possible "YYYY-MM-DDT..." format
-	dateStr := startDate
-	if idx := strings.IndexByte(dateStr, 'T'); idx > 0 {
-		dateStr = dateStr[:idx]
-	}
-
-	// Normalize time: extract HH:MM:SS from possible "0000-01-01THH:MM:SSZ" format
-	timeStr := rotationTime
-	if idx := strings.IndexByte(timeStr, 'T'); idx >= 0 {
-		timeStr = timeStr[idx+1:]
-	}
-	timeStr = strings.TrimSuffix(timeStr, "Z")
-	if len(timeStr) > 8 {
-		timeStr = timeStr[:8]
-	}
-
-	t, err := time.ParseInLocation("2006-01-02 15:04:05", dateStr+" "+timeStr, loc)
-	if err != nil {
-		t, _ = time.ParseInLocation("2006-01-02", dateStr, loc)
-		t = t.Add(12 * time.Hour)
-	}
-	return t
+	y, m, d := startDate.Date()
+	return time.Date(y, m, d, rotationTime.Hour(), rotationTime.Minute(), rotationTime.Second(), 0, loc)
 }
 
-func computeNextRotation(startDate, rotationTime, timezone string, periodDays int) *time.Time {
-	t := parseRotationEpoch(startDate, rotationTime, timezone)
+// computeScheduledUserNow returns the user who should be on-call per the base
+// rotation at the current time (ignoring overrides). The logic mirrors
+// computeRotationShifts: compute rotationEpoch, then periodsElapsed, then
+// memberIdx = periodsElapsed % len(members).
+func computeScheduledUserNow(rot *model.OncallRotation, members []model.OncallRotationMemberWithUser) uuid.UUID {
+	t0 := rotationEpoch(rot.StartDate, rot.RotationTime, rot.Timezone)
+	period := time.Duration(rot.PeriodDays) * 24 * time.Hour
+	now := time.Now()
+
+	elapsed := now.Sub(t0)
+	periodsElapsed := int(elapsed / period)
+	if elapsed < 0 && elapsed%period != 0 {
+		periodsElapsed--
+	}
+
+	numMembers := len(members)
+	memberIdx := periodsElapsed % numMembers
+	if memberIdx < 0 {
+		memberIdx += numMembers
+	}
+
+	return members[memberIdx].UserID
+}
+
+func computeNextRotation(startDate, rotationTime time.Time, timezone string, periodDays int) *time.Time {
+	t := rotationEpoch(startDate, rotationTime, timezone)
 
 	now := time.Now()
 
@@ -985,76 +1166,34 @@ func computeNextRotation(startDate, rotationTime, timezone string, periodDays in
 	}
 
 	// Otherwise, add periods until we're in the future
-	next := t.Add(time.Duration(periodDays) * 24 * time.Hour)
+	period := time.Duration(periodDays) * 24 * time.Hour
+	next := t.Add(period)
 	for next.Before(now) {
-		next = next.Add(time.Duration(periodDays) * 24 * time.Hour)
+		next = next.Add(period)
 	}
 
 	utc := next.UTC()
 	return &utc
 }
 
-func computeNextRotationFromNow(_ string, periodDays int) *time.Time {
-	next := time.Now().Add(time.Duration(periodDays) * 24 * time.Hour)
-	return &next
+// parseDate parses a "YYYY-MM-DD" string from API input into a time.Time (UTC midnight).
+func parseDate(s string) (time.Time, error) {
+	return time.Parse("2006-01-02", s)
 }
 
-// GetSchedule returns the projected on-call schedule for a date range, with overrides applied.
-func (s *OncallService) GetSchedule(ctx context.Context, info *model.AuthInfo, projectKey string, teamID uuid.UUID, rangeStart, rangeEnd time.Time) (*ScheduleResult, error) {
-	project, err := s.projects.GetByKey(ctx, projectKey)
+// parseTimeOfDay parses an "HH:MM:SS" or "HH:MM" string from API input into a time.Time.
+// Only the hour/minute/second components are meaningful; the date is zero-valued.
+func parseTimeOfDay(s string) (time.Time, error) {
+	t, err := time.Parse("15:04:05", s)
 	if err != nil {
-		return nil, err
+		t, err = time.Parse("15:04", s)
 	}
-
-	if err := s.requireMembership(ctx, info, project.ID); err != nil {
-		return nil, err
-	}
-
-	team, err := s.teams.GetByID(ctx, teamID)
-	if err != nil {
-		return nil, err
-	}
-	if team.ProjectID != project.ID {
-		return nil, model.ErrNotFound
-	}
-
-	rot, err := s.oncall.GetByTeamID(ctx, teamID)
-	if err != nil {
-		return nil, err
-	}
-
-	members, err := s.oncall.ListMembers(ctx, rot.ID)
-	if err != nil {
-		return nil, fmt.Errorf("listing rotation members: %w", err)
-	}
-
-	var shifts []ScheduleShift
-	if len(members) > 0 {
-		shifts = computeRotationShifts(rot, members, rangeStart, rangeEnd)
-	}
-
-	var overrides []model.OncallOverrideWithUser
-	if s.overrides != nil {
-		overrides, err = s.overrides.ListOverridesInRange(ctx, rot.ID, rangeStart, rangeEnd)
-		if err != nil {
-			return nil, fmt.Errorf("listing overrides in range: %w", err)
-		}
-		if len(overrides) > 0 {
-			shifts = applyOverrides(shifts, overrides)
-		}
-	}
-
-	return &ScheduleResult{
-		OncallRotation: *rot,
-		Members:        members,
-		Shifts:         shifts,
-		Overrides:      overrides,
-	}, nil
+	return t, err
 }
 
 // computeRotationShifts projects the base rotation schedule (without overrides) for a time range.
 func computeRotationShifts(rot *model.OncallRotation, members []model.OncallRotationMemberWithUser, rangeStart, rangeEnd time.Time) []ScheduleShift {
-	t0 := parseRotationEpoch(rot.StartDate, rot.RotationTime, rot.Timezone)
+	t0 := rotationEpoch(rot.StartDate, rot.RotationTime, rot.Timezone)
 
 	period := time.Duration(rot.PeriodDays) * 24 * time.Hour
 	numMembers := len(members)
@@ -1097,13 +1236,10 @@ func computeRotationShifts(rot *model.OncallRotation, members []model.OncallRota
 
 		member := members[memberIdx]
 		shifts = append(shifts, ScheduleShift{
-			UserID:      member.UserID,
-			DisplayName: member.DisplayName,
-			Email:       member.Email,
-			AvatarURL:   member.AvatarURL,
-			StartAt:     clippedStart,
-			EndAt:       clippedEnd,
-			IsOverride:  false,
+			UserID:     member.UserID,
+			StartAt:    clippedStart,
+			EndAt:      clippedEnd,
+			IsOverride: false,
 		})
 
 		shiftStart = shiftEnd
@@ -1147,13 +1283,11 @@ func applyOverrides(shifts []ScheduleShift, overrides []model.OncallOverrideWith
 			}
 			ovID := ov.ID
 			newShifts = append(newShifts, ScheduleShift{
-				UserID:      ov.OverrideUserID,
-				DisplayName: ov.OverrideUserName,
-				AvatarURL:   ov.OverrideAvatar,
-				StartAt:     ovStart,
-				EndAt:       ovEnd,
-				IsOverride:  true,
-				OverrideID:  &ovID,
+				UserID:     ov.OverrideUserID,
+				StartAt:    ovStart,
+				EndAt:      ovEnd,
+				IsOverride: true,
+				OverrideID: &ovID,
 			})
 
 			// After portion (part of shift after override ends)

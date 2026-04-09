@@ -316,7 +316,7 @@ func TestOncallGet_Success(t *testing.T) {
 		t.Fatalf("create failed: %v", err)
 	}
 
-	result, err := svc.GetRotation(context.Background(), info, "TEST", team.ID)
+	result, err := svc.GetRotation(context.Background(), info, "TEST", team.ID, nil, nil)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -330,7 +330,7 @@ func TestOncallGet_NotFound(t *testing.T) {
 	info := userAuthInfo()
 	_, team, _ := setupOncallProject(t, projectRepo, memberRepo, teamRepo, info, model.ProjectRoleMember)
 
-	_, err := svc.GetRotation(context.Background(), info, "TEST", team.ID)
+	_, err := svc.GetRotation(context.Background(), info, "TEST", team.ID, nil, nil)
 	if !errors.Is(err, model.ErrNotFound) {
 		t.Fatalf("expected ErrNotFound, got %v", err)
 	}
@@ -401,7 +401,7 @@ func TestOncallDelete_Success(t *testing.T) {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
-	_, err = svc.GetRotation(context.Background(), info, "TEST", team.ID)
+	_, err = svc.GetRotation(context.Background(), info, "TEST", team.ID, nil, nil)
 	if !errors.Is(err, model.ErrNotFound) {
 		t.Fatalf("expected ErrNotFound after delete, got %v", err)
 	}
@@ -516,6 +516,82 @@ func TestOncallAdvance_SingleMember(t *testing.T) {
 	}
 }
 
+func TestOncallAdvance_MissedRotationsCatchUp(t *testing.T) {
+	svc, oncallRepo, teamRepo, projectRepo, memberRepo := newTestOncallService()
+	info := userAuthInfo()
+	_, team, memberIDs := setupOncallProject(t, projectRepo, memberRepo, teamRepo, info, model.ProjectRoleAdmin)
+
+	// Create rotation with 2-day period and 3 members
+	input := CreateOncallRotationInput{
+		PeriodDays:   2,
+		RotationTime: "12:00:00",
+		Timezone:     "UTC",
+		StartDate:    "2026-04-01",
+		MemberIDs:    memberIDs,
+	}
+	created, err := svc.CreateRotation(context.Background(), info, "TEST", team.ID, input)
+	if err != nil {
+		t.Fatalf("create failed: %v", err)
+	}
+
+	// Simulate the worker being down: set next_rotation_at to 5 days ago
+	// (missed 2 full periods with a 2-day period = should advance 3 positions)
+	rot := oncallRepo.rotations[created.ID]
+	pastDue := time.Now().Add(-5 * 24 * time.Hour)
+	rot.NextRotationAt = &pastDue
+	oncallRepo.rotations[created.ID] = rot
+
+	result, err := svc.AdvanceRotation(context.Background(), created.ID)
+	if err != nil {
+		t.Fatalf("advance failed: %v", err)
+	}
+
+	// 3 positions from 0 with 3 members: (0 + 3) % 3 = 0, wraps back to first member
+	if result.NewUserID != memberIDs[0] {
+		t.Fatalf("expected wrap to member[0] %s after 3-position skip, got %s", memberIDs[0], result.NewUserID)
+	}
+
+	// Verify next_rotation_at is aligned to the rotation schedule, not now + period
+	updated := oncallRepo.rotations[created.ID]
+	if updated.NextRotationAt == nil {
+		t.Fatal("expected next_rotation_at to be set")
+	}
+	nextRot := *updated.NextRotationAt
+	if !nextRot.After(time.Now()) {
+		t.Fatalf("expected next_rotation_at in the future, got %v", nextRot)
+	}
+	// It should be at 12:00 UTC (the configured rotation_time)
+	if nextRot.UTC().Hour() != 12 || nextRot.UTC().Minute() != 0 {
+		t.Fatalf("expected next_rotation_at at 12:00 UTC, got %s", nextRot.UTC().Format(time.RFC3339))
+	}
+}
+
+func TestOncallAdvance_NextRotationAlignedToSchedule(t *testing.T) {
+	svc, oncallRepo, teamRepo, projectRepo, memberRepo := newTestOncallService()
+	info := userAuthInfo()
+	_, team, memberIDs := setupOncallProject(t, projectRepo, memberRepo, teamRepo, info, model.ProjectRoleAdmin)
+
+	created, err := svc.CreateRotation(context.Background(), info, "TEST", team.ID, validCreateOncallInput(memberIDs))
+	if err != nil {
+		t.Fatalf("create failed: %v", err)
+	}
+
+	_, err = svc.AdvanceRotation(context.Background(), created.ID)
+	if err != nil {
+		t.Fatalf("advance failed: %v", err)
+	}
+
+	// After advance, next_rotation_at should be at 12:00 UTC (not now + 7 days)
+	updated := oncallRepo.rotations[created.ID]
+	if updated.NextRotationAt == nil {
+		t.Fatal("expected next_rotation_at to be set")
+	}
+	nextRot := updated.NextRotationAt.UTC()
+	if nextRot.Hour() != 12 || nextRot.Minute() != 0 {
+		t.Fatalf("expected next_rotation_at at 12:00 UTC, got %s", nextRot.Format(time.RFC3339))
+	}
+}
+
 func TestOncallCreate_WrongProject(t *testing.T) {
 	svc, _, teamRepo, projectRepo, memberRepo := newTestOncallService()
 	info := userAuthInfo()
@@ -571,8 +647,9 @@ func TestOncallUpdate_StartDateResetsRotation(t *testing.T) {
 	if result.CurrentUserID == nil || *result.CurrentUserID != memberIDs[0] {
 		t.Fatal("expected current user to be reset to first member")
 	}
-	if result.StartDate != newStartDate {
-		t.Fatalf("expected start_date %s, got %s", newStartDate, result.StartDate)
+	expectedDate, _ := parseDate(newStartDate)
+	if !result.StartDate.Equal(expectedDate) {
+		t.Fatalf("expected start_date %s, got %s", newStartDate, result.StartDate.Format("2006-01-02"))
 	}
 
 	// History should have 3 entries: initial, advance, and reset
@@ -589,7 +666,8 @@ func TestOncallUpdate_StartDateResetsRotation(t *testing.T) {
 // --- Mock oncall override repository ---
 
 type mockOncallOverrideRepo struct {
-	overrides map[uuid.UUID]*model.OncallOverride
+	overrides        map[uuid.UUID]*model.OncallOverride
+	staleTransitions []model.OverrideTransition
 }
 
 func newMockOncallOverrideRepo() *mockOncallOverrideRepo {
@@ -655,6 +733,10 @@ func (m *mockOncallOverrideRepo) GetActiveOverride(_ context.Context, rotationID
 		}
 	}
 	return latest, nil
+}
+
+func (m *mockOncallOverrideRepo) ListStaleOverrideRotations(_ context.Context) ([]model.OverrideTransition, error) {
+	return m.staleTransitions, nil
 }
 
 func (m *mockOncallOverrideRepo) ListOverridesInRange(_ context.Context, rotationID uuid.UUID, from, to time.Time) ([]model.OncallOverrideWithUser, error) {
@@ -886,7 +968,7 @@ func TestOncallOverrideDelete_NonCreatorMemberForbidden(t *testing.T) {
 }
 
 func TestOncallOverrideActiveOverride(t *testing.T) {
-	svc, _, _, teamRepo, projectRepo, memberRepo := newTestOncallServiceWithOverrides()
+	svc, _, overrideRepo, teamRepo, projectRepo, memberRepo := newTestOncallServiceWithOverrides()
 	info := userAuthInfo()
 	_, team, memberIDs := setupOncallProject(t, projectRepo, memberRepo, teamRepo, info, model.ProjectRoleAdmin)
 
@@ -905,7 +987,9 @@ func TestOncallOverrideActiveOverride(t *testing.T) {
 		t.Fatalf("create override failed: %v", err)
 	}
 
-	active, err := svc.GetActiveOverride(context.Background(), team.ID)
+	// Verify active override via the repository directly
+	rot, _ := svc.oncall.GetByTeamID(context.Background(), team.ID)
+	active, err := overrideRepo.GetActiveOverride(context.Background(), rot.ID)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -937,15 +1021,25 @@ func TestOncallOverrideGetRotation_IncludesActiveOverride(t *testing.T) {
 		t.Fatalf("create override failed: %v", err)
 	}
 
-	result, err := svc.GetRotation(context.Background(), info, "TEST", team.ID)
+	result, err := svc.GetRotation(context.Background(), info, "TEST", team.ID, nil, nil)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if result.ActiveOverride == nil {
-		t.Fatal("expected active_override in rotation result, got nil")
+	if !result.IsOverride {
+		t.Fatal("expected IsOverride to be true when active override exists")
 	}
-	if result.ActiveOverride.OverrideUserID != memberIDs[2] {
-		t.Fatalf("expected override_user_id %s, got %s", memberIDs[2], result.ActiveOverride.OverrideUserID)
+	if len(result.Overrides) == 0 {
+		t.Fatal("expected overrides in rotation result, got none")
+	}
+	foundOverrideUser := false
+	for _, o := range result.Overrides {
+		if o.OverrideUserID == memberIDs[2] {
+			foundOverrideUser = true
+			break
+		}
+	}
+	if !foundOverrideUser {
+		t.Fatalf("expected override_user_id %s in overrides list", memberIDs[2])
 	}
 }
 
@@ -985,28 +1079,22 @@ func TestOncallUpdate_SameStartDateNoReset(t *testing.T) {
 	}
 }
 
-// --- parseRotationEpoch tests ---
+// --- rotationEpoch tests ---
 
-func TestParseRotationEpoch_APIFormat(t *testing.T) {
-	// Raw API input format
-	result := parseRotationEpoch("2026-04-09", "12:00:00", "UTC")
+func TestRotationEpoch_Basic(t *testing.T) {
+	sd := time.Date(2026, 4, 9, 0, 0, 0, 0, time.UTC)
+	rt := time.Date(0, 1, 1, 12, 0, 0, 0, time.UTC)
+	result := rotationEpoch(sd, rt, "UTC")
 	expected := time.Date(2026, 4, 9, 12, 0, 0, 0, time.UTC)
 	if !result.Equal(expected) {
 		t.Errorf("expected %v, got %v", expected, result)
 	}
 }
 
-func TestParseRotationEpoch_PostgresFormat(t *testing.T) {
-	// Format returned by lib/pq when scanning DATE/TIME columns as strings
-	result := parseRotationEpoch("2026-04-09T00:00:00Z", "0000-01-01T12:00:00Z", "UTC")
-	expected := time.Date(2026, 4, 9, 12, 0, 0, 0, time.UTC)
-	if !result.Equal(expected) {
-		t.Errorf("expected %v, got %v", expected, result)
-	}
-}
-
-func TestParseRotationEpoch_Timezone(t *testing.T) {
-	result := parseRotationEpoch("2026-04-06", "12:00:00", "America/New_York")
+func TestRotationEpoch_Timezone(t *testing.T) {
+	sd := time.Date(2026, 4, 6, 0, 0, 0, 0, time.UTC)
+	rt := time.Date(0, 1, 1, 12, 0, 0, 0, time.UTC)
+	result := rotationEpoch(sd, rt, "America/New_York")
 	// April 6 is during EDT (UTC-4)
 	expectedUTC := time.Date(2026, 4, 6, 16, 0, 0, 0, time.UTC)
 	if !result.UTC().Equal(expectedUTC) {
@@ -1018,8 +1106,8 @@ func TestParseRotationEpoch_Timezone(t *testing.T) {
 
 func TestComputeRotationShifts_Basic(t *testing.T) {
 	rot := &model.OncallRotation{
-		StartDate:    "2026-04-01",
-		RotationTime: "12:00:00",
+		StartDate:    time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC),
+		RotationTime: time.Date(0, 1, 1, 12, 0, 0, 0, time.UTC),
 		Timezone:     "UTC",
 		PeriodDays:   7,
 	}
@@ -1080,8 +1168,8 @@ func TestComputeRotationShifts_Basic(t *testing.T) {
 
 func TestComputeRotationShifts_FutureStartDate(t *testing.T) {
 	rot := &model.OncallRotation{
-		StartDate:    "2026-05-01",
-		RotationTime: "00:00:00",
+		StartDate:    time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC),
+		RotationTime: time.Date(0, 1, 1, 0, 0, 0, 0, time.UTC),
 		Timezone:     "UTC",
 		PeriodDays:   3,
 	}
@@ -1114,8 +1202,8 @@ func TestComputeRotationShifts_FutureStartDate(t *testing.T) {
 
 func TestComputeRotationShifts_Timezone(t *testing.T) {
 	rot := &model.OncallRotation{
-		StartDate:    "2026-04-06",
-		RotationTime: "12:00:00",
+		StartDate:    time.Date(2026, 4, 6, 0, 0, 0, 0, time.UTC),
+		RotationTime: time.Date(0, 1, 1, 12, 0, 0, 0, time.UTC),
 		Timezone:     "America/New_York",
 		PeriodDays:   7,
 	}
@@ -1136,7 +1224,7 @@ func TestComputeRotationShifts_Timezone(t *testing.T) {
 
 	// Before T0 (Apr 6 00:00 → Apr 6 16:00): should be Hackzm (prev period)
 	if shifts[0].UserID != userB {
-		t.Errorf("shift 0: expected Hackzm (prev period), got %s", shifts[0].DisplayName)
+		t.Errorf("shift 0: expected Hackzm (prev period), got %s", shifts[0].UserID)
 	}
 	t0UTC := time.Date(2026, 4, 6, 16, 0, 0, 0, time.UTC)
 	if !shifts[0].EndAt.Equal(t0UTC) {
@@ -1145,7 +1233,7 @@ func TestComputeRotationShifts_Timezone(t *testing.T) {
 
 	// From T0: Hack is on-call
 	if shifts[1].UserID != userA {
-		t.Errorf("shift 1: expected Hack, got %s", shifts[1].DisplayName)
+		t.Errorf("shift 1: expected Hack, got %s", shifts[1].UserID)
 	}
 	nextRotation := time.Date(2026, 4, 13, 16, 0, 0, 0, time.UTC)
 	if !shifts[1].EndAt.Equal(nextRotation) {
@@ -1154,7 +1242,7 @@ func TestComputeRotationShifts_Timezone(t *testing.T) {
 
 	// From Apr 13 16:00: Hackzm is on-call (clipped to range end)
 	if shifts[2].UserID != userB {
-		t.Errorf("shift 2: expected Hackzm, got %s", shifts[2].DisplayName)
+		t.Errorf("shift 2: expected Hackzm, got %s", shifts[2].UserID)
 	}
 }
 
@@ -1164,10 +1252,9 @@ func TestApplyOverrides_SplitsShift(t *testing.T) {
 
 	shifts := []ScheduleShift{
 		{
-			UserID:      userA,
-			DisplayName: "Alice",
-			StartAt:     time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC),
-			EndAt:       time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC),
+			UserID:  userA,
+			StartAt: time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC),
+			EndAt:   time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC),
 		},
 	}
 
@@ -1262,7 +1349,7 @@ func TestGetSchedule_Integration(t *testing.T) {
 	rangeStart := time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)
 	rangeEnd := time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)
 
-	result, err := svc.GetSchedule(context.Background(), info, "TEST", team.ID, rangeStart, rangeEnd)
+	result, err := svc.GetRotation(context.Background(), info, "TEST", team.ID, &rangeStart, &rangeEnd)
 	if err != nil {
 		t.Fatalf("get schedule failed: %v", err)
 	}
@@ -1290,7 +1377,7 @@ func TestGetSchedule_Integration(t *testing.T) {
 	}
 	overrideRepo.overrides[override.ID] = override
 
-	result, err = svc.GetSchedule(context.Background(), info, "TEST", team.ID, rangeStart, rangeEnd)
+	result, err = svc.GetRotation(context.Background(), info, "TEST", team.ID, &rangeStart, &rangeEnd)
 	if err != nil {
 		t.Fatalf("get schedule with override failed: %v", err)
 	}
@@ -1310,5 +1397,401 @@ func TestGetSchedule_Integration(t *testing.T) {
 	// Check overrides list is populated
 	if len(result.Overrides) != 1 {
 		t.Fatalf("expected 1 override in result, got %d", len(result.Overrides))
+	}
+}
+
+// --- Override transition tests ---
+
+func TestCreateOverride_ImmediateActive(t *testing.T) {
+	svc, oncallRepo, _, teamRepo, projectRepo, memberRepo := newTestOncallServiceWithOverrides()
+	info := userAuthInfo()
+	_, team, memberIDs := setupOncallProject(t, projectRepo, memberRepo, teamRepo, info, model.ProjectRoleAdmin)
+
+	_, err := svc.CreateRotation(context.Background(), info, "TEST", team.ID, validCreateOncallInput(memberIDs))
+	if err != nil {
+		t.Fatalf("create rotation failed: %v", err)
+	}
+
+	// Create an override that is immediately active (start_at in the past)
+	overrideInput := CreateOncallOverrideInput{
+		OverrideUserID: memberIDs[1],
+		StartAt:        time.Now().Add(-1 * time.Minute),
+		EndAt:          time.Now().Add(24 * time.Hour),
+	}
+
+	_, err = svc.CreateOverride(context.Background(), info, "TEST", team.ID, overrideInput)
+	if err != nil {
+		t.Fatalf("create override failed: %v", err)
+	}
+
+	// Verify the rotation was updated to reflect the active override
+	rot := oncallRepo.byTeam[team.ID]
+	if !rot.IsOverride {
+		t.Fatal("expected IsOverride to be true after creating immediately active override")
+	}
+	if rot.CurrentUserID == nil || *rot.CurrentUserID != memberIDs[1] {
+		t.Fatalf("expected CurrentUserID to be override user %s, got %v", memberIDs[1], rot.CurrentUserID)
+	}
+}
+
+func TestDeleteOverride_RestoresScheduledUser(t *testing.T) {
+	svc, oncallRepo, _, teamRepo, projectRepo, memberRepo := newTestOncallServiceWithOverrides()
+	info := userAuthInfo()
+	_, team, memberIDs := setupOncallProject(t, projectRepo, memberRepo, teamRepo, info, model.ProjectRoleAdmin)
+
+	_, err := svc.CreateRotation(context.Background(), info, "TEST", team.ID, validCreateOncallInput(memberIDs))
+	if err != nil {
+		t.Fatalf("create rotation failed: %v", err)
+	}
+
+	// Create an active override
+	override, err := svc.CreateOverride(context.Background(), info, "TEST", team.ID, CreateOncallOverrideInput{
+		OverrideUserID: memberIDs[2],
+		StartAt:        time.Now().Add(-1 * time.Minute),
+		EndAt:          time.Now().Add(24 * time.Hour),
+	})
+	if err != nil {
+		t.Fatalf("create override failed: %v", err)
+	}
+
+	// Confirm override is active
+	rot := oncallRepo.byTeam[team.ID]
+	if !rot.IsOverride {
+		t.Fatal("expected IsOverride to be true after creating active override")
+	}
+
+	// Delete the override
+	err = svc.DeleteOverride(context.Background(), info, "TEST", team.ID, override.ID)
+	if err != nil {
+		t.Fatalf("delete override failed: %v", err)
+	}
+
+	// Verify the rotation was restored to scheduled user
+	rot = oncallRepo.byTeam[team.ID]
+	if rot.IsOverride {
+		t.Fatal("expected IsOverride to be false after deleting the only active override")
+	}
+
+	// The scheduled user should be based on the rotation position.
+	// computeScheduledUserNow determines the correct user based on time elapsed.
+	members, _ := oncallRepo.ListMembers(context.Background(), rot.ID)
+	expectedUser := computeScheduledUserNow(rot, members)
+	if rot.CurrentUserID == nil || *rot.CurrentUserID != expectedUser {
+		t.Fatalf("expected CurrentUserID to be scheduled user %s, got %v", expectedUser, rot.CurrentUserID)
+	}
+}
+
+func TestDeleteOverride_FallsBackToAnotherOverride(t *testing.T) {
+	svc, oncallRepo, _, teamRepo, projectRepo, memberRepo := newTestOncallServiceWithOverrides()
+	info := userAuthInfo()
+	_, team, memberIDs := setupOncallProject(t, projectRepo, memberRepo, teamRepo, info, model.ProjectRoleAdmin)
+
+	_, err := svc.CreateRotation(context.Background(), info, "TEST", team.ID, validCreateOncallInput(memberIDs))
+	if err != nil {
+		t.Fatalf("create rotation failed: %v", err)
+	}
+
+	// Create two overlapping active overrides for different users
+	override1, err := svc.CreateOverride(context.Background(), info, "TEST", team.ID, CreateOncallOverrideInput{
+		OverrideUserID: memberIDs[1],
+		StartAt:        time.Now().Add(-2 * time.Minute),
+		EndAt:          time.Now().Add(24 * time.Hour),
+	})
+	if err != nil {
+		t.Fatalf("create override 1 failed: %v", err)
+	}
+
+	_, err = svc.CreateOverride(context.Background(), info, "TEST", team.ID, CreateOncallOverrideInput{
+		OverrideUserID: memberIDs[2],
+		StartAt:        time.Now().Add(-1 * time.Minute),
+		EndAt:          time.Now().Add(24 * time.Hour),
+	})
+	if err != nil {
+		t.Fatalf("create override 2 failed: %v", err)
+	}
+
+	// Delete the first override
+	err = svc.DeleteOverride(context.Background(), info, "TEST", team.ID, override1.ID)
+	if err != nil {
+		t.Fatalf("delete override 1 failed: %v", err)
+	}
+
+	// The second override should still be active
+	rot := oncallRepo.byTeam[team.ID]
+	if !rot.IsOverride {
+		t.Fatal("expected IsOverride to remain true when another active override exists")
+	}
+	if rot.CurrentUserID == nil || *rot.CurrentUserID != memberIDs[2] {
+		t.Fatalf("expected CurrentUserID to be second override user %s, got %v", memberIDs[2], rot.CurrentUserID)
+	}
+}
+
+func TestAdvanceRotation_DuringActiveOverride(t *testing.T) {
+	svc, oncallRepo, _, teamRepo, projectRepo, memberRepo := newTestOncallServiceWithOverrides()
+	info := userAuthInfo()
+	_, team, memberIDs := setupOncallProject(t, projectRepo, memberRepo, teamRepo, info, model.ProjectRoleAdmin)
+
+	created, err := svc.CreateRotation(context.Background(), info, "TEST", team.ID, validCreateOncallInput(memberIDs))
+	if err != nil {
+		t.Fatalf("create rotation failed: %v", err)
+	}
+
+	// Create an active override
+	_, err = svc.CreateOverride(context.Background(), info, "TEST", team.ID, CreateOncallOverrideInput{
+		OverrideUserID: memberIDs[2],
+		StartAt:        time.Now().Add(-1 * time.Minute),
+		EndAt:          time.Now().Add(24 * time.Hour),
+	})
+	if err != nil {
+		t.Fatalf("create override failed: %v", err)
+	}
+
+	// Advance the rotation
+	result, err := svc.AdvanceRotation(context.Background(), created.ID)
+	if err != nil {
+		t.Fatalf("advance rotation failed: %v", err)
+	}
+
+	// Position should have advanced
+	rot := oncallRepo.rotations[created.ID]
+	if rot.CurrentPosition != 1 {
+		t.Fatalf("expected CurrentPosition to advance to 1, got %d", rot.CurrentPosition)
+	}
+
+	// But CurrentUserID should still be the override user, not the scheduled user
+	if rot.CurrentUserID == nil || *rot.CurrentUserID != memberIDs[2] {
+		t.Fatalf("expected CurrentUserID to be override user %s, got %v", memberIDs[2], rot.CurrentUserID)
+	}
+	if !rot.IsOverride {
+		t.Fatal("expected IsOverride to be true during active override")
+	}
+
+	// The advance result returns the scheduled new user (position-based), not the override user
+	if result.NewUserID != memberIDs[1] {
+		t.Fatalf("expected advance result new user to be %s (position 1), got %s", memberIDs[1], result.NewUserID)
+	}
+}
+
+func TestReconcileOverrides_OverrideStarted(t *testing.T) {
+	svc, oncallRepo, overrideRepo, teamRepo, projectRepo, memberRepo := newTestOncallServiceWithOverrides()
+	info := userAuthInfo()
+	_, team, memberIDs := setupOncallProject(t, projectRepo, memberRepo, teamRepo, info, model.ProjectRoleAdmin)
+
+	created, err := svc.CreateRotation(context.Background(), info, "TEST", team.ID, validCreateOncallInput(memberIDs))
+	if err != nil {
+		t.Fatalf("create rotation failed: %v", err)
+	}
+
+	// Directly insert an active override in the mock (bypassing the service to simulate
+	// a future override that has since become active without synchronous update)
+	overrideUserID := memberIDs[1]
+	override := &model.OncallOverride{
+		ID:             uuid.Must(uuid.NewV7()),
+		RotationID:     created.ID,
+		OverrideUserID: overrideUserID,
+		StartAt:        time.Now().Add(-10 * time.Minute),
+		EndAt:          time.Now().Add(24 * time.Hour),
+		CreatedBy:      info.UserID,
+		CreatedAt:      time.Now(),
+	}
+	overrideRepo.overrides[override.ID] = override
+
+	// Rotation still has IsOverride=false (stale state)
+	rot := oncallRepo.rotations[created.ID]
+	if rot.IsOverride {
+		t.Fatal("expected IsOverride to be false before reconciliation")
+	}
+
+	// Set up stale transitions to report a "started" transition
+	overrideRepo.staleTransitions = []model.OverrideTransition{
+		{
+			RotationID:     created.ID,
+			OverrideUserID: &overrideUserID,
+			Type:           "started",
+		},
+	}
+
+	// Reconcile
+	err = svc.ReconcileOverrides(context.Background())
+	if err != nil {
+		t.Fatalf("reconcile overrides failed: %v", err)
+	}
+
+	// Verify rotation was updated
+	rot = oncallRepo.rotations[created.ID]
+	if !rot.IsOverride {
+		t.Fatal("expected IsOverride to be true after reconciling started override")
+	}
+	if rot.CurrentUserID == nil || *rot.CurrentUserID != overrideUserID {
+		t.Fatalf("expected CurrentUserID to be override user %s, got %v", overrideUserID, rot.CurrentUserID)
+	}
+}
+
+func TestReconcileOverrides_OverrideEnded(t *testing.T) {
+	svc, oncallRepo, overrideRepo, teamRepo, projectRepo, memberRepo := newTestOncallServiceWithOverrides()
+	info := userAuthInfo()
+	_, team, memberIDs := setupOncallProject(t, projectRepo, memberRepo, teamRepo, info, model.ProjectRoleAdmin)
+
+	created, err := svc.CreateRotation(context.Background(), info, "TEST", team.ID, validCreateOncallInput(memberIDs))
+	if err != nil {
+		t.Fatalf("create rotation failed: %v", err)
+	}
+
+	// Manually set rotation to override state (simulating a previously active override)
+	rot := oncallRepo.rotations[created.ID]
+	rot.IsOverride = true
+	overrideUser := memberIDs[2]
+	rot.CurrentUserID = &overrideUser
+	oncallRepo.rotations[created.ID] = rot
+	oncallRepo.byTeam[team.ID] = rot
+
+	// Set up stale transitions to report an "ended" transition
+	overrideRepo.staleTransitions = []model.OverrideTransition{
+		{
+			RotationID:     created.ID,
+			OverrideUserID: nil,
+			Type:           "ended",
+		},
+	}
+
+	// Reconcile
+	err = svc.ReconcileOverrides(context.Background())
+	if err != nil {
+		t.Fatalf("reconcile overrides failed: %v", err)
+	}
+
+	// Verify rotation was restored
+	rot = oncallRepo.rotations[created.ID]
+	if rot.IsOverride {
+		t.Fatal("expected IsOverride to be false after reconciling ended override")
+	}
+
+	// CurrentUserID should be the scheduled user
+	members, _ := oncallRepo.ListMembers(context.Background(), created.ID)
+	expectedUser := computeScheduledUserNow(rot, members)
+	if rot.CurrentUserID == nil || *rot.CurrentUserID != expectedUser {
+		t.Fatalf("expected CurrentUserID to be scheduled user %s, got %v", expectedUser, rot.CurrentUserID)
+	}
+}
+
+func TestReconcileOverrides_NoMismatch(t *testing.T) {
+	svc, oncallRepo, overrideRepo, teamRepo, projectRepo, memberRepo := newTestOncallServiceWithOverrides()
+	info := userAuthInfo()
+	_, team, memberIDs := setupOncallProject(t, projectRepo, memberRepo, teamRepo, info, model.ProjectRoleAdmin)
+
+	created, err := svc.CreateRotation(context.Background(), info, "TEST", team.ID, validCreateOncallInput(memberIDs))
+	if err != nil {
+		t.Fatalf("create rotation failed: %v", err)
+	}
+
+	// No stale transitions
+	overrideRepo.staleTransitions = nil
+
+	// Record current state
+	rotBefore := *oncallRepo.rotations[created.ID]
+
+	err = svc.ReconcileOverrides(context.Background())
+	if err != nil {
+		t.Fatalf("reconcile overrides failed: %v", err)
+	}
+
+	// Rotation should be unchanged
+	rotAfter := oncallRepo.rotations[created.ID]
+	if rotAfter.IsOverride != rotBefore.IsOverride {
+		t.Fatalf("expected IsOverride to remain %v, got %v", rotBefore.IsOverride, rotAfter.IsOverride)
+	}
+	if rotAfter.UpdatedAt != rotBefore.UpdatedAt {
+		t.Fatal("expected rotation to not be updated when there are no stale transitions")
+	}
+}
+
+func TestComputeScheduledUserNow(t *testing.T) {
+	// Create a rotation with start_date ~21 days in the past, 7-day period, 3 members
+	// After 21 days with 7-day period: 3 periods elapsed, 3 % 3 = 0 -> member[0]
+	startDate := time.Now().Add(-21 * 24 * time.Hour)
+	rot := &model.OncallRotation{
+		ID:           uuid.New(),
+		StartDate:    startDate,
+		RotationTime: time.Date(0, 1, 1, 0, 0, 0, 0, time.UTC), // midnight
+		Timezone:     "UTC",
+		PeriodDays:   7,
+	}
+
+	user1 := uuid.New()
+	user2 := uuid.New()
+	user3 := uuid.New()
+	members := []model.OncallRotationMemberWithUser{
+		{OncallRotationMember: model.OncallRotationMember{UserID: user1, Position: 0}},
+		{OncallRotationMember: model.OncallRotationMember{UserID: user2, Position: 1}},
+		{OncallRotationMember: model.OncallRotationMember{UserID: user3, Position: 2}},
+	}
+
+	result := computeScheduledUserNow(rot, members)
+
+	// Compute expected: t0 = startDate at midnight UTC
+	t0 := rotationEpoch(rot.StartDate, rot.RotationTime, rot.Timezone)
+	period := time.Duration(rot.PeriodDays) * 24 * time.Hour
+	elapsed := time.Since(t0)
+	periodsElapsed := int(elapsed / period)
+	expectedIdx := periodsElapsed % len(members)
+	if expectedIdx < 0 {
+		expectedIdx += len(members)
+	}
+	expectedUser := members[expectedIdx].UserID
+
+	if result != expectedUser {
+		t.Fatalf("expected scheduled user %s (member[%d]), got %s", expectedUser, expectedIdx, result)
+	}
+}
+
+func TestGetRotation_WithDateRange(t *testing.T) {
+	svc, _, _, teamRepo, projectRepo, memberRepo := newTestOncallServiceWithOverrides()
+	info := userAuthInfo()
+	_, team, memberIDs := setupOncallProject(t, projectRepo, memberRepo, teamRepo, info, model.ProjectRoleAdmin)
+
+	_, err := svc.CreateRotation(context.Background(), info, "TEST", team.ID, validCreateOncallInput(memberIDs))
+	if err != nil {
+		t.Fatalf("create rotation failed: %v", err)
+	}
+
+	// Request rotation with a date range
+	rangeStart := time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)
+	rangeEnd := time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)
+
+	result, err := svc.GetRotation(context.Background(), info, "TEST", team.ID, &rangeStart, &rangeEnd)
+	if err != nil {
+		t.Fatalf("get rotation failed: %v", err)
+	}
+
+	if len(result.Shifts) == 0 {
+		t.Fatal("expected Shifts to be non-empty when date range is provided")
+	}
+
+	// Verify shifts cover the range
+	for _, shift := range result.Shifts {
+		if shift.StartAt.After(rangeEnd) || shift.EndAt.Before(rangeStart) {
+			t.Fatalf("shift %v-%v is outside requested range %v-%v", shift.StartAt, shift.EndAt, rangeStart, rangeEnd)
+		}
+	}
+}
+
+func TestGetRotation_WithoutDateRange(t *testing.T) {
+	svc, _, _, teamRepo, projectRepo, memberRepo := newTestOncallServiceWithOverrides()
+	info := userAuthInfo()
+	_, team, memberIDs := setupOncallProject(t, projectRepo, memberRepo, teamRepo, info, model.ProjectRoleAdmin)
+
+	_, err := svc.CreateRotation(context.Background(), info, "TEST", team.ID, validCreateOncallInput(memberIDs))
+	if err != nil {
+		t.Fatalf("create rotation failed: %v", err)
+	}
+
+	// Request rotation without a date range
+	result, err := svc.GetRotation(context.Background(), info, "TEST", team.ID, nil, nil)
+	if err != nil {
+		t.Fatalf("get rotation failed: %v", err)
+	}
+
+	if len(result.Shifts) != 0 {
+		t.Fatalf("expected Shifts to be empty when no date range is provided, got %d shifts", len(result.Shifts))
 	}
 }

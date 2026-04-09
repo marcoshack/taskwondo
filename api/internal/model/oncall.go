@@ -11,11 +11,12 @@ type OncallRotation struct {
 	ID              uuid.UUID  `json:"id"`
 	TeamID          uuid.UUID  `json:"team_id"`
 	PeriodDays      int        `json:"period_days"`
-	RotationTime    string     `json:"rotation_time"`
+	RotationTime    time.Time  `json:"rotation_time"`
 	Timezone        string     `json:"timezone"`
-	StartDate       string     `json:"start_date"`
+	StartDate       time.Time  `json:"start_date"`
 	CurrentUserID   *uuid.UUID `json:"current_user_id"`
 	CurrentPosition int        `json:"current_position"`
+	IsOverride      bool       `json:"is_override"`
 	NextRotationAt  *time.Time `json:"next_rotation_at"`
 	CreatedAt       time.Time  `json:"created_at"`
 	UpdatedAt       time.Time  `json:"updated_at"`
@@ -108,4 +109,11 @@ type OncallRotationAdvancedEvent struct {
 	OldUserID      uuid.UUID  `json:"old_user_id"`
 	NewUserID      uuid.UUID  `json:"new_user_id"`
 	NextRotationAt *time.Time `json:"next_rotation_at"`
+}
+
+// OverrideTransition represents a rotation whose is_override flag is stale.
+type OverrideTransition struct {
+	RotationID     uuid.UUID
+	OverrideUserID *uuid.UUID // nil for "ended" transitions
+	Type           string     // "started" or "ended"
 }

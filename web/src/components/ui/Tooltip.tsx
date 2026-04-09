@@ -6,6 +6,7 @@ interface TooltipProps {
   children: ReactNode
   position?: 'top' | 'bottom' | 'left' | 'right'
   className?: string
+  style?: React.CSSProperties
   maxWidth?: number
 }
 
@@ -62,7 +63,7 @@ const arrowClasses = {
   right: 'border-r-gray-600 dark:border-r-gray-600 border-y-transparent border-l-transparent',
 }
 
-export function Tooltip({ content, children, position = 'top', className, maxWidth }: TooltipProps) {
+export function Tooltip({ content, children, position = 'top', className, style: wrapperStyle, maxWidth }: TooltipProps) {
   const [visible, setVisible] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const triggerRef = useRef<HTMLSpanElement>(null)
@@ -104,6 +105,7 @@ export function Tooltip({ content, children, position = 'top', className, maxWid
     <span
       ref={triggerRef}
       className={className ?? 'relative inline-flex'}
+      style={wrapperStyle}
       onMouseEnter={show}
       onMouseLeave={hide}
       onFocus={show}
@@ -113,7 +115,7 @@ export function Tooltip({ content, children, position = 'top', className, maxWid
       {visible && createPortal(
         <span
           ref={tooltipRef}
-          className={`z-50 pointer-events-none rounded bg-gray-600 dark:bg-gray-600 px-2 py-1 text-xs text-white shadow-lg animate-in fade-in duration-100 ${maxWidth ? 'whitespace-normal' : 'whitespace-nowrap'}`}
+          className={`z-50 pointer-events-none rounded bg-gray-600 dark:bg-gray-600 px-2 py-1 text-xs text-white shadow-lg animate-in fade-in duration-100 ${maxWidth ? 'whitespace-pre-line' : 'whitespace-nowrap'}`}
           role="tooltip"
           style={{ ...style, ...(maxWidth ? { maxWidth } : {}) }}
         >

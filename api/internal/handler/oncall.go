@@ -46,19 +46,21 @@ type updateOncallRotationRequest struct {
 // --- Response DTOs ---
 
 type oncallRotationResponse struct {
-	ID              uuid.UUID                     `json:"id"`
-	TeamID          uuid.UUID                     `json:"team_id"`
-	PeriodDays      int                           `json:"period_days"`
-	RotationTime    string                        `json:"rotation_time"`
-	Timezone        string                        `json:"timezone"`
-	StartDate       string                        `json:"start_date"`
-	CurrentUserID   *uuid.UUID                    `json:"current_user_id"`
-	CurrentPosition int                           `json:"current_position"`
-	NextRotationAt  *time.Time                    `json:"next_rotation_at"`
-	Members         []oncallRotationMemberResp    `json:"members"`
-	ActiveOverride  *oncallActiveOverrideResponse `json:"active_override"`
-	CreatedAt       time.Time                     `json:"created_at"`
-	UpdatedAt       time.Time                     `json:"updated_at"`
+	ID              uuid.UUID                      `json:"id"`
+	TeamID          uuid.UUID                      `json:"team_id"`
+	PeriodDays      int                            `json:"period_days"`
+	RotationTime    string                         `json:"rotation_time"`
+	Timezone        string                         `json:"timezone"`
+	StartDate       string                         `json:"start_date"`
+	CurrentUserID   *uuid.UUID                     `json:"current_user_id"`
+	CurrentPosition int                            `json:"current_position"`
+	IsOverride      bool                           `json:"is_override"`
+	NextRotationAt  *time.Time                     `json:"next_rotation_at"`
+	Members         []oncallRotationMemberResp     `json:"members"`
+	Overrides       []oncallOverrideResponse       `json:"overrides"`
+	Shifts          []oncallScheduleShiftResponse  `json:"shifts,omitempty"`
+	CreatedAt       time.Time                      `json:"created_at"`
+	UpdatedAt       time.Time                      `json:"updated_at"`
 }
 
 type oncallRotationMemberResp struct {
@@ -118,14 +120,6 @@ type oncallOverrideResponse struct {
 	CreatedAt        time.Time  `json:"created_at"`
 }
 
-type oncallActiveOverrideResponse struct {
-	ID             uuid.UUID `json:"id"`
-	OverrideUserID uuid.UUID `json:"override_user_id"`
-	StartAt        time.Time `json:"start_at"`
-	EndAt          time.Time `json:"end_at"`
-	Reason         *string   `json:"reason,omitempty"`
-}
-
 func toOncallOverrideResponse(o *model.OncallOverrideWithUser) oncallOverrideResponse {
 	return oncallOverrideResponse{
 		ID:               o.ID,
@@ -142,19 +136,6 @@ func toOncallOverrideResponse(o *model.OncallOverrideWithUser) oncallOverrideRes
 	}
 }
 
-func toActiveOverrideResponse(o *model.OncallOverride) *oncallActiveOverrideResponse {
-	if o == nil {
-		return nil
-	}
-	return &oncallActiveOverrideResponse{
-		ID:             o.ID,
-		OverrideUserID: o.OverrideUserID,
-		StartAt:        o.StartAt,
-		EndAt:          o.EndAt,
-		Reason:         o.Reason,
-	}
-}
-
 func toOncallRotationResponse(r *service.OncallRotationResult) oncallRotationResponse {
 	members := make([]oncallRotationMemberResp, len(r.Members))
 	for i, m := range r.Members {
@@ -167,18 +148,40 @@ func toOncallRotationResponse(r *service.OncallRotationResult) oncallRotationRes
 			AvatarURL:   m.AvatarURL,
 		}
 	}
+
+	overrides := make([]oncallOverrideResponse, len(r.Overrides))
+	for i := range r.Overrides {
+		overrides[i] = toOncallOverrideResponse(&r.Overrides[i])
+	}
+
+	var shifts []oncallScheduleShiftResponse
+	if len(r.Shifts) > 0 {
+		shifts = make([]oncallScheduleShiftResponse, len(r.Shifts))
+		for i, s := range r.Shifts {
+			shifts[i] = oncallScheduleShiftResponse{
+				UserID:     s.UserID,
+				StartAt:    s.StartAt,
+				EndAt:      s.EndAt,
+				IsOverride: s.IsOverride,
+				OverrideID: s.OverrideID,
+			}
+		}
+	}
+
 	return oncallRotationResponse{
 		ID:              r.ID,
 		TeamID:          r.TeamID,
 		PeriodDays:      r.PeriodDays,
-		RotationTime:    r.RotationTime,
+		RotationTime:    r.RotationTime.Format("15:04:05"),
 		Timezone:        r.Timezone,
-		StartDate:       r.StartDate,
+		StartDate:       r.StartDate.Format("2006-01-02"),
 		CurrentUserID:   r.CurrentUserID,
 		CurrentPosition: r.CurrentPosition,
+		IsOverride:      r.IsOverride,
 		NextRotationAt:  r.NextRotationAt,
 		Members:         members,
-		ActiveOverride:  toActiveOverrideResponse(r.ActiveOverride),
+		Overrides:       overrides,
+		Shifts:          shifts,
 		CreatedAt:       r.CreatedAt,
 		UpdatedAt:       r.UpdatedAt,
 	}
@@ -214,7 +217,37 @@ func (h *OncallHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := h.oncall.GetRotation(r.Context(), info, projectKey, teamID)
+	var rangeStart, rangeEnd *time.Time
+	startStr := r.URL.Query().Get("start")
+	endStr := r.URL.Query().Get("end")
+	if startStr != "" && endStr != "" {
+		s, err := time.Parse("2006-01-02", startStr)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid start date: expected YYYY-MM-DD")
+			return
+		}
+		e, err := time.Parse("2006-01-02", endStr)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid end date: expected YYYY-MM-DD")
+			return
+		}
+		e = e.AddDate(0, 0, 1) // exclusive end
+		if !s.Before(e) {
+			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "start must be before end")
+			return
+		}
+		if e.Sub(s) > 90*24*time.Hour {
+			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "date range must not exceed 90 days")
+			return
+		}
+		rangeStart = &s
+		rangeEnd = &e
+	} else if startStr != "" || endStr != "" {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "both start and end query parameters are required")
+		return
+	}
+
+	result, err := h.oncall.GetRotation(r.Context(), info, projectKey, teamID, rangeStart, rangeEnd)
 	if err != nil {
 		handleOncallError(w, r, err, "failed to get oncall rotation")
 		return
@@ -573,138 +606,13 @@ func (h *OncallHandler) DeleteOverride(w http.ResponseWriter, r *http.Request) {
 // --- Schedule DTOs ---
 
 type oncallScheduleShiftResponse struct {
-	UserID      uuid.UUID  `json:"user_id"`
-	DisplayName string     `json:"display_name"`
-	Email       string     `json:"email"`
-	AvatarURL   *string    `json:"avatar_url,omitempty"`
-	StartAt     time.Time  `json:"start_at"`
-	EndAt       time.Time  `json:"end_at"`
-	IsOverride  bool       `json:"is_override"`
-	OverrideID  *uuid.UUID `json:"override_id,omitempty"`
+	UserID     uuid.UUID  `json:"user_id"`
+	StartAt    time.Time  `json:"start_at"`
+	EndAt      time.Time  `json:"end_at"`
+	IsOverride bool       `json:"is_override"`
+	OverrideID *uuid.UUID `json:"override_id,omitempty"`
 }
 
-type oncallScheduleResponse struct {
-	ID              uuid.UUID                     `json:"id"`
-	TeamID          uuid.UUID                     `json:"team_id"`
-	PeriodDays      int                           `json:"period_days"`
-	RotationTime    string                        `json:"rotation_time"`
-	Timezone        string                        `json:"timezone"`
-	StartDate       string                        `json:"start_date"`
-	CurrentUserID   *uuid.UUID                    `json:"current_user_id"`
-	CurrentPosition int                           `json:"current_position"`
-	NextRotationAt  *time.Time                    `json:"next_rotation_at"`
-	Members         []oncallRotationMemberResp    `json:"members"`
-	Shifts          []oncallScheduleShiftResponse `json:"shifts"`
-	Overrides       []oncallOverrideResponse      `json:"overrides"`
-	CreatedAt       time.Time                     `json:"created_at"`
-	UpdatedAt       time.Time                     `json:"updated_at"`
-}
-
-func toOncallScheduleResponse(r *service.ScheduleResult) oncallScheduleResponse {
-	members := make([]oncallRotationMemberResp, len(r.Members))
-	for i, m := range r.Members {
-		members[i] = oncallRotationMemberResp{
-			ID:          m.ID,
-			UserID:      m.UserID,
-			Position:    m.Position,
-			Email:       m.Email,
-			DisplayName: m.DisplayName,
-			AvatarURL:   m.AvatarURL,
-		}
-	}
-
-	shifts := make([]oncallScheduleShiftResponse, len(r.Shifts))
-	for i, s := range r.Shifts {
-		shifts[i] = oncallScheduleShiftResponse{
-			UserID:      s.UserID,
-			DisplayName: s.DisplayName,
-			Email:       s.Email,
-			AvatarURL:   s.AvatarURL,
-			StartAt:     s.StartAt,
-			EndAt:       s.EndAt,
-			IsOverride:  s.IsOverride,
-			OverrideID:  s.OverrideID,
-		}
-	}
-
-	overrides := make([]oncallOverrideResponse, len(r.Overrides))
-	for i := range r.Overrides {
-		overrides[i] = toOncallOverrideResponse(&r.Overrides[i])
-	}
-
-	return oncallScheduleResponse{
-		ID:              r.ID,
-		TeamID:          r.TeamID,
-		PeriodDays:      r.PeriodDays,
-		RotationTime:    r.RotationTime,
-		Timezone:        r.Timezone,
-		StartDate:       r.StartDate,
-		CurrentUserID:   r.CurrentUserID,
-		CurrentPosition: r.CurrentPosition,
-		NextRotationAt:  r.NextRotationAt,
-		Members:         members,
-		Shifts:          shifts,
-		Overrides:       overrides,
-		CreatedAt:       r.CreatedAt,
-		UpdatedAt:       r.UpdatedAt,
-	}
-}
-
-// GetSchedule handles GET /teams/{teamId}/oncall/schedule?start=YYYY-MM-DD&end=YYYY-MM-DD
-func (h *OncallHandler) GetSchedule(w http.ResponseWriter, r *http.Request) {
-	info := model.AuthInfoFromContext(r.Context())
-	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
-		return
-	}
-
-	projectKey := chi.URLParam(r, "projectKey")
-	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid team ID")
-		return
-	}
-
-	startStr := r.URL.Query().Get("start")
-	endStr := r.URL.Query().Get("end")
-	if startStr == "" || endStr == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "start and end query parameters are required (YYYY-MM-DD)")
-		return
-	}
-
-	rangeStart, err := time.Parse("2006-01-02", startStr)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid start date: expected YYYY-MM-DD")
-		return
-	}
-	rangeEnd, err := time.Parse("2006-01-02", endStr)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid end date: expected YYYY-MM-DD")
-		return
-	}
-
-	// End date is exclusive: add one day so the full end date is included
-	rangeEnd = rangeEnd.AddDate(0, 0, 1)
-
-	if !rangeStart.Before(rangeEnd) {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "start must be before end")
-		return
-	}
-
-	// Cap range to 90 days
-	if rangeEnd.Sub(rangeStart) > 90*24*time.Hour {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "date range must not exceed 90 days")
-		return
-	}
-
-	result, err := h.oncall.GetSchedule(r.Context(), info, projectKey, teamID, rangeStart, rangeEnd)
-	if err != nil {
-		handleOncallError(w, r, err, "failed to get oncall schedule")
-		return
-	}
-
-	writeData(w, http.StatusOK, toOncallScheduleResponse(result))
-}
 
 // --- Helpers ---
 

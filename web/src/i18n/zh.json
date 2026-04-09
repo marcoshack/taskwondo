@@ -1313,6 +1313,8 @@
   "teams.oncall.calendar.fri": "五",
   "teams.oncall.calendar.sat": "六",
   "teams.oncall.calendar.sun": "日",
+  "teams.oncall.calendar.shiftRegular": "常规轮换",
+  "teams.oncall.calendar.shiftOverride": "覆盖",
   "teams.oncall.deleteRotation": "删除轮换",
   "teams.oncall.nextRotationLabel": "下次轮换",
   "teams.oncall.override.add": "添加覆盖",

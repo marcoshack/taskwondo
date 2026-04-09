@@ -189,3 +189,48 @@ func (r *OncallOverrideRepository) ListOverridesInRange(ctx context.Context, rot
 	}
 	return overrides, rows.Err()
 }
+
+// ListStaleOverrideRotations finds rotations where the is_override flag doesn't match reality:
+//   - "ended": is_override = true but no active override exists
+//   - "started": is_override = false but an active override exists
+func (r *OncallOverrideRepository) ListStaleOverrideRotations(ctx context.Context) ([]model.OverrideTransition, error) {
+	now := time.Now()
+	rows, err := r.db.QueryContext(ctx,
+		`-- Ended: rotation says override but none active
+		 SELECT r.id AS rotation_id, NULL::uuid AS override_user_id, 'ended' AS type
+		 FROM oncall_rotations r
+		 WHERE r.is_override = true
+		   AND NOT EXISTS (
+		       SELECT 1 FROM oncall_overrides o
+		       WHERE o.rotation_id = r.id AND o.start_at <= $1 AND o.end_at > $1
+		   )
+
+		 UNION ALL
+
+		 -- Started: rotation says no override but one is active
+		 SELECT DISTINCT ON (r.id) r.id AS rotation_id, o.override_user_id, 'started' AS type
+		 FROM oncall_rotations r
+		 JOIN oncall_overrides o ON o.rotation_id = r.id
+		 WHERE r.is_override = false
+		   AND o.start_at <= $1 AND o.end_at > $1
+		 ORDER BY r.id, o.created_at DESC`, now)
+	if err != nil {
+		return nil, fmt.Errorf("querying stale override rotations: %w", err)
+	}
+	defer rows.Close()
+
+	var transitions []model.OverrideTransition
+	for rows.Next() {
+		var t model.OverrideTransition
+		var overrideUserID sql.NullString
+		if err := rows.Scan(&t.RotationID, &overrideUserID, &t.Type); err != nil {
+			return nil, fmt.Errorf("scanning override transition row: %w", err)
+		}
+		if overrideUserID.Valid {
+			id, _ := uuid.Parse(overrideUserID.String)
+			t.OverrideUserID = &id
+		}
+		transitions = append(transitions, t)
+	}
+	return transitions, rows.Err()
+}

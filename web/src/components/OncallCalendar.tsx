@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
+import { Tooltip } from '@/components/ui/Tooltip'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { useOncallSchedule } from '@/hooks/useOncall'
+import { useOncallRotation } from '@/hooks/useOncall'
 import type { OncallScheduleShift, OncallRotationMember } from '@/api/oncall'
 
 const BAR_COLORS = [
@@ -39,6 +40,8 @@ interface WeekSpan {
   continuesFromPrev: boolean
   continuesToNext: boolean
   isOverride: boolean
+  shiftStart: string
+  shiftEnd: string
 }
 
 interface OncallCalendarProps {
@@ -92,12 +95,19 @@ export function OncallCalendar({ members, projectKey, teamId }: OncallCalendarPr
   const rangeStart = calendarSlots.length > 0 ? formatDate(calendarSlots[0].date) : ''
   const rangeEnd = calendarSlots.length > 0 ? formatDate(calendarSlots[calendarSlots.length - 1].date) : ''
 
-  const { data: schedule } = useOncallSchedule(projectKey, teamId, rangeStart, rangeEnd)
-  const shifts = schedule?.shifts ?? []
+  const { data: rotationData } = useOncallRotation(projectKey, teamId, rangeStart, rangeEnd)
+  const shifts = rotationData?.shifts ?? []
+  const resolvedMembers = rotationData?.members ?? members
+
+  const memberMap = useMemo(() => {
+    const map = new Map<string, OncallRotationMember>()
+    for (const m of resolvedMembers) map.set(m.user_id, m)
+    return map
+  }, [resolvedMembers])
 
   const sortedMembers = useMemo(
-    () => [...members].sort((a, b) => a.position - b.position),
-    [members],
+    () => [...resolvedMembers].sort((a, b) => a.position - b.position),
+    [resolvedMembers],
   )
 
   const colorMap = useMemo(() => {
@@ -113,8 +123,8 @@ export function OncallCalendar({ members, projectKey, teamId }: OncallCalendarPr
   // primary = the one starting earlier (outgoing), secondary = the one starting later (incoming).
   const dayAssignments = useMemo(() => {
     return calendarSlots.map((slot) => {
-      const dayStart = new Date(Date.UTC(slot.date.getFullYear(), slot.date.getMonth(), slot.date.getDate()))
-      const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000)
+      const dayStart = new Date(slot.date.getFullYear(), slot.date.getMonth(), slot.date.getDate())
+      const dayEnd = new Date(slot.date.getFullYear(), slot.date.getMonth(), slot.date.getDate() + 1)
 
       const overlapping: OncallScheduleShift[] = []
       for (const shift of shifts) {
@@ -163,13 +173,15 @@ export function OncallCalendar({ members, projectKey, teamId }: OncallCalendarPr
             const nextFirst = ws + 7 < dayAssignments.length ? dayAssignments[ws + 7].primary : null
             topSpans.push({
               memberId: spanShift.user_id,
-              memberName: spanShift.display_name,
+              memberName: memberMap.get(spanShift.user_id)?.display_name ?? '',
               colorIdx: spanShift.is_override ? -1 : (colorMap.get(spanShift.user_id) ?? 0),
               startCol: spanStart,
               endCol,
               continuesFromPrev: spanStart === 0 && prevLast?.user_id === spanShift.user_id && prevLast?.is_override === spanShift.is_override,
               continuesToNext: endCol === 6 && nextFirst?.user_id === spanShift.user_id && nextFirst?.is_override === spanShift.is_override,
               isOverride: spanShift.is_override,
+              shiftStart: spanShift.start_at,
+              shiftEnd: spanShift.end_at,
             })
           }
           spanStart = shift ? di : null
@@ -184,13 +196,15 @@ export function OncallCalendar({ members, projectKey, teamId }: OncallCalendarPr
         if (secondary) {
           bottomSpans.push({
             memberId: secondary.user_id,
-            memberName: secondary.display_name,
+            memberName: memberMap.get(secondary.user_id)?.display_name ?? '',
             colorIdx: secondary.is_override ? -1 : (colorMap.get(secondary.user_id) ?? 0),
             startCol: di,
             endCol: di,
             continuesFromPrev: false,
             continuesToNext: false,
             isOverride: secondary.is_override,
+            shiftStart: secondary.start_at,
+            shiftEnd: secondary.end_at,
           })
         }
       }
@@ -198,12 +212,19 @@ export function OncallCalendar({ members, projectKey, teamId }: OncallCalendarPr
       result.push({ topSpans, bottomSpans })
     }
     return result
-  }, [dayAssignments, numWeeks, colorMap])
+  }, [dayAssignments, numWeeks, colorMap, memberMap])
 
   const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month
   const todayDate = today.getDate()
 
   const hasOverrides = shifts.some(s => s.is_override)
+
+  function shiftTooltip(span: WeekSpan): string {
+    const start = new Date(span.shiftStart).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+    const end = new Date(span.shiftEnd).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+    const type = span.isOverride ? t('teams.oncall.calendar.shiftOverride') : t('teams.oncall.calendar.shiftRegular')
+    return `${span.memberName}\n${start} — ${end}\n${type}`
+  }
 
   function prevMonth() { setViewDate(new Date(year, month - 1, 1)) }
   function nextMonth() { setViewDate(new Date(year, month + 1, 1)) }
@@ -294,32 +315,32 @@ export function OncallCalendar({ members, projectKey, teamId }: OncallCalendarPr
                   const barColor = span.isOverride ? OVERRIDE_COLOR : BAR_COLORS[span.colorIdx]
 
                   return (
-                    <div
+                    <Tooltip
                       key={si}
+                      content={shiftTooltip(span)}
+                      position="bottom"
+                      maxWidth={220}
                       className={`h-6 flex items-center px-1.5 text-[0.65rem] font-medium leading-none truncate ${barColor} ${rl} ${rr}`}
-                      style={{
-                        gridColumn: `${span.startCol + 1} / ${span.endCol + 2}`,
-                        gridRow: 1,
-                      }}
+                      style={{ gridColumn: `${span.startCol + 1} / ${span.endCol + 2}`, gridRow: 1 }}
                     >
                       {span.isOverride ? `\u26A1 ${span.memberName}` : span.memberName}
-                    </div>
+                    </Tooltip>
                   )
                 })}
                 {weekSpanRows[wi].bottomSpans.map((span, si) => {
                   const barColor = span.isOverride ? OVERRIDE_COLOR : BAR_COLORS[span.colorIdx]
 
                   return (
-                    <div
+                    <Tooltip
                       key={`b-${si}`}
+                      content={shiftTooltip(span)}
+                      position="bottom"
+                      maxWidth={220}
                       className={`h-6 flex items-center px-1.5 text-[0.65rem] font-medium leading-none truncate ${barColor} rounded-md mt-0.5`}
-                      style={{
-                        gridColumn: `${span.startCol + 1} / ${span.endCol + 2}`,
-                        gridRow: 2,
-                      }}
+                      style={{ gridColumn: `${span.startCol + 1} / ${span.endCol + 2}`, gridRow: 2 }}
                     >
                       {span.isOverride ? `\u26A1 ${span.memberName}` : span.memberName}
-                    </div>
+                    </Tooltip>
                   )
                 })}
               </div>

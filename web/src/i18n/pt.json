@@ -1313,6 +1313,8 @@
   "teams.oncall.calendar.fri": "Sex",
   "teams.oncall.calendar.sat": "Sáb",
   "teams.oncall.calendar.sun": "Dom",
+  "teams.oncall.calendar.shiftRegular": "Rotação regular",
+  "teams.oncall.calendar.shiftOverride": "Substituição",
   "teams.oncall.deleteRotation": "Excluir rotação",
   "teams.oncall.nextRotationLabel": "Próxima rotação",
   "teams.oncall.override.add": "Adicionar substituição",

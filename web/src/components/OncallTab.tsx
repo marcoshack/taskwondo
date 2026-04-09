@@ -6,7 +6,6 @@ import {
   useCreateOncallRotation,
   useUpdateOncallRotation,
   useDeleteOncallRotation,
-  useOncallOverrides,
   useCreateOncallOverride,
   useUpdateOncallOverride,
   useDeleteOncallOverride,
@@ -141,7 +140,7 @@ export function OncallTab({
             )}
             <RotationDetailsCard data={rotationData} />
             <RotationMembersPanel data={rotationData} />
-            <OverridePanel projectKey={projectKey} teamId={teamId} canManage={canManage} />
+            <OverridePanel overrides={rotationData.overrides ?? []} projectKey={projectKey} teamId={teamId} canManage={canManage} />
           </div>
         </div>
       )}
@@ -222,8 +221,11 @@ function RotationMembersPanel({ data }: { data: OncallRotationWithMembers }) {
             <span className="text-xs text-gray-400 w-4 text-right shrink-0">{idx + 1}</span>
             <Avatar name={member.display_name} avatarUrl={member.avatar_url} size="xs" />
             <span className="text-sm text-gray-900 dark:text-gray-100">{member.display_name}</span>
-            {member.user_id === data.current_user_id && !data.active_override && (
+            {member.user_id === data.current_user_id && !data.is_override && (
               <Badge color="green">{t('teams.oncall.active')}</Badge>
+            )}
+            {member.user_id === data.current_user_id && data.is_override && (
+              <Badge color="yellow">{t('teams.oncall.override.active')}</Badge>
             )}
           </div>
         ))}
@@ -597,16 +599,17 @@ function RotationForm({
 // --- Override Panel (sidebar) ---
 
 function OverridePanel({
+  overrides,
   projectKey,
   teamId,
   canManage,
 }: {
+  overrides: OncallOverride[]
   projectKey: string
   teamId: string
   canManage: boolean
 }) {
   const { t } = useTranslation()
-  const { data: overrides } = useOncallOverrides(projectKey, teamId)
   const deleteMutation = useDeleteOncallOverride(projectKey, teamId)
   const [deleteTarget, setDeleteTarget] = useState<OncallOverride | null>(null)
   const [editTarget, setEditTarget] = useState<OncallOverride | null>(null)
@@ -633,7 +636,7 @@ function OverridePanel({
           {t('teams.oncall.override.title')}
         </p>
         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
-        {overrides && overrides.length > 0 ? (
+        {overrides.length > 0 ? (
           <div className="space-y-2">
             {overrides.map((override) => {
               const isActive = new Date(override.start_at) <= now && new Date(override.end_at) > now

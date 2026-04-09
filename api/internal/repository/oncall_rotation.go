@@ -23,11 +23,11 @@ func NewOncallRotationRepository(db *sql.DB) *OncallRotationRepository {
 // Create inserts a new on-call rotation.
 func (r *OncallRotationRepository) Create(ctx context.Context, rot *model.OncallRotation) (*model.OncallRotation, error) {
 	err := r.db.QueryRowContext(ctx,
-		`INSERT INTO oncall_rotations (id, team_id, period_days, rotation_time, timezone, start_date, current_user_id, current_position, next_rotation_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		`INSERT INTO oncall_rotations (id, team_id, period_days, rotation_time, timezone, start_date, current_user_id, current_position, is_override, next_rotation_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		 RETURNING created_at, updated_at`,
 		rot.ID, rot.TeamID, rot.PeriodDays, rot.RotationTime, rot.Timezone,
-		rot.StartDate, rot.CurrentUserID, rot.CurrentPosition, rot.NextRotationAt,
+		rot.StartDate, rot.CurrentUserID, rot.CurrentPosition, rot.IsOverride, rot.NextRotationAt,
 	).Scan(&rot.CreatedAt, &rot.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("inserting oncall rotation: %w", err)
@@ -39,7 +39,7 @@ func (r *OncallRotationRepository) Create(ctx context.Context, rot *model.Oncall
 func (r *OncallRotationRepository) GetByTeamID(ctx context.Context, teamID uuid.UUID) (*model.OncallRotation, error) {
 	row := r.db.QueryRowContext(ctx,
 		`SELECT id, team_id, period_days, rotation_time, timezone, start_date,
-		        current_user_id, current_position, next_rotation_at, created_at, updated_at
+		        current_user_id, current_position, is_override, next_rotation_at, created_at, updated_at
 		 FROM oncall_rotations WHERE team_id = $1`, teamID)
 	return scanOncallRotation(row)
 }
@@ -48,7 +48,7 @@ func (r *OncallRotationRepository) GetByTeamID(ctx context.Context, teamID uuid.
 func (r *OncallRotationRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.OncallRotation, error) {
 	row := r.db.QueryRowContext(ctx,
 		`SELECT id, team_id, period_days, rotation_time, timezone, start_date,
-		        current_user_id, current_position, next_rotation_at, created_at, updated_at
+		        current_user_id, current_position, is_override, next_rotation_at, created_at, updated_at
 		 FROM oncall_rotations WHERE id = $1`, id)
 	return scanOncallRotation(row)
 }
@@ -58,11 +58,11 @@ func (r *OncallRotationRepository) Update(ctx context.Context, rot *model.Oncall
 	err := r.db.QueryRowContext(ctx,
 		`UPDATE oncall_rotations
 		 SET period_days = $1, rotation_time = $2, timezone = $3, start_date = $4,
-		     current_user_id = $5, current_position = $6, next_rotation_at = $7, updated_at = now()
-		 WHERE id = $8
+		     current_user_id = $5, current_position = $6, is_override = $7, next_rotation_at = $8, updated_at = now()
+		 WHERE id = $9
 		 RETURNING updated_at`,
 		rot.PeriodDays, rot.RotationTime, rot.Timezone, rot.StartDate,
-		rot.CurrentUserID, rot.CurrentPosition, rot.NextRotationAt, rot.ID,
+		rot.CurrentUserID, rot.CurrentPosition, rot.IsOverride, rot.NextRotationAt, rot.ID,
 	).Scan(&rot.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, model.ErrNotFound
@@ -214,7 +214,7 @@ func (r *OncallRotationRepository) ListHistory(ctx context.Context, rotationID u
 func (r *OncallRotationRepository) ListDueRotations(ctx context.Context) ([]model.OncallRotation, error) {
 	rows, err := r.db.QueryContext(ctx,
 		`SELECT id, team_id, period_days, rotation_time, timezone, start_date,
-		        current_user_id, current_position, next_rotation_at, created_at, updated_at
+		        current_user_id, current_position, is_override, next_rotation_at, created_at, updated_at
 		 FROM oncall_rotations
 		 WHERE next_rotation_at IS NOT NULL AND next_rotation_at <= $1`, time.Now())
 	if err != nil {
@@ -237,11 +237,9 @@ func scanOncallRotation(row *sql.Row) (*model.OncallRotation, error) {
 	var rot model.OncallRotation
 	var currentUserID sql.NullString
 	var nextRotationAt sql.NullTime
-	var rotationTime string
-	var startDate string
 
-	err := row.Scan(&rot.ID, &rot.TeamID, &rot.PeriodDays, &rotationTime, &rot.Timezone,
-		&startDate, &currentUserID, &rot.CurrentPosition, &nextRotationAt,
+	err := row.Scan(&rot.ID, &rot.TeamID, &rot.PeriodDays, &rot.RotationTime, &rot.Timezone,
+		&rot.StartDate, &currentUserID, &rot.CurrentPosition, &rot.IsOverride, &nextRotationAt,
 		&rot.CreatedAt, &rot.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, model.ErrNotFound
@@ -249,9 +247,6 @@ func scanOncallRotation(row *sql.Row) (*model.OncallRotation, error) {
 	if err != nil {
 		return nil, fmt.Errorf("scanning oncall rotation: %w", err)
 	}
-
-	rot.RotationTime = rotationTime
-	rot.StartDate = startDate
 
 	if currentUserID.Valid {
 		id, _ := uuid.Parse(currentUserID.String)
@@ -268,18 +263,13 @@ func scanOncallRotationRow(rows *sql.Rows) (*model.OncallRotation, error) {
 	var rot model.OncallRotation
 	var currentUserID sql.NullString
 	var nextRotationAt sql.NullTime
-	var rotationTime string
-	var startDate string
 
-	err := rows.Scan(&rot.ID, &rot.TeamID, &rot.PeriodDays, &rotationTime, &rot.Timezone,
-		&startDate, &currentUserID, &rot.CurrentPosition, &nextRotationAt,
+	err := rows.Scan(&rot.ID, &rot.TeamID, &rot.PeriodDays, &rot.RotationTime, &rot.Timezone,
+		&rot.StartDate, &currentUserID, &rot.CurrentPosition, &rot.IsOverride, &nextRotationAt,
 		&rot.CreatedAt, &rot.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("scanning oncall rotation row: %w", err)
 	}
-
-	rot.RotationTime = rotationTime
-	rot.StartDate = startDate
 
 	if currentUserID.Valid {
 		id, _ := uuid.Parse(currentUserID.String)

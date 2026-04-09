@@ -12,6 +12,7 @@ export interface OncallRotation {
   current_user_id: string | null
   current_position: number
   next_rotation_at: string | null
+  is_override: boolean
   created_at: string
   updated_at: string
 }
@@ -38,7 +39,8 @@ export interface OncallRotationHistory {
 
 export interface OncallRotationWithMembers extends OncallRotation {
   members: OncallRotationMember[]
-  active_override: OncallActiveOverride | null
+  overrides: OncallOverride[]
+  shifts?: OncallScheduleShift[]
 }
 
 export interface CreateOncallRotationInput {
@@ -71,14 +73,6 @@ export interface OncallOverride {
   created_at: string
 }
 
-export interface OncallActiveOverride {
-  id: string
-  override_user_id: string
-  start_at: string
-  end_at: string
-  reason?: string
-}
-
 export interface CreateOncallOverrideInput {
   override_user_id: string
   start_at: string   // RFC3339
@@ -97,30 +91,10 @@ export interface UpdateOncallOverrideInput {
 
 export interface OncallScheduleShift {
   user_id: string
-  display_name: string
-  email: string
-  avatar_url?: string
   start_at: string   // RFC3339
   end_at: string     // RFC3339
   is_override: boolean
   override_id?: string
-}
-
-export interface OncallScheduleResponse {
-  id: string
-  team_id: string
-  period_days: number
-  rotation_time: string
-  timezone: string
-  start_date: string
-  current_user_id: string | null
-  current_position: number
-  next_rotation_at: string | null
-  members: OncallRotationMember[]
-  shifts: OncallScheduleShift[]
-  overrides: OncallOverride[]
-  created_at: string
-  updated_at: string
 }
 
 // --- API Functions ---
@@ -129,9 +103,13 @@ interface DataResponse<T> {
   data: T
 }
 
-export async function getOncallRotation(projectKey: string, teamId: string) {
+export async function getOncallRotation(projectKey: string, teamId: string, start?: string, end?: string) {
+  const params: Record<string, string> = {}
+  if (start) params.start = start
+  if (end) params.end = end
   const res = await api.get<DataResponse<OncallRotationWithMembers>>(
     `${nsPrefix()}/projects/${projectKey}/teams/${teamId}/oncall`,
+    { params },
   )
   return res.data.data
 }
@@ -164,13 +142,6 @@ export async function createOncallOverride(projectKey: string, teamId: string, i
   return res.data.data
 }
 
-export async function listOncallOverrides(projectKey: string, teamId: string) {
-  const res = await api.get<DataResponse<OncallOverride[]>>(
-    `${nsPrefix()}/projects/${projectKey}/teams/${teamId}/oncall/overrides`,
-  )
-  return res.data.data
-}
-
 export async function updateOncallOverride(projectKey: string, teamId: string, overrideId: string, input: UpdateOncallOverrideInput) {
   const res = await api.patch<DataResponse<OncallOverride>>(
     `${nsPrefix()}/projects/${projectKey}/teams/${teamId}/oncall/overrides/${overrideId}`,
@@ -181,14 +152,6 @@ export async function updateOncallOverride(projectKey: string, teamId: string, o
 
 export async function deleteOncallOverride(projectKey: string, teamId: string, overrideId: string) {
   await api.delete(`${nsPrefix()}/projects/${projectKey}/teams/${teamId}/oncall/overrides/${overrideId}`)
-}
-
-export async function getOncallSchedule(projectKey: string, teamId: string, start: string, end: string) {
-  const res = await api.get<DataResponse<OncallScheduleResponse>>(
-    `${nsPrefix()}/projects/${projectKey}/teams/${teamId}/oncall/schedule`,
-    { params: { start, end } },
-  )
-  return res.data.data
 }
 
 export async function getOncallHistory(projectKey: string, teamId: string, limit?: number, offset?: number) {

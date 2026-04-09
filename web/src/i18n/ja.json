@@ -1313,6 +1313,8 @@
   "teams.oncall.calendar.fri": "金",
   "teams.oncall.calendar.sat": "土",
   "teams.oncall.calendar.sun": "日",
+  "teams.oncall.calendar.shiftRegular": "通常ローテーション",
+  "teams.oncall.calendar.shiftOverride": "オーバーライド",
   "teams.oncall.deleteRotation": "ローテーションを削除",
   "teams.oncall.nextRotationLabel": "次のローテーション",
   "teams.oncall.override.add": "オーバーライドを追加",

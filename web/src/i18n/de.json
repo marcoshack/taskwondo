@@ -1313,6 +1313,8 @@
   "teams.oncall.calendar.fri": "Fr",
   "teams.oncall.calendar.sat": "Sa",
   "teams.oncall.calendar.sun": "So",
+  "teams.oncall.calendar.shiftRegular": "Reguläre Rotation",
+  "teams.oncall.calendar.shiftOverride": "Überschreibung",
   "teams.oncall.deleteRotation": "Rotation löschen",
   "teams.oncall.nextRotationLabel": "Nächste Rotation",
   "teams.oncall.override.add": "Überschreibung hinzufügen",

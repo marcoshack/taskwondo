@@ -1313,6 +1313,8 @@
   "teams.oncall.calendar.fri": "금",
   "teams.oncall.calendar.sat": "토",
   "teams.oncall.calendar.sun": "일",
+  "teams.oncall.calendar.shiftRegular": "정기 로테이션",
+  "teams.oncall.calendar.shiftOverride": "오버라이드",
   "teams.oncall.deleteRotation": "로테이션 삭제",
   "teams.oncall.nextRotationLabel": "다음 로테이션",
   "teams.oncall.override.add": "오버라이드 추가",

@@ -95,10 +95,11 @@ test.describe('Oncall overrides', () => {
       end_at: endAt,
     });
 
-    // Get rotation — should include active_override
+    // Get rotation — should include is_override flag and overrides array
     const rotation = await api.getOncallRotation(request, testUser.token, testProject.key, team.id);
-    expect((rotation as any).active_override).toBeTruthy();
-    expect((rotation as any).active_override.override_user_id).toBe(user2.id);
+    expect(rotation.is_override).toBe(true);
+    expect(rotation.overrides.length).toBeGreaterThanOrEqual(1);
+    expect(rotation.overrides.some((o: any) => o.override_user_id === user2.id)).toBe(true);
   });
 
   test('member can create override for themselves', async ({ request, testUser, testProject }) => {
@@ -244,6 +245,65 @@ test.describe('Oncall overrides', () => {
     // Verify updated
     await expect(page.getByText('Updated reason')).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('Original reason')).not.toBeVisible();
+  });
+
+  test('immediate override sets is_override flag', async ({ request, testUser, testProject }) => {
+    const { team, user2 } = await setupTeamWithRotation(request, testUser, testProject);
+
+    // Create an override that started 5 min ago (immediately active)
+    const startAt = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    const endAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+    await api.createOncallOverride(request, testUser.token, testProject.key, team.id, {
+      override_user_id: user2.id,
+      start_at: startAt,
+      end_at: endAt,
+    });
+
+    const rotation = await api.getOncallRotation(request, testUser.token, testProject.key, team.id);
+    expect(rotation.is_override).toBe(true);
+    expect(rotation.current_user_id).toBe(user2.id);
+  });
+
+  test('deleting active override restores scheduled user', async ({ request, testUser, testProject }) => {
+    // Use a custom rotation with rotation_time=00:00:00 to ensure the epoch
+    // is in the past regardless of what time the test runs.
+    const adminToken = getAdminToken();
+    const user2 = await createSecondUser(request, adminToken, testProject.key, testUser.token);
+    const team = await api.createTeam(request, testUser.token, testProject.key, { name: 'Delete Override Team' });
+    await api.addTeamMember(request, testUser.token, testProject.key, team.id, testUser.id);
+    await api.addTeamMember(request, testUser.token, testProject.key, team.id, user2.id);
+    const today = new Date().toISOString().slice(0, 10);
+    await api.createOncallRotation(request, testUser.token, testProject.key, team.id, {
+      period_days: 7,
+      rotation_time: '00:00:00',
+      timezone: 'UTC',
+      start_date: today,
+      member_ids: [testUser.id, user2.id],
+    });
+
+    // Create an active override (starts 5 min ago)
+    const startAt = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    const endAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+    const override = await api.createOncallOverride(request, testUser.token, testProject.key, team.id, {
+      override_user_id: user2.id,
+      start_at: startAt,
+      end_at: endAt,
+    });
+
+    // Verify override is active
+    const rotationBefore = await api.getOncallRotation(request, testUser.token, testProject.key, team.id);
+    expect(rotationBefore.is_override).toBe(true);
+    expect(rotationBefore.current_user_id).toBe(user2.id);
+
+    // Delete the override
+    await api.deleteOncallOverride(request, testUser.token, testProject.key, team.id, override.id);
+
+    // Verify scheduled user is restored
+    const rotationAfter = await api.getOncallRotation(request, testUser.token, testProject.key, team.id);
+    expect(rotationAfter.is_override).toBe(false);
+    expect(rotationAfter.current_user_id).toBe(testUser.id);
   });
 
   test('invalid time range rejected', async ({ request, testUser, testProject }) => {

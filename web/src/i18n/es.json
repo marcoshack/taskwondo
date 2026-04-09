@@ -1313,6 +1313,8 @@
   "teams.oncall.calendar.fri": "Vie",
   "teams.oncall.calendar.sat": "Sáb",
   "teams.oncall.calendar.sun": "Dom",
+  "teams.oncall.calendar.shiftRegular": "Rotación regular",
+  "teams.oncall.calendar.shiftOverride": "Anulación",
   "teams.oncall.deleteRotation": "Eliminar rotación",
   "teams.oncall.nextRotationLabel": "Próxima rotación",
   "teams.oncall.override.add": "Añadir anulación",

@@ -1313,6 +1313,8 @@
   "teams.oncall.calendar.fri": "جمع",
   "teams.oncall.calendar.sat": "سبت",
   "teams.oncall.calendar.sun": "أحد",
+  "teams.oncall.calendar.shiftRegular": "تناوب عادي",
+  "teams.oncall.calendar.shiftOverride": "تجاوز",
   "teams.oncall.deleteRotation": "حذف الدورة",
   "teams.oncall.nextRotationLabel": "الدورة التالية",
   "teams.oncall.override.add": "إضافة تجاوز",

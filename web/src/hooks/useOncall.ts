@@ -1,12 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   getOncallRotation,
-  getOncallSchedule,
   createOncallRotation,
   updateOncallRotation,
   deleteOncallRotation,
   getOncallHistory,
-  listOncallOverrides,
   createOncallOverride,
   updateOncallOverride,
   deleteOncallOverride,
@@ -16,25 +14,13 @@ import {
   type UpdateOncallOverrideInput,
 } from '@/api/oncall'
 
-export function useOncallRotation(projectKey: string, teamId: string) {
+export function useOncallRotation(projectKey: string, teamId: string, start?: string, end?: string) {
   return useQuery({
-    queryKey: ['projects', projectKey, 'teams', teamId, 'oncall'],
-    queryFn: () => getOncallRotation(projectKey, teamId),
+    queryKey: ['projects', projectKey, 'teams', teamId, 'oncall', start, end],
+    queryFn: () => getOncallRotation(projectKey, teamId, start, end),
     enabled: !!projectKey && !!teamId,
     retry: (failureCount, error) => {
       // Don't retry on 404 (no rotation configured)
-      if ((error as { response?: { status?: number } })?.response?.status === 404) return false
-      return failureCount < 3
-    },
-  })
-}
-
-export function useOncallSchedule(projectKey: string, teamId: string, start: string, end: string) {
-  return useQuery({
-    queryKey: ['projects', projectKey, 'teams', teamId, 'oncall', 'schedule', start, end],
-    queryFn: () => getOncallSchedule(projectKey, teamId, start, end),
-    enabled: !!projectKey && !!teamId && !!start && !!end,
-    retry: (failureCount, error) => {
       if ((error as { response?: { status?: number } })?.response?.status === 404) return false
       return failureCount < 3
     },
@@ -76,14 +62,6 @@ export function useDeleteOncallRotation(projectKey: string, teamId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['projects', projectKey, 'teams', teamId, 'oncall'] })
     },
-  })
-}
-
-export function useOncallOverrides(projectKey: string, teamId: string) {
-  return useQuery({
-    queryKey: ['projects', projectKey, 'teams', teamId, 'oncall', 'overrides'],
-    queryFn: () => listOncallOverrides(projectKey, teamId),
-    enabled: !!projectKey && !!teamId,
   })
 }
 

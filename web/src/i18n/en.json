@@ -1421,6 +1421,8 @@
   "teams.oncall.calendar.fri": "Fri",
   "teams.oncall.calendar.sat": "Sat",
   "teams.oncall.calendar.sun": "Sun",
+  "teams.oncall.calendar.shiftRegular": "Regular rotation",
+  "teams.oncall.calendar.shiftOverride": "Override",
   "teams.oncall.deleteRotation": "Delete Rotation",
   "teams.oncall.nextRotationLabel": "Next rotation",
   "teams.oncall.override.add": "Add Override",

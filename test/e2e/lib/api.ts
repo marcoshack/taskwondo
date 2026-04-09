@@ -1555,7 +1555,7 @@ export async function getOncallRotation(
   token: string,
   projectKey: string,
   teamId: string,
-): Promise<{ id: string; period_days: number; timezone: string; current_user_id: string | null; next_rotation_at: string | null; members: { user_id: string; position: number; display_name: string }[] }> {
+): Promise<{ id: string; period_days: number; timezone: string; current_user_id: string | null; next_rotation_at: string | null; is_override: boolean; overrides: any[]; members: { user_id: string; position: number; display_name: string }[] }> {
   const res = await request.get(`${BASE_URL}/api/v1/default/projects/${projectKey}/teams/${teamId}/oncall`, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -1659,7 +1659,7 @@ export async function getOncallSchedule(
   start: string,
   end: string,
 ) {
-  const res = await request.get(`${BASE_URL}/api/v1/default/projects/${projectKey}/teams/${teamId}/oncall/schedule?start=${start}&end=${end}`, {
+  const res = await request.get(`${BASE_URL}/api/v1/default/projects/${projectKey}/teams/${teamId}/oncall?start=${start}&end=${end}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok()) throw new Error(`Get oncall schedule failed (${res.status()}): ${await res.text()}`);
