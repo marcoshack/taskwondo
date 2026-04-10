@@ -408,14 +408,10 @@ export function ProjectSettingsPage() {
     createInviteMutation.mutate(
       { role: emailInviteRole, email: emailInput.trim() },
       {
-        onSuccess: (result) => {
+        onSuccess: () => {
           setEmailInput('')
           setEmailInviteRole('member')
-          if (result.direct_add) {
-            showSaved('addMember')
-          } else {
-            showSaved('emailInvite')
-          }
+          showSaved('emailInvite')
         },
         onError: (err) => {
           setMemberError(getLocalizedError(err, t, 'projects.settings.emailInviteError'))

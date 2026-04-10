@@ -5,7 +5,7 @@ import { randomUUID } from 'crypto';
 
 test.describe('Email-based Project Invites', () => {
 
-  test('inviting an existing user by email adds them directly to the project', async ({ request, testProject }) => {
+  test('inviting an existing user by email creates a pending invite', async ({ request, testProject }) => {
     const adminToken = getAdminToken();
     const uniqueId = randomUUID().slice(0, 8);
     const email = `exist-${uniqueId}@test.local`;
@@ -16,15 +16,20 @@ test.describe('Email-based Project Invites', () => {
     const tempLogin = await api.login(request, email, created.temporary_password);
     await api.changePassword(request, tempLogin.token, created.temporary_password, 'TestPass123!');
 
-    // Invite by email — should add directly since user exists
+    // Invite by email — should create a pending invite (not add directly)
     const result = await api.createEmailInvite(request, adminToken, testProject.key, email, 'member');
-    expect(result.direct_add).toBe(true);
+    expect(result.code).toBeTruthy();
 
-    // Verify the user is now a member
-    const members = await api.listMembers(request, adminToken, testProject.key);
-    const found = members.find((m: any) => m.email === email);
+    // Verify the invite appears in the invite list
+    const invites = await api.listInvites(request, adminToken, testProject.key);
+    const found = invites.find((inv: any) => inv.code === result.code);
     expect(found).toBeTruthy();
-    expect(found!.role).toBe('member');
+    expect(found!.invitee_email).toBe(email);
+
+    // Verify the user is NOT yet a member (they must accept the invite first)
+    const members = await api.listMembers(request, adminToken, testProject.key);
+    const memberFound = members.find((m: any) => m.email === email);
+    expect(memberFound).toBeFalsy();
   });
 
   test('inviting a non-existing user by email creates an invite with invitee_email', async ({ request, testProject }) => {
@@ -34,7 +39,6 @@ test.describe('Email-based Project Invites', () => {
 
     // Invite by email — should create an invite since user doesn't exist
     const result = await api.createEmailInvite(request, adminToken, testProject.key, nonExistentEmail, 'member');
-    expect(result.direct_add).toBeFalsy();
     expect(result.code).toBeTruthy();
 
     // Verify the invite appears in the invite list with the invitee_email
@@ -59,6 +63,31 @@ test.describe('Email-based Project Invites', () => {
 
     // Wait for the invite email to arrive in Mailpit
     const msg = await api.waitForMailpitMessage(request, inviteeEmail, { timeoutMs: 10000 });
+    expect(msg.Subject).toContain(testProject.name);
+    expect(msg.HTML).toContain(result.code!);
+    expect(msg.HTML).toContain('Accept Invite');
+  });
+
+  test('existing user receives an invite email when invited by email', async ({ request, testProject }) => {
+    const adminToken = getAdminToken();
+    const uniqueId = randomUUID().slice(0, 8);
+    const email = `exist-email-${uniqueId}@e2e.local`;
+    const displayName = `Existing Email User ${uniqueId}`;
+
+    // Create a registered user
+    const created = await api.createUser(request, adminToken, email, displayName);
+    const tempLogin = await api.login(request, email, created.temporary_password);
+    await api.changePassword(request, tempLogin.token, created.temporary_password, 'TestPass123!');
+
+    // Clear any existing messages
+    await api.deleteMailpitMessages(request);
+
+    // Invite the existing user by email
+    const result = await api.createEmailInvite(request, adminToken, testProject.key, email, 'member');
+    expect(result.code).toBeTruthy();
+
+    // Wait for the invite email to arrive in Mailpit
+    const msg = await api.waitForMailpitMessage(request, email, { timeoutMs: 10000 });
     expect(msg.Subject).toContain(testProject.name);
     expect(msg.HTML).toContain(result.code!);
     expect(msg.HTML).toContain('Accept Invite');

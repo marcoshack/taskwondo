@@ -160,7 +160,6 @@ export interface ProjectInvite {
   max_uses: number
   use_count: number
   created_at: string
-  direct_add?: boolean
 }
 
 export interface InviteInfo {

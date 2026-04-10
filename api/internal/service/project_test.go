@@ -2481,7 +2481,7 @@ func TestGetInviteInfo_ExpiredAndFull(t *testing.T) {
 
 // --- Email Invite Tests ---
 
-func TestCreateEmailInvite_ExistingUser_DirectAdd(t *testing.T) {
+func TestCreateEmailInvite_ExistingUser_CreatesInvite(t *testing.T) {
 	s := newTestProjectSetup()
 	owner := userAuthInfo()
 	ctx := context.Background()
@@ -2503,17 +2503,14 @@ func TestCreateEmailInvite_ExistingUser_DirectAdd(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if !result.DirectAdd {
-		t.Fatal("expected DirectAdd to be true")
+	if result.Invite == nil {
+		t.Fatal("expected Invite to be set")
 	}
-	if result.Member == nil {
-		t.Fatal("expected Member to be set")
+	if result.Invite.InviteeEmail == nil || *result.Invite.InviteeEmail != "existing@test.com" {
+		t.Fatalf("expected invitee_email 'existing@test.com', got %v", result.Invite.InviteeEmail)
 	}
-	if result.Member.UserID != existingUser.ID {
-		t.Fatalf("expected member user ID %s, got %s", existingUser.ID, result.Member.UserID)
-	}
-	if result.Invite != nil {
-		t.Fatal("expected Invite to be nil")
+	if result.Invite.MaxUses != 1 {
+		t.Fatalf("expected max_uses 1, got %d", result.Invite.MaxUses)
 	}
 }
 
@@ -2530,9 +2527,6 @@ func TestCreateEmailInvite_NonExistingUser_CreatesInvite(t *testing.T) {
 	result, err := s.svc.CreateEmailInvite(ctx, owner, "TT", "newuser@test.com", model.ProjectRoleMember, nil)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
-	}
-	if result.DirectAdd {
-		t.Fatal("expected DirectAdd to be false")
 	}
 	if result.Invite == nil {
 		t.Fatal("expected Invite to be set")

@@ -557,7 +557,6 @@ type inviteResponse struct {
 	MaxUses       int        `json:"max_uses"`
 	UseCount      int        `json:"use_count"`
 	CreatedAt     time.Time  `json:"created_at"`
-	DirectAdd     bool       `json:"direct_add,omitempty"`
 }
 
 type inviteInfoResponse struct {
@@ -627,14 +626,6 @@ func (h *ProjectHandler) CreateInvite(w http.ResponseWriter, r *http.Request) {
 		result, err := h.projects.CreateEmailInvite(r.Context(), info, projectKey, req.Email, req.Role, expiresAt)
 		if err != nil {
 			handleProjectError(w, r, err, "failed to create email invite")
-			return
-		}
-		if result.DirectAdd {
-			// User existed and was added directly — return a synthetic invite response
-			writeData(w, http.StatusCreated, inviteResponse{
-				Role:      req.Role,
-				DirectAdd: true,
-			})
 			return
 		}
 		writeData(w, http.StatusCreated, h.toInviteResponse(result.Invite))

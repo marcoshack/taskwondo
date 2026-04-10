@@ -982,13 +982,12 @@ func (s *ProjectService) CreateInvite(ctx context.Context, info *model.AuthInfo,
 
 // CreateEmailInviteResult contains the result of an email-based invite attempt.
 type CreateEmailInviteResult struct {
-	Invite      *model.ProjectInvite  // Non-nil when an invite was created (user doesn't exist)
-	Member      *model.ProjectMember  // Non-nil when user was added directly (user exists)
-	DirectAdd   bool                  // True if user already existed and was added directly
+	Invite *model.ProjectInvite
 }
 
-// CreateEmailInvite handles an email-based invite. If the user exists, adds them directly;
-// otherwise creates a personal invite and sends an email notification.
+// CreateEmailInvite creates a personal invite for the given email and sends an
+// email notification. The invitee must accept the invite to join the project,
+// regardless of whether they already have an account.
 func (s *ProjectService) CreateEmailInvite(ctx context.Context, info *model.AuthInfo, projectKey, email, role string, expiresAt *time.Time) (*CreateEmailInviteResult, error) {
 	project, err := s.projects.GetByKey(ctx, projectKey)
 	if err != nil {
@@ -1010,14 +1009,13 @@ func (s *ProjectService) CreateEmailInvite(ctx context.Context, info *model.Auth
 		}
 	}
 
-	// Check if the user already exists
+	// If the user already exists, check they're not already a member
 	existingUser, err := s.users.GetByEmail(ctx, email)
 	if err != nil && err != model.ErrNotFound {
 		return nil, fmt.Errorf("looking up user by email: %w", err)
 	}
 
 	if existingUser != nil {
-		// User exists — add them directly
 		existing, err := s.members.GetByProjectAndUser(ctx, project.ID, existingUser.ID)
 		if err == nil && existing != nil {
 			return nil, fmt.Errorf("user is already a member of this project: %w", model.ErrAlreadyExists)
@@ -1025,30 +1023,9 @@ func (s *ProjectService) CreateEmailInvite(ctx context.Context, info *model.Auth
 		if err != nil && err != model.ErrNotFound {
 			return nil, fmt.Errorf("checking membership: %w", err)
 		}
-
-		member := &model.ProjectMember{
-			ID:        uuid.New(),
-			ProjectID: project.ID,
-			UserID:    existingUser.ID,
-			Role:      role,
-		}
-		if err := s.members.Add(ctx, member); err != nil {
-			return nil, fmt.Errorf("adding member: %w", err)
-		}
-
-		log.Ctx(ctx).Info().
-			Str("project_key", projectKey).
-			Str("email", email).
-			Str("role", role).
-			Msg("user added directly via email invite (existing user)")
-
-		// Publish member-added notification (reuse existing flow)
-		s.publishMemberAdded(ctx, project, existingUser.ID, info.UserID, role)
-
-		return &CreateEmailInviteResult{Member: member, DirectAdd: true}, nil
 	}
 
-	// User doesn't exist — create a personal invite and send email
+	// Create a personal invite and send email
 	code, err := generateInviteCode()
 	if err != nil {
 		return nil, fmt.Errorf("generating invite code: %w", err)
@@ -1074,7 +1051,7 @@ func (s *ProjectService) CreateEmailInvite(ctx context.Context, info *model.Auth
 		Str("invite_code", code).
 		Str("invitee_email", email).
 		Str("role", role).
-		Msg("email invite created for non-existing user")
+		Msg("email invite created")
 
 	// Publish invite email notification
 	s.publishInviteEmail(ctx, project, info, email, code, role)

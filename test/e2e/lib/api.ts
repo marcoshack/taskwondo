@@ -865,7 +865,7 @@ export async function createEmailInvite(
   projectKey: string,
   email: string,
   role: string,
-): Promise<{ code?: string; url?: string; direct_add?: boolean }> {
+): Promise<{ code?: string; url?: string }> {
   const res = await request.post(`${BASE_URL}/api/v1/default/projects/${projectKey}/invites`, {
     headers: { Authorization: `Bearer ${token}` },
     data: { role, email },
