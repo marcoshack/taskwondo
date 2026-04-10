@@ -51,6 +51,7 @@ test.describe('Invite + Email Registration', () => {
     await expect(page.getByText('Create an account')).toBeVisible();
     await page.getByText('Create an account').click();
     await page.waitForURL(/\/register/);
+    await page.waitForLoadState('networkidle');
 
     // Step 3: Fill in the registration form
     await page.getByLabel('Display Name').fill(displayName);

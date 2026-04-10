@@ -32,53 +32,8 @@ function uniqueSlug() {
   return `ns-fe-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 5)}`;
 }
 
-test.describe('Namespace Feature Toggle', () => {
-  test('enabling namespaces via admin features toggle', async ({ page, request }, testInfo) => {
-    const adminToken = getAdminToken();
-
-    // Ensure namespaces are disabled via API, then navigate to pick up the new state
-    await api.disableNamespaces(request, adminToken);
-
-    // Navigate to the admin features page (fresh load picks up API state)
-    await page.goto('/admin/features');
-    await page.waitForLoadState('networkidle');
-
-    // Find the Namespaces section and its toggle
-    const namespacesSection = page.locator('div').filter({ hasText: /^Namespaces/ }).first();
-    const toggle = namespacesSection.locator('button[role="switch"]');
-
-    // If a parallel test re-enabled namespaces between our API call and page load, turn it off via UI
-    if (await toggle.getAttribute('aria-checked') === 'true') {
-      await toggle.click();
-      await expect(toggle).toHaveAttribute('aria-checked', 'false', { timeout: 10000 });
-    }
-    await expect(toggle).toHaveAttribute('aria-checked', 'false');
-    await attach(page, testInfo, '00-toggle-off');
-
-    // Click to enable
-    await toggle.click();
-
-    // Toggle should now be on
-    await expect(toggle).toHaveAttribute('aria-checked', 'true', { timeout: 10000 });
-    await attach(page, testInfo, '00-toggle-on');
-
-    // Verify the feature actually works: create a namespace via API.
-    // Re-enable first in case a parallel test toggled it off after the UI click.
-    await api.enableNamespaces(request, adminToken);
-    const slug = uniqueSlug();
-    await api.createNamespace(request, adminToken, slug, 'Toggle Test NS');
-
-    // Navigate to projects — namespace switcher should appear
-    await page.goto('/d/projects');
-    await page.waitForLoadState('networkidle');
-    const switcher = page.getByTestId('namespace-switcher');
-    await expect(switcher).toBeVisible();
-    await attach(page, testInfo, '00-feature-active');
-
-    // Cleanup
-    await api.deleteNamespace(request, adminToken, slug);
-  });
-});
+// The "enabling namespaces via admin features toggle" test lives in
+// namespace-toggle.spec.ts to avoid racing with tests that need namespaces enabled.
 
 test.describe('Namespace Frontend UI', () => {
   test.beforeEach(async ({ request }) => {

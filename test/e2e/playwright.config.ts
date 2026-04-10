@@ -51,18 +51,30 @@ export default defineConfig({
       dependencies: ['setup', 'chromium-setup'],
     },
     {
-      // Namespace tests toggle the global namespaces_enabled setting, so they
-      // must run without full parallelism to avoid racing on shared state.
+      // Namespace tests use the global namespaces_enabled setting.
+      // fullyParallel:false serialises tests *within* each file; files still
+      // run in parallel which is safe because these tests only call
+      // enableNamespaces (idempotent).
       name: 'namespace',
       testMatch: /namespace/,
+      testIgnore: /namespace-toggle/,
       use: { ...devices['Desktop Chrome'] },
       dependencies: ['setup', 'chromium-setup'],
       fullyParallel: false,
     },
     {
+      // Tests that call disableNamespaces must run AFTER all other namespace
+      // tests to avoid toggling global state out from under them.
+      name: 'namespace-toggle',
+      testMatch: /namespace-toggle/,
+      use: { ...devices['Desktop Chrome'] },
+      dependencies: ['namespace'],
+      fullyParallel: false,
+    },
+    {
       name: 'cleanup',
       testMatch: /cleanup\.teardown\.ts/,
-      dependencies: ['chromium', 'namespace'],
+      dependencies: ['chromium', 'namespace-toggle'],
     },
   ],
 });

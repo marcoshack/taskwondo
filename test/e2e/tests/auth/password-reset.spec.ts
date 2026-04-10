@@ -27,12 +27,14 @@ test.describe('Password Reset', () => {
     const loginResult = await api.login(request, email, created.temporary_password);
     await api.changePassword(request, loginResult.token, created.temporary_password, oldPassword);
 
-    // Step 1: Navigate to login page and click "Forgot your password?"
+    // Step 1: Verify login page has "Forgot your password?" link, then
+    // navigate directly to the forgot-password page (avoids SPA transition
+    // race where both pages share an "Email" input).
     await page.goto('/login');
     await page.waitForLoadState('networkidle');
     await expect(page.getByText('Forgot your password?')).toBeVisible();
-    await page.getByText('Forgot your password?').click();
-    await page.waitForURL(/\/forgot-password/);
+    await page.goto('/forgot-password');
+    await page.waitForLoadState('networkidle');
 
     // Step 2: Enter email and submit
     await page.getByLabel('Email').fill(email);

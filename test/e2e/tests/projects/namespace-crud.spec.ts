@@ -113,48 +113,8 @@ test.describe('Namespace CRUD', () => {
     expect(body.error.code).toBe('NAMESPACE_NOT_EMPTY');
   });
 
-  test('cannot create namespace when feature is disabled', async ({ request }) => {
-    const adminToken = getAdminToken();
-    const BASE_URL = process.env.BASE_URL || 'http://localhost:5173';
-
-    // Disable namespaces
-    await api.disableNamespaces(request, adminToken);
-
-    const res = await request.post(`${BASE_URL}/api/v1/namespaces`, {
-      headers: { Authorization: `Bearer ${adminToken}` },
-      data: { slug: 'shouldfail', display_name: 'Should Fail' },
-    });
-    expect(res.status()).toBe(403);
-    const body = await res.json();
-    expect(body.error.code).toBe('NAMESPACES_DISABLED');
-
-    // Re-enable for cleanup
-    await api.enableNamespaces(request, adminToken);
-  });
-
-  test('requesting non-default namespace when feature disabled returns 404', async ({ request }) => {
-    const adminToken = getAdminToken();
-    const BASE_URL = process.env.BASE_URL || 'http://localhost:5173';
-
-    // Create a namespace first (while enabled)
-    const slug = `ns-dis-${Date.now().toString(36)}`;
-    await api.createNamespace(request, adminToken, slug, 'Disabled Test');
-
-    // Disable namespaces
-    await api.disableNamespaces(request, adminToken);
-
-    // Try to list projects with that namespace context — middleware should block
-    const res = await request.get(`${BASE_URL}/api/v1/${slug}/projects`, {
-      headers: { Authorization: `Bearer ${adminToken}` },
-    });
-    expect(res.status()).toBe(404);
-    const body = await res.json();
-    expect(body.error.code).toBe('NOT_FOUND');
-
-    // Re-enable for cleanup
-    await api.enableNamespaces(request, adminToken);
-    await api.deleteNamespace(request, adminToken, slug);
-  });
+  // Tests that call disableNamespaces live in namespace-toggle.spec.ts
+  // to avoid racing with other namespace tests that need it enabled.
 });
 
 test.describe('Namespace Members', () => {
