@@ -285,7 +285,8 @@ func (r *EscalationRepository) loadLevelTeams(ctx context.Context, levelID uuid.
 		`SELECT t.id, t.name,
 		        CASE WHEN oc.id IS NOT NULL THEN true ELSE false END AS has_oncall,
 		        COALESCE(ov.override_user_id, oc.current_user_id),
-		        COALESCE(ov_u.display_name, u.display_name)
+		        COALESCE(ov_u.display_name, u.display_name),
+		        COALESCE(ov_u.email, u.email)
 		 FROM escalation_level_teams elt
 		 JOIN teams t ON t.id = elt.team_id
 		 LEFT JOIN oncall_rotations oc ON oc.team_id = t.id
@@ -308,7 +309,8 @@ func (r *EscalationRepository) loadLevelTeams(ctx context.Context, levelID uuid.
 		var t model.EscalationLevelTeam
 		var oncallUserID sql.NullString
 		var oncallUserName sql.NullString
-		if err := rows.Scan(&t.TeamID, &t.Name, &t.HasOncall, &oncallUserID, &oncallUserName); err != nil {
+		var oncallUserEmail sql.NullString
+		if err := rows.Scan(&t.TeamID, &t.Name, &t.HasOncall, &oncallUserID, &oncallUserName, &oncallUserEmail); err != nil {
 			return nil, fmt.Errorf("scanning escalation level team row: %w", err)
 		}
 		if oncallUserID.Valid {
@@ -317,6 +319,9 @@ func (r *EscalationRepository) loadLevelTeams(ctx context.Context, levelID uuid.
 		}
 		if oncallUserName.Valid {
 			t.OncallUserName = oncallUserName.String
+		}
+		if oncallUserEmail.Valid {
+			t.OncallUserEmail = oncallUserEmail.String
 		}
 		teams = append(teams, t)
 	}

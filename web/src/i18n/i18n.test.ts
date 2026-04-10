@@ -78,6 +78,7 @@ const SAME_VALUE_ALLOWED = new Set([
   'common.description',
   'common.experimental',
   'escalation.name',
+  'escalation.teamsSection',
   'common.system',
   'milestone.dashboard.totalItems',
   'milestones.name',

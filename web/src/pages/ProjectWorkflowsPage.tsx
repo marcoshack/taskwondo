@@ -18,6 +18,7 @@ import {
   useDeleteEscalationMapping,
 } from '@/hooks/useEscalation'
 import { useSLATargets } from '@/hooks/useSLA'
+import { useTeams } from '@/hooks/useTeams'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -51,6 +52,7 @@ export function ProjectWorkflowsPage() {
   const { data: typeWorkflows } = useTypeWorkflows(projectKey ?? '')
   const updateTypeWorkflowMutation = useUpdateTypeWorkflow(projectKey ?? '')
   const { data: slaTargets } = useSLATargets(projectKey ?? '')
+  const { data: projectTeams } = useTeams(projectKey ?? '')
 
   const [activeTab, setActiveTab] = useState('workflow')
 
@@ -697,6 +699,7 @@ export function ProjectWorkflowsPage() {
           projectKey={projectKey ?? ''}
           editingId={editingEscalationId}
           members={members ?? []}
+          teams={projectTeams ?? []}
         />
       )}
 

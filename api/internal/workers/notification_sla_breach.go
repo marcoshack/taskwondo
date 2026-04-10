@@ -22,10 +22,16 @@ type slaBreachNotificationRepository interface {
 	RecordSent(ctx context.Context, workItemID uuid.UUID, statusName string, level, thresholdPct int) error
 }
 
+// slaBreachTeamMemberRepository lists team members for teams without on-call rotation.
+type slaBreachTeamMemberRepository interface {
+	ListMembers(ctx context.Context, teamID uuid.UUID) ([]model.TeamMemberWithUser, error)
+}
+
 // NotificationSLABreachTask sends email notifications for SLA breach events.
 type NotificationSLABreachTask struct {
 	escalations   slaBreachEscalationRepository
 	notifications slaBreachNotificationRepository
+	teamMembers   slaBreachTeamMemberRepository
 	settings      userSettingRepository
 	sender        emailSender
 	baseURL       string
@@ -36,6 +42,7 @@ type NotificationSLABreachTask struct {
 func NewNotificationSLABreachTask(
 	escalations slaBreachEscalationRepository,
 	notifications slaBreachNotificationRepository,
+	teamMembers slaBreachTeamMemberRepository,
 	settings userSettingRepository,
 	sender emailSender,
 	baseURL string,
@@ -44,6 +51,7 @@ func NewNotificationSLABreachTask(
 	return &NotificationSLABreachTask{
 		escalations:   escalations,
 		notifications: notifications,
+		teamMembers:   teamMembers,
 		settings:      settings,
 		sender:        sender,
 		baseURL:       baseURL,
@@ -87,20 +95,60 @@ func (t *NotificationSLABreachTask) Execute(ctx context.Context, payload []byte)
 	}
 	level := escList.Levels[evt.EscalationLevel-1]
 
-	if len(level.Users) == 0 {
+	// Build deduplicated recipient list from individual users and teams
+	type recipient struct {
+		userID uuid.UUID
+		email  string
+	}
+	seen := make(map[uuid.UUID]bool)
+	var recipients []recipient
+
+	// Add individual users
+	for _, user := range level.Users {
+		if !seen[user.UserID] {
+			seen[user.UserID] = true
+			recipients = append(recipients, recipient{userID: user.UserID, email: user.Email})
+		}
+	}
+
+	// Resolve team recipients
+	for _, team := range level.Teams {
+		if team.HasOncall && team.OncallUserID != nil {
+			// Team with on-call rotation: notify only the current on-call user
+			if !seen[*team.OncallUserID] {
+				seen[*team.OncallUserID] = true
+				recipients = append(recipients, recipient{userID: *team.OncallUserID, email: team.OncallUserEmail})
+			}
+		} else if !team.HasOncall {
+			// Team without on-call rotation: notify all members
+			members, err := t.teamMembers.ListMembers(ctx, team.TeamID)
+			if err != nil {
+				l.Error().Err(err).Str("team_id", team.TeamID.String()).Msg("failed to list team members")
+				continue
+			}
+			for _, m := range members {
+				if !seen[m.UserID] {
+					seen[m.UserID] = true
+					recipients = append(recipients, recipient{userID: m.UserID, email: m.Email})
+				}
+			}
+		}
+	}
+
+	if len(recipients) == 0 {
 		l.Debug().Msg("no recipients for escalation level")
 		return nil
 	}
 
 	// Send email to each recipient who has SLA breach notifications enabled
 	emailsSent := 0
-	for _, user := range level.Users {
-		if !t.isSLABreachEnabled(ctx, user.UserID, evt.ProjectID) {
-			l.Debug().Str("user_id", user.UserID.String()).Msg("SLA breach notification disabled for user")
+	for _, r := range recipients {
+		if !t.isSLABreachEnabled(ctx, r.userID, evt.ProjectID) {
+			l.Debug().Str("user_id", r.userID.String()).Msg("SLA breach notification disabled for user")
 			continue
 		}
 
-		lang := getUserLanguage(ctx, t.settings, user.UserID)
+		lang := getUserLanguage(ctx, t.settings, r.userID)
 
 		subject := i18n.T(lang, "email.sla_breach.subject",
 			"projectKey", evt.ProjectKey,
@@ -113,13 +161,13 @@ func (t *NotificationSLABreachTask) Execute(ctx context.Context, payload []byte)
 
 		body := slaBreachEmailHTML(lang, evt, itemURL)
 
-		if err := t.sender.Send(ctx, user.Email, subject, body); err != nil {
-			l.Error().Err(err).Str("to", user.Email).Msg("failed to send SLA breach notification")
+		if err := t.sender.Send(ctx, r.email, subject, body); err != nil {
+			l.Error().Err(err).Str("to", r.email).Msg("failed to send SLA breach notification")
 			continue
 		}
 
 		emailsSent++
-		l.Info().Str("to", user.Email).Msg("SLA breach notification sent")
+		l.Info().Str("to", r.email).Msg("SLA breach notification sent")
 	}
 
 	// Record that this notification was sent (for deduplication)

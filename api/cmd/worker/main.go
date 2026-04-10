@@ -163,7 +163,7 @@ func main() {
 
 	// Register SLA breach notification task
 	notifySLABreach := workers.NewNotificationSLABreachTask(
-		escalationRepo, slaNotificationRepo, userSettingRepo, emailSender, cfg.BaseURL, log.Logger,
+		escalationRepo, slaNotificationRepo, teamRepo, userSettingRepo, emailSender, cfg.BaseURL, log.Logger,
 	)
 	dispatcher.Register(notifySLABreach)
 

@@ -1195,13 +1195,13 @@ export async function uploadAttachment(
 
 export interface EscalationListInput {
   name: string;
-  levels: { threshold_pct: number; user_ids: string[] }[];
+  levels: { threshold_pct: number; user_ids: string[]; team_ids?: string[] }[];
 }
 
 export interface EscalationListResponse {
   id: string;
   name: string;
-  levels: { id: string; threshold_pct: number; position: number; users: { id: string; display_name: string; email: string }[] }[];
+  levels: { id: string; threshold_pct: number; position: number; users: { id: string; display_name: string; email: string }[]; teams: { id: string; name: string; has_oncall: boolean }[] }[];
 }
 
 export async function createEscalationList(

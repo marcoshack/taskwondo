@@ -41,6 +41,17 @@ func (m *mockBreachNotifRecordRepo) RecordSent(_ context.Context, workItemID uui
 	return nil
 }
 
+type mockBreachTeamMemberRepo struct {
+	members map[uuid.UUID][]model.TeamMemberWithUser
+}
+
+func (m *mockBreachTeamMemberRepo) ListMembers(_ context.Context, teamID uuid.UUID) ([]model.TeamMemberWithUser, error) {
+	if members, ok := m.members[teamID]; ok {
+		return members, nil
+	}
+	return nil, nil
+}
+
 // --- Tests ---
 
 func TestNotificationSLABreach_Name(t *testing.T) {
@@ -80,7 +91,7 @@ func TestNotificationSLABreach_Execute_SendsEmail(t *testing.T) {
 	sender := &mockEmailSender{}
 
 	task := NewNotificationSLABreachTask(
-		escRepo, notifRepo, settings, sender, "https://example.com", zerolog.Nop(),
+		escRepo, notifRepo, &mockBreachTeamMemberRepo{members: map[uuid.UUID][]model.TeamMemberWithUser{}}, settings, sender, "https://example.com", zerolog.Nop(),
 	)
 
 	evt := model.SLABreachEvent{
@@ -185,7 +196,7 @@ func TestNotificationSLABreach_Execute_SkipsDisabledPreference(t *testing.T) {
 	sender := &mockEmailSender{}
 
 	task := NewNotificationSLABreachTask(
-		escRepo, notifRepo, settings, sender, "https://example.com", zerolog.Nop(),
+		escRepo, notifRepo, &mockBreachTeamMemberRepo{members: map[uuid.UUID][]model.TeamMemberWithUser{}}, settings, sender, "https://example.com", zerolog.Nop(),
 	)
 
 	evt := model.SLABreachEvent{
@@ -245,7 +256,7 @@ func TestNotificationSLABreach_Execute_SendsToMultipleRecipients(t *testing.T) {
 	sender := &mockEmailSender{}
 
 	task := NewNotificationSLABreachTask(
-		escRepo, notifRepo, settings, sender, "https://example.com", zerolog.Nop(),
+		escRepo, notifRepo, &mockBreachTeamMemberRepo{members: map[uuid.UUID][]model.TeamMemberWithUser{}}, settings, sender, "https://example.com", zerolog.Nop(),
 	)
 
 	evt := model.SLABreachEvent{
@@ -282,6 +293,7 @@ func TestNotificationSLABreach_Execute_InvalidPayload(t *testing.T) {
 	task := NewNotificationSLABreachTask(
 		&mockBreachEscalationRepo{lists: map[uuid.UUID]*model.EscalationList{}},
 		&mockBreachNotifRecordRepo{},
+		&mockBreachTeamMemberRepo{members: map[uuid.UUID][]model.TeamMemberWithUser{}},
 		&mockUserSettingRepo{settings: map[string]*model.UserSetting{}},
 		&mockEmailSender{},
 		"https://example.com",
@@ -313,6 +325,7 @@ func TestNotificationSLABreach_Execute_EscalationLevelOutOfRange(t *testing.T) {
 	task := NewNotificationSLABreachTask(
 		escRepo,
 		&mockBreachNotifRecordRepo{},
+		&mockBreachTeamMemberRepo{members: map[uuid.UUID][]model.TeamMemberWithUser{}},
 		&mockUserSettingRepo{settings: map[string]*model.UserSetting{}},
 		sender,
 		"https://example.com",
@@ -371,6 +384,7 @@ func TestNotificationSLABreach_Execute_DefaultSLABreachEnabled(t *testing.T) {
 	task := NewNotificationSLABreachTask(
 		escRepo,
 		&mockBreachNotifRecordRepo{},
+		&mockBreachTeamMemberRepo{members: map[uuid.UUID][]model.TeamMemberWithUser{}},
 		settings,
 		sender,
 		"https://example.com",
@@ -457,5 +471,205 @@ func TestSLABreachEmailHTML_BreachedColor(t *testing.T) {
 	// Progress bar should use red color for >= 100%
 	if !strings.Contains(html, "#ef4444") {
 		t.Error("expected breached (red) color in progress bar")
+	}
+}
+
+func TestNotificationSLABreach_Execute_TeamWithOncall(t *testing.T) {
+	escListID := uuid.New()
+	projectID := uuid.New()
+	oncallUserID := uuid.New()
+	teamID := uuid.New()
+
+	escRepo := &mockBreachEscalationRepo{lists: map[uuid.UUID]*model.EscalationList{
+		escListID: {
+			ID:        escListID,
+			ProjectID: projectID,
+			Levels: []model.EscalationLevel{
+				{
+					ThresholdPct: 75,
+					Teams: []model.EscalationLevelTeam{
+						{
+							TeamID:          teamID,
+							Name:            "Ops Team",
+							HasOncall:       true,
+							OncallUserID:    &oncallUserID,
+							OncallUserName:  "Oncall Person",
+							OncallUserEmail: "oncall@example.com",
+						},
+					},
+				},
+			},
+		},
+	}}
+
+	notifRepo := &mockBreachNotifRecordRepo{}
+	teamMemberRepo := &mockBreachTeamMemberRepo{members: map[uuid.UUID][]model.TeamMemberWithUser{}}
+	settings := &mockUserSettingRepo{settings: map[string]*model.UserSetting{}}
+	sender := &mockEmailSender{}
+
+	task := NewNotificationSLABreachTask(
+		escRepo, notifRepo, teamMemberRepo, settings, sender, "https://example.com", zerolog.Nop(),
+	)
+
+	evt := model.SLABreachEvent{
+		WorkItemID:       uuid.New(),
+		ProjectID:        projectID,
+		ProjectKey:       "TP",
+		ItemNumber:       1,
+		Title:            "Test",
+		StatusName:       "Open",
+		SLAPercentage:    80,
+		TargetSeconds:    3600,
+		ElapsedSeconds:   2880,
+		EscalationLevel:  1,
+		EscalationListID: escListID,
+		ThresholdPct:     75,
+	}
+	payload, _ := json.Marshal(evt)
+
+	if err := task.Execute(context.Background(), payload); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(sender.sent) != 1 {
+		t.Fatalf("expected 1 email (on-call user), got %d", len(sender.sent))
+	}
+	if sender.sent[0].to != "oncall@example.com" {
+		t.Errorf("expected email to oncall@example.com, got %s", sender.sent[0].to)
+	}
+}
+
+func TestNotificationSLABreach_Execute_TeamWithoutOncall(t *testing.T) {
+	escListID := uuid.New()
+	projectID := uuid.New()
+	teamID := uuid.New()
+	member1ID := uuid.New()
+	member2ID := uuid.New()
+
+	escRepo := &mockBreachEscalationRepo{lists: map[uuid.UUID]*model.EscalationList{
+		escListID: {
+			ID:        escListID,
+			ProjectID: projectID,
+			Levels: []model.EscalationLevel{
+				{
+					ThresholdPct: 75,
+					Teams: []model.EscalationLevelTeam{
+						{
+							TeamID:    teamID,
+							Name:      "Dev Team",
+							HasOncall: false,
+						},
+					},
+				},
+			},
+		},
+	}}
+
+	teamMemberRepo := &mockBreachTeamMemberRepo{members: map[uuid.UUID][]model.TeamMemberWithUser{
+		teamID: {
+			{TeamMember: model.TeamMember{UserID: member1ID}, Email: "dev1@example.com", DisplayName: "Dev1"},
+			{TeamMember: model.TeamMember{UserID: member2ID}, Email: "dev2@example.com", DisplayName: "Dev2"},
+		},
+	}}
+
+	notifRepo := &mockBreachNotifRecordRepo{}
+	settings := &mockUserSettingRepo{settings: map[string]*model.UserSetting{}}
+	sender := &mockEmailSender{}
+
+	task := NewNotificationSLABreachTask(
+		escRepo, notifRepo, teamMemberRepo, settings, sender, "https://example.com", zerolog.Nop(),
+	)
+
+	evt := model.SLABreachEvent{
+		WorkItemID:       uuid.New(),
+		ProjectID:        projectID,
+		ProjectKey:       "TP",
+		ItemNumber:       1,
+		Title:            "Test",
+		StatusName:       "Open",
+		SLAPercentage:    80,
+		TargetSeconds:    3600,
+		ElapsedSeconds:   2880,
+		EscalationLevel:  1,
+		EscalationListID: escListID,
+		ThresholdPct:     75,
+	}
+	payload, _ := json.Marshal(evt)
+
+	if err := task.Execute(context.Background(), payload); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(sender.sent) != 2 {
+		t.Fatalf("expected 2 emails (all team members), got %d", len(sender.sent))
+	}
+}
+
+func TestNotificationSLABreach_Execute_DeduplicatesUserAndTeam(t *testing.T) {
+	escListID := uuid.New()
+	projectID := uuid.New()
+	userID := uuid.New()
+	teamID := uuid.New()
+
+	escRepo := &mockBreachEscalationRepo{lists: map[uuid.UUID]*model.EscalationList{
+		escListID: {
+			ID:        escListID,
+			ProjectID: projectID,
+			Levels: []model.EscalationLevel{
+				{
+					ThresholdPct: 75,
+					Users: []model.EscalationLevelUser{
+						{UserID: userID, DisplayName: "Same User", Email: "user@example.com"},
+					},
+					Teams: []model.EscalationLevelTeam{
+						{
+							TeamID:          teamID,
+							Name:            "Ops Team",
+							HasOncall:       true,
+							OncallUserID:    &userID,
+							OncallUserName:  "Same User",
+							OncallUserEmail: "user@example.com",
+						},
+					},
+				},
+			},
+		},
+	}}
+
+	teamMemberRepo := &mockBreachTeamMemberRepo{members: map[uuid.UUID][]model.TeamMemberWithUser{}}
+	notifRepo := &mockBreachNotifRecordRepo{}
+	settings := &mockUserSettingRepo{settings: map[string]*model.UserSetting{}}
+	sender := &mockEmailSender{}
+
+	task := NewNotificationSLABreachTask(
+		escRepo, notifRepo, teamMemberRepo, settings, sender, "https://example.com", zerolog.Nop(),
+	)
+
+	evt := model.SLABreachEvent{
+		WorkItemID:       uuid.New(),
+		ProjectID:        projectID,
+		ProjectKey:       "TP",
+		ItemNumber:       1,
+		Title:            "Test",
+		StatusName:       "Open",
+		SLAPercentage:    80,
+		TargetSeconds:    3600,
+		ElapsedSeconds:   2880,
+		EscalationLevel:  1,
+		EscalationListID: escListID,
+		ThresholdPct:     75,
+	}
+	payload, _ := json.Marshal(evt)
+
+	if err := task.Execute(context.Background(), payload); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Should only send 1 email despite user appearing both individually and as on-call
+	if len(sender.sent) != 1 {
+		t.Fatalf("expected 1 email (deduplicated), got %d", len(sender.sent))
+	}
+	if sender.sent[0].to != "user@example.com" {
+		t.Errorf("expected email to user@example.com, got %s", sender.sent[0].to)
 	}
 }

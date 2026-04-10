@@ -95,7 +95,7 @@ test.describe('Escalation Lists', () => {
     await dialog.locator('input[type="number"]').first().fill('50');
 
     // Search for the helper user (dropdown is portaled to document.body)
-    await dialog.getByPlaceholder('Search by name or email...').fill(helper.name.slice(0, 8));
+    await dialog.getByPlaceholder('Search by name, e-mail or team name...').fill(helper.name.slice(0, 8));
     await page.waitForTimeout(500);
     await page.getByText(helper.name).first().click();
 
@@ -161,7 +161,7 @@ test.describe('Escalation Lists', () => {
     // No users
     await dialog.locator('input[type="number"]').first().fill('50');
     await dialog.getByRole('button', { name: 'Create' }).click();
-    await expect(dialog.getByText('Each level must have at least one user.')).toBeVisible();
+    await expect(dialog.getByText('Each level must have at least one user or team.')).toBeVisible();
 
     await page.keyboard.press('Escape');
   });
@@ -302,5 +302,96 @@ test.describe('Escalation Lists', () => {
     await expect(listCard).not.toBeVisible({ timeout: 5000 });
 
     await api.deleteEscalationMapping(request, testUser.token, testProject.key, 'task').catch(() => {});
+  });
+
+  test('create escalation list with team via UI', async ({ page, request, testUser, testProject }) => {
+    // Create a team
+    const team = await api.createTeam(request, testUser.token, testProject.key, { name: 'E2E Oncall Team' });
+
+    await gotoEscalationTab(page, testProject.key);
+
+    await page.getByRole('button', { name: 'New Escalation List' }).click();
+
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+
+    await dialog.getByRole('textbox', { name: 'Name', exact: true }).fill('Team Escalation');
+
+    // Add a level
+    await dialog.getByRole('button', { name: 'Add Level' }).click();
+    await dialog.locator('input[type="number"]').first().fill('60');
+
+    // Search for the team
+    await dialog.getByPlaceholder('Search by name, e-mail or team name...').fill('E2E Oncall');
+    await page.waitForTimeout(500);
+
+    // Verify team section header is visible
+    await expect(page.getByText('Teams', { exact: true }).first()).toBeVisible();
+
+    // Click the team
+    await page.getByText('E2E Oncall Team').first().click();
+
+    // Verify the green team chip appears
+    const teamChip = dialog.locator('.bg-green-50, .dark\\:bg-green-900\\/30').filter({ hasText: 'E2E Oncall Team' });
+    await expect(teamChip).toBeVisible();
+
+    // Create
+    await dialog.getByRole('button', { name: 'Create' }).click();
+    await expect(dialog).not.toBeVisible({ timeout: 5000 });
+
+    await expect(page.getByRole('button', { name: /Team Escalation/ })).toBeVisible();
+
+    // Verify team was persisted via API
+    const lists = await api.listEscalationLists(request, testUser.token, testProject.key);
+    const created = lists.find((l) => l.name === 'Team Escalation');
+    expect(created).toBeTruthy();
+    expect(created!.levels[0].teams.length).toBe(1);
+    expect(created!.levels[0].teams[0].name).toBe('E2E Oncall Team');
+
+    // Cleanup
+    for (const l of lists) {
+      await api.deleteEscalationList(request, testUser.token, testProject.key, l.id);
+    }
+  });
+
+  test('create escalation list with both user and team', async ({ page, request, testUser, testProject }) => {
+    const helper = await createHelperUser(request, testUser.token, testProject.key);
+    const team = await api.createTeam(request, testUser.token, testProject.key, { name: 'E2E Mixed Team' });
+
+    // Create via API with both user and team
+    const list = await api.createEscalationList(request, testUser.token, testProject.key, {
+      name: 'Mixed Recipients',
+      levels: [{ threshold_pct: 50, user_ids: [helper.id], team_ids: [team.id] }],
+    });
+
+    // Verify via API
+    expect(list.levels[0].users.length).toBe(1);
+    expect(list.levels[0].teams.length).toBe(1);
+
+    await gotoEscalationTab(page, testProject.key);
+
+    // Open the list edit dialog via pencil button
+    const listCard = page.getByRole('button', { name: /Mixed Recipients/ });
+    await expect(listCard).toBeVisible();
+    const cardContainer = listCard.locator('xpath=ancestor::div[contains(@class,"p-4")]');
+    await cardContainer.locator('button').filter({ has: page.locator('svg.h-3\\.5') }).first().click();
+
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+
+    // Wait for data to load
+    await expect(dialog.getByRole('textbox', { name: 'Name', exact: true })).toHaveValue('Mixed Recipients', { timeout: 5000 });
+
+    // Verify team chip (green) and user chip (indigo) are both visible
+    await expect(dialog.locator('span').filter({ hasText: 'E2E Mixed Team' }).first()).toBeVisible();
+    await expect(dialog.locator('span').filter({ hasText: helper.name }).first()).toBeVisible();
+
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+
+    // Cleanup
+    const lists = await api.listEscalationLists(request, testUser.token, testProject.key);
+    for (const l of lists) {
+      await api.deleteEscalationList(request, testUser.token, testProject.key, l.id);
+    }
   });
 });

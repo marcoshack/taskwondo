@@ -1,17 +1,19 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
-import { X, Plus, Trash2 } from 'lucide-react'
+import { X, Plus, Trash2, Users } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Avatar } from '@/components/ui/Avatar'
 import { useCreateEscalationList, useUpdateEscalationList, useEscalationListDetail } from '@/hooks/useEscalation'
 import type { ProjectMember } from '@/api/projects'
+import type { Team } from '@/api/teams'
 
 interface LevelDraft {
   threshold_pct: string
   users: { id: string; display_name: string; email: string }[]
+  teams: { id: string; name: string }[]
 }
 
 interface Props {
@@ -21,9 +23,10 @@ interface Props {
   projectKey: string
   editingId?: string | null
   members: ProjectMember[]
+  teams: Team[]
 }
 
-export function EscalationListModal({ open, onClose, onSave, projectKey, editingId, members }: Props) {
+export function EscalationListModal({ open, onClose, onSave, projectKey, editingId, members, teams }: Props) {
   const { t } = useTranslation()
   const createMutation = useCreateEscalationList(projectKey)
   const updateMutation = useUpdateEscalationList(projectKey)
@@ -48,6 +51,10 @@ export function EscalationListModal({ open, onClose, onSave, projectKey, editing
             display_name: u.display_name,
             email: u.email,
           })),
+          teams: (lv.teams ?? []).map((t) => ({
+            id: t.id,
+            name: t.name,
+          })),
         }))
       )
       setInitialized(true)
@@ -65,7 +72,7 @@ export function EscalationListModal({ open, onClose, onSave, projectKey, editing
   }, [open])
 
   function addLevel() {
-    setLevels([...levels, { threshold_pct: '', users: [] }])
+    setLevels([...levels, { threshold_pct: '', users: [], teams: [] }])
   }
 
   function removeLevel(index: number) {
@@ -98,6 +105,28 @@ export function EscalationListModal({ open, onClose, onSave, projectKey, editing
     )
   }
 
+  function addTeamToLevel(index: number, team: Team) {
+    setLevels(
+      levels.map((lv, i) => {
+        if (i !== index) return lv
+        if (lv.teams.some((t) => t.id === team.id)) return lv
+        return {
+          ...lv,
+          teams: [...lv.teams, { id: team.id, name: team.name }],
+        }
+      })
+    )
+  }
+
+  function removeTeamFromLevel(levelIndex: number, teamId: string) {
+    setLevels(
+      levels.map((lv, i) => {
+        if (i !== levelIndex) return lv
+        return { ...lv, teams: lv.teams.filter((t) => t.id !== teamId) }
+      })
+    )
+  }
+
   function validate(): boolean {
     setError('')
 
@@ -126,10 +155,10 @@ export function EscalationListModal({ open, onClose, onSave, projectKey, editing
       thresholds.add(pct)
     }
 
-    // Check users
+    // Check users or teams
     for (const lv of levels) {
-      if (lv.users.length === 0) {
-        setError(t('escalation.usersRequired'))
+      if (lv.users.length === 0 && lv.teams.length === 0) {
+        setError(t('escalation.recipientsRequired'))
         return false
       }
     }
@@ -145,6 +174,7 @@ export function EscalationListModal({ open, onClose, onSave, projectKey, editing
       levels: levels.map((lv) => ({
         threshold_pct: Number(lv.threshold_pct),
         user_ids: lv.users.map((u) => u.id),
+        team_ids: lv.teams.map((t) => t.id),
       })),
     }
 
@@ -257,18 +287,36 @@ export function EscalationListModal({ open, onClose, onSave, projectKey, editing
                     </button>
                   </div>
 
-                  {/* Users */}
+                  {/* Users and Teams */}
                   <div>
                     <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                      {t('escalation.users')}
+                      {t('escalation.notifyUsersAndTeams')}
                     </label>
 
-                    {/* Selected user chips */}
-                    {level.users.length > 0 && (
+                    {/* Selected chips */}
+                    {(level.teams.length > 0 || level.users.length > 0) && (
                       <div className="flex flex-wrap gap-1.5 mb-2">
+                        {/* Team chips (green) */}
+                        {level.teams.map((team) => (
+                          <span
+                            key={`team-${team.id}`}
+                            className="inline-flex items-center gap-1 rounded-full bg-green-50 dark:bg-green-900/30 px-2.5 py-1 text-xs font-medium text-green-700 dark:text-green-300 border border-green-200 dark:border-green-700"
+                          >
+                            <Users className="h-3 w-3" />
+                            <span>{team.name}</span>
+                            <button
+                              type="button"
+                              className="ml-0.5 hover:text-red-500"
+                              onClick={() => removeTeamFromLevel(index, team.id)}
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </span>
+                        ))}
+                        {/* User chips (indigo) */}
                         {level.users.map((user) => (
                           <span
-                            key={user.id}
+                            key={`user-${user.id}`}
                             className="inline-flex items-center gap-1 rounded-full bg-indigo-50 dark:bg-indigo-900/30 px-2.5 py-1 text-xs font-medium text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700"
                           >
                             <Avatar name={user.display_name} size="xs" />
@@ -285,11 +333,14 @@ export function EscalationListModal({ open, onClose, onSave, projectKey, editing
                       </div>
                     )}
 
-                    {/* Member picker */}
-                    <MemberPicker
+                    {/* Picker */}
+                    <MemberTeamPicker
                       members={members}
+                      teams={teams}
                       excludeUserIds={level.users.map((u) => u.id)}
-                      onSelect={(member) => addUserToLevel(index, member)}
+                      excludeTeamIds={level.teams.map((t) => t.id)}
+                      onSelectMember={(member) => addUserToLevel(index, member)}
+                      onSelectTeam={(team) => addTeamToLevel(index, team)}
                     />
                   </div>
                 </div>
@@ -312,14 +363,20 @@ export function EscalationListModal({ open, onClose, onSave, projectKey, editing
   )
 }
 
-function MemberPicker({
+function MemberTeamPicker({
   members,
+  teams,
   excludeUserIds,
-  onSelect,
+  excludeTeamIds,
+  onSelectMember,
+  onSelectTeam,
 }: {
   members: ProjectMember[]
+  teams: Team[]
   excludeUserIds: string[]
-  onSelect: (member: ProjectMember) => void
+  excludeTeamIds: string[]
+  onSelectMember: (member: ProjectMember) => void
+  onSelectTeam: (team: Team) => void
 }) {
   const { t } = useTranslation()
   const [search, setSearch] = useState('')
@@ -329,12 +386,21 @@ function MemberPicker({
   const dropdownRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const available = members.filter((m) => {
+  const q = search.toLowerCase()
+
+  const availableTeams = teams.filter((t) => {
+    if (excludeTeamIds.includes(t.id)) return false
+    if (!search) return true
+    return t.name.toLowerCase().includes(q)
+  })
+
+  const availableMembers = members.filter((m) => {
     if (excludeUserIds.includes(m.user_id)) return false
     if (!search) return true
-    const q = search.toLowerCase()
     return m.display_name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q)
   })
+
+  const hasResults = availableTeams.length > 0 || availableMembers.length > 0
 
   const updatePosition = useCallback(() => {
     if (!inputRef.current) return
@@ -359,8 +425,14 @@ function MemberPicker({
     return () => document.removeEventListener('mousedown', handler)
   }, [open])
 
-  function handleSelect(member: ProjectMember) {
-    onSelect(member)
+  function handleSelectMember(member: ProjectMember) {
+    onSelectMember(member)
+    setSearch('')
+    setOpen(false)
+  }
+
+  function handleSelectTeam(team: Team) {
+    onSelectTeam(team)
     setSearch('')
     setOpen(false)
   }
@@ -370,7 +442,7 @@ function MemberPicker({
       <input
         ref={inputRef}
         className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-        placeholder={t('projects.settings.addMemberPlaceholder')}
+        placeholder={t('escalation.searchPlaceholder')}
         value={search}
         onChange={(e) => { setSearch(e.target.value); updatePosition(); setOpen(true) }}
         onFocus={() => { updatePosition(); setOpen(true) }}
@@ -383,26 +455,60 @@ function MemberPicker({
           className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg"
         >
           <ul className="max-h-48 overflow-auto">
-            {available.length === 0 ? (
+            {!hasResults ? (
               <li className="px-3 py-2 text-sm text-gray-400 dark:text-gray-500">
                 {t('projects.settings.noUsersFound')}
               </li>
             ) : (
-              available.map((member) => (
-                <li key={member.user_id}>
-                  <button
-                    type="button"
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 flex items-center gap-2"
-                    onClick={() => handleSelect(member)}
-                  >
-                    <span className="shrink-0"><Avatar name={member.display_name} avatarUrl={member.avatar_url} size="xs" /></span>
-                    <div className="min-w-0">
-                      <div className="font-medium truncate">{member.display_name}</div>
-                      <div className="text-xs text-gray-400 truncate">{member.email}</div>
-                    </div>
-                  </button>
-                </li>
-              ))
+              <>
+                {/* Teams section */}
+                {availableTeams.length > 0 && (
+                  <>
+                    <li className="px-3 py-1 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-750">
+                      {t('escalation.teamsSection')}
+                    </li>
+                    {availableTeams.map((team) => (
+                      <li key={`team-${team.id}`}>
+                        <button
+                          type="button"
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 flex items-center gap-2"
+                          onClick={() => handleSelectTeam(team)}
+                        >
+                          <span className="shrink-0 h-5 w-5 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
+                            <Users className="h-3 w-3 text-green-600 dark:text-green-400" />
+                          </span>
+                          <div className="min-w-0">
+                            <div className="font-medium truncate">{team.name}</div>
+                          </div>
+                        </button>
+                      </li>
+                    ))}
+                  </>
+                )}
+                {/* Users section */}
+                {availableMembers.length > 0 && (
+                  <>
+                    <li className="px-3 py-1 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-750">
+                      {t('escalation.usersSection')}
+                    </li>
+                    {availableMembers.map((member) => (
+                      <li key={member.user_id}>
+                        <button
+                          type="button"
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 flex items-center gap-2"
+                          onClick={() => handleSelectMember(member)}
+                        >
+                          <span className="shrink-0"><Avatar name={member.display_name} avatarUrl={member.avatar_url} size="xs" /></span>
+                          <div className="min-w-0">
+                            <div className="font-medium truncate">{member.display_name}</div>
+                            <div className="text-xs text-gray-400 truncate">{member.email}</div>
+                          </div>
+                        </button>
+                      </li>
+                    ))}
+                  </>
+                )}
+              </>
             )}
           </ul>
         </div>,

@@ -36,11 +36,12 @@ type EscalationLevelUser struct {
 
 // EscalationLevelTeam represents a team assigned to an escalation level.
 type EscalationLevelTeam struct {
-	TeamID         uuid.UUID  `json:"id"`
-	Name           string     `json:"name"`
-	HasOncall      bool       `json:"has_oncall"`
-	OncallUserID   *uuid.UUID `json:"oncall_user_id,omitempty"`
-	OncallUserName string     `json:"oncall_user_name,omitempty"`
+	TeamID          uuid.UUID  `json:"id"`
+	Name            string     `json:"name"`
+	HasOncall       bool       `json:"has_oncall"`
+	OncallUserID    *uuid.UUID `json:"oncall_user_id,omitempty"`
+	OncallUserName  string     `json:"oncall_user_name,omitempty"`
+	OncallUserEmail string     `json:"oncall_user_email,omitempty"`
 }
 
 // TypeEscalationMapping maps a work item type to an escalation list within a project.

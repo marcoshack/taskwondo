@@ -8,12 +8,21 @@ export interface EscalationLevelUser {
   email: string
 }
 
+export interface EscalationLevelTeam {
+  id: string
+  name: string
+  has_oncall: boolean
+  oncall_user_id?: string
+  oncall_user_name?: string
+}
+
 export interface EscalationLevel {
   id: string
   escalation_list_id: string
   threshold_pct: number
   position: number
   users: EscalationLevelUser[]
+  teams: EscalationLevelTeam[]
 }
 
 export interface EscalationList {
@@ -31,7 +40,7 @@ export interface TypeEscalationMapping {
 
 export interface EscalationListInput {
   name: string
-  levels: { threshold_pct: number; user_ids: string[] }[]
+  levels: { threshold_pct: number; user_ids: string[]; team_ids: string[] }[]
 }
 
 // --- API Functions ---
