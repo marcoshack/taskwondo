@@ -384,6 +384,7 @@
   "escalation.noLists": "Aucune liste d'escalade pour le moment.",
   "escalation.noSlaWarning": "Aucun objectif SLA configuré — la détection de dépassement ne se déclenchera pas.",
   "escalation.noUsers": "Aucun utilisateur assigné.",
+  "escalation.noRecipients": "Aucun destinataire attribué.",
   "escalation.none": "Aucun",
   "escalation.removeLevel": "Supprimer le niveau",
   "escalation.saveError": "Échec de l'enregistrement de la liste d'escalade.",

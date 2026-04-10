@@ -32,6 +32,7 @@ type EscalationLevelUser struct {
 	UserID      uuid.UUID `json:"id"`
 	DisplayName string    `json:"display_name"`
 	Email       string    `json:"email"`
+	AvatarURL   *string   `json:"avatar_url,omitempty"`
 }
 
 // EscalationLevelTeam represents a team assigned to an escalation level.

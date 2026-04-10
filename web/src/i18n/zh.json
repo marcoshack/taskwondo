@@ -384,6 +384,7 @@
   "escalation.noLists": "暂无升级列表。",
   "escalation.noSlaWarning": "未配置 SLA 目标 — 违规检测将不会触发。",
   "escalation.noUsers": "未分配用户。",
+  "escalation.noRecipients": "未分配收件人。",
   "escalation.none": "无",
   "escalation.removeLevel": "移除级别",
   "escalation.saveError": "保存升级列表失败。",

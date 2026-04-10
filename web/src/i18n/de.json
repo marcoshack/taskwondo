@@ -384,6 +384,7 @@
   "escalation.noLists": "Noch keine Eskalationslisten.",
   "escalation.noSlaWarning": "Keine SLA-Ziele konfiguriert — Verletzungserkennung wird nicht ausgelöst.",
   "escalation.noUsers": "Keine Benutzer zugewiesen.",
+  "escalation.noRecipients": "Keine Empfänger zugewiesen.",
   "escalation.none": "Keine",
   "escalation.removeLevel": "Stufe entfernen",
   "escalation.saveError": "Eskalationsliste konnte nicht gespeichert werden.",

@@ -384,6 +384,7 @@
   "escalation.noLists": "아직 에스컬레이션 목록이 없습니다.",
   "escalation.noSlaWarning": "SLA 목표가 구성되지 않음 — 위반 감지가 트리거되지 않습니다.",
   "escalation.noUsers": "할당된 사용자가 없습니다.",
+  "escalation.noRecipients": "할당된 수신자가 없습니다.",
   "escalation.none": "없음",
   "escalation.removeLevel": "레벨 제거",
   "escalation.saveError": "에스컬레이션 목록 저장에 실패했습니다.",

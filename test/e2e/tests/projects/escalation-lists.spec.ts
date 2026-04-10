@@ -339,7 +339,14 @@ test.describe('Escalation Lists', () => {
     await dialog.getByRole('button', { name: 'Create' }).click();
     await expect(dialog).not.toBeVisible({ timeout: 5000 });
 
-    await expect(page.getByRole('button', { name: /Team Escalation/ })).toBeVisible();
+    const listCard = page.getByRole('button', { name: /Team Escalation/ });
+    await expect(listCard).toBeVisible();
+
+    // Expand the card and verify the team chip is rendered
+    await listCard.click();
+    const cardContainer = listCard.locator('xpath=ancestor::div[contains(@class,"p-4")]');
+    const cardTeamChip = cardContainer.locator('span.bg-green-50').filter({ hasText: 'E2E Oncall Team' });
+    await expect(cardTeamChip).toBeVisible();
 
     // Verify team was persisted via API
     const lists = await api.listEscalationLists(request, testUser.token, testProject.key);
@@ -370,10 +377,24 @@ test.describe('Escalation Lists', () => {
 
     await gotoEscalationTab(page, testProject.key);
 
-    // Open the list edit dialog via pencil button
+    // Expand the list card to reveal levels + recipients
     const listCard = page.getByRole('button', { name: /Mixed Recipients/ });
     await expect(listCard).toBeVisible();
+    await listCard.click();
+
+    // Verify threshold badge is visible
+    await expect(page.getByText('50%')).toBeVisible();
+
+    // Verify team chip (green) is rendered in the card
     const cardContainer = listCard.locator('xpath=ancestor::div[contains(@class,"p-4")]');
+    const cardTeamChip = cardContainer.locator('span.bg-green-50').filter({ hasText: 'E2E Mixed Team' });
+    await expect(cardTeamChip).toBeVisible();
+
+    // Verify user chip (indigo) is rendered in the card
+    const cardUserChip = cardContainer.locator('span.bg-indigo-50').filter({ hasText: helper.name });
+    await expect(cardUserChip).toBeVisible();
+
+    // Open the list edit dialog via pencil button
     await cardContainer.locator('button').filter({ has: page.locator('svg.h-3\\.5') }).first().click();
 
     const dialog = page.getByRole('dialog');
@@ -382,9 +403,9 @@ test.describe('Escalation Lists', () => {
     // Wait for data to load
     await expect(dialog.getByRole('textbox', { name: 'Name', exact: true })).toHaveValue('Mixed Recipients', { timeout: 5000 });
 
-    // Verify team chip (green) and user chip (indigo) are both visible
-    await expect(dialog.locator('span').filter({ hasText: 'E2E Mixed Team' }).first()).toBeVisible();
-    await expect(dialog.locator('span').filter({ hasText: helper.name }).first()).toBeVisible();
+    // Verify team chip (green) and user chip (indigo) are both visible in the modal
+    await expect(dialog.locator('span.bg-green-50').filter({ hasText: 'E2E Mixed Team' })).toBeVisible();
+    await expect(dialog.locator('span.bg-indigo-50').filter({ hasText: helper.name })).toBeVisible();
 
     await dialog.getByRole('button', { name: 'Cancel' }).click();
 

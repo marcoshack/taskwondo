@@ -71,6 +71,7 @@ type escalationLevelUserResponse struct {
 	ID          uuid.UUID `json:"id"`
 	DisplayName string    `json:"display_name"`
 	Email       string    `json:"email"`
+	AvatarURL   *string   `json:"avatar_url,omitempty"`
 }
 
 type typeEscalationMappingResponse struct {
@@ -87,6 +88,7 @@ func toEscalationListResponse(el *model.EscalationList) escalationListResponse {
 				ID:          u.UserID,
 				DisplayName: u.DisplayName,
 				Email:       u.Email,
+				AvatarURL:   u.AvatarURL,
 			}
 		}
 		teams := make([]escalationLevelTeamResponse, len(lv.Teams))

@@ -384,6 +384,7 @@
   "escalation.noLists": "エスカレーションリストはまだありません。",
   "escalation.noSlaWarning": "SLA目標が設定されていません — 違反検出はトリガーされません。",
   "escalation.noUsers": "ユーザーが割り当てられていません。",
+  "escalation.noRecipients": "受信者が割り当てられていません。",
   "escalation.none": "なし",
   "escalation.removeLevel": "レベルを削除",
   "escalation.saveError": "エスカレーションリストの保存に失敗しました。",

@@ -258,7 +258,7 @@ func (r *EscalationRepository) loadLevels(ctx context.Context, listID uuid.UUID)
 // loadLevelUsers returns all users for an escalation level, joining with users table for display info.
 func (r *EscalationRepository) loadLevelUsers(ctx context.Context, levelID uuid.UUID) ([]model.EscalationLevelUser, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT u.id, u.display_name, u.email
+		`SELECT u.id, u.display_name, u.email, u.avatar_url
 		 FROM escalation_level_users elu
 		 JOIN users u ON u.id = elu.user_id
 		 WHERE elu.escalation_level_id = $1
@@ -271,8 +271,12 @@ func (r *EscalationRepository) loadLevelUsers(ctx context.Context, levelID uuid.
 	var users []model.EscalationLevelUser
 	for rows.Next() {
 		var u model.EscalationLevelUser
-		if err := rows.Scan(&u.UserID, &u.DisplayName, &u.Email); err != nil {
+		var avatarURL sql.NullString
+		if err := rows.Scan(&u.UserID, &u.DisplayName, &u.Email, &avatarURL); err != nil {
 			return nil, fmt.Errorf("scanning escalation level user row: %w", err)
+		}
+		if avatarURL.Valid {
+			u.AvatarURL = &avatarURL.String
 		}
 		users = append(users, u)
 	}

@@ -384,6 +384,7 @@
   "escalation.noLists": "Aún no hay listas de escalamiento.",
   "escalation.noSlaWarning": "No hay objetivos de SLA configurados — la detección de incumplimiento no se activará.",
   "escalation.noUsers": "No hay usuarios asignados.",
+  "escalation.noRecipients": "No hay destinatarios asignados.",
   "escalation.none": "Ninguno",
   "escalation.removeLevel": "Eliminar nivel",
   "escalation.saveError": "Error al guardar la lista de escalamiento.",

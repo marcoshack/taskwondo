@@ -384,6 +384,7 @@
   "escalation.noLists": "لا توجد قوائم تصعيد بعد.",
   "escalation.noSlaWarning": "لم يتم تكوين أهداف SLA — لن يتم تفعيل كشف الانتهاك.",
   "escalation.noUsers": "لم يتم تعيين مستخدمين.",
+  "escalation.noRecipients": "لم يتم تعيين مستلمين.",
   "escalation.none": "لا شيء",
   "escalation.removeLevel": "إزالة المستوى",
   "escalation.saveError": "فشل في حفظ قائمة التصعيد.",

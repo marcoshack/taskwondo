@@ -12,7 +12,7 @@ import type { Team } from '@/api/teams'
 
 interface LevelDraft {
   threshold_pct: string
-  users: { id: string; display_name: string; email: string }[]
+  users: { id: string; display_name: string; email: string; avatar_url?: string }[]
   teams: { id: string; name: string }[]
 }
 
@@ -50,6 +50,7 @@ export function EscalationListModal({ open, onClose, onSave, projectKey, editing
             id: u.id,
             display_name: u.display_name,
             email: u.email,
+            avatar_url: u.avatar_url,
           })),
           teams: (lv.teams ?? []).map((t) => ({
             id: t.id,
@@ -83,6 +84,14 @@ export function EscalationListModal({ open, onClose, onSave, projectKey, editing
     setLevels(levels.map((lv, i) => (i === index ? { ...lv, threshold_pct: value } : lv)))
   }
 
+  function sortLevelsByThreshold() {
+    setLevels((prev) =>
+      [...prev].sort(
+        (a, b) => (Number(a.threshold_pct) || Infinity) - (Number(b.threshold_pct) || Infinity)
+      )
+    )
+  }
+
   function addUserToLevel(index: number, member: ProjectMember) {
     setLevels(
       levels.map((lv, i) => {
@@ -90,7 +99,7 @@ export function EscalationListModal({ open, onClose, onSave, projectKey, editing
         if (lv.users.some((u) => u.id === member.user_id)) return lv
         return {
           ...lv,
-          users: [...lv.users, { id: member.user_id, display_name: member.display_name, email: member.email }],
+          users: [...lv.users, { id: member.user_id, display_name: member.display_name, email: member.email, avatar_url: member.avatar_url ?? undefined }],
         }
       })
     )
@@ -248,10 +257,7 @@ export function EscalationListModal({ open, onClose, onSave, projectKey, editing
             </div>
           ) : (
             <div className="space-y-4">
-              {levels
-                .map((level, index) => ({ level, index }))
-                .sort((a, b) => (Number(a.level.threshold_pct) || Infinity) - (Number(b.level.threshold_pct) || Infinity))
-                .map(({ level, index }) => (
+              {levels.map((level, index) => (
                 <div
                   key={index}
                   className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3"
@@ -269,6 +275,7 @@ export function EscalationListModal({ open, onClose, onSave, projectKey, editing
                             className="block w-24 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             value={level.threshold_pct}
                             onChange={(e) => updateLevelThreshold(index, e.target.value)}
+                            onBlur={sortLevelsByThreshold}
                             placeholder={t('escalation.thresholdPlaceholder')}
                           />
                           <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0">
@@ -319,7 +326,7 @@ export function EscalationListModal({ open, onClose, onSave, projectKey, editing
                             key={`user-${user.id}`}
                             className="inline-flex items-center gap-1 rounded-full bg-indigo-50 dark:bg-indigo-900/30 px-2.5 py-1 text-xs font-medium text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700"
                           >
-                            <Avatar name={user.display_name} size="xs" />
+                            <Avatar name={user.display_name} avatarUrl={user.avatar_url} size="xs" />
                             <span>{user.display_name}</span>
                             <button
                               type="button"
@@ -464,7 +471,7 @@ function MemberTeamPicker({
                 {/* Teams section */}
                 {availableTeams.length > 0 && (
                   <>
-                    <li className="px-3 py-1 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-750">
+                    <li className="px-3 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-100 dark:bg-gray-700/50">
                       {t('escalation.teamsSection')}
                     </li>
                     {availableTeams.map((team) => (
@@ -488,7 +495,7 @@ function MemberTeamPicker({
                 {/* Users section */}
                 {availableMembers.length > 0 && (
                   <>
-                    <li className="px-3 py-1 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-750">
+                    <li className="px-3 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-100 dark:bg-gray-700/50">
                       {t('escalation.usersSection')}
                     </li>
                     {availableMembers.map((member) => (

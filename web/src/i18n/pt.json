@@ -384,6 +384,7 @@
   "escalation.noLists": "Nenhuma lista de escalonamento ainda.",
   "escalation.noSlaWarning": "Nenhuma meta de SLA configurada — a detecção de violação não será ativada.",
   "escalation.noUsers": "Nenhum usuário atribuído.",
+  "escalation.noRecipients": "Nenhum destinatário atribuído.",
   "escalation.none": "Nenhum",
   "escalation.removeLevel": "Remover nível",
   "escalation.saveError": "Falha ao salvar a lista de escalonamento.",

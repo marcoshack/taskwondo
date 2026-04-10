@@ -1040,6 +1040,7 @@
   "escalation.noLevels": "No levels defined.",
   "escalation.noLists": "No escalation lists yet.",
   "escalation.noUsers": "No users assigned.",
+  "escalation.noRecipients": "No recipients assigned.",
   "escalation.threshold": "Threshold",
   "escalation.thresholdPlaceholder": "e.g. 75",
   "escalation.thresholdHelp": "(% of SLA elapsed)",

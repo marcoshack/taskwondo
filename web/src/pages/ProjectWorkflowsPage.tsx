@@ -26,8 +26,9 @@ import { TimezoneSelect } from '@/components/ui/TimezoneSelect'
 import { Modal } from '@/components/ui/Modal'
 import { Spinner } from '@/components/ui/Spinner'
 import { Badge } from '@/components/ui/Badge'
+import { Avatar } from '@/components/ui/Avatar'
 import { Tabs } from '@/components/ui/Tabs'
-import { Lock, Plus, Pencil, Trash2, ArrowRight, Check, Eye, Clock, ChevronDown, ChevronRight, ChevronLeft, AlertTriangle } from 'lucide-react'
+import { Lock, Plus, Pencil, Trash2, ArrowRight, Check, Eye, Clock, ChevronDown, ChevronRight, ChevronLeft, AlertTriangle, Users } from 'lucide-react'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { SLAConfigModal } from '@/components/SLAConfigModal'
 import { EscalationListModal } from '@/components/EscalationListModal'
@@ -407,10 +408,10 @@ export function ProjectWorkflowsPage() {
                       .map((lv) => (
                         <div key={lv.id} className="flex items-center gap-3">
                           <ThresholdBadge pct={lv.threshold_pct} />
-                          {lv.users.length === 0 ? (
-                            <span className="text-xs text-gray-400">{t('escalation.noUsers')}</span>
+                          {lv.users.length === 0 && (lv.teams ?? []).length === 0 ? (
+                            <span className="text-xs text-gray-400">{t('escalation.noRecipients')}</span>
                           ) : (
-                            <ScrollableUserList users={lv.users} />
+                            <ScrollableRecipientList users={lv.users} teams={lv.teams ?? []} />
                           )}
                         </div>
                       ))}
@@ -807,7 +808,13 @@ function ThresholdBadge({ pct }: { pct: number }) {
   return <Badge color={color}>{pct}%</Badge>
 }
 
-function ScrollableUserList({ users }: { users: { id: string; display_name: string }[] }) {
+function ScrollableRecipientList({
+  users,
+  teams,
+}: {
+  users: { id: string; display_name: string; avatar_url?: string }[]
+  teams: { id: string; name: string }[]
+}) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(false)
@@ -826,7 +833,7 @@ function ScrollableUserList({ users }: { users: { id: string; display_name: stri
     const ro = new ResizeObserver(checkScroll)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [checkScroll, users])
+  }, [checkScroll, users, teams])
 
   function scroll(direction: 'left' | 'right') {
     scrollRef.current?.scrollBy({ left: direction === 'left' ? -120 : 120, behavior: 'smooth' })
@@ -844,11 +851,21 @@ function ScrollableUserList({ users }: { users: { id: string; display_name: stri
         onScroll={checkScroll}
         className="flex items-center gap-1.5 overflow-x-auto scrollbar-none min-w-0"
       >
+        {teams.map((team) => (
+          <span
+            key={`team-${team.id}`}
+            className="inline-flex items-center gap-1 shrink-0 rounded-full bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700 px-2 py-0.5 text-xs font-medium text-green-700 dark:text-green-300"
+          >
+            <Users className="h-3 w-3" />
+            {team.name}
+          </span>
+        ))}
         {users.map((u) => (
           <span
-            key={u.id}
-            className="inline-flex items-center shrink-0 rounded-full bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-300"
+            key={`user-${u.id}`}
+            className="inline-flex items-center gap-1 shrink-0 rounded-full bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-300"
           >
+            <Avatar name={u.display_name} avatarUrl={u.avatar_url} size="xs" />
             {u.display_name}
           </span>
         ))}
