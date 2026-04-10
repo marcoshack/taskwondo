@@ -220,6 +220,7 @@
   "projects.settings.emailInviteConfirmBody": "Send an invite email to <bold>{{email}}</bold> to join this project as <bold>{{role}}</bold>? If the user already has an account, they will be added directly.",
   "projects.settings.emailInviteSend": "Send Invite",
   "projects.settings.emailInviteError": "Failed to send email invite.",
+  "projects.settings.invitedBadge": "Invited",
   "projects.settings.updateRoleError": "Failed to update role.",
   "projects.settings.removeMemberError": "Failed to remove member.",
   "projects.settings.removeMemberConfirmTitle": "Remove Member",

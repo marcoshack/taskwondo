@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Trans, useTranslation } from 'react-i18next'
@@ -13,7 +13,7 @@ import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { Tabs } from '@/components/ui/Tabs'
-import { Check, Trash2, Copy, Link, AlertTriangle, ArrowRightLeft, ChevronDown, Info } from 'lucide-react'
+import { Check, Trash2, Copy, Link, AlertTriangle, ArrowRightLeft, ChevronDown, Info, Mail } from 'lucide-react'
 import { useNamespaceContext } from '@/contexts/NamespaceContext'
 import { useMigrateProject } from '@/hooks/useNamespaces'
 import { clearLastProjectKey } from '@/hooks/useLastProjectKey'
@@ -460,6 +460,17 @@ export function ProjectSettingsPage() {
 
   const memberIds = members?.map((m) => m.user_id) ?? []
 
+  const pendingEmailInvites = useMemo(
+    () =>
+      invites?.filter(
+        (inv) =>
+          inv.invitee_email &&
+          (inv.max_uses === 0 || inv.use_count < inv.max_uses) &&
+          (!inv.expires_at || new Date(inv.expires_at) >= new Date()),
+      ) ?? [],
+    [invites],
+  )
+
   return (
     <div className="max-w-3xl space-y-6">
       {/* Page Header */}
@@ -640,12 +651,12 @@ export function ProjectSettingsPage() {
           )}
 
           {/* Member list */}
-          {members && members.length > 0 && (
+          {((members && members.length > 0) || pendingEmailInvites.length > 0) && (
             <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
-              {members.map((member) => {
+              {members?.map((member) => {
                 const isSelf = member.user_id === user?.id
                 const memberIsOwner = member.role === 'owner'
-                const ownerCount = members.filter((m) => m.role === 'owner').length
+                const ownerCount = members!.filter((m) => m.role === 'owner').length
                 const isLastOwner = memberIsOwner && ownerCount <= 1
                 const canEditRole = canManageMembers && (!memberIsOwner || isOwner)
 
@@ -698,11 +709,45 @@ export function ProjectSettingsPage() {
                   </div>
                 )
               })}
-              {membersTotalCount != null && membersTotalCount > members.length && (
+              {members && membersTotalCount != null && membersTotalCount > members.length && (
                 <div className="py-2 text-sm text-gray-500 dark:text-gray-400 pl-[60px]">
                   {t('projects.settings.hiddenMembers', { count: membersTotalCount - members.length })}
                 </div>
               )}
+              {pendingEmailInvites.map((invite) => (
+                <div key={invite.id} className="flex flex-wrap items-center justify-between gap-2 p-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="h-8 w-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                      <Mail className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                        {invite.invitee_email}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
+                    <Badge color="yellow">{t('projects.settings.invitedBadge')}</Badge>
+                    {canManageMembers ? (
+                      <>
+                        <Badge color={ROLE_BADGE_COLORS[invite.role] ?? 'gray'}>
+                          {t(`projects.settings.roles.${invite.role}`)}
+                        </Badge>
+                        <button
+                          className="p-1 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                          onClick={() => setRevokeTarget({ id: invite.id, code: invite.code })}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </>
+                    ) : (
+                      <Badge color={ROLE_BADGE_COLORS[invite.role] ?? 'gray'}>
+                        {t(`projects.settings.roles.${invite.role}`)}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>

@@ -777,6 +777,7 @@
   "projects.settings.emailInviteConfirmBody": "<bold>{{email}}</bold>に<bold>{{role}}</bold>としてこのプロジェクトに参加する招待メールを送信しますか？ユーザーが既にアカウントを持っている場合は、直接追加されます。",
   "projects.settings.emailInviteConfirmTitle": "メール招待を送信",
   "projects.settings.emailInviteError": "メール招待の送信に失敗しました。",
+  "projects.settings.invitedBadge": "招待済み",
   "projects.settings.emailInvitePlaceholder": "メールアドレスで招待...",
   "projects.settings.emailInviteSend": "招待を送信",
   "projects.settings.general": "一般",

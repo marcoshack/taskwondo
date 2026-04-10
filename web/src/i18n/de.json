@@ -777,6 +777,7 @@
   "projects.settings.emailInviteConfirmBody": "E-Mail-Einladung an <bold>{{email}}</bold> senden, um diesem Projekt als <bold>{{role}}</bold> beizutreten? Falls der Benutzer bereits ein Konto hat, wird er direkt hinzugefügt.",
   "projects.settings.emailInviteConfirmTitle": "E-Mail-Einladung senden",
   "projects.settings.emailInviteError": "E-Mail-Einladung konnte nicht gesendet werden.",
+  "projects.settings.invitedBadge": "Eingeladen",
   "projects.settings.emailInvitePlaceholder": "Per E-Mail-Adresse einladen...",
   "projects.settings.emailInviteSend": "Einladung senden",
   "projects.settings.general": "Allgemein",

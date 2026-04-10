@@ -777,6 +777,7 @@
   "projects.settings.emailInviteConfirmBody": "向 <bold>{{email}}</bold> 发送邀请邮件，以 <bold>{{role}}</bold> 身份加入此项目？如果用户已有账户，将直接添加。",
   "projects.settings.emailInviteConfirmTitle": "发送邮件邀请",
   "projects.settings.emailInviteError": "发送邮件邀请失败。",
+  "projects.settings.invitedBadge": "已邀请",
   "projects.settings.emailInvitePlaceholder": "通过电子邮件地址邀请...",
   "projects.settings.emailInviteSend": "发送邀请",
   "projects.settings.general": "常规",

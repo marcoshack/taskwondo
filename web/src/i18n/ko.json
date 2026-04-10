@@ -777,6 +777,7 @@
   "projects.settings.emailInviteConfirmBody": "<bold>{{email}}</bold>에게 <bold>{{role}}</bold>(으)로 이 프로젝트에 참여하도록 초대 이메일을 보내시겠습니까? 사용자가 이미 계정을 가지고 있으면 바로 추가됩니다.",
   "projects.settings.emailInviteConfirmTitle": "이메일 초대 보내기",
   "projects.settings.emailInviteError": "이메일 초대 전송에 실패했습니다.",
+  "projects.settings.invitedBadge": "초대됨",
   "projects.settings.emailInvitePlaceholder": "이메일 주소로 초대...",
   "projects.settings.emailInviteSend": "초대 보내기",
   "projects.settings.general": "일반",

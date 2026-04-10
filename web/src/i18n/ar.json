@@ -777,6 +777,7 @@
   "projects.settings.emailInviteConfirmBody": "إرسال بريد دعوة إلى <bold>{{email}}</bold> للانضمام إلى هذا المشروع بصفة <bold>{{role}}</bold>؟ إذا كان لدى المستخدم حساب بالفعل، فسيتم إضافته مباشرة.",
   "projects.settings.emailInviteConfirmTitle": "إرسال دعوة بالبريد الإلكتروني",
   "projects.settings.emailInviteError": "فشل إرسال الدعوة بالبريد الإلكتروني.",
+  "projects.settings.invitedBadge": "مدعو",
   "projects.settings.emailInvitePlaceholder": "دعوة عبر البريد الإلكتروني...",
   "projects.settings.emailInviteSend": "إرسال الدعوة",
   "projects.settings.general": "عام",

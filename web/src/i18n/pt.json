@@ -777,6 +777,7 @@
   "projects.settings.emailInviteConfirmBody": "Enviar um e-mail de convite para <bold>{{email}}</bold> para participar deste projeto como <bold>{{role}}</bold>? Se o usuário já tiver uma conta, será adicionado diretamente.",
   "projects.settings.emailInviteConfirmTitle": "Enviar convite por e-mail",
   "projects.settings.emailInviteError": "Falha ao enviar convite por e-mail.",
+  "projects.settings.invitedBadge": "Convidado",
   "projects.settings.emailInvitePlaceholder": "Convidar por endereço de e-mail...",
   "projects.settings.emailInviteSend": "Enviar convite",
   "projects.settings.general": "Geral",
