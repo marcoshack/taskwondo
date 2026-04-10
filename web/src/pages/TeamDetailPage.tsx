@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Trans, useTranslation } from 'react-i18next'
 import {
   useTeam,
@@ -30,7 +30,17 @@ export function TeamDetailPage() {
   const { user } = useAuth()
   const { data: members } = useMembers(projectKey ?? '')
   const { data: team, isLoading } = useTeam(projectKey ?? '', teamId ?? '')
-  const [activeTab, setActiveTab] = useState('members')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const activeTab = searchParams.get('tab') || 'members'
+  function setActiveTab(tab: string) {
+    const params = new URLSearchParams(searchParams)
+    if (tab === 'members') {
+      params.delete('tab')
+    } else {
+      params.set('tab', tab)
+    }
+    setSearchParams(params, { replace: true })
+  }
 
   const currentUserMember = members?.find((m) => m.user_id === user?.id)
   const currentUserRole = currentUserMember?.role ?? (user?.global_role === 'admin' ? 'owner' : null)

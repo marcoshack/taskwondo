@@ -81,6 +81,9 @@ type OncallOverrideCreatedEvent struct {
 	RotationID     uuid.UUID `json:"rotation_id"`
 	TeamID         uuid.UUID `json:"team_id"`
 	TeamName       string    `json:"team_name"`
+	ProjectID      uuid.UUID `json:"project_id"`
+	ProjectKey     string    `json:"project_key"`
+	ProjectName    string    `json:"project_name"`
 	OverrideUserID uuid.UUID `json:"override_user_id"`
 	ScheduledUser  uuid.UUID `json:"scheduled_user_id"`
 	StartAt        time.Time `json:"start_at"`
@@ -94,6 +97,9 @@ type OncallOverrideCancelledEvent struct {
 	RotationID     uuid.UUID `json:"rotation_id"`
 	TeamID         uuid.UUID `json:"team_id"`
 	TeamName       string    `json:"team_name"`
+	ProjectID      uuid.UUID `json:"project_id"`
+	ProjectKey     string    `json:"project_key"`
+	ProjectName    string    `json:"project_name"`
 	OverrideUserID uuid.UUID `json:"override_user_id"`
 	ScheduledUser  uuid.UUID `json:"scheduled_user_id"`
 	StartAt        time.Time `json:"start_at"`
@@ -105,6 +111,8 @@ type OncallRotationAdvancedEvent struct {
 	RotationID     uuid.UUID  `json:"rotation_id"`
 	TeamID         uuid.UUID  `json:"team_id"`
 	ProjectID      uuid.UUID  `json:"project_id"`
+	ProjectKey     string     `json:"project_key"`
+	ProjectName    string     `json:"project_name"`
 	TeamName       string     `json:"team_name"`
 	OldUserID      uuid.UUID  `json:"old_user_id"`
 	NewUserID      uuid.UUID  `json:"new_user_id"`

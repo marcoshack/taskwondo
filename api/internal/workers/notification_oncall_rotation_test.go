@@ -30,18 +30,22 @@ func TestNotificationOncallRotation_Execute(t *testing.T) {
 	sender := &mockEmailSender{}
 
 	task := &NotificationOncallRotationTask{
-		users:  users,
-		sender: sender,
-		logger: zerolog.Nop(),
+		users:   users,
+		sender:  sender,
+		baseURL: "https://example.com",
+		logger:  zerolog.Nop(),
 	}
 
+	teamID := uuid.New()
 	evt := model.OncallRotationAdvancedEvent{
-		RotationID: uuid.New(),
-		TeamID:     uuid.New(),
-		ProjectID:  uuid.New(),
-		TeamName:   "Engineering",
-		OldUserID:  oldUserID,
-		NewUserID:  newUserID,
+		RotationID:  uuid.New(),
+		TeamID:      teamID,
+		ProjectID:   uuid.New(),
+		ProjectKey:  "ENG",
+		ProjectName: "Engineering Platform",
+		TeamName:    "Engineering",
+		OldUserID:   oldUserID,
+		NewUserID:   newUserID,
 	}
 	payload, _ := json.Marshal(evt)
 
@@ -60,16 +64,35 @@ func TestNotificationOncallRotation_Execute(t *testing.T) {
 	if !strings.Contains(sender.sent[0].subject, "Engineering") {
 		t.Errorf("expected subject to contain team name, got %s", sender.sent[0].subject)
 	}
+	if !strings.Contains(sender.sent[0].subject, "[ENG]") {
+		t.Errorf("expected subject to contain project key prefix, got %s", sender.sent[0].subject)
+	}
 	if !strings.Contains(sender.sent[0].body, "now on-call") {
 		t.Errorf("expected body to contain 'now on-call', got %s", sender.sent[0].body)
+	}
+	if !strings.Contains(sender.sent[0].body, "ENG") || !strings.Contains(sender.sent[0].body, "Engineering Platform") {
+		t.Errorf("expected body to contain project key and name, got %s", sender.sent[0].body)
+	}
+	expectedURL := "https://example.com/d/projects/ENG/teams/" + teamID.String() + "?tab=oncall"
+	if !strings.Contains(sender.sent[0].body, expectedURL) {
+		t.Errorf("expected body to contain oncall tab URL %q, got %s", expectedURL, sender.sent[0].body)
 	}
 
 	// Check outgoing notification
 	if sender.sent[1].to != "old@example.com" {
 		t.Errorf("expected outgoing email to old@example.com, got %s", sender.sent[1].to)
 	}
+	if !strings.Contains(sender.sent[1].subject, "[ENG]") {
+		t.Errorf("expected outgoing subject to contain project key prefix, got %s", sender.sent[1].subject)
+	}
 	if !strings.Contains(sender.sent[1].body, "has ended") {
 		t.Errorf("expected body to contain 'has ended', got %s", sender.sent[1].body)
+	}
+	if !strings.Contains(sender.sent[1].body, "Engineering Platform") {
+		t.Errorf("expected outgoing body to contain project name, got %s", sender.sent[1].body)
+	}
+	if !strings.Contains(sender.sent[1].body, expectedURL) {
+		t.Errorf("expected outgoing body to contain oncall tab URL %q, got %s", expectedURL, sender.sent[1].body)
 	}
 }
 
@@ -88,12 +111,14 @@ func TestNotificationOncallRotation_SameUser(t *testing.T) {
 	}
 
 	evt := model.OncallRotationAdvancedEvent{
-		RotationID: uuid.New(),
-		TeamID:     uuid.New(),
-		ProjectID:  uuid.New(),
-		TeamName:   "Solo Team",
-		OldUserID:  userID,
-		NewUserID:  userID, // same user
+		RotationID:  uuid.New(),
+		TeamID:      uuid.New(),
+		ProjectID:   uuid.New(),
+		ProjectKey:  "SOLO",
+		ProjectName: "Solo Project",
+		TeamName:    "Solo Team",
+		OldUserID:   userID,
+		NewUserID:   userID, // same user
 	}
 	payload, _ := json.Marshal(evt)
 

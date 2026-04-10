@@ -169,18 +169,18 @@ func main() {
 
 	// Register on-call rotation notification task
 	notifyOncallRotation := workers.NewNotificationOncallRotationTask(
-		userRepo, emailSender, log.Logger,
+		userRepo, emailSender, cfg.BaseURL, log.Logger,
 	)
 	dispatcher.Register(notifyOncallRotation)
 
 	// Register on-call override notification tasks
 	notifyOncallOverrideCreated := workers.NewNotificationOncallOverrideCreatedTask(
-		userRepo, emailSender, log.Logger,
+		userRepo, emailSender, cfg.BaseURL, log.Logger,
 	)
 	dispatcher.Register(notifyOncallOverrideCreated)
 
 	notifyOncallOverrideCancelled := workers.NewNotificationOncallOverrideCancelledTask(
-		userRepo, emailSender, log.Logger,
+		userRepo, emailSender, cfg.BaseURL, log.Logger,
 	)
 	dispatcher.Register(notifyOncallOverrideCancelled)
 

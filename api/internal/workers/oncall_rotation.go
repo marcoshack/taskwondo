@@ -92,6 +92,8 @@ func (t *OncallRotationTask) Run(ctx context.Context) error {
 			RotationID:     result.RotationID,
 			TeamID:         result.TeamID,
 			ProjectID:      project.ID,
+			ProjectKey:     project.Key,
+			ProjectName:    project.Name,
 			TeamName:       team.Name,
 			OldUserID:      result.OldUserID,
 			NewUserID:      result.NewUserID,
