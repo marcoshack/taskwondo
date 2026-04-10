@@ -8,35 +8,22 @@ Taskwondo — a self-hosted task and ticket management system. Monorepo with a G
 
 ## Commands
 
+Run `make help` for the full list of Make targets (dev, test, build, migrate, release, etc.).
+Requires `.env` — copy from `.env.template`.
+
+Commands not covered by `make help`:
+
 ```bash
-# Development (requires .env — copy from .env.template)
-make dev              # Start everything: Postgres + MinIO + API (air hot-reload) + Web (Vite)
-make dev-services     # Start only Postgres and MinIO (Docker)
-make dev-api          # API with hot reload (requires: go install github.com/air-verse/air@latest)
-make dev-web          # Vite dev server on :5173
+# Go tests — single package / single test
+cd api && go test ./internal/handler/... -v -race
+cd api && go test ./internal/service/... -v -run TestName
 
-# Go tests
-cd api && go test ./... -v -race                                # All tests
-cd api && go test ./internal/handler/... -v -race               # One package
-cd api && go test ./internal/service/... -v -run TestName       # Single test
+# Frontend — lint / typecheck only (no Make target)
+cd web && npm run lint
+cd web && npm run typecheck
 
-# Frontend
-cd web && npm run build       # tsc + vite build
-cd web && npm run lint        # ESLint
-cd web && npm run typecheck   # tsc only
-
-# E2E tests
-make test-e2e                 # Fully containerized — builds & runs everything in Docker
-make test-e2e-dev             # Against local dev server (localhost:5173, needs running dev stack)
-make test-e2e-report          # Serve HTML report at http://localhost:9323
-
-# Database
-make migrate                              # Run migrations
-make migrate-new name=create_foo          # Create new migration pair
-
-# Docker
-make up / make down / make logs
-make build                    # Run tests then build images
+# Migrations also run automatically on API startup.
+# Use `./taskwondo --migrate-only` to run migrations and exit (useful for init containers / CI).
 ```
 
 ## Architecture
@@ -96,6 +83,7 @@ Path alias: `@/` → `src/`. Vite proxies `/api` to `:8080` in dev.
 
 ### React/TypeScript
 - **i18n**: All UI strings in `web/src/i18n/en.json`. Use `const { t } = useTranslation()` in every component. `<Trans>` for JSX with embedded HTML. Module-level arrays with display strings must be inside component body. Interpolation: `{{var}}`. Pluralization: `_one`/`_other` suffixes. Any key added to `en.json` must also be added to all other language files.
+- **Adding a new locale**: four places must stay in sync — (1) create `web/src/i18n/<code>.json` with a full translation of `en.json`, (2) import it in `web/src/i18n/index.ts` and add it to the `resources` map, (3) add the code to the `Language` type union in `web/src/contexts/LanguageContext.tsx`, (4) add an entry to the `SUPPORTED_LANGUAGES` array in the same file. The i18n Vitest suite will fail if keys drift between locales.
 - **API errors**: Use `getLocalizedError(err, t, 'fallback.key')` from `@/utils/apiError` to display API errors. Never extract `error.message` manually. The helper resolves `error_key` → i18n translation with params, falling back to the raw message then the fallback key.
 - **Destructive actions**: Always `<Modal>` with cancel/confirm. Never `window.confirm()`.
 - **Success feedback**: Inline green checkmark (`<Check>` from lucide-react), never layout-shifting toasts. Pattern: `savedId` state + `setTimeout(~2s)`.
@@ -118,6 +106,10 @@ The API is not exposed directly in Docker — all API traffic goes through the n
 Health: `GET /healthz` (liveness), `GET /readyz` (readiness + DB ping)
 
 ## Test Patterns
+
+**Coverage target:** 80%+ per package. Skip only when the remaining paths would require disproportionate complexity (mocking transactional boundaries, platform-specific code, etc.) — document the reason in the test file if so.
+
+**Test at the same entry point the real client hits.** A service-level test is not a substitute for a handler-level test: handlers contain their own input validation, auth checks, and response shaping that service tests will silently skip. If a bug can be triggered by an HTTP request, there must be a test that sends the same HTTP request. The same rule applies in the frontend: if a bug is visible in the UI, an E2E test should exercise the UI flow — not just the hook or API wrapper underneath.
 
 ### Go (`api/`)
 In-package mocks (mock structs implementing repository interfaces) and `httptest` for handler tests. Chi router is wired up in tests when URL params are needed. Tests live alongside source files.

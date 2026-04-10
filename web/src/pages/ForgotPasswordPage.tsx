@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { Link, Navigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { PoweredByFooter } from '@/components/PoweredByFooter'
@@ -11,15 +10,10 @@ import { getLocalizedError } from '@/utils/apiError'
 
 export function ForgotPasswordPage() {
   const { t } = useTranslation()
-  const { user } = useAuth()
   const [email, setEmail] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
-
-  if (user) {
-    return <Navigate to="/d/projects" replace />
-  }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()

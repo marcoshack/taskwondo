@@ -17,11 +17,13 @@ async function dismissWelcomeModal(page: any) {
   }
 }
 
-async function navigateToAPIKeys(page: any) {
+async function navigateToAPIKeysTab(page: any) {
   await page.goto('/');
   await dismissWelcomeModal(page);
-  await page.goto('/preferences/api-keys');
-  await expect(page.getByRole('heading', { name: 'API Keys' })).toBeVisible();
+  await page.goto('/preferences/authentication');
+  await expect(page.getByRole('heading', { name: 'Authentication' })).toBeVisible();
+  // Click the API Keys tab
+  await page.getByRole('button', { name: 'API Keys' }).click();
 }
 
 async function createKey(page: any, name: string) {
@@ -31,7 +33,7 @@ async function createKey(page: any, name: string) {
 }
 
 test.describe('API Key Management', () => {
-  test('navigate to API keys via sidebar', async ({ page }, testInfo) => {
+  test('navigate to API keys via sidebar and tab', async ({ page }, testInfo) => {
     await page.goto('/');
     await dismissWelcomeModal(page);
 
@@ -40,18 +42,31 @@ test.describe('API Key Management', () => {
     await expect(page).toHaveURL(/preferences\/profile/);
     await attach(page, testInfo, '01-profile-page');
 
-    // Click the API Keys sidebar link
-    await page.getByRole('link', { name: 'API Keys' }).click();
-    await expect(page).toHaveURL(/preferences\/api-keys/);
-    await attach(page, testInfo, '02-api-keys-page');
+    // Click the Authentication sidebar link
+    await page.getByRole('link', { name: 'Authentication' }).click();
+    await expect(page).toHaveURL(/preferences\/authentication/);
+    await attach(page, testInfo, '02-authentication-page');
 
-    // Verify page elements
-    await expect(page.getByRole('heading', { name: 'API Keys' })).toBeVisible();
+    // Verify page heading
+    await expect(page.getByRole('heading', { name: 'Authentication' })).toBeVisible();
+
+    // Click API Keys tab
+    await page.getByRole('button', { name: 'API Keys' }).click();
     await expect(page.getByText('No API keys yet')).toBeVisible();
+    await attach(page, testInfo, '03-api-keys-tab');
+  });
+
+  test('old api-keys URL redirects to authentication', async ({ page }, testInfo) => {
+    await page.goto('/');
+    await dismissWelcomeModal(page);
+
+    await page.goto('/preferences/api-keys');
+    await expect(page).toHaveURL(/preferences\/authentication/);
+    await attach(page, testInfo, '01-redirected');
   });
 
   test('create an API key and verify it appears in the list', async ({ page }, testInfo) => {
-    await navigateToAPIKeys(page);
+    await navigateToAPIKeysTab(page);
     await attach(page, testInfo, '01-empty-state');
 
     // Create the key
@@ -74,7 +89,7 @@ test.describe('API Key Management', () => {
   });
 
   test('create and delete an API key', async ({ page }, testInfo) => {
-    await navigateToAPIKeys(page);
+    await navigateToAPIKeysTab(page);
 
     // Create a key
     await createKey(page, 'Key To Delete');
@@ -99,7 +114,7 @@ test.describe('API Key Management', () => {
   });
 
   test('create API key with read-only permission and expiration', async ({ page }, testInfo) => {
-    await navigateToAPIKeys(page);
+    await navigateToAPIKeysTab(page);
 
     // Fill form with specific options
     await page.getByPlaceholder('e.g. CI/CD Pipeline').fill('Read Only Key');
@@ -125,7 +140,7 @@ test.describe('API Key Management', () => {
   });
 
   test('require name to create API key', async ({ page }, testInfo) => {
-    await navigateToAPIKeys(page);
+    await navigateToAPIKeysTab(page);
 
     // Try to create without a name
     await page.getByRole('button', { name: 'Create Key' }).click();
@@ -136,7 +151,7 @@ test.describe('API Key Management', () => {
   });
 
   test('rename an API key inline', async ({ page }, testInfo) => {
-    await navigateToAPIKeys(page);
+    await navigateToAPIKeysTab(page);
 
     // Create a key first
     await createKey(page, 'Original Name');
@@ -166,7 +181,7 @@ test.describe('API Key Management', () => {
   });
 
   test('cancel API key rename with Escape', async ({ page }, testInfo) => {
-    await navigateToAPIKeys(page);
+    await navigateToAPIKeysTab(page);
 
     // Create a key first
     await createKey(page, 'Keep This Name');
@@ -189,9 +204,9 @@ test.describe('API Key Management', () => {
     await attach(page, testInfo, '01-rename-cancelled');
   });
 
-  test('navigate between appearance and API keys via sidebar', async ({ page }, testInfo) => {
-    await navigateToAPIKeys(page);
-    await attach(page, testInfo, '01-api-keys-page');
+  test('navigate between appearance and authentication via sidebar', async ({ page }, testInfo) => {
+    await navigateToAPIKeysTab(page);
+    await attach(page, testInfo, '01-api-keys-tab');
 
     // Click Appearance in sidebar
     await page.getByRole('link', { name: 'Appearance' }).click();
@@ -199,10 +214,10 @@ test.describe('API Key Management', () => {
     await expect(page.getByRole('heading', { name: 'Appearance' })).toBeVisible();
     await attach(page, testInfo, '02-appearance-page');
 
-    // Navigate back to API Keys
-    await page.getByRole('link', { name: 'API Keys' }).click();
-    await expect(page).toHaveURL(/preferences\/api-keys/);
-    await expect(page.getByRole('heading', { name: 'API Keys' })).toBeVisible();
-    await attach(page, testInfo, '03-back-to-api-keys');
+    // Navigate back to Authentication
+    await page.getByRole('link', { name: 'Authentication' }).click();
+    await expect(page).toHaveURL(/preferences\/authentication/);
+    await expect(page.getByRole('heading', { name: 'Authentication' })).toBeVisible();
+    await attach(page, testInfo, '03-back-to-authentication');
   });
 });

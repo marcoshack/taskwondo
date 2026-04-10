@@ -377,6 +377,10 @@ func main() {
 			r.Patch("/user/api-keys/{keyId}", auth.RenameAPIKey)
 			r.Delete("/user/api-keys/{keyId}", auth.DeleteAPIKey)
 
+			// Connected OAuth accounts
+			r.Get("/user/connected-accounts", auth.ListConnectedAccounts)
+			r.Delete("/user/connected-accounts/{accountId}", auth.UnlinkConnectedAccount)
+
 			// Global user preferences
 			r.Route("/user/preferences", func(r chi.Router) {
 				r.Get("/", userSettings.ListGlobal)

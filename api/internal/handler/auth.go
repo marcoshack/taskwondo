@@ -61,6 +61,7 @@ type userResponse struct {
 	DisplayName          string              `json:"display_name"`
 	GlobalRole           string              `json:"global_role"`
 	AvatarURL            *string             `json:"avatar_url,omitempty"`
+	HasPassword          bool                `json:"has_password"`
 	PortalProjects       []portalProjectInfo `json:"portal_projects,omitempty"`
 	TotalProjectCount    int                 `json:"total_project_count,omitempty"`
 	NamespaceMemberCount int                 `json:"namespace_member_count,omitempty"`
@@ -72,6 +73,7 @@ func toUserResponse(u *model.User) userResponse {
 		Email:       u.Email,
 		DisplayName: u.DisplayName,
 		GlobalRole:  u.GlobalRole,
+		HasPassword: u.PasswordHash != "",
 	}
 	resp.AvatarURL = avatarURL(u.AvatarURL, u.ID, u.UpdatedAt.Unix())
 	return resp
@@ -408,8 +410,8 @@ func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.OldPassword == "" || req.NewPassword == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "old_password and new_password are required")
+	if req.NewPassword == "" {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "new_password is required")
 		return
 	}
 
@@ -504,6 +506,66 @@ func (h *AuthHandler) DeleteAPIKey(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to delete api key")
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// Connected OAuth account handlers
+
+type connectedAccountResponse struct {
+	ID               uuid.UUID `json:"id"`
+	Provider         string    `json:"provider"`
+	ProviderEmail    string    `json:"provider_email,omitempty"`
+	ProviderUsername string    `json:"provider_username,omitempty"`
+	ProviderAvatar   string    `json:"provider_avatar,omitempty"`
+	CreatedAt        time.Time `json:"created_at"`
+}
+
+// ListConnectedAccounts returns all OAuth accounts linked to the authenticated user.
+func (h *AuthHandler) ListConnectedAccounts(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+
+	accounts, err := h.auth.ListConnectedAccounts(r.Context(), info.UserID)
+	if err != nil {
+		log.Ctx(r.Context()).Error().Err(err).Msg("failed to list connected accounts")
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		return
+	}
+
+	resp := make([]connectedAccountResponse, len(accounts))
+	for i := range accounts {
+		resp[i] = connectedAccountResponse{
+			ID:               accounts[i].ID,
+			Provider:         accounts[i].Provider,
+			ProviderEmail:    accounts[i].ProviderEmail,
+			ProviderUsername: accounts[i].ProviderUsername,
+			ProviderAvatar:   accounts[i].ProviderAvatar,
+			CreatedAt:        accounts[i].CreatedAt,
+		}
+	}
+
+	writeData(w, http.StatusOK, resp)
+}
+
+// UnlinkConnectedAccount removes an OAuth account link for the authenticated user.
+func (h *AuthHandler) UnlinkConnectedAccount(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+
+	accountID, err := uuid.Parse(chi.URLParam(r, "accountId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid account ID")
+		return
+	}
+
+	if err := h.auth.UnlinkConnectedAccount(r.Context(), accountID, info.UserID); err != nil {
+		if errors.Is(err, model.ErrNotFound) {
+			writeError(w, http.StatusNotFound, "NOT_FOUND", "connected account not found")
+			return
+		}
+		log.Ctx(r.Context()).Error().Err(err).Msg("failed to unlink connected account")
 		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
 		return
 	}

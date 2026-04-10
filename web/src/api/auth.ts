@@ -12,6 +12,7 @@ export interface User {
   display_name: string
   global_role: string
   avatar_url?: string
+  has_password: boolean
   portal_projects?: PortalProject[]
   total_project_count?: number
   namespace_member_count?: number
@@ -203,6 +204,26 @@ export async function changePassword(oldPassword: string, newPassword: string) {
     new_password: newPassword,
   })
   return res.data.data
+}
+
+// Connected OAuth accounts
+
+export interface ConnectedAccount {
+  id: string
+  provider: string
+  provider_email?: string
+  provider_username?: string
+  provider_avatar?: string
+  created_at: string
+}
+
+export async function listConnectedAccounts() {
+  const res = await api.get<{ data: ConnectedAccount[] }>('/user/connected-accounts')
+  return res.data.data
+}
+
+export async function unlinkConnectedAccount(id: string) {
+  await api.delete(`/user/connected-accounts/${id}`)
 }
 
 // Profile

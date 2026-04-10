@@ -703,6 +703,73 @@ func TestChangePassword_Handler_401_WrongPassword(t *testing.T) {
 	}
 }
 
+func TestChangePassword_Handler_400_MissingNewPassword(t *testing.T) {
+	h, authSvc, token := testSetup(t)
+	info, _ := authSvc.ValidateJWT(token)
+
+	body := `{"old_password":"adminpass"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/change-password", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), info))
+	w := httptest.NewRecorder()
+
+	h.ChangePassword(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+// TestChangePassword_Handler_200_OAuthUserSetsInitial verifies that an OAuth-only user
+// (no password hash) can set an initial password without providing old_password.
+func TestChangePassword_Handler_200_OAuthUserSetsInitial(t *testing.T) {
+	userRepo := newMockUserRepo()
+	apiKeyRepo := newMockAPIKeyRepo()
+	oauthRepo := newMockOAuthAccountRepo()
+	discord := service.NewDiscordProvider("test-client-id", "test-client-secret", "http://localhost:5173/auth/discord/callback", nil)
+	authSvc := service.NewAuthService(userRepo, apiKeyRepo, oauthRepo,
+		"test-secret-that-is-at-least-32!", 1*time.Hour,
+		[]service.OAuthProvider{discord})
+
+	// Create an OAuth-only user (no password hash)
+	oauthUser := &model.User{
+		ID:          uuid.New(),
+		Email:       "oauth@test.com",
+		DisplayName: "OAuth User",
+		GlobalRole:  model.RoleUser,
+		IsActive:    true,
+	}
+	if err := userRepo.Create(context.Background(), oauthUser); err != nil {
+		t.Fatal(err)
+	}
+
+	h := NewAuthHandler(authSvc, nil, nil, nil)
+	info := &model.AuthInfo{
+		UserID:     oauthUser.ID,
+		Email:      oauthUser.Email,
+		GlobalRole: oauthUser.GlobalRole,
+	}
+
+	// Submit with empty old_password — should succeed for OAuth-only user
+	body := `{"old_password":"","new_password":"newpassword123"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/change-password", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), info))
+	w := httptest.NewRecorder()
+
+	h.ChangePassword(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	// Verify the password was set
+	updated, _ := userRepo.GetByID(context.Background(), oauthUser.ID)
+	if updated.PasswordHash == "" {
+		t.Fatal("expected password hash to be set after setting initial password")
+	}
+}
+
 func TestLogin_Handler_ReturnsForcePasswordChange(t *testing.T) {
 	h, _, _ := testSetup(t)
 
@@ -1541,6 +1608,138 @@ func TestResetPasswordHandler_InvalidToken(t *testing.T) {
 
 	if w.Code != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+// --- Connected accounts handler tests ---
+
+func TestListConnectedAccounts_Empty(t *testing.T) {
+	h, authSvc, token := testSetup(t)
+	info, _ := authSvc.ValidateJWT(token)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/user/connected-accounts", nil)
+	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), info))
+	w := httptest.NewRecorder()
+
+	h.ListConnectedAccounts(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	accounts := resp["data"].([]interface{})
+	if len(accounts) != 0 {
+		t.Fatalf("expected 0 accounts, got %d", len(accounts))
+	}
+}
+
+func TestListConnectedAccounts_WithAccount(t *testing.T) {
+	h, authSvc, token := testSetup(t)
+	info, _ := authSvc.ValidateJWT(token)
+
+	// Seed a connected account via the service
+	_ = authSvc.TestCreateOAuthAccount(context.Background(), &model.OAuthAccount{
+		ID:               uuid.New(),
+		UserID:           info.UserID,
+		Provider:         "github",
+		ProviderUserID:   "gh-123",
+		ProviderEmail:    "test@github.com",
+		ProviderUsername: "testuser",
+		CreatedAt:        time.Now(),
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/user/connected-accounts", nil)
+	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), info))
+	w := httptest.NewRecorder()
+
+	h.ListConnectedAccounts(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	accounts := resp["data"].([]interface{})
+	if len(accounts) != 1 {
+		t.Fatalf("expected 1 account, got %d", len(accounts))
+	}
+
+	first := accounts[0].(map[string]interface{})
+	if first["provider"] != "github" {
+		t.Fatalf("expected provider github, got %s", first["provider"])
+	}
+	if first["provider_email"] != "test@github.com" {
+		t.Fatalf("expected provider_email test@github.com, got %s", first["provider_email"])
+	}
+}
+
+func TestUnlinkConnectedAccount_Success(t *testing.T) {
+	h, authSvc, token := testSetup(t)
+	info, _ := authSvc.ValidateJWT(token)
+
+	accountID := uuid.New()
+	_ = authSvc.TestCreateOAuthAccount(context.Background(), &model.OAuthAccount{
+		ID:             accountID,
+		UserID:         info.UserID,
+		Provider:       "discord",
+		ProviderUserID: "dc-456",
+		CreatedAt:      time.Now(),
+	})
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/user/connected-accounts/"+accountID.String(), nil)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("accountId", accountID.String())
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	h.UnlinkConnectedAccount(w, req)
+
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("expected 204, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestUnlinkConnectedAccount_NotFound(t *testing.T) {
+	h, authSvc, token := testSetup(t)
+	info, _ := authSvc.ValidateJWT(token)
+
+	fakeID := uuid.New()
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/user/connected-accounts/"+fakeID.String(), nil)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("accountId", fakeID.String())
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	h.UnlinkConnectedAccount(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestUnlinkConnectedAccount_InvalidID(t *testing.T) {
+	h, authSvc, token := testSetup(t)
+	info, _ := authSvc.ValidateJWT(token)
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/user/connected-accounts/not-a-uuid", nil)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("accountId", "not-a-uuid")
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	h.UnlinkConnectedAccount(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
 	}
 }
 

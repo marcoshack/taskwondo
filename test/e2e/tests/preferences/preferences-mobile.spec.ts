@@ -4,7 +4,7 @@ test.describe('Preferences mobile layout', () => {
   test('top bar does not overflow on mobile viewport', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
 
-    const sections = ['profile', 'appearance', 'notifications', 'api-keys'];
+    const sections = ['profile', 'appearance', 'notifications', 'authentication'];
 
     for (const section of sections) {
       await page.goto(`/preferences/${section}`);
@@ -45,7 +45,7 @@ test.describe('Preferences mobile layout', () => {
     await expect(mobileNav.getByText('Profile')).toBeVisible();
     await expect(mobileNav.getByText('Appearance')).toBeVisible();
     await expect(mobileNav.getByText('Notifications')).toBeVisible();
-    await expect(mobileNav.getByText('API Keys')).toBeVisible();
+    await expect(mobileNav.getByText('Authentication')).toBeVisible();
 
     // Clicking Appearance tab should navigate
     await mobileNav.getByText('Appearance').click();

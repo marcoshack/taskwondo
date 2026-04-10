@@ -168,6 +168,11 @@ func (s *AuthService) SetEncryptor(enc *crypto.Encryptor) {
 	s.encryptor = enc
 }
 
+// TestCreateOAuthAccount exposes the OAuthAccount Create for testing. Do not use in production.
+func (s *AuthService) TestCreateOAuthAccount(ctx context.Context, account *model.OAuthAccount) error {
+	return s.oauthAccounts.Create(ctx, account)
+}
+
 // getProvider returns an OAuthProvider for the given name, preferring DB config over static.
 // Returns nil if the provider is not configured anywhere.
 func (s *AuthService) getProvider(ctx context.Context, name string) OAuthProvider {
@@ -515,6 +520,16 @@ func (s *AuthService) RenameAPIKey(ctx context.Context, id, userID uuid.UUID, na
 // DeleteAPIKey deletes an API key, scoped to the owning user.
 func (s *AuthService) DeleteAPIKey(ctx context.Context, id, userID uuid.UUID) error {
 	return s.apiKeys.Delete(ctx, id, userID)
+}
+
+// ListConnectedAccounts returns all OAuth accounts linked to a user.
+func (s *AuthService) ListConnectedAccounts(ctx context.Context, userID uuid.UUID) ([]model.OAuthAccount, error) {
+	return s.oauthAccounts.ListByUserID(ctx, userID)
+}
+
+// UnlinkConnectedAccount removes an OAuth account for a user.
+func (s *AuthService) UnlinkConnectedAccount(ctx context.Context, id, userID uuid.UUID) error {
+	return s.oauthAccounts.Delete(ctx, id, userID)
 }
 
 // SeedAdminUser creates an admin user if one doesn't already exist with the given email.
@@ -1142,19 +1157,21 @@ func (s *AuthService) generateJWT(user *model.User) (string, error) {
 	return token.SignedString(s.jwtSecret)
 }
 
-// ChangePassword validates the old password and sets a new one, clearing force_password_change.
+// ChangePassword sets a new password on a user account, clearing force_password_change.
+// If the user already has a password, the old password must be provided and verified.
+// If the user has no password (OAuth-only account), oldPassword is ignored and this
+// sets the initial password.
 func (s *AuthService) ChangePassword(ctx context.Context, userID uuid.UUID, oldPassword, newPassword string) error {
 	user, err := s.users.GetByID(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("looking up user: %w", err)
 	}
 
-	if user.PasswordHash == "" {
-		return model.ErrInvalidCredentials
-	}
-
-	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(oldPassword)); err != nil {
-		return model.ErrInvalidCredentials
+	// Verify old password only if the user already has one.
+	if user.PasswordHash != "" {
+		if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(oldPassword)); err != nil {
+			return model.ErrInvalidCredentials
+		}
 	}
 
 	if len(newPassword) < 8 {

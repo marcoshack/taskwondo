@@ -1,6 +1,6 @@
 import { NavLink, Routes, Route, Navigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Palette, Key, Bell, User, Settings } from 'lucide-react'
+import { Palette, Lock, Bell, User, Settings } from 'lucide-react'
 import { useSidebar } from '@/contexts/SidebarContext'
 import { useLayout } from '@/contexts/LayoutContext'
 import { PreferencesSidebar } from '@/components/PreferencesSidebar'
@@ -8,7 +8,7 @@ import { ProfilePage } from './ProfilePage'
 import { GeneralPage } from './GeneralPage'
 import { AppearancePage } from './AppearancePage'
 import { NotificationsPage } from './NotificationsPage'
-import { APIKeysPage } from './APIKeysPage'
+import { AuthenticationPage } from './AuthenticationPage'
 
 export function PreferencesPage() {
   const { t } = useTranslation()
@@ -20,7 +20,7 @@ export function PreferencesPage() {
     { to: 'general', label: t('preferences.sidebar.general'), icon: Settings },
     { to: 'appearance', label: t('preferences.sidebar.appearance'), icon: Palette },
     { to: 'notifications', label: t('preferences.sidebar.notifications'), icon: Bell },
-    { to: 'api-keys', label: t('preferences.sidebar.apiKeys'), icon: Key },
+    { to: 'authentication', label: t('preferences.sidebar.authentication'), icon: Lock },
   ]
 
   return (
@@ -54,7 +54,8 @@ export function PreferencesPage() {
             <Route path="general" element={<GeneralPage />} />
             <Route path="appearance" element={<AppearancePage />} />
             <Route path="notifications" element={<NotificationsPage />} />
-            <Route path="api-keys" element={<APIKeysPage />} />
+            <Route path="authentication" element={<AuthenticationPage />} />
+            <Route path="api-keys" element={<Navigate to="/preferences/authentication" replace />} />
           </Routes>
         </div>
       </div>

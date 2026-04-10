@@ -107,11 +107,6 @@ export function APIKeysPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{t('preferences.apiKeys.title')}</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('preferences.apiKeys.description')}</p>
-      </div>
-
       {/* Key Reveal Card */}
       {createdKey && (
         <div className="mb-6 rounded-lg border-2 border-amber-400 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-600 p-4">

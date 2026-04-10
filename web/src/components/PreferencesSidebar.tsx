@@ -5,7 +5,7 @@ import {
   User,
   Settings,
   Palette,
-  Key,
+  Lock,
   Bell,
   PanelLeftClose,
   PanelLeftOpen,
@@ -22,7 +22,7 @@ export function PreferencesSidebar() {
     { to: 'general', label: t('preferences.sidebar.general'), icon: Settings, end: false },
     { to: 'appearance', label: t('preferences.sidebar.appearance'), icon: Palette, end: false },
     { to: 'notifications', label: t('preferences.sidebar.notifications'), icon: Bell, end: false },
-    { to: 'api-keys', label: t('preferences.sidebar.apiKeys'), icon: Key, end: false },
+    { to: 'authentication', label: t('preferences.sidebar.authentication'), icon: Lock, end: false },
   ]
 
   function renderNavItems(showLabels: boolean) {

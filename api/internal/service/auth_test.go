@@ -1102,6 +1102,34 @@ func TestChangePassword_TooShort(t *testing.T) {
 	}
 }
 
+func TestChangePassword_SetInitialForOAuthUser(t *testing.T) {
+	svc, userRepo, _ := newTestAuthService()
+	// Create an OAuth-only user (no password hash)
+	user := &model.User{
+		ID:          uuid.New(),
+		Email:       "oauth@example.com",
+		DisplayName: "OAuth User",
+		GlobalRole:  model.RoleUser,
+	}
+	if err := userRepo.Create(context.Background(), user); err != nil {
+		t.Fatalf("failed to create user: %v", err)
+	}
+
+	// Setting an initial password should succeed even with empty old password
+	err := svc.ChangePassword(context.Background(), user.ID, "", "newpassword123")
+	if err != nil {
+		t.Fatalf("expected no error setting initial password, got %v", err)
+	}
+
+	updated, _ := userRepo.GetByID(context.Background(), user.ID)
+	if updated.PasswordHash == "" {
+		t.Fatal("expected password hash to be set")
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(updated.PasswordHash), []byte("newpassword123")); err != nil {
+		t.Fatal("expected new password to be valid")
+	}
+}
+
 func TestLogin_ReturnsForcePasswordChange(t *testing.T) {
 	svc, userRepo, _ := newTestAuthService()
 	user := createTestUser(t, userRepo, "test@example.com", "password123", model.RoleUser)
