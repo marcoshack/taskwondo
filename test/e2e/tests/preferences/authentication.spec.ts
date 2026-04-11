@@ -68,7 +68,7 @@ test.describe('Authentication Page', () => {
 
     // Switch to API Keys tab
     await page.getByRole('button', { name: 'API Keys' }).click();
-    await expect(page.getByText(/Create New Key|No API keys yet/)).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Create New Key' })).toBeVisible();
     await attach(page, testInfo, '03-api-keys-tab');
 
     // Switch back to Password tab
