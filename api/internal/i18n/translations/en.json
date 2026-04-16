@@ -37,6 +37,11 @@
   "email.invite.cta": "Accept Invite",
   "email.invite.footer": "You received this email because someone invited you to a Taskwondo project. If you don't recognize this invite, you can safely ignore this email.",
 
+  "email.namespace_invite.subject": "You've been invited to {{namespaceName}}",
+  "email.namespace_invite.intro": "<strong>{{inviterName}}</strong> invited you to join the workspace <strong>{{namespaceName}}</strong> as a <strong>{{role}}</strong>.",
+  "email.namespace_invite.cta": "Accept Invite",
+  "email.namespace_invite.footer": "You received this email because someone invited you to a Taskwondo workspace. If you don't recognize this invite, you can safely ignore this email.",
+
   "email.sla_breach.subject": "[{{projectKey}}] SLA Warning: #{{itemNumber}} \u2014 \"{{title}}\" (Level {{level}})",
   "email.sla_breach.intro": "A work item is approaching or has exceeded its SLA target:",
   "email.sla_breach.sla_status": "SLA: <strong>{{percentage}}%</strong> of target time used",

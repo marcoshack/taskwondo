@@ -7,8 +7,24 @@ import { useNotification } from '@/contexts/NotificationContext'
 import { useInviteInfo, useAcceptInvite } from '@/hooks/useProjects'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
+import { toUrlSegment } from '@/hooks/useNamespacePath'
+import type { AcceptInviteResult, InviteInfo } from '@/api/projects'
 
 const PENDING_INVITE_KEY = 'taskwondo_pending_invite'
+
+function getDisplayName(info: InviteInfo): string {
+  return info.type === 'namespace' ? (info.namespace_display_name ?? '') : (info.project_name ?? '')
+}
+
+function getPostAcceptPath(result: AcceptInviteResult): string {
+  if (result.type === 'namespace') {
+    return `/${toUrlSegment(result.namespace_slug ?? 'd')}/projects`
+  }
+  if (result.project) {
+    return `/d/projects/${result.project.key}`
+  }
+  return '/d/projects'
+}
 
 export function InviteAcceptPage() {
   const { t } = useTranslation()
@@ -36,14 +52,15 @@ export function InviteAcceptPage() {
 
     acceptMutation.mutateAsync(code)
       .then((result) => {
+        const roleKey = result.type === 'namespace' ? 'namespaces.roles.' : 'projects.settings.roles.'
         if (result.role_not_applied) {
-          const existingRole = t(`projects.settings.roles.${result.existing_role}`)
-          const inviteRole = t(`projects.settings.roles.${result.invite_role}`)
+          const existingRole = t(`${roleKey}${result.existing_role}`)
+          const inviteRole = t(`${roleKey}${result.invite_role}`)
           showNotification(t('invite.roleNotApplied', { existingRole, inviteRole }))
         } else {
-          showNotification(t('invite.accepted', { projectName: inviteInfo.project_name }))
+          showNotification(t('invite.accepted', { projectName: getDisplayName(inviteInfo) }))
         }
-        navigate(`/d/projects/${result.key}`, { replace: true })
+        navigate(getPostAcceptPath(result), { replace: true })
       })
       .catch((err) => {
         setAutoAccepting(false)
@@ -116,7 +133,10 @@ export function InviteAcceptPage() {
     )
   }
 
-  const roleLabel = t(`projects.settings.roles.${inviteInfo.role}`)
+  const resourceDisplayName = getDisplayName(inviteInfo)
+  const roleNamespace = inviteInfo.type === 'namespace' ? 'namespaces.roles.' : 'projects.settings.roles.'
+  const roleLabel = t(`${roleNamespace}${inviteInfo.role}`)
+  const joinKey = inviteInfo.type === 'namespace' ? 'invite.joinNamespaceAs' : 'invite.joinAs'
 
   const handleLoginToJoin = () => {
     localStorage.setItem(PENDING_INVITE_KEY, code ?? '')
@@ -128,13 +148,13 @@ export function InviteAcceptPage() {
       const result = await acceptMutation.mutateAsync(code ?? '')
       localStorage.removeItem(PENDING_INVITE_KEY)
       if (result.role_not_applied) {
-        const existingRole = t(`projects.settings.roles.${result.existing_role}`)
-        const inviteRole = t(`projects.settings.roles.${result.invite_role}`)
+        const existingRole = t(`${roleNamespace}${result.existing_role}`)
+        const inviteRole = t(`${roleNamespace}${result.invite_role}`)
         showNotification(t('invite.roleNotApplied', { existingRole, inviteRole }))
       } else {
-        showNotification(t('invite.accepted', { projectName: inviteInfo.project_name }))
+        showNotification(t('invite.accepted', { projectName: resourceDisplayName }))
       }
-      navigate(`/d/projects/${result.key}`, { replace: true })
+      navigate(getPostAcceptPath(result), { replace: true })
     } catch (err) {
       if (isAxiosError(err) && err.response?.status === 409) {
         showNotification(t('invite.alreadyMember'), 'error')
@@ -153,8 +173,8 @@ export function InviteAcceptPage() {
 
         <p className="text-gray-600 dark:text-gray-400">
           <Trans
-            i18nKey="invite.joinAs"
-            values={{ projectName: inviteInfo.project_name, role: roleLabel }}
+            i18nKey={joinKey}
+            values={{ projectName: resourceDisplayName, namespaceName: resourceDisplayName, role: roleLabel }}
             components={{ bold: <strong className="text-gray-900 dark:text-gray-100" /> }}
           />
         </p>
@@ -167,7 +187,7 @@ export function InviteAcceptPage() {
           >
             {acceptMutation.isPending
               ? t('invite.joining')
-              : t('invite.join', { projectName: inviteInfo.project_name })}
+              : t('invite.join', { projectName: resourceDisplayName })}
           </Button>
         ) : (
           <Button onClick={handleLoginToJoin} className="w-full">

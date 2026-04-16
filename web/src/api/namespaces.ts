@@ -101,3 +101,37 @@ export async function removeNamespaceMember(slug: string, userId: string): Promi
 export async function migrateProject(fromSlug: string, projectKey: string, targetSlug: string): Promise<void> {
   await api.post(`/namespaces/${fromSlug}/projects/${projectKey}/migrate`, { target_namespace: targetSlug })
 }
+
+// --- Namespace Invites ---
+
+export interface NamespaceInvite {
+  id: string
+  code: string
+  role: string
+  url: string
+  invitee_email?: string
+  expires_at?: string
+  max_uses: number
+  use_count: number
+  created_at: string
+}
+
+export interface CreateNamespaceEmailInviteInput {
+  email: string
+  role: string
+  expires_in?: string
+}
+
+export async function listNamespaceInvites(slug: string): Promise<NamespaceInvite[]> {
+  const res = await api.get<DataResponse<NamespaceInvite[]>>(`/namespaces/${slug}/invites`)
+  return res.data.data ?? []
+}
+
+export async function createNamespaceEmailInvite(slug: string, input: CreateNamespaceEmailInviteInput): Promise<NamespaceInvite> {
+  const res = await api.post<DataResponse<NamespaceInvite>>(`/namespaces/${slug}/invites`, input)
+  return res.data.data
+}
+
+export async function deleteNamespaceInvite(slug: string, inviteId: string): Promise<void> {
+  await api.delete(`/namespaces/${slug}/invites/${inviteId}`)
+}

@@ -2,11 +2,21 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Trans, useTranslation } from 'react-i18next'
 import { toUrlSegment, fromUrlSegment } from '@/hooks/useNamespacePath'
-import { Check, Trash2 } from 'lucide-react'
+import { Check, Trash2, Mail } from 'lucide-react'
 import { NamespaceIcon, NAMESPACE_ICONS, NAMESPACE_COLORS, getColorClasses, getIconComponent } from '@/components/NamespaceIcon'
 import { useAuth } from '@/contexts/AuthContext'
 import { useNamespaceContext } from '@/contexts/NamespaceContext'
-import { useNamespace, useUpdateNamespace, useDeleteNamespace, useNamespaceMembers, useAddNamespaceMember, useUpdateNamespaceMemberRole, useRemoveNamespaceMember } from '@/hooks/useNamespaces'
+import {
+  useNamespace,
+  useUpdateNamespace,
+  useDeleteNamespace,
+  useNamespaceMembers,
+  useUpdateNamespaceMemberRole,
+  useRemoveNamespaceMember,
+  useNamespaceInvites,
+  useCreateNamespaceEmailInvite,
+  useDeleteNamespaceInvite,
+} from '@/hooks/useNamespaces'
 import { useSidebar } from '@/contexts/SidebarContext'
 import { useLayout } from '@/contexts/LayoutContext'
 import { AppSidebar } from '@/components/AppSidebar'
@@ -17,16 +27,13 @@ import { Spinner } from '@/components/ui/Spinner'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import { Tooltip } from '@/components/ui/Tooltip'
-import { UserSearchInput } from '@/components/UserSearchInput'
 import { getLocalizedError } from '@/utils/apiError'
-import type { UserSearchResult } from '@/api/users'
 
-const ROLE_OPTIONS = ['admin', 'member', 'customer'] as const
+const ROLE_OPTIONS = ['admin', 'member'] as const
 const ROLE_BADGE_COLORS: Record<string, 'indigo' | 'blue' | 'green' | 'gray' | 'yellow'> = {
   owner: 'indigo',
   admin: 'blue',
   member: 'green',
-  customer: 'yellow',
 }
 
 export function NamespaceSettingsPage() {
@@ -43,9 +50,11 @@ export function NamespaceSettingsPage() {
   const updateMutation = useUpdateNamespace(slug ?? '')
   const deleteMutation = useDeleteNamespace()
   const { data: members } = useNamespaceMembers(slug ?? '')
-  const addMemberMutation = useAddNamespaceMember(slug ?? '')
   const updateRoleMutation = useUpdateNamespaceMemberRole(slug ?? '')
   const removeMemberMutation = useRemoveNamespaceMember(slug ?? '')
+  const { data: invites } = useNamespaceInvites(slug ?? '')
+  const createInviteMutation = useCreateNamespaceEmailInvite(slug ?? '')
+  const deleteInviteMutation = useDeleteNamespaceInvite(slug ?? '')
 
   const [displayName, setDisplayName] = useState<string | null>(null)
   const [slugInput, setSlugInput] = useState<string | null>(null)
@@ -56,10 +65,12 @@ export function NamespaceSettingsPage() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
 
   // Members state
-  const [selectedUser, setSelectedUser] = useState<UserSearchResult | null>(null)
+  const [emailInput, setEmailInput] = useState('')
   const [newMemberRole, setNewMemberRole] = useState('member')
   const [memberError, setMemberError] = useState('')
   const [removeTarget, setRemoveTarget] = useState<{ userId: string; name: string } | null>(null)
+  const [revokeTarget, setRevokeTarget] = useState<{ id: string; email: string } | null>(null)
+  const [showEmailInviteModal, setShowEmailInviteModal] = useState(false)
 
   const [saved, setSaved] = useState<Record<string, boolean>>({})
   function showSaved(key: string) {
@@ -96,6 +107,14 @@ export function NamespaceSettingsPage() {
   const canManage = currentUserRole === 'owner' || currentUserRole === 'admin' || user?.global_role === 'admin'
   const isOwner = currentUserRole === 'owner' || user?.global_role === 'admin'
 
+  // Pending email invites (active, unexpired, not fully used)
+  const pendingEmailInvites = (invites ?? []).filter(
+    (inv) =>
+      inv.invitee_email &&
+      (inv.max_uses === 0 || inv.use_count < inv.max_uses) &&
+      (!inv.expires_at || new Date(inv.expires_at) >= new Date()),
+  )
+
   function handleSave(e: React.FormEvent) {
     e.preventDefault()
     setSaveError('')
@@ -127,7 +146,6 @@ export function NamespaceSettingsPage() {
   function handleDelete() {
     deleteMutation.mutate(slug!, {
       onSuccess: () => {
-        // Switch to default namespace (setActiveNamespace navigates to projects)
         const defaultNs = namespaces.find((ns) => ns.is_default)
         if (defaultNs) setActiveNamespace(defaultNs.slug)
       },
@@ -138,19 +156,20 @@ export function NamespaceSettingsPage() {
     })
   }
 
-  function handleAddMember() {
-    if (!selectedUser) return
+  function handleEmailInvite() {
+    if (!emailInput.trim()) return
     setMemberError('')
-    addMemberMutation.mutate(
-      { user_id: selectedUser.id, role: newMemberRole },
+    setShowEmailInviteModal(false)
+    createInviteMutation.mutate(
+      { email: emailInput.trim(), role: newMemberRole },
       {
         onSuccess: () => {
-          setSelectedUser(null)
+          setEmailInput('')
           setNewMemberRole('member')
-          showSaved('addMember')
+          showSaved('emailInvite')
         },
         onError: (err) => {
-          setMemberError(getLocalizedError(err, t, 'namespaces.addMemberError'))
+          setMemberError(getLocalizedError(err, t, 'namespaces.emailInviteError'))
         },
       },
     )
@@ -181,7 +200,17 @@ export function NamespaceSettingsPage() {
     })
   }
 
-  const memberIds = members?.map((m) => m.user_id) ?? []
+  function handleRevokeInvite() {
+    if (!revokeTarget) return
+    setMemberError('')
+    deleteInviteMutation.mutate(revokeTarget.id, {
+      onSuccess: () => setRevokeTarget(null),
+      onError: (err) => {
+        setMemberError(getLocalizedError(err, t, 'namespaces.inviteDeleteError'))
+        setRevokeTarget(null)
+      },
+    })
+  }
 
   return (
     <div className={`${containerClass(true)} py-6`}>
@@ -299,38 +328,39 @@ export function NamespaceSettingsPage() {
 
           {canManage && (
             <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3">
-              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('namespaces.addMember')}</h3>
+              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('namespaces.inviteByEmail')}</h3>
               <div className="flex gap-2 items-end">
-                {selectedUser ? (
-                  <div className="flex-1 min-w-0 flex items-center gap-2 rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm bg-white dark:bg-gray-800">
-                    <span className="shrink-0"><Avatar name={selectedUser.display_name} avatarUrl={selectedUser.avatar_url} size="xs" /></span>
-                    <span className="truncate text-gray-900 dark:text-gray-100">{selectedUser.display_name}</span>
-                    <button type="button" className="shrink-0 ml-auto text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" onClick={() => setSelectedUser(null)}>&times;</button>
-                  </div>
-                ) : (
-                  <UserSearchInput excludeUserIds={memberIds} onSelect={setSelectedUser} />
-                )}
+                <div className="flex-1 min-w-0">
+                  <Input
+                    type="email"
+                    placeholder={t('namespaces.emailInvitePlaceholder')}
+                    value={emailInput}
+                    onChange={(e) => setEmailInput(e.target.value)}
+                  />
+                </div>
                 <select
                   className="shrink-0 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   value={newMemberRole}
                   onChange={(e) => setNewMemberRole(e.target.value)}
                 >
-                  {isOwner && <option value="owner">{t('namespaces.roles.owner')}</option>}
                   {ROLE_OPTIONS.map((role) => (
                     <option key={role} value={role}>{t(`namespaces.roles.${role}`)}</option>
                   ))}
                 </select>
-                <Button disabled={!selectedUser || addMemberMutation.isPending} onClick={handleAddMember}>
-                  {addMemberMutation.isPending ? t('common.saving') : t('common.add')}
+                <Button
+                  disabled={!emailInput.trim() || createInviteMutation.isPending}
+                  onClick={() => setShowEmailInviteModal(true)}
+                >
+                  {createInviteMutation.isPending ? t('common.saving') : t('namespaces.sendInvite')}
                 </Button>
-                {saved.addMember && <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />}
+                {saved.emailInvite && <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />}
               </div>
             </div>
           )}
 
-          {members && members.length > 0 && (
+          {((members && members.length > 0) || pendingEmailInvites.length > 0) && (
             <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
-              {members.map((member) => {
+              {members?.map((member) => {
                 const isSelf = member.user_id === user?.id
                 const memberIsOwner = member.role === 'owner'
                 const ownerCount = members.filter((m) => m.role === 'owner').length
@@ -385,6 +415,34 @@ export function NamespaceSettingsPage() {
                   </div>
                 )
               })}
+              {pendingEmailInvites.map((invite) => (
+                <div key={invite.id} className="flex flex-wrap items-center justify-between gap-2 p-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="h-8 w-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                      <Mail className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                        {invite.invitee_email}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
+                    <Badge color="yellow">{t('namespaces.invitedBadge')}</Badge>
+                    <Badge color={ROLE_BADGE_COLORS[invite.role] ?? 'gray'}>
+                      {t(`namespaces.roles.${invite.role}`)}
+                    </Badge>
+                    {canManage && (
+                      <button
+                        className="p-1 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                        onClick={() => setRevokeTarget({ id: invite.id, email: invite.invitee_email ?? '' })}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 
@@ -440,6 +498,38 @@ export function NamespaceSettingsPage() {
               <Button variant="secondary" onClick={() => setRemoveTarget(null)}>{t('common.cancel')}</Button>
               <Button variant="danger" disabled={removeMemberMutation.isPending} onClick={handleRemoveMember}>
                 {removeMemberMutation.isPending ? t('common.deleting') : t('common.remove')}
+              </Button>
+            </div>
+          </Modal>
+
+          {/* Revoke invite confirmation modal */}
+          <Modal open={!!revokeTarget} onClose={() => setRevokeTarget(null)} title={t('namespaces.revokeInviteConfirmTitle')}>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+              <Trans i18nKey="namespaces.revokeInviteConfirmBody" values={{ email: revokeTarget?.email }} components={{ bold: <strong /> }} />
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setRevokeTarget(null)}>{t('common.cancel')}</Button>
+              <Button variant="danger" disabled={deleteInviteMutation.isPending} onClick={handleRevokeInvite}>
+                {deleteInviteMutation.isPending ? t('common.deleting') : t('common.revoke')}
+              </Button>
+            </div>
+          </Modal>
+
+          {/* Email invite confirmation modal */}
+          <Modal open={showEmailInviteModal} onClose={() => setShowEmailInviteModal(false)} title={t('namespaces.emailInviteConfirmTitle')}>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+              <Trans
+                i18nKey="namespaces.emailInviteConfirmBody"
+                values={{ email: emailInput, role: t(`namespaces.roles.${newMemberRole}`) }}
+                components={{ bold: <strong /> }}
+              />
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setShowEmailInviteModal(false)}>
+                {t('common.cancel')}
+              </Button>
+              <Button disabled={createInviteMutation.isPending} onClick={handleEmailInvite}>
+                {createInviteMutation.isPending ? t('common.saving') : t('namespaces.emailInviteSend')}
               </Button>
             </div>
           </Modal>

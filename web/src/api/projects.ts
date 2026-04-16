@@ -163,11 +163,16 @@ export interface ProjectInvite {
 }
 
 export interface InviteInfo {
-  project_name: string
-  project_key: string
+  type: 'project' | 'namespace'
   role: string
   expired: boolean
   full: boolean
+  // Present when type === 'project'
+  project_name?: string
+  project_key?: string
+  // Present when type === 'namespace'
+  namespace_slug?: string
+  namespace_display_name?: string
 }
 
 export interface CreateInviteInput {
@@ -196,7 +201,14 @@ export async function getInviteInfo(code: string) {
   return res.data.data
 }
 
-export interface AcceptInviteResult extends Project {
+export interface AcceptInviteResult {
+  type: 'project' | 'namespace'
+  // Present when type === 'project'
+  project?: Project
+  // Present when type === 'namespace'
+  namespace_slug?: string
+  namespace_display_name?: string
+
   role_not_applied?: boolean
   existing_role?: string
   invite_role?: string

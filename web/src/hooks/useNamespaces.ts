@@ -10,10 +10,14 @@ import {
   updateNamespaceMemberRole,
   removeNamespaceMember,
   migrateProject,
+  listNamespaceInvites,
+  createNamespaceEmailInvite,
+  deleteNamespaceInvite,
   type NamespaceListResult,
   type CreateNamespaceInput,
   type UpdateNamespaceInput,
   type AddNamespaceMemberInput,
+  type CreateNamespaceEmailInviteInput,
 } from '@/api/namespaces'
 
 export function useNamespaces(enabled = true) {
@@ -132,6 +136,34 @@ export function useMigrateProject() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['projects'] })
       qc.invalidateQueries({ queryKey: ['namespaces'] })
+    },
+  })
+}
+
+export function useNamespaceInvites(slug: string) {
+  return useQuery({
+    queryKey: ['namespaces', slug, 'invites'],
+    queryFn: () => listNamespaceInvites(slug),
+    enabled: !!slug,
+  })
+}
+
+export function useCreateNamespaceEmailInvite(slug: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: CreateNamespaceEmailInviteInput) => createNamespaceEmailInvite(slug, input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['namespaces', slug, 'invites'] })
+    },
+  })
+}
+
+export function useDeleteNamespaceInvite(slug: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (inviteId: string) => deleteNamespaceInvite(slug, inviteId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['namespaces', slug, 'invites'] })
     },
   })
 }

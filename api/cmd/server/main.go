@@ -106,6 +106,7 @@ func main() {
 	embeddingRepo := repository.NewEmbeddingRepository(db)
 	namespaceRepo := repository.NewNamespaceRepository(db)
 	namespaceMemberRepo := repository.NewNamespaceMemberRepository(db)
+	namespaceInviteRepo := repository.NewNamespaceInviteRepository(db)
 
 	// Initialize storage
 	store, err := storage.NewMinIOStorage(
@@ -162,7 +163,7 @@ func main() {
 	inboxService := service.NewInboxService(inboxRepo, projectMemberRepo)
 	userSettingService := service.NewUserSettingService(userSettingRepo, projectRepo, projectMemberRepo)
 	systemSettingService := service.NewSystemSettingService(systemSettingRepo)
-	namespaceService := service.NewNamespaceService(namespaceRepo, namespaceMemberRepo, projectRepo, projectMemberRepo, userRepo, systemSettingRepo, userSettingRepo)
+	namespaceService := service.NewNamespaceService(namespaceRepo, namespaceMemberRepo, projectRepo, projectMemberRepo, userRepo, systemSettingRepo, userSettingRepo, namespaceInviteRepo)
 	adminRepo := repository.NewAdminRepository(db)
 	adminService := service.NewAdminService(userRepo, projectRepo, projectMemberRepo, adminRepo)
 	statsService := service.NewStatsService(statsRepo, projectRepo, projectMemberRepo)
@@ -256,6 +257,7 @@ func main() {
 	systemSettingService.SetPublisher(publisher)
 	oncallService.SetPublisher(publisher)
 	teamService.SetPublisher(publisher)
+	namespaceService.SetPublisher(publisher)
 
 	// Wire SLA notification repository for clearing notifications on status transitions
 	slaNotificationRepo := repository.NewSLANotificationRepository(db)
@@ -311,7 +313,8 @@ func main() {
 	inbox := handler.NewInboxHandler(inboxService, slaService)
 	stats := handler.NewStatsHandler(statsService)
 	search := handler.NewSearchHandler(searchService)
-	namespaces := handler.NewNamespaceHandler(namespaceService)
+	namespaces := handler.NewNamespaceHandler(namespaceService, cfg.BaseURL)
+	invites := handler.NewInviteHandler(projectService, namespaceService)
 	portal := handler.NewPortalHandler(workItemService, queueService, authService, cfg.MaxUploadSize)
 
 	metricsHandler := handler.NewMetricsHandler()
@@ -351,8 +354,8 @@ func main() {
 		// Public settings (unauthenticated)
 		r.Get("/settings/public", systemSettings.GetPublic)
 
-		// Public invite info (unauthenticated)
-		r.Get("/invites/{code}", projects.GetInviteInfo)
+		// Public invite info (unauthenticated) — resolves project or namespace invites
+		r.Get("/invites/{code}", invites.GetInviteInfo)
 
 		// Public avatar serving (loaded by <img> tags which can't send JWT)
 		r.Get("/users/{userId}/avatar", auth.GetUserAvatar)
@@ -410,8 +413,8 @@ func main() {
 			r.Get("/users", auth.SearchUsers)
 			r.Get("/users/search", auth.SearchUsersDeprecated) // deprecated — use /users
 
-			// Accept invite (authenticated)
-			r.Post("/invites/{code}/accept", projects.AcceptInvite)
+			// Accept invite (authenticated) — resolves project or namespace invites
+			r.Post("/invites/{code}/accept", invites.AcceptInvite)
 
 			// Semantic search
 			r.Get("/search", search.Search)
@@ -429,6 +432,11 @@ func main() {
 						r.Post("/", namespaces.AddMember)
 						r.Put("/{userId}", namespaces.UpdateMemberRole)
 						r.Delete("/{userId}", namespaces.RemoveMember)
+					})
+					r.Route("/invites", func(r chi.Router) {
+						r.Get("/", namespaces.ListInvites)
+						r.Post("/", namespaces.CreateInvite)
+						r.Delete("/{inviteId}", namespaces.DeleteInvite)
 					})
 					r.Post("/projects/{projectKey}/migrate", namespaces.MigrateProject)
 				})

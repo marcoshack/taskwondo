@@ -100,6 +100,16 @@ type InviteEmailEvent struct {
 	Role         string `json:"role"`
 }
 
+// NamespaceInviteEmailEvent is published when a namespace email invite is created.
+type NamespaceInviteEmailEvent struct {
+	NamespaceSlug        string `json:"namespace_slug"`
+	NamespaceDisplayName string `json:"namespace_display_name"`
+	InviteeEmail         string `json:"invitee_email"`
+	InviterName          string `json:"inviter_name"`
+	InviteCode           string `json:"invite_code"`
+	Role                 string `json:"role"`
+}
+
 // SLABreachEvent is published when a work item crosses an SLA escalation threshold.
 type SLABreachEvent struct {
 	WorkItemID       uuid.UUID `json:"work_item_id"`

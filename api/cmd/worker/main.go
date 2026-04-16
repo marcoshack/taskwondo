@@ -161,6 +161,11 @@ func main() {
 	)
 	dispatcher.Register(notifyInviteEmail)
 
+	notifyNamespaceInviteEmail := workers.NewNotificationNamespaceInviteEmailTask(
+		emailSender, cfg.BaseURL, log.Logger,
+	)
+	dispatcher.Register(notifyNamespaceInviteEmail)
+
 	// Register SLA breach notification task
 	notifySLABreach := workers.NewNotificationSLABreachTask(
 		escalationRepo, slaNotificationRepo, teamRepo, userSettingRepo, emailSender, cfg.BaseURL, log.Logger,

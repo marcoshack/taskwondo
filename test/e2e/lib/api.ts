@@ -1104,6 +1104,70 @@ export async function enableNamespaces(
   await setSystemSetting(request, adminToken, 'namespaces_enabled', true);
 }
 
+export async function createNamespaceEmailInvite(
+  request: APIRequestContext,
+  token: string,
+  slug: string,
+  email: string,
+  role: string,
+): Promise<{ id: string; code: string; role: string; invitee_email?: string; max_uses: number; use_count: number }> {
+  const res = await request.post(`${BASE_URL}/api/v1/namespaces/${slug}/invites`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { role, email },
+  });
+  if (!res.ok()) throw new Error(`Create namespace invite failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function listNamespaceInvites(
+  request: APIRequestContext,
+  token: string,
+  slug: string,
+): Promise<Array<{ id: string; code: string; role: string; invitee_email?: string; max_uses: number; use_count: number }>> {
+  const res = await request.get(`${BASE_URL}/api/v1/namespaces/${slug}/invites`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`List namespace invites failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data ?? [];
+}
+
+export async function deleteNamespaceInvite(
+  request: APIRequestContext,
+  token: string,
+  slug: string,
+  inviteId: string,
+): Promise<void> {
+  const res = await request.delete(`${BASE_URL}/api/v1/namespaces/${slug}/invites/${inviteId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`Delete namespace invite failed (${res.status()}): ${await res.text()}`);
+}
+
+export async function getInviteInfo(
+  request: APIRequestContext,
+  code: string,
+): Promise<{ type: 'project' | 'namespace'; role: string; expired: boolean; full: boolean; project_name?: string; project_key?: string; namespace_slug?: string; namespace_display_name?: string }> {
+  const res = await request.get(`${BASE_URL}/api/v1/invites/${code}`);
+  if (!res.ok()) throw new Error(`Get invite info failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function acceptInvite(
+  request: APIRequestContext,
+  token: string,
+  code: string,
+): Promise<{ type: 'project' | 'namespace'; namespace_slug?: string; namespace_display_name?: string; role_not_applied?: boolean; existing_role?: string; invite_role?: string }> {
+  const res = await request.post(`${BASE_URL}/api/v1/invites/${code}/accept`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`Accept invite failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
 export async function disableNamespaces(
   request: APIRequestContext,
   adminToken: string,

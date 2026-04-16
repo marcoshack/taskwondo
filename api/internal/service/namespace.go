@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
@@ -60,6 +61,17 @@ type NamespaceProjectRepository interface {
 type NamespaceUserRepository interface {
 	ListAll(ctx context.Context) ([]model.User, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*model.User, error)
+	GetByEmail(ctx context.Context, email string) (*model.User, error)
+}
+
+// NamespaceInviteRepository defines persistence operations for namespace invites.
+type NamespaceInviteRepository interface {
+	Create(ctx context.Context, invite *model.NamespaceInvite) error
+	GetByCode(ctx context.Context, code string) (*model.NamespaceInvite, error)
+	GetByID(ctx context.Context, id uuid.UUID) (*model.NamespaceInvite, error)
+	ListByNamespace(ctx context.Context, namespaceID uuid.UUID) ([]model.NamespaceInvite, error)
+	IncrementUseCount(ctx context.Context, id uuid.UUID) error
+	Delete(ctx context.Context, id uuid.UUID) error
 }
 
 // NamespaceSystemSettingsRepository defines the system settings operations needed by the namespace service.
@@ -86,10 +98,12 @@ type NamespaceService struct {
 	users          NamespaceUserRepository
 	systemSettings NamespaceSystemSettingsRepository
 	userSettings   NamespaceUserSettingsRepository
+	invites        NamespaceInviteRepository
+	publisher      EventPublisher
 }
 
 // NewNamespaceService creates a new NamespaceService.
-func NewNamespaceService(namespaces NamespaceRepository, members NamespaceMemberRepository, projects NamespaceProjectRepository, projectMembers NamespaceProjectMemberRepository, users NamespaceUserRepository, systemSettings NamespaceSystemSettingsRepository, userSettings NamespaceUserSettingsRepository) *NamespaceService {
+func NewNamespaceService(namespaces NamespaceRepository, members NamespaceMemberRepository, projects NamespaceProjectRepository, projectMembers NamespaceProjectMemberRepository, users NamespaceUserRepository, systemSettings NamespaceSystemSettingsRepository, userSettings NamespaceUserSettingsRepository, invites NamespaceInviteRepository) *NamespaceService {
 	return &NamespaceService{
 		namespaces:     namespaces,
 		members:        members,
@@ -98,7 +112,13 @@ func NewNamespaceService(namespaces NamespaceRepository, members NamespaceMember
 		users:          users,
 		systemSettings: systemSettings,
 		userSettings:   userSettings,
+		invites:        invites,
 	}
+}
+
+// SetPublisher configures the event publisher for notifications.
+func (s *NamespaceService) SetPublisher(p EventPublisher) {
+	s.publisher = p
 }
 
 // --- Namespace CRUD ---
@@ -504,6 +524,285 @@ func (s *NamespaceService) RemoveNamespaceMember(ctx context.Context, info *mode
 		Msg("member removed from namespace")
 
 	return nil
+}
+
+// --- Namespace Invites ---
+
+// namespaceRoleRank returns a numeric rank for namespace roles (higher = more access).
+func namespaceRoleRank(role string) int {
+	switch role {
+	case model.NamespaceRoleOwner:
+		return 3
+	case model.NamespaceRoleAdmin:
+		return 2
+	case model.NamespaceRoleMember:
+		return 1
+	default:
+		return 0
+	}
+}
+
+// isValidNamespaceInviteRole returns true if the role can be used in an invite (owner not allowed).
+func isValidNamespaceInviteRole(role string) bool {
+	switch role {
+	case model.NamespaceRoleAdmin, model.NamespaceRoleMember:
+		return true
+	}
+	return false
+}
+
+// CreateNamespaceEmailInviteResult contains the result of an email-based namespace invite.
+type CreateNamespaceEmailInviteResult struct {
+	Invite *model.NamespaceInvite
+}
+
+// CreateNamespaceEmailInvite creates a personal invite for the given email and publishes
+// a notification event. The invitee must accept the invite to join the namespace,
+// regardless of whether they already have an account. Mirrors ProjectService.CreateEmailInvite.
+func (s *NamespaceService) CreateNamespaceEmailInvite(ctx context.Context, info *model.AuthInfo, slug, email, role string, expiresAt *time.Time) (*CreateNamespaceEmailInviteResult, error) {
+	if s.invites == nil {
+		return nil, fmt.Errorf("namespace invites not configured")
+	}
+
+	ns, err := s.namespaces.GetBySlug(ctx, slug)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.requireNamespaceRole(ctx, info, ns.ID, model.NamespaceRoleOwner, model.NamespaceRoleAdmin); err != nil {
+		return nil, err
+	}
+
+	if !isValidNamespaceInviteRole(role) {
+		return nil, fmt.Errorf("invalid namespace invite role %q (owner not allowed): %w", role, model.ErrValidation)
+	}
+
+	if email == "" {
+		return nil, fmt.Errorf("email is required: %w", model.ErrValidation)
+	}
+
+	// If the user already exists, check they're not already a member.
+	existingUser, err := s.users.GetByEmail(ctx, email)
+	if err != nil && err != model.ErrNotFound {
+		return nil, fmt.Errorf("looking up user by email: %w", err)
+	}
+	if existingUser != nil {
+		existing, err := s.members.GetByNamespaceAndUser(ctx, ns.ID, existingUser.ID)
+		if err == nil && existing != nil {
+			return nil, fmt.Errorf("user is already a member of this namespace: %w", model.ErrAlreadyExists)
+		}
+		if err != nil && err != model.ErrNotFound {
+			return nil, fmt.Errorf("checking membership: %w", err)
+		}
+	}
+
+	code, err := generateInviteCode()
+	if err != nil {
+		return nil, fmt.Errorf("generating invite code: %w", err)
+	}
+
+	invite := &model.NamespaceInvite{
+		ID:           uuid.New(),
+		NamespaceID:  ns.ID,
+		Code:         code,
+		Role:         role,
+		CreatedBy:    info.UserID,
+		InviteeEmail: &email,
+		ExpiresAt:    expiresAt,
+		MaxUses:      1,
+	}
+
+	if err := s.invites.Create(ctx, invite); err != nil {
+		return nil, fmt.Errorf("creating namespace invite: %w", err)
+	}
+
+	log.Ctx(ctx).Info().
+		Str("namespace_slug", slug).
+		Str("invite_code", code).
+		Str("invitee_email", email).
+		Str("role", role).
+		Msg("namespace email invite created")
+
+	s.publishNamespaceInviteEmail(ctx, ns, info, email, code, role)
+
+	return &CreateNamespaceEmailInviteResult{Invite: invite}, nil
+}
+
+func (s *NamespaceService) publishNamespaceInviteEmail(ctx context.Context, ns *model.Namespace, info *model.AuthInfo, email, code, role string) {
+	if s.publisher == nil {
+		return
+	}
+	inviter, err := s.users.GetByID(ctx, info.UserID)
+	inviterName := "A team member"
+	if err == nil {
+		inviterName = inviter.DisplayName
+	}
+	evt := model.NamespaceInviteEmailEvent{
+		NamespaceSlug:        ns.Slug,
+		NamespaceDisplayName: ns.DisplayName,
+		InviteeEmail:         email,
+		InviterName:          inviterName,
+		InviteCode:           code,
+		Role:                 role,
+	}
+	if err := s.publisher.Publish("notification.namespace_invite_email", evt); err != nil {
+		log.Ctx(context.Background()).Warn().Err(err).Msg("failed to publish namespace invite email notification")
+	}
+}
+
+// ListNamespaceInvites returns all invites for a namespace. Requires owner or admin role.
+func (s *NamespaceService) ListNamespaceInvites(ctx context.Context, info *model.AuthInfo, slug string) ([]model.NamespaceInvite, error) {
+	if s.invites == nil {
+		return nil, nil
+	}
+	ns, err := s.namespaces.GetBySlug(ctx, slug)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.requireNamespaceRole(ctx, info, ns.ID, model.NamespaceRoleOwner, model.NamespaceRoleAdmin); err != nil {
+		return nil, err
+	}
+
+	return s.invites.ListByNamespace(ctx, ns.ID)
+}
+
+// DeleteNamespaceInvite revokes an invite. Requires owner or admin role.
+func (s *NamespaceService) DeleteNamespaceInvite(ctx context.Context, info *model.AuthInfo, slug string, inviteID uuid.UUID) error {
+	if s.invites == nil {
+		return model.ErrNotFound
+	}
+	ns, err := s.namespaces.GetBySlug(ctx, slug)
+	if err != nil {
+		return err
+	}
+
+	if err := s.requireNamespaceRole(ctx, info, ns.ID, model.NamespaceRoleOwner, model.NamespaceRoleAdmin); err != nil {
+		return err
+	}
+
+	invite, err := s.invites.GetByID(ctx, inviteID)
+	if err != nil {
+		return err
+	}
+	if invite.NamespaceID != ns.ID {
+		return model.ErrNotFound
+	}
+
+	if err := s.invites.Delete(ctx, inviteID); err != nil {
+		return fmt.Errorf("deleting namespace invite: %w", err)
+	}
+
+	log.Ctx(ctx).Info().
+		Str("namespace_slug", slug).
+		Str("invite_id", inviteID.String()).
+		Msg("namespace invite revoked")
+
+	return nil
+}
+
+// GetNamespaceInviteInfo returns public information about a namespace invite for the join page.
+// No authentication required.
+func (s *NamespaceService) GetNamespaceInviteInfo(ctx context.Context, code string) (*model.NamespaceInviteInfo, error) {
+	if s.invites == nil {
+		return nil, model.ErrNotFound
+	}
+	invite, err := s.invites.GetByCode(ctx, code)
+	if err != nil {
+		return nil, err
+	}
+
+	ns, err := s.namespaces.GetByID(ctx, invite.NamespaceID)
+	if err != nil {
+		return nil, err
+	}
+
+	info := &model.NamespaceInviteInfo{
+		NamespaceSlug:        ns.Slug,
+		NamespaceDisplayName: ns.DisplayName,
+		Role:                 invite.Role,
+		Expired:              invite.ExpiresAt != nil && invite.ExpiresAt.Before(time.Now()),
+		Full:                 invite.MaxUses > 0 && invite.UseCount >= invite.MaxUses,
+	}
+
+	return info, nil
+}
+
+// AcceptNamespaceInviteResult contains the result of accepting a namespace invite.
+type AcceptNamespaceInviteResult struct {
+	Namespace      *model.Namespace
+	RoleNotApplied bool
+	ExistingRole   string
+	InviteRole     string
+}
+
+// AcceptNamespaceInvite uses an invite code to join a namespace. Requires authentication.
+func (s *NamespaceService) AcceptNamespaceInvite(ctx context.Context, info *model.AuthInfo, code string) (*AcceptNamespaceInviteResult, error) {
+	if s.invites == nil {
+		return nil, model.ErrNotFound
+	}
+	invite, err := s.invites.GetByCode(ctx, code)
+	if err != nil {
+		return nil, err
+	}
+
+	ns, err := s.namespaces.GetByID(ctx, invite.NamespaceID)
+	if err != nil {
+		return nil, err
+	}
+
+	if invite.ExpiresAt != nil && invite.ExpiresAt.Before(time.Now()) {
+		return nil, fmt.Errorf("invite has expired: %w", model.ErrValidation)
+	}
+
+	if invite.MaxUses > 0 && invite.UseCount >= invite.MaxUses {
+		return nil, fmt.Errorf("invite has reached maximum uses: %w", model.ErrValidation)
+	}
+
+	result := &AcceptNamespaceInviteResult{Namespace: ns}
+	existing, err := s.members.GetByNamespaceAndUser(ctx, ns.ID, info.UserID)
+	if err != nil && err != model.ErrNotFound {
+		return nil, fmt.Errorf("checking namespace membership: %w", err)
+	}
+	if existing != nil {
+		if namespaceRoleRank(invite.Role) > namespaceRoleRank(existing.Role) {
+			if err := s.members.UpdateRole(ctx, ns.ID, info.UserID, invite.Role); err != nil {
+				return nil, fmt.Errorf("updating namespace member role: %w", err)
+			}
+			log.Ctx(ctx).Info().
+				Str("namespace_slug", ns.Slug).
+				Str("user_id", info.UserID.String()).
+				Str("old_role", existing.Role).
+				Str("new_role", invite.Role).
+				Msg("upgraded namespace member role via invite")
+		} else if namespaceRoleRank(invite.Role) < namespaceRoleRank(existing.Role) {
+			result.RoleNotApplied = true
+			result.ExistingRole = existing.Role
+			result.InviteRole = invite.Role
+		}
+	} else {
+		member := &model.NamespaceMember{
+			NamespaceID: ns.ID,
+			UserID:      info.UserID,
+			Role:        invite.Role,
+		}
+		if err := s.members.Add(ctx, member); err != nil {
+			return nil, fmt.Errorf("adding namespace member: %w", err)
+		}
+	}
+
+	if err := s.invites.IncrementUseCount(ctx, invite.ID); err != nil {
+		log.Ctx(ctx).Warn().Err(err).Str("invite_id", invite.ID.String()).Msg("failed to increment namespace invite use count")
+	}
+
+	log.Ctx(ctx).Info().
+		Str("namespace_slug", ns.Slug).
+		Str("user_id", info.UserID.String()).
+		Str("role", invite.Role).
+		Str("invite_code", code).
+		Msg("user joined namespace via invite")
+
+	return result, nil
 }
 
 // --- Project Migration ---

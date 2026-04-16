@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -17,11 +18,12 @@ import (
 // NamespaceHandler handles namespace and namespace member endpoints.
 type NamespaceHandler struct {
 	namespaces *service.NamespaceService
+	baseURL    string
 }
 
 // NewNamespaceHandler creates a new NamespaceHandler.
-func NewNamespaceHandler(namespaces *service.NamespaceService) *NamespaceHandler {
-	return &NamespaceHandler{namespaces: namespaces}
+func NewNamespaceHandler(namespaces *service.NamespaceService, baseURL string) *NamespaceHandler {
+	return &NamespaceHandler{namespaces: namespaces, baseURL: baseURL}
 }
 
 // --- Request DTOs ---
@@ -360,6 +362,134 @@ func (h *NamespaceHandler) RemoveMember(w http.ResponseWriter, r *http.Request) 
 
 	if err := h.namespaces.RemoveNamespaceMember(r.Context(), info, slug, userID); err != nil {
 		handleNamespaceError(w, r, err, "failed to remove namespace member")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// --- Namespace Invite Handlers ---
+
+type createNamespaceInviteRequest struct {
+	Role      string `json:"role"`
+	Email     string `json:"email"`
+	ExpiresIn string `json:"expires_in,omitempty"`
+}
+
+type namespaceInviteResponse struct {
+	ID           uuid.UUID  `json:"id"`
+	Code         string     `json:"code"`
+	Role         string     `json:"role"`
+	URL          string     `json:"url"`
+	InviteeEmail *string    `json:"invitee_email,omitempty"`
+	ExpiresAt    *time.Time `json:"expires_at,omitempty"`
+	MaxUses      int        `json:"max_uses"`
+	UseCount     int        `json:"use_count"`
+	CreatedAt    time.Time  `json:"created_at"`
+}
+
+func (h *NamespaceHandler) toInviteResponse(inv *model.NamespaceInvite) namespaceInviteResponse {
+	return namespaceInviteResponse{
+		ID:           inv.ID,
+		Code:         inv.Code,
+		Role:         inv.Role,
+		URL:          fmt.Sprintf("%s/invite/%s", h.baseURL, inv.Code),
+		InviteeEmail: inv.InviteeEmail,
+		ExpiresAt:    inv.ExpiresAt,
+		MaxUses:      inv.MaxUses,
+		UseCount:     inv.UseCount,
+		CreatedAt:    inv.CreatedAt,
+	}
+}
+
+// CreateInvite handles POST /api/v1/namespaces/{slug}/invites
+// Currently only supports email-based invites (email is required).
+func (h *NamespaceHandler) CreateInvite(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	slug := chi.URLParam(r, "slug")
+
+	var req createNamespaceInviteRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		return
+	}
+
+	if req.Role == "" {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "role is required")
+		return
+	}
+	if req.Email == "" {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "email is required")
+		return
+	}
+
+	var expiresAt *time.Time
+	if req.ExpiresIn != "" {
+		d, err := parseExpiresIn(req.ExpiresIn)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+			return
+		}
+		t := time.Now().Add(d)
+		expiresAt = &t
+	}
+
+	result, err := h.namespaces.CreateNamespaceEmailInvite(r.Context(), info, slug, req.Email, req.Role, expiresAt)
+	if err != nil {
+		handleNamespaceError(w, r, err, "failed to create namespace invite")
+		return
+	}
+
+	writeData(w, http.StatusCreated, h.toInviteResponse(result.Invite))
+}
+
+// ListInvites handles GET /api/v1/namespaces/{slug}/invites
+func (h *NamespaceHandler) ListInvites(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	slug := chi.URLParam(r, "slug")
+
+	invites, err := h.namespaces.ListNamespaceInvites(r.Context(), info, slug)
+	if err != nil {
+		handleNamespaceError(w, r, err, "failed to list namespace invites")
+		return
+	}
+
+	resp := make([]namespaceInviteResponse, len(invites))
+	for i := range invites {
+		resp[i] = h.toInviteResponse(&invites[i])
+	}
+
+	writeData(w, http.StatusOK, resp)
+}
+
+// DeleteInvite handles DELETE /api/v1/namespaces/{slug}/invites/{inviteId}
+func (h *NamespaceHandler) DeleteInvite(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		return
+	}
+
+	slug := chi.URLParam(r, "slug")
+
+	inviteID, err := uuid.Parse(chi.URLParam(r, "inviteId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid invite ID")
+		return
+	}
+
+	if err := h.namespaces.DeleteNamespaceInvite(r.Context(), info, slug, inviteID); err != nil {
+		handleNamespaceError(w, r, err, "failed to delete namespace invite")
 		return
 	}
 
