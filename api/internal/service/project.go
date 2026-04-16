@@ -51,12 +51,13 @@ type ProjectTypeWorkflowRepository interface {
 	Upsert(ctx context.Context, mapping *model.ProjectTypeWorkflow) error
 }
 
-// ProjectInviteRepository defines persistence operations for project invites.
-type ProjectInviteRepository interface {
-	Create(ctx context.Context, invite *model.ProjectInvite) error
-	GetByCode(ctx context.Context, code string) (*model.ProjectInvite, error)
-	GetByID(ctx context.Context, id uuid.UUID) (*model.ProjectInvite, error)
-	ListByProject(ctx context.Context, projectID uuid.UUID) ([]model.ProjectInvite, error)
+// InviteRepository defines persistence operations for invites (project or namespace).
+type InviteRepository interface {
+	Create(ctx context.Context, invite *model.Invite) error
+	GetByCode(ctx context.Context, code string) (*model.Invite, error)
+	GetByID(ctx context.Context, id uuid.UUID) (*model.Invite, error)
+	ListByProject(ctx context.Context, projectID uuid.UUID) ([]model.Invite, error)
+	ListByNamespace(ctx context.Context, namespaceID uuid.UUID) ([]model.Invite, error)
 	IncrementUseCount(ctx context.Context, id uuid.UUID) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	DeleteByProject(ctx context.Context, projectID uuid.UUID) error
@@ -70,7 +71,7 @@ type ProjectService struct {
 	workflows      WorkflowRepository
 	typeWorkflows  ProjectTypeWorkflowRepository
 	systemSettings SystemSettingRepositoryInterface
-	invites        ProjectInviteRepository
+	invites        InviteRepository
 	inboxItems     InboxRepository
 	watchers       WatcherRepository
 	userSettings   UserSettingRepository
@@ -89,7 +90,7 @@ func (s *ProjectService) SetEmbedCache(cache *FeatureFlagCache) {
 }
 
 // NewProjectService creates a new ProjectService.
-func NewProjectService(projects ProjectRepository, members ProjectMemberRepository, users UserRepository, workflows WorkflowRepository, typeWorkflows ProjectTypeWorkflowRepository, systemSettings SystemSettingRepositoryInterface, invites ProjectInviteRepository, inboxItems InboxRepository, watchers WatcherRepository, userSettings UserSettingRepository) *ProjectService {
+func NewProjectService(projects ProjectRepository, members ProjectMemberRepository, users UserRepository, workflows WorkflowRepository, typeWorkflows ProjectTypeWorkflowRepository, systemSettings SystemSettingRepositoryInterface, invites InviteRepository, inboxItems InboxRepository, watchers WatcherRepository, userSettings UserSettingRepository) *ProjectService {
 	return &ProjectService{
 		projects:       projects,
 		members:        members,
@@ -938,7 +939,7 @@ func (s *ProjectService) resolveDefaultTypeWorkflows(ctx context.Context, validW
 }
 
 // CreateInvite creates a new invite link for a project. Requires owner or admin role.
-func (s *ProjectService) CreateInvite(ctx context.Context, info *model.AuthInfo, projectKey, role string, expiresAt *time.Time, maxUses int) (*model.ProjectInvite, error) {
+func (s *ProjectService) CreateInvite(ctx context.Context, info *model.AuthInfo, projectKey, role string, expiresAt *time.Time, maxUses int) (*model.Invite, error) {
 	project, err := s.projects.GetByKey(ctx, projectKey)
 	if err != nil {
 		return nil, err
@@ -957,9 +958,9 @@ func (s *ProjectService) CreateInvite(ctx context.Context, info *model.AuthInfo,
 		return nil, fmt.Errorf("generating invite code: %w", err)
 	}
 
-	invite := &model.ProjectInvite{
+	invite := &model.Invite{
 		ID:        uuid.New(),
-		ProjectID: project.ID,
+		ProjectID: &project.ID,
 		Code:      code,
 		Role:      role,
 		CreatedBy: info.UserID,
@@ -982,7 +983,7 @@ func (s *ProjectService) CreateInvite(ctx context.Context, info *model.AuthInfo,
 
 // CreateEmailInviteResult contains the result of an email-based invite attempt.
 type CreateEmailInviteResult struct {
-	Invite *model.ProjectInvite
+	Invite *model.Invite
 }
 
 // CreateEmailInvite creates a personal invite for the given email and sends an
@@ -1031,9 +1032,9 @@ func (s *ProjectService) CreateEmailInvite(ctx context.Context, info *model.Auth
 		return nil, fmt.Errorf("generating invite code: %w", err)
 	}
 
-	invite := &model.ProjectInvite{
+	invite := &model.Invite{
 		ID:           uuid.New(),
-		ProjectID:    project.ID,
+		ProjectID:    &project.ID,
 		Code:         code,
 		Role:         role,
 		CreatedBy:    info.UserID,
@@ -1082,7 +1083,7 @@ func (s *ProjectService) publishInviteEmail(ctx context.Context, project *model.
 }
 
 // ListInvites returns all invites for a project. Requires owner or admin role.
-func (s *ProjectService) ListInvites(ctx context.Context, info *model.AuthInfo, projectKey string) ([]model.ProjectInvite, error) {
+func (s *ProjectService) ListInvites(ctx context.Context, info *model.AuthInfo, projectKey string) ([]model.Invite, error) {
 	project, err := s.projects.GetByKey(ctx, projectKey)
 	if err != nil {
 		return nil, err
@@ -1111,7 +1112,7 @@ func (s *ProjectService) DeleteInvite(ctx context.Context, info *model.AuthInfo,
 	if err != nil {
 		return err
 	}
-	if invite.ProjectID != project.ID {
+	if invite.ProjectID == nil || *invite.ProjectID != project.ID {
 		return model.ErrNotFound
 	}
 
@@ -1128,14 +1129,18 @@ func (s *ProjectService) DeleteInvite(ctx context.Context, info *model.AuthInfo,
 }
 
 // GetInviteInfo returns public information about an invite for the join page.
-// No authentication required.
+// No authentication required. Returns ErrNotFound if the code belongs to a
+// namespace invite rather than a project invite.
 func (s *ProjectService) GetInviteInfo(ctx context.Context, code string) (*model.ProjectInviteInfo, error) {
 	invite, err := s.invites.GetByCode(ctx, code)
 	if err != nil {
 		return nil, err
 	}
+	if invite.ProjectID == nil {
+		return nil, model.ErrNotFound
+	}
 
-	project, err := s.projects.GetByID(ctx, invite.ProjectID)
+	project, err := s.projects.GetByID(ctx, *invite.ProjectID)
 	if err != nil {
 		return nil, err
 	}
@@ -1183,13 +1188,17 @@ func roleRank(role string) int {
 }
 
 // AcceptInvite uses an invite code to join a project. Requires authentication.
+// Returns ErrNotFound if the code belongs to a namespace invite.
 func (s *ProjectService) AcceptInvite(ctx context.Context, info *model.AuthInfo, code string) (*AcceptInviteResult, error) {
 	invite, err := s.invites.GetByCode(ctx, code)
 	if err != nil {
 		return nil, err
 	}
+	if invite.ProjectID == nil {
+		return nil, model.ErrNotFound
+	}
 
-	project, err := s.projects.GetByID(ctx, invite.ProjectID)
+	project, err := s.projects.GetByID(ctx, *invite.ProjectID)
 	if err != nil {
 		return nil, err
 	}

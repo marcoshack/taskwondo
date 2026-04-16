@@ -64,16 +64,6 @@ type NamespaceUserRepository interface {
 	GetByEmail(ctx context.Context, email string) (*model.User, error)
 }
 
-// NamespaceInviteRepository defines persistence operations for namespace invites.
-type NamespaceInviteRepository interface {
-	Create(ctx context.Context, invite *model.NamespaceInvite) error
-	GetByCode(ctx context.Context, code string) (*model.NamespaceInvite, error)
-	GetByID(ctx context.Context, id uuid.UUID) (*model.NamespaceInvite, error)
-	ListByNamespace(ctx context.Context, namespaceID uuid.UUID) ([]model.NamespaceInvite, error)
-	IncrementUseCount(ctx context.Context, id uuid.UUID) error
-	Delete(ctx context.Context, id uuid.UUID) error
-}
-
 // NamespaceSystemSettingsRepository defines the system settings operations needed by the namespace service.
 type NamespaceSystemSettingsRepository interface {
 	Get(ctx context.Context, key string) (*model.SystemSetting, error)
@@ -98,12 +88,12 @@ type NamespaceService struct {
 	users          NamespaceUserRepository
 	systemSettings NamespaceSystemSettingsRepository
 	userSettings   NamespaceUserSettingsRepository
-	invites        NamespaceInviteRepository
+	invites        InviteRepository
 	publisher      EventPublisher
 }
 
 // NewNamespaceService creates a new NamespaceService.
-func NewNamespaceService(namespaces NamespaceRepository, members NamespaceMemberRepository, projects NamespaceProjectRepository, projectMembers NamespaceProjectMemberRepository, users NamespaceUserRepository, systemSettings NamespaceSystemSettingsRepository, userSettings NamespaceUserSettingsRepository, invites NamespaceInviteRepository) *NamespaceService {
+func NewNamespaceService(namespaces NamespaceRepository, members NamespaceMemberRepository, projects NamespaceProjectRepository, projectMembers NamespaceProjectMemberRepository, users NamespaceUserRepository, systemSettings NamespaceSystemSettingsRepository, userSettings NamespaceUserSettingsRepository, invites InviteRepository) *NamespaceService {
 	return &NamespaceService{
 		namespaces:     namespaces,
 		members:        members,
@@ -553,7 +543,7 @@ func isValidNamespaceInviteRole(role string) bool {
 
 // CreateNamespaceEmailInviteResult contains the result of an email-based namespace invite.
 type CreateNamespaceEmailInviteResult struct {
-	Invite *model.NamespaceInvite
+	Invite *model.Invite
 }
 
 // CreateNamespaceEmailInvite creates a personal invite for the given email and publishes
@@ -601,9 +591,9 @@ func (s *NamespaceService) CreateNamespaceEmailInvite(ctx context.Context, info 
 		return nil, fmt.Errorf("generating invite code: %w", err)
 	}
 
-	invite := &model.NamespaceInvite{
+	invite := &model.Invite{
 		ID:           uuid.New(),
-		NamespaceID:  ns.ID,
+		NamespaceID:  &ns.ID,
 		Code:         code,
 		Role:         role,
 		CreatedBy:    info.UserID,
@@ -651,7 +641,7 @@ func (s *NamespaceService) publishNamespaceInviteEmail(ctx context.Context, ns *
 }
 
 // ListNamespaceInvites returns all invites for a namespace. Requires owner or admin role.
-func (s *NamespaceService) ListNamespaceInvites(ctx context.Context, info *model.AuthInfo, slug string) ([]model.NamespaceInvite, error) {
+func (s *NamespaceService) ListNamespaceInvites(ctx context.Context, info *model.AuthInfo, slug string) ([]model.Invite, error) {
 	if s.invites == nil {
 		return nil, nil
 	}
@@ -685,7 +675,7 @@ func (s *NamespaceService) DeleteNamespaceInvite(ctx context.Context, info *mode
 	if err != nil {
 		return err
 	}
-	if invite.NamespaceID != ns.ID {
+	if invite.NamespaceID == nil || *invite.NamespaceID != ns.ID {
 		return model.ErrNotFound
 	}
 
@@ -702,7 +692,7 @@ func (s *NamespaceService) DeleteNamespaceInvite(ctx context.Context, info *mode
 }
 
 // GetNamespaceInviteInfo returns public information about a namespace invite for the join page.
-// No authentication required.
+// No authentication required. Returns ErrNotFound if the code belongs to a project invite.
 func (s *NamespaceService) GetNamespaceInviteInfo(ctx context.Context, code string) (*model.NamespaceInviteInfo, error) {
 	if s.invites == nil {
 		return nil, model.ErrNotFound
@@ -711,8 +701,11 @@ func (s *NamespaceService) GetNamespaceInviteInfo(ctx context.Context, code stri
 	if err != nil {
 		return nil, err
 	}
+	if invite.NamespaceID == nil {
+		return nil, model.ErrNotFound
+	}
 
-	ns, err := s.namespaces.GetByID(ctx, invite.NamespaceID)
+	ns, err := s.namespaces.GetByID(ctx, *invite.NamespaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -737,6 +730,7 @@ type AcceptNamespaceInviteResult struct {
 }
 
 // AcceptNamespaceInvite uses an invite code to join a namespace. Requires authentication.
+// Returns ErrNotFound if the code belongs to a project invite.
 func (s *NamespaceService) AcceptNamespaceInvite(ctx context.Context, info *model.AuthInfo, code string) (*AcceptNamespaceInviteResult, error) {
 	if s.invites == nil {
 		return nil, model.ErrNotFound
@@ -745,8 +739,11 @@ func (s *NamespaceService) AcceptNamespaceInvite(ctx context.Context, info *mode
 	if err != nil {
 		return nil, err
 	}
+	if invite.NamespaceID == nil {
+		return nil, model.ErrNotFound
+	}
 
-	ns, err := s.namespaces.GetByID(ctx, invite.NamespaceID)
+	ns, err := s.namespaces.GetByID(ctx, *invite.NamespaceID)
 	if err != nil {
 		return nil, err
 	}

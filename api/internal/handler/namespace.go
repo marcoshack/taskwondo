@@ -388,7 +388,7 @@ type namespaceInviteResponse struct {
 	CreatedAt    time.Time  `json:"created_at"`
 }
 
-func (h *NamespaceHandler) toInviteResponse(inv *model.NamespaceInvite) namespaceInviteResponse {
+func (h *NamespaceHandler) toInviteResponse(inv *model.Invite) namespaceInviteResponse {
 	return namespaceInviteResponse{
 		ID:           inv.ID,
 		Code:         inv.Code,

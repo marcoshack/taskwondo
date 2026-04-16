@@ -235,25 +235,25 @@ func (m *mockProjectMemberRepo) IsCustomerOnlyInNamespace(_ context.Context, _, 
 }
 
 type mockProjectInviteRepo struct {
-	invites map[uuid.UUID]*model.ProjectInvite
-	byCode  map[string]*model.ProjectInvite
+	invites map[uuid.UUID]*model.Invite
+	byCode  map[string]*model.Invite
 }
 
 func newMockProjectInviteRepo() *mockProjectInviteRepo {
 	return &mockProjectInviteRepo{
-		invites: make(map[uuid.UUID]*model.ProjectInvite),
-		byCode:  make(map[string]*model.ProjectInvite),
+		invites: make(map[uuid.UUID]*model.Invite),
+		byCode:  make(map[string]*model.Invite),
 	}
 }
 
-func (m *mockProjectInviteRepo) Create(_ context.Context, invite *model.ProjectInvite) error {
+func (m *mockProjectInviteRepo) Create(_ context.Context, invite *model.Invite) error {
 	invite.CreatedAt = time.Now()
 	m.invites[invite.ID] = invite
 	m.byCode[invite.Code] = invite
 	return nil
 }
 
-func (m *mockProjectInviteRepo) GetByCode(_ context.Context, code string) (*model.ProjectInvite, error) {
+func (m *mockProjectInviteRepo) GetByCode(_ context.Context, code string) (*model.Invite, error) {
 	inv, ok := m.byCode[code]
 	if !ok {
 		return nil, model.ErrNotFound
@@ -261,7 +261,7 @@ func (m *mockProjectInviteRepo) GetByCode(_ context.Context, code string) (*mode
 	return inv, nil
 }
 
-func (m *mockProjectInviteRepo) GetByID(_ context.Context, id uuid.UUID) (*model.ProjectInvite, error) {
+func (m *mockProjectInviteRepo) GetByID(_ context.Context, id uuid.UUID) (*model.Invite, error) {
 	inv, ok := m.invites[id]
 	if !ok {
 		return nil, model.ErrNotFound
@@ -269,14 +269,18 @@ func (m *mockProjectInviteRepo) GetByID(_ context.Context, id uuid.UUID) (*model
 	return inv, nil
 }
 
-func (m *mockProjectInviteRepo) ListByProject(_ context.Context, projectID uuid.UUID) ([]model.ProjectInvite, error) {
-	var result []model.ProjectInvite
+func (m *mockProjectInviteRepo) ListByProject(_ context.Context, projectID uuid.UUID) ([]model.Invite, error) {
+	var result []model.Invite
 	for _, inv := range m.invites {
-		if inv.ProjectID == projectID {
+		if inv.ProjectID != nil && *inv.ProjectID == projectID {
 			result = append(result, *inv)
 		}
 	}
 	return result, nil
+}
+
+func (m *mockProjectInviteRepo) ListByNamespace(_ context.Context, _ uuid.UUID) ([]model.Invite, error) {
+	return nil, nil
 }
 
 func (m *mockProjectInviteRepo) IncrementUseCount(_ context.Context, id uuid.UUID) error {
@@ -303,7 +307,7 @@ func (m *mockProjectInviteRepo) Delete(_ context.Context, id uuid.UUID) error {
 
 func (m *mockProjectInviteRepo) DeleteByProject(_ context.Context, projectID uuid.UUID) error {
 	for id, inv := range m.invites {
-		if inv.ProjectID == projectID {
+		if inv.ProjectID != nil && *inv.ProjectID == projectID {
 			delete(m.byCode, inv.Code)
 			delete(m.invites, id)
 		}

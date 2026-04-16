@@ -96,7 +96,7 @@ func main() {
 	inboxRepo := repository.NewInboxRepository(db)
 	oauthAccountRepo := repository.NewOAuthAccountRepository(db)
 	typeWorkflowRepo := repository.NewProjectTypeWorkflowRepository(db)
-	inviteRepo := repository.NewProjectInviteRepository(db)
+	inviteRepo := repository.NewInviteRepository(db)
 	slaRepo := repository.NewSLARepository(db)
 	escalationRepo := repository.NewEscalationRepository(db)
 	watcherRepo := repository.NewWatcherRepository(db)
@@ -106,7 +106,6 @@ func main() {
 	embeddingRepo := repository.NewEmbeddingRepository(db)
 	namespaceRepo := repository.NewNamespaceRepository(db)
 	namespaceMemberRepo := repository.NewNamespaceMemberRepository(db)
-	namespaceInviteRepo := repository.NewNamespaceInviteRepository(db)
 
 	// Initialize storage
 	store, err := storage.NewMinIOStorage(
@@ -163,7 +162,7 @@ func main() {
 	inboxService := service.NewInboxService(inboxRepo, projectMemberRepo)
 	userSettingService := service.NewUserSettingService(userSettingRepo, projectRepo, projectMemberRepo)
 	systemSettingService := service.NewSystemSettingService(systemSettingRepo)
-	namespaceService := service.NewNamespaceService(namespaceRepo, namespaceMemberRepo, projectRepo, projectMemberRepo, userRepo, systemSettingRepo, userSettingRepo, namespaceInviteRepo)
+	namespaceService := service.NewNamespaceService(namespaceRepo, namespaceMemberRepo, projectRepo, projectMemberRepo, userRepo, systemSettingRepo, userSettingRepo, inviteRepo)
 	adminRepo := repository.NewAdminRepository(db)
 	adminService := service.NewAdminService(userRepo, projectRepo, projectMemberRepo, adminRepo)
 	statsService := service.NewStatsService(statsRepo, projectRepo, projectMemberRepo)

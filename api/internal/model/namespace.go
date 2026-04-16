@@ -86,21 +86,6 @@ type NamespaceMemberWithUser struct {
 	AvatarURL   *string `json:"avatar_url,omitempty"`
 }
 
-// NamespaceInvite represents a shareable or personal email invite to join a namespace.
-type NamespaceInvite struct {
-	ID            uuid.UUID  `json:"id"`
-	NamespaceID   uuid.UUID  `json:"namespace_id"`
-	Code          string     `json:"code"`
-	Role          string     `json:"role"`
-	CreatedBy     uuid.UUID  `json:"created_by"`
-	CreatedByName string     `json:"created_by_name"`
-	InviteeEmail  *string    `json:"invitee_email,omitempty"`
-	ExpiresAt     *time.Time `json:"expires_at,omitempty"`
-	MaxUses       int        `json:"max_uses"`
-	UseCount      int        `json:"use_count"`
-	CreatedAt     time.Time  `json:"created_at"`
-}
-
 // NamespaceInviteInfo is a public-facing view of a namespace invite for the join page.
 type NamespaceInviteInfo struct {
 	NamespaceSlug        string `json:"namespace_slug"`

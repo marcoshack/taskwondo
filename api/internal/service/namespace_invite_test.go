@@ -14,18 +14,18 @@ import (
 // --- Mock namespace invite repo ---
 
 type mockNamespaceInviteRepo struct {
-	invites map[uuid.UUID]*model.NamespaceInvite
-	byCode  map[string]*model.NamespaceInvite
+	invites map[uuid.UUID]*model.Invite
+	byCode  map[string]*model.Invite
 }
 
 func newMockNamespaceInviteRepo() *mockNamespaceInviteRepo {
 	return &mockNamespaceInviteRepo{
-		invites: make(map[uuid.UUID]*model.NamespaceInvite),
-		byCode:  make(map[string]*model.NamespaceInvite),
+		invites: make(map[uuid.UUID]*model.Invite),
+		byCode:  make(map[string]*model.Invite),
 	}
 }
 
-func (r *mockNamespaceInviteRepo) Create(_ context.Context, inv *model.NamespaceInvite) error {
+func (r *mockNamespaceInviteRepo) Create(_ context.Context, inv *model.Invite) error {
 	if _, ok := r.byCode[inv.Code]; ok {
 		return model.ErrAlreadyExists
 	}
@@ -35,7 +35,7 @@ func (r *mockNamespaceInviteRepo) Create(_ context.Context, inv *model.Namespace
 	return nil
 }
 
-func (r *mockNamespaceInviteRepo) GetByCode(_ context.Context, code string) (*model.NamespaceInvite, error) {
+func (r *mockNamespaceInviteRepo) GetByCode(_ context.Context, code string) (*model.Invite, error) {
 	inv, ok := r.byCode[code]
 	if !ok {
 		return nil, model.ErrNotFound
@@ -43,7 +43,7 @@ func (r *mockNamespaceInviteRepo) GetByCode(_ context.Context, code string) (*mo
 	return inv, nil
 }
 
-func (r *mockNamespaceInviteRepo) GetByID(_ context.Context, id uuid.UUID) (*model.NamespaceInvite, error) {
+func (r *mockNamespaceInviteRepo) GetByID(_ context.Context, id uuid.UUID) (*model.Invite, error) {
 	inv, ok := r.invites[id]
 	if !ok {
 		return nil, model.ErrNotFound
@@ -51,10 +51,10 @@ func (r *mockNamespaceInviteRepo) GetByID(_ context.Context, id uuid.UUID) (*mod
 	return inv, nil
 }
 
-func (r *mockNamespaceInviteRepo) ListByNamespace(_ context.Context, nsID uuid.UUID) ([]model.NamespaceInvite, error) {
-	var out []model.NamespaceInvite
+func (r *mockNamespaceInviteRepo) ListByNamespace(_ context.Context, nsID uuid.UUID) ([]model.Invite, error) {
+	var out []model.Invite
 	for _, inv := range r.invites {
-		if inv.NamespaceID == nsID {
+		if inv.NamespaceID != nil && *inv.NamespaceID == nsID {
 			out = append(out, *inv)
 		}
 	}
@@ -80,6 +80,14 @@ func (r *mockNamespaceInviteRepo) Delete(_ context.Context, id uuid.UUID) error 
 	}
 	delete(r.invites, id)
 	delete(r.byCode, inv.Code)
+	return nil
+}
+
+func (r *mockNamespaceInviteRepo) ListByProject(_ context.Context, _ uuid.UUID) ([]model.Invite, error) {
+	return nil, nil
+}
+
+func (r *mockNamespaceInviteRepo) DeleteByProject(_ context.Context, _ uuid.UUID) error {
 	return nil
 }
 
@@ -132,7 +140,7 @@ func TestCreateNamespaceEmailInvite_CreatesInviteForUnregisteredEmail(t *testing
 	if err != nil {
 		t.Fatalf("invite not persisted: %v", err)
 	}
-	if stored.NamespaceID != ns.ID {
+	if stored.NamespaceID == nil || *stored.NamespaceID != ns.ID {
 		t.Fatalf("invite namespace_id mismatch")
 	}
 }
@@ -249,8 +257,8 @@ func TestAcceptNamespaceInvite_ExpiredRejected(t *testing.T) {
 	ns := seedNamespace(t, nsRepo, memberRepo, "acme", ownerID)
 
 	expired := time.Now().Add(-time.Hour)
-	inv := &model.NamespaceInvite{
-		ID: uuid.New(), NamespaceID: ns.ID, Code: "expired01", Role: "member",
+	inv := &model.Invite{
+		ID: uuid.New(), NamespaceID: &ns.ID, Code: "expired01", Role: "member",
 		CreatedBy: ownerID, ExpiresAt: &expired,
 	}
 	_ = inviteRepo.Create(context.Background(), inv)
@@ -309,8 +317,8 @@ func TestAcceptNamespaceInvite_DoesNotDowngrade(t *testing.T) {
 	})
 
 	// Craft a member-role invite directly
-	inv := &model.NamespaceInvite{
-		ID: uuid.New(), NamespaceID: ns.ID, Code: "lowrole0", Role: "member",
+	inv := &model.Invite{
+		ID: uuid.New(), NamespaceID: &ns.ID, Code: "lowrole0", Role: "member",
 		CreatedBy: ownerID, MaxUses: 1,
 	}
 	_ = inviteRepo.Create(context.Background(), inv)

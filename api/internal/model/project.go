@@ -101,10 +101,12 @@ type ProjectMemberWithProject struct {
 	NamespaceSlug string `json:"namespace_slug,omitempty"`
 }
 
-// ProjectInvite represents a shareable invite link to join a project.
-type ProjectInvite struct {
+// Invite represents a shareable or personal email invite to join a project
+// or a namespace. Exactly one of ProjectID / NamespaceID is set per invite.
+type Invite struct {
 	ID            uuid.UUID  `json:"id"`
-	ProjectID     uuid.UUID  `json:"project_id"`
+	ProjectID     *uuid.UUID `json:"project_id,omitempty"`
+	NamespaceID   *uuid.UUID `json:"namespace_id,omitempty"`
 	Code          string     `json:"code"`
 	Role          string     `json:"role"`
 	CreatedBy     uuid.UUID  `json:"created_by"`

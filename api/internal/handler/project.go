@@ -574,7 +574,7 @@ type acceptInviteResponse struct {
 	InviteRole     string `json:"invite_role,omitempty"`
 }
 
-func (h *ProjectHandler) toInviteResponse(inv *model.ProjectInvite) inviteResponse {
+func (h *ProjectHandler) toInviteResponse(inv *model.Invite) inviteResponse {
 	return inviteResponse{
 		ID:            inv.ID,
 		Code:          inv.Code,
