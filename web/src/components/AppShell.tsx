@@ -139,7 +139,10 @@ export function AppShell() {
       keys: ['g', 'o'],
       callback: () => guardedNavigate(p(`/projects/${activeProjectKey}/items`)),
     })
-  }, [activeProjectKey, navigate, registerSequentialCombo])
+    // `p` must be in deps: it changes only when the user switches namespaces
+    // (see useNamespacePath), and without it the callback closes over the
+    // previous namespace's segment and routes to the wrong URL (TF-345).
+  }, [activeProjectKey, p, guardedNavigate, registerSequentialCombo])
 
   useLayoutEffect(() => {
     return registerSequentialCombo({
