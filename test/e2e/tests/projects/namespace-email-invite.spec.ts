@@ -167,6 +167,69 @@ test.describe('Namespace email invites', () => {
     await api.deleteNamespace(request, adminToken, ns.slug);
   });
 
+  test('accepting a project invite redirects to the project in its own namespace', async ({ page, request }) => {
+    const adminToken = getAdminToken();
+    const uniqueId = randomUUID().slice(0, 8);
+    const suffix = uniqueId.slice(0, 3).toUpperCase();
+    const nsSlug = `ns-${uniqueId}`;
+    const projectKey = `N${suffix}`;
+
+    // Create a non-default namespace with a project in it
+    await api.createNamespace(request, adminToken, nsSlug, `NS ${uniqueId}`);
+    await api.createProject(request, adminToken, projectKey, `Project ${uniqueId}`, nsSlug);
+
+    // Create a second user who will be invited
+    const inviteeEmail = `accept-redir-${uniqueId}@test.local`;
+    const created = await api.createUser(request, adminToken, inviteeEmail, `Invitee ${uniqueId}`);
+    const tempLogin = await api.login(request, inviteeEmail, created.temporary_password);
+    await api.changePassword(request, tempLogin.token, created.temporary_password, 'TestPass123!');
+    const userLogin = await api.login(request, inviteeEmail, 'TestPass123!');
+    await api.setPreference(request, userLogin.token, 'welcome_dismissed', true);
+
+    // Admin creates an email invite for the project in the custom namespace
+    const invite = await request.post(
+      `${process.env.BASE_URL || 'http://localhost:5173'}/api/v1/${nsSlug}/projects/${projectKey}/invites`,
+      {
+        headers: { Authorization: `Bearer ${adminToken}` },
+        data: { role: 'member', email: inviteeEmail },
+      },
+    );
+    if (!invite.ok()) throw new Error(`Create project email invite failed: ${await invite.text()}`);
+    const inviteBody = await invite.json();
+    const inviteCode = inviteBody.data.code as string;
+
+    // Open a browser context authenticated as the invitee
+    const context = await page.context().browser()!.newContext({
+      storageState: {
+        cookies: [],
+        origins: [
+          {
+            origin: process.env.BASE_URL || 'http://localhost:5173',
+            localStorage: [{ name: 'taskwondo_token', value: userLogin.token }],
+          },
+        ],
+      },
+    });
+    const userPage = await context.newPage();
+
+    // Visit the invite link and click Accept
+    await userPage.goto(`/invite/${inviteCode}`);
+    await userPage.waitForLoadState('networkidle');
+    await userPage.getByRole('button', { name: /^join/i }).click();
+
+    // Must land on the project URL under the custom namespace, not under /d/
+    await userPage.waitForURL(new RegExp(`/${nsSlug}/projects/${projectKey}`), { timeout: 10000 });
+    expect(userPage.url()).not.toContain('/d/projects/');
+
+    // Cleanup
+    await context.close();
+    await request.delete(
+      `${process.env.BASE_URL || 'http://localhost:5173'}/api/v1/${nsSlug}/projects/${projectKey}`,
+      { headers: { Authorization: `Bearer ${adminToken}` } },
+    );
+    await api.deleteNamespace(request, adminToken, nsSlug);
+  });
+
   test('namespace settings UI accepts email input and creates an invite', async ({ page, request }) => {
     const adminToken = getAdminToken();
     const uniqueId = randomUUID().slice(0, 8);
