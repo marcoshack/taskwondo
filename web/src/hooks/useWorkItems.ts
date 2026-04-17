@@ -35,11 +35,12 @@ import {
   type WorkItemFilter as WIF,
 } from '@/api/workitems'
 
-export function useWorkItems(projectKey: string, filter: WorkItemFilter = {}) {
+export function useWorkItems(projectKey: string, filter: WorkItemFilter = {}, refetchInterval?: number) {
   return useQuery({
     queryKey: ['projects', projectKey, 'items', filter],
     queryFn: () => listWorkItems(projectKey, filter),
     enabled: !!projectKey,
+    refetchInterval: refetchInterval || undefined,
   })
 }
 

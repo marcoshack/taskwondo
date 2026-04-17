@@ -13,17 +13,17 @@ interface RefreshButtonProps {
 }
 
 const INTERVAL_OPTIONS: { value: RefreshInterval; labelKey: string }[] = [
-  { value: 0, labelKey: 'inbox.autoRefreshOff' },
-  { value: 5000, labelKey: 'inbox.autoRefresh5s' },
-  { value: 10000, labelKey: 'inbox.autoRefresh10s' },
-  { value: 30000, labelKey: 'inbox.autoRefresh30s' },
-  { value: 60000, labelKey: 'inbox.autoRefresh1m' },
-  { value: 300000, labelKey: 'inbox.autoRefresh5m' },
+  { value: 0, labelKey: 'common.autoRefreshOff' },
+  { value: 5000, labelKey: 'common.autoRefresh5s' },
+  { value: 10000, labelKey: 'common.autoRefresh10s' },
+  { value: 30000, labelKey: 'common.autoRefresh30s' },
+  { value: 60000, labelKey: 'common.autoRefresh1m' },
+  { value: 300000, labelKey: 'common.autoRefresh5m' },
 ]
 
 function getIntervalLabel(t: (key: string) => string, interval: RefreshInterval): string {
   const opt = INTERVAL_OPTIONS.find((o) => o.value === interval)
-  return opt ? t(opt.labelKey) : t('inbox.autoRefreshOff')
+  return opt ? t(opt.labelKey) : t('common.autoRefreshOff')
 }
 
 export function RefreshButton({ interval, onIntervalChange, onRefresh, isRefreshing }: RefreshButtonProps) {
@@ -59,7 +59,7 @@ export function RefreshButton({ interval, onIntervalChange, onRefresh, isRefresh
   }, [open])
 
   const isActive = interval > 0
-  const label = isActive ? getIntervalLabel(t, interval) : t('inbox.refresh')
+  const label = isActive ? getIntervalLabel(t, interval) : t('common.refresh')
 
   return (
     <div ref={buttonRef} className="relative inline-flex">
@@ -68,7 +68,7 @@ export function RefreshButton({ interval, onIntervalChange, onRefresh, isRefresh
         <button
           onClick={onRefresh}
           className="flex items-center gap-1.5 px-2.5 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-          aria-label={t('inbox.refresh')}
+          aria-label={t('common.refresh')}
         >
           <RefreshCw className={`h-5 w-5 ${isRefreshing ? 'animate-spin' : ''}`} />
           <span className="hidden sm:inline">{label}</span>
@@ -77,7 +77,7 @@ export function RefreshButton({ interval, onIntervalChange, onRefresh, isRefresh
         <button
           onClick={() => setOpen((v) => !v)}
           className="flex items-center px-1.5 border-l border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-          aria-label={t('inbox.autoRefresh')}
+          aria-label={t('common.autoRefresh')}
           aria-expanded={open}
         >
           <ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? 'rotate-180' : ''}`} />

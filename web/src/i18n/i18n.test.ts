@@ -39,11 +39,11 @@ const SAME_VALUE_ALLOWED = new Set([
   'projects.create.keyPlaceholder',
 
   // Format-only strings (only interpolation variables, no translatable words)
-  'inbox.autoRefresh5s',
-  'inbox.autoRefresh10s',
-  'inbox.autoRefresh30s',
-  'inbox.autoRefresh1m',
-  'inbox.autoRefresh5m',
+  'common.autoRefresh5s',
+  'common.autoRefresh10s',
+  'common.autoRefresh30s',
+  'common.autoRefresh1m',
+  'common.autoRefresh5m',
   'milestones.timeEstimated',
   'milestones.timeSpent',
   'milestones.timeProgress',

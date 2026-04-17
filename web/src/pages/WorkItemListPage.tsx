@@ -18,6 +18,7 @@ import { PriorityBadge } from '@/components/workitems/PriorityBadge'
 import { TypeBadge } from '@/components/workitems/TypeBadge'
 import { StatusBadge } from '@/components/workitems/StatusBadge'
 import { WorkItemFilters } from '@/components/workitems/WorkItemFilters'
+import { RefreshButton, type RefreshInterval } from '@/components/ui/RefreshButton'
 import { CreateWorkItemModal } from '@/components/workitems/CreateWorkItemModal'
 import { BoardView } from '@/components/workitems/BoardView'
 import { SLAIndicator } from '@/components/SLAIndicator'
@@ -472,7 +473,13 @@ export function WorkItemListPage() {
     limit: viewMode === 'board' ? 200 : 50,
   }), [filter, debouncedSearch, viewMode, sort, order])
 
-  const { data: result, isLoading } = useWorkItems(projectKey ?? '', activeFilter)
+  const { data: refreshIntervalPref } = usePreference<number>('workitems_refresh_interval')
+  const [refreshInterval, setRefreshInterval] = useState<RefreshInterval>(0)
+  useEffect(() => {
+    if (refreshIntervalPref != null) setRefreshInterval(refreshIntervalPref as RefreshInterval)
+  }, [refreshIntervalPref])
+
+  const { data: result, isLoading, refetch, isFetching } = useWorkItems(projectKey ?? '', activeFilter, refreshInterval)
 
   const deleteMutation = useDeleteWorkItem(projectKey ?? '')
   const bulkMutation = useBulkUpdateWorkItems(projectKey ?? '')
@@ -788,6 +795,28 @@ export function WorkItemListPage() {
             onReorder={handleReorderSearch}
             canManageShared={canManageShared}
             variant="mobile"
+          />
+        }
+        trailingContent={
+          <RefreshButton
+            interval={refreshInterval}
+            onIntervalChange={(val) => {
+              setRefreshInterval(val)
+              setPreferenceMutation.mutate({ key: 'workitems_refresh_interval', value: val })
+            }}
+            onRefresh={() => refetch()}
+            isRefreshing={isFetching}
+          />
+        }
+        trailingContentMobileButton={
+          <RefreshButton
+            interval={refreshInterval}
+            onIntervalChange={(val) => {
+              setRefreshInterval(val)
+              setPreferenceMutation.mutate({ key: 'workitems_refresh_interval', value: val })
+            }}
+            onRefresh={() => refetch()}
+            isRefreshing={isFetching}
           />
         }
       />
