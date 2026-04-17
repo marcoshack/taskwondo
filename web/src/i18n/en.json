@@ -1290,6 +1290,8 @@
   "namespaces.createTitle": "Create Namespace",
   "namespaces.createDescription": "Namespaces let you organize projects into separate groups with their own members and project key spaces.",
   "namespaces.settings": "Namespace settings",
+  "namespaces.tab.general": "General",
+  "namespaces.tab.users": "Users",
   "namespaces.settingsTitle": "Namespace Settings",
   "namespaces.settingsDescription": "Manage namespace display name, slug, and members.",
   "namespaces.displayName": "Display name",

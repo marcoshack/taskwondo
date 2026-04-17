@@ -589,6 +589,8 @@
   "namespaces.settings": "네임스페이스 설정",
   "namespaces.settingsDescription": "네임스페이스의 표시 이름, 슬러그, 멤버를 관리합니다.",
   "namespaces.settingsTitle": "네임스페이스 설정",
+  "namespaces.tab.general": "일반",
+  "namespaces.tab.users": "사용자",
   "namespaces.slug": "슬러그",
   "namespaces.slugHint": "2~30자, 소문자, 숫자, 하이픈만 사용 가능합니다.",
   "namespaces.slugPlaceholder": "예: my-team",

@@ -589,6 +589,8 @@
   "namespaces.settings": "Configurações do espaço de nomes",
   "namespaces.settingsDescription": "Gerencie o nome de exibição, o slug e os membros do espaço de nomes.",
   "namespaces.settingsTitle": "Configurações do Espaço de Nomes",
+  "namespaces.tab.general": "Geral",
+  "namespaces.tab.users": "Usuários",
   "namespaces.slug": "Identificador",
   "namespaces.slugHint": "De 2 a 30 caracteres, apenas letras minúsculas, números e hifens.",
   "namespaces.slugPlaceholder": "ex. minha-equipe",

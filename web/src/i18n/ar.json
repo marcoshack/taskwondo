@@ -589,6 +589,8 @@
   "namespaces.settings": "إعدادات مساحة الاسم",
   "namespaces.settingsDescription": "إدارة الاسم المعروض والمعرّف والأعضاء لمساحة الاسم.",
   "namespaces.settingsTitle": "إعدادات مساحة الاسم",
+  "namespaces.tab.general": "عام",
+  "namespaces.tab.users": "المستخدمون",
   "namespaces.slug": "المعرّف",
   "namespaces.slugHint": "من 2 إلى 30 حرفاً، أحرف صغيرة وأرقام وشرطات فقط.",
   "namespaces.slugPlaceholder": "مثال: my-team",

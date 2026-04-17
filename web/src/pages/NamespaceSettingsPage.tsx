@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { Trans, useTranslation } from 'react-i18next'
 import { toUrlSegment, fromUrlSegment } from '@/hooks/useNamespacePath'
 import { Check, Trash2, Mail } from 'lucide-react'
@@ -27,6 +27,7 @@ import { Spinner } from '@/components/ui/Spinner'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import { Tooltip } from '@/components/ui/Tooltip'
+import { Tabs } from '@/components/ui/Tabs'
 import { getLocalizedError } from '@/utils/apiError'
 
 const ROLE_OPTIONS = ['admin', 'member'] as const
@@ -41,6 +42,7 @@ export function NamespaceSettingsPage() {
   const { namespace: urlNamespace } = useParams<{ namespace: string }>()
   const slug = fromUrlSegment(urlNamespace ?? 'd')
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { user } = useAuth()
   const { collapsed } = useSidebar('app')
   const { containerClass } = useLayout()
@@ -76,6 +78,17 @@ export function NamespaceSettingsPage() {
   function showSaved(key: string) {
     setSaved((prev) => ({ ...prev, [key]: true }))
     setTimeout(() => setSaved((prev) => ({ ...prev, [key]: false })), 2000)
+  }
+
+  const activeTab = searchParams.get('tab') || 'general'
+  function setActiveTab(tab: string) {
+    const params = new URLSearchParams(searchParams)
+    if (tab === 'general') {
+      params.delete('tab')
+    } else {
+      params.set('tab', tab)
+    }
+    setSearchParams(params, { replace: true })
   }
 
   if (isLoading || !namespace) {
@@ -212,17 +225,28 @@ export function NamespaceSettingsPage() {
     })
   }
 
+  const tabs = [
+    { key: 'general', label: t('namespaces.tab.general') },
+    { key: 'users', label: t('namespaces.tab.users') },
+  ]
+  const effectiveTab = tabs.some((tb) => tb.key === activeTab) ? activeTab : 'general'
+
   return (
     <div className={`${containerClass(true)} py-6`}>
       <div className={`flex transition-all duration-200 ${collapsed ? 'gap-4' : 'gap-8'}`}>
         <AppSidebar />
         <div className="flex-1 min-w-0 max-w-3xl space-y-6">
-          {/* General section */}
+          {/* Page Header */}
           <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('namespaces.settingsTitle')}</h2>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{t('namespaces.settingsTitle')}</h2>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('namespaces.settingsDescription')}</p>
           </div>
 
+          <Tabs tabs={tabs} activeTab={effectiveTab} onTabChange={setActiveTab} />
+
+          {/* ───── General tab ───── */}
+          {effectiveTab === 'general' && (
+          <div className="space-y-6">
           <form onSubmit={handleSave} className="space-y-4">
             <Input
               label={t('namespaces.displayName')}
@@ -318,11 +342,30 @@ export function NamespaceSettingsPage() {
             )}
           </form>
 
-          {/* Members section */}
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('namespaces.members')}</h2>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('namespaces.membersDescription')}</p>
+          {/* Danger Zone */}
+          {isOwner && (
+            <div className="border border-red-300 dark:border-red-800 rounded-lg">
+              <div className="px-4 py-3 border-b border-red-300 dark:border-red-800">
+                <h3 className="text-base font-semibold text-red-600">{t('namespaces.dangerZone')}</h3>
+              </div>
+              <div className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('namespaces.deleteTitle')}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('namespaces.deleteWarning')}</p>
+                </div>
+                <Button variant="danger" size="sm" onClick={() => setShowDeleteModal(true)}>
+                  {t('namespaces.delete')}
+                </Button>
+              </div>
+            </div>
+          )}
           </div>
+          )}
+
+          {/* ───── Users tab ───── */}
+          {effectiveTab === 'users' && (
+          <div className="space-y-6">
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t('namespaces.membersDescription')}</p>
 
           {memberError && <p className="text-sm text-red-600 dark:text-red-400">{memberError}</p>}
 
@@ -445,24 +488,10 @@ export function NamespaceSettingsPage() {
               ))}
             </div>
           )}
-
-          {/* Danger Zone */}
-          {isOwner && (
-            <div className="border border-red-300 dark:border-red-800 rounded-lg mt-8">
-              <div className="px-4 py-3 border-b border-red-300 dark:border-red-800">
-                <h3 className="text-base font-semibold text-red-600">{t('namespaces.dangerZone')}</h3>
-              </div>
-              <div className="p-4 flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('namespaces.deleteTitle')}</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('namespaces.deleteWarning')}</p>
-                </div>
-                <Button variant="danger" size="sm" onClick={() => setShowDeleteModal(true)}>
-                  {t('namespaces.delete')}
-                </Button>
-              </div>
-            </div>
+          </div>
           )}
+
+          {/* ───── Modals ───── */}
 
           {/* Delete confirmation modal */}
           <Modal open={showDeleteModal} onClose={() => setShowDeleteModal(false)} title={t('namespaces.deleteConfirmTitle')}>

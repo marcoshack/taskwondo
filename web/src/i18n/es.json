@@ -589,6 +589,8 @@
   "namespaces.settings": "Configuración del espacio de nombres",
   "namespaces.settingsDescription": "Administre el nombre, el identificador y los miembros del espacio de nombres.",
   "namespaces.settingsTitle": "Configuración del Espacio de Nombres",
+  "namespaces.tab.general": "General",
+  "namespaces.tab.users": "Usuarios",
   "namespaces.slug": "Identificador",
   "namespaces.slugHint": "De 2 a 30 caracteres, solo letras minúsculas, números y guiones.",
   "namespaces.slugPlaceholder": "ej. mi-equipo",

@@ -589,6 +589,8 @@
   "namespaces.settings": "命名空间设置",
   "namespaces.settingsDescription": "管理命名空间的显示名称、标识符和成员。",
   "namespaces.settingsTitle": "命名空间设置",
+  "namespaces.tab.general": "常规",
+  "namespaces.tab.users": "用户",
   "namespaces.slug": "标识符",
   "namespaces.slugHint": "2-30个字符，仅允许小写字母、数字和连字符。",
   "namespaces.slugPlaceholder": "例如：my-team",

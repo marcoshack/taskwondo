@@ -589,6 +589,8 @@
   "namespaces.settings": "名前空間の設定",
   "namespaces.settingsDescription": "名前空間の表示名、スラッグ、メンバーを管理します。",
   "namespaces.settingsTitle": "名前空間の設定",
+  "namespaces.tab.general": "一般",
+  "namespaces.tab.users": "ユーザー",
   "namespaces.slug": "スラッグ",
   "namespaces.slugHint": "2〜30文字、小文字の英字、数字、ハイフンのみ使用できます。",
   "namespaces.slugPlaceholder": "例: my-team",

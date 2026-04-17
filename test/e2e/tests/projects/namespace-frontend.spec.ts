@@ -179,11 +179,12 @@ test.describe('Namespace Frontend UI', () => {
 
     await api.createNamespace(request, adminToken, slug, 'Members Test NS');
 
-    await page.goto(`/${slug}/settings`);
+    // Members section now lives in the Users tab (post TF-348 refactor)
+    await page.goto(`/${slug}/settings?tab=users`);
     await page.waitForLoadState('networkidle');
 
-    // Should see members section
-    await expect(page.getByText('Members', { exact: false }).first()).toBeVisible();
+    // Invite-by-email is the canonical Users-tab marker
+    await expect(page.getByText('Invite by email', { exact: false })).toBeVisible();
 
     await attach(page, testInfo, '07-members-section');
 

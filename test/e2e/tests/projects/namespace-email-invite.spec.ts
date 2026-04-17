@@ -158,7 +158,7 @@ test.describe('Namespace email invites', () => {
 
     await api.createNamespaceEmailInvite(request, adminToken, ns.slug, email, 'member');
 
-    await page.goto(`/${ns.slug}/settings`);
+    await page.goto(`/${ns.slug}/settings?tab=users`);
     await page.waitForLoadState('networkidle');
 
     await expect(page.getByText(email)).toBeVisible({ timeout: 5000 });
@@ -235,7 +235,7 @@ test.describe('Namespace email invites', () => {
     const uniqueId = randomUUID().slice(0, 8);
     const ns = await api.createNamespace(request, adminToken, `ns-${uniqueId}`, `NS ${uniqueId}`);
 
-    await page.goto(`/${ns.slug}/settings`);
+    await page.goto(`/${ns.slug}/settings?tab=users`);
     await page.waitForLoadState('networkidle');
 
     // The email input should be the one with the email placeholder (no user autocomplete)

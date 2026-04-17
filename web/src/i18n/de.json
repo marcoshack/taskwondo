@@ -589,6 +589,8 @@
   "namespaces.settings": "Namensraum-Einstellungen",
   "namespaces.settingsDescription": "Anzeigename, Slug und Mitglieder des Namensraums verwalten.",
   "namespaces.settingsTitle": "Namensraum-Einstellungen",
+  "namespaces.tab.general": "Allgemein",
+  "namespaces.tab.users": "Benutzer",
   "namespaces.slug": "Kurzname",
   "namespaces.slugHint": "2–30 Zeichen, nur Kleinbuchstaben, Zahlen und Bindestriche.",
   "namespaces.slugPlaceholder": "z.B. mein-team",
