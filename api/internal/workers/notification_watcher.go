@@ -23,7 +23,7 @@ type NotificationWatcherTask struct {
 	users    userRepository
 	settings userSettingRepository
 	sender   emailSender
-	baseURL  string
+	urls     *URLBuilder
 	logger   zerolog.Logger
 }
 
@@ -33,7 +33,7 @@ func NewNotificationWatcherTask(
 	users userRepository,
 	settings userSettingRepository,
 	sender emailSender,
-	baseURL string,
+	urls *URLBuilder,
 	logger zerolog.Logger,
 ) *NotificationWatcherTask {
 	return &NotificationWatcherTask{
@@ -41,7 +41,7 @@ func NewNotificationWatcherTask(
 		users:    users,
 		settings: settings,
 		sender:   sender,
-		baseURL:  baseURL,
+		urls:     urls,
 		logger:   logger,
 	}
 }
@@ -104,8 +104,7 @@ func (t *NotificationWatcherTask) Execute(ctx context.Context, payload []byte) e
 			"itemNumber", fmt.Sprintf("%d", evt.ItemNumber),
 			"title", evt.Title)
 
-		itemURL := fmt.Sprintf("%s/d/projects/%s/items/%d",
-			t.baseURL, evt.ProjectKey, evt.ItemNumber)
+		itemURL := t.urls.WorkItem(ctx, evt.ProjectID, evt.ProjectKey, evt.ItemNumber)
 
 		body := watcherEmailHTML(lang, actor.DisplayName, evt, itemURL)
 

@@ -30,10 +30,10 @@ func TestNotificationOncallRotation_Execute(t *testing.T) {
 	sender := &mockEmailSender{}
 
 	task := &NotificationOncallRotationTask{
-		users:   users,
-		sender:  sender,
-		baseURL: "https://example.com",
-		logger:  zerolog.Nop(),
+		users:  users,
+		sender: sender,
+		urls:   newTestURLBuilder(),
+		logger: zerolog.Nop(),
 	}
 
 	teamID := uuid.New()
@@ -107,6 +107,7 @@ func TestNotificationOncallRotation_SameUser(t *testing.T) {
 	task := &NotificationOncallRotationTask{
 		users:  users,
 		sender: sender,
+		urls:   newTestURLBuilder(),
 		logger: zerolog.Nop(),
 	}
 
@@ -139,6 +140,7 @@ func TestNotificationOncallRotation_InvalidPayload(t *testing.T) {
 	task := &NotificationOncallRotationTask{
 		users:  &mockUserRepo{users: map[uuid.UUID]*model.User{}},
 		sender: &mockEmailSender{},
+		urls:   newTestURLBuilder(),
 		logger: zerolog.Nop(),
 	}
 

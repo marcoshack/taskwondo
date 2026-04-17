@@ -37,7 +37,7 @@ func TestNotificationCommentAssigned_Execute_SendsToAssignee(t *testing.T) {
 
 	task := &NotificationCommentOnAssignedTask{
 		users: users, settings: settings, sender: sender,
-		baseURL: "https://example.com", logger: zerolog.Nop(),
+		urls: newTestURLBuilder(), logger: zerolog.Nop(),
 	}
 
 	evt := model.CommentOnAssignedEvent{
@@ -77,7 +77,7 @@ func TestNotificationCommentAssigned_Execute_SkipsWhenDisabled(t *testing.T) {
 
 	task := &NotificationCommentOnAssignedTask{
 		users: users, settings: settings, sender: sender,
-		baseURL: "https://example.com", logger: zerolog.Nop(),
+		urls: newTestURLBuilder(), logger: zerolog.Nop(),
 	}
 
 	evt := model.CommentOnAssignedEvent{
@@ -100,7 +100,7 @@ func TestNotificationCommentAssigned_Execute_InvalidPayload(t *testing.T) {
 	task := &NotificationCommentOnAssignedTask{
 		users: &mockUserRepo{users: map[uuid.UUID]*model.User{}},
 		settings: &mockUserSettingRepo{settings: map[string]*model.UserSetting{}},
-		sender: &mockEmailSender{}, baseURL: "https://example.com", logger: zerolog.Nop(),
+		sender: &mockEmailSender{}, urls: newTestURLBuilder(), logger: zerolog.Nop(),
 	}
 
 	if err := task.Execute(context.Background(), []byte("not json")); err != nil {

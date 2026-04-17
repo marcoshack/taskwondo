@@ -17,7 +17,7 @@ type NotificationMemberAddedTask struct {
 	users    userRepository
 	settings userSettingRepository
 	sender   emailSender
-	baseURL  string
+	urls     *URLBuilder
 	logger   zerolog.Logger
 }
 
@@ -26,14 +26,14 @@ func NewNotificationMemberAddedTask(
 	users userRepository,
 	settings userSettingRepository,
 	sender emailSender,
-	baseURL string,
+	urls *URLBuilder,
 	logger zerolog.Logger,
 ) *NotificationMemberAddedTask {
 	return &NotificationMemberAddedTask{
 		users:    users,
 		settings: settings,
 		sender:   sender,
-		baseURL:  baseURL,
+		urls:     urls,
 		logger:   logger,
 	}
 }
@@ -76,7 +76,7 @@ func (t *NotificationMemberAddedTask) Execute(ctx context.Context, payload []byt
 	subject := i18n.T(lang, "email.member_added.subject",
 		"projectName", evt.ProjectName)
 
-	projectURL := fmt.Sprintf("%s/d/projects/%s", t.baseURL, evt.ProjectKey)
+	projectURL := t.urls.Project(ctx, evt.ProjectID, evt.ProjectKey)
 
 	body := memberAddedEmailHTML(lang, addedBy.DisplayName, evt.ProjectName, evt.ProjectKey, evt.Role, projectURL)
 

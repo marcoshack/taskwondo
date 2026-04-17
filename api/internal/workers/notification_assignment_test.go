@@ -3,6 +3,7 @@ package workers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -260,7 +261,109 @@ func newTestAssignmentTask(users userRepository, projects projectRepository, set
 		projects: projects,
 		settings: settings,
 		sender:   sender,
-		baseURL:  "https://example.com",
+		urls:     newTestURLBuilder(),
 		logger:   zerolog.Nop(),
+	}
+}
+
+// TF-346 regression: work item URL in assignment emails must carry the project's
+// actual namespace segment, not the hardcoded default ("d").
+func TestNotificationAssignment_Execute_UsesProjectNamespaceInURL(t *testing.T) {
+	assigneeID := uuid.New()
+	assignerID := uuid.New()
+	projectID := uuid.New()
+
+	users := &mockUserRepo{users: map[uuid.UUID]*model.User{
+		assigneeID: {ID: assigneeID, Email: "assignee@example.com", DisplayName: "Alice"},
+		assignerID: {ID: assignerID, Email: "assigner@example.com", DisplayName: "Bob"},
+	}}
+	projects := &mockProjectRepo{projects: map[uuid.UUID]*model.Project{
+		projectID: {ID: projectID, Name: "Rally", Key: "RALLY"},
+	}}
+	settings := &mockUserSettingRepo{settings: map[string]*model.UserSetting{}}
+	sender := &mockEmailSender{}
+
+	task := &NotificationAssignmentTask{
+		users:    users,
+		projects: projects,
+		settings: settings,
+		sender:   sender,
+		urls:     newTestURLBuilderWith(map[uuid.UUID]string{projectID: "mhack"}),
+		logger:   zerolog.Nop(),
+	}
+
+	evt := model.AssignmentEvent{
+		WorkItemID: uuid.New(),
+		ProjectKey: "RALLY",
+		ItemNumber: 7,
+		Title:      "Fix SLA escalation",
+		AssigneeID: assigneeID,
+		AssignerID: assignerID,
+		ProjectID:  projectID,
+	}
+	payload, _ := json.Marshal(evt)
+
+	if err := task.Execute(context.Background(), payload); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(sender.sent) != 1 {
+		t.Fatalf("expected 1 email, got %d", len(sender.sent))
+	}
+
+	body := sender.sent[0].body
+	wantURL := "https://example.com/mhack/projects/RALLY/items/7"
+	if !strings.Contains(body, wantURL) {
+		t.Errorf("expected email body to contain namespaced URL %q, got: %s", wantURL, body)
+	}
+	badURL := "https://example.com/d/projects/RALLY"
+	if strings.Contains(body, badURL) {
+		t.Errorf("email body must not contain default-namespace URL %q for a project in a different namespace", badURL)
+	}
+}
+
+// Sanity check: when the project lives in the default namespace the URL still
+// uses the "d" segment (matching the frontend's toUrlSegment mapping).
+func TestNotificationAssignment_Execute_DefaultNamespaceURL(t *testing.T) {
+	assigneeID := uuid.New()
+	assignerID := uuid.New()
+	projectID := uuid.New()
+
+	users := &mockUserRepo{users: map[uuid.UUID]*model.User{
+		assigneeID: {ID: assigneeID, Email: "assignee@example.com", DisplayName: "Alice"},
+		assignerID: {ID: assignerID, Email: "assigner@example.com", DisplayName: "Bob"},
+	}}
+	projects := &mockProjectRepo{projects: map[uuid.UUID]*model.Project{
+		projectID: {ID: projectID, Name: "Test Project", Key: "TP"},
+	}}
+	sender := &mockEmailSender{}
+
+	task := &NotificationAssignmentTask{
+		users:    users,
+		projects: projects,
+		settings: &mockUserSettingRepo{settings: map[string]*model.UserSetting{}},
+		sender:   sender,
+		urls:     newTestURLBuilderWith(map[uuid.UUID]string{projectID: model.DefaultNamespaceSlug}),
+		logger:   zerolog.Nop(),
+	}
+
+	evt := model.AssignmentEvent{
+		WorkItemID: uuid.New(),
+		ProjectKey: "TP",
+		ItemNumber: 3,
+		Title:      "Task in default ns",
+		AssigneeID: assigneeID,
+		AssignerID: assignerID,
+		ProjectID:  projectID,
+	}
+	payload, _ := json.Marshal(evt)
+
+	if err := task.Execute(context.Background(), payload); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	body := sender.sent[0].body
+	wantURL := fmt.Sprintf("https://example.com/d/projects/TP/items/%d", evt.ItemNumber)
+	if !strings.Contains(body, wantURL) {
+		t.Errorf("expected default-namespace URL %q, got: %s", wantURL, body)
 	}
 }

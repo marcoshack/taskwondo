@@ -38,7 +38,7 @@ type NotificationAssignmentTask struct {
 	projects projectRepository
 	settings userSettingRepository
 	sender   emailSender
-	baseURL  string
+	urls     *URLBuilder
 	logger   zerolog.Logger
 }
 
@@ -48,7 +48,7 @@ func NewNotificationAssignmentTask(
 	projects projectRepository,
 	settings userSettingRepository,
 	sender emailSender,
-	baseURL string,
+	urls *URLBuilder,
 	logger zerolog.Logger,
 ) *NotificationAssignmentTask {
 	return &NotificationAssignmentTask{
@@ -56,7 +56,7 @@ func NewNotificationAssignmentTask(
 		projects: projects,
 		settings: settings,
 		sender:   sender,
-		baseURL:  baseURL,
+		urls:     urls,
 		logger:   logger,
 	}
 }
@@ -112,8 +112,7 @@ func (t *NotificationAssignmentTask) Execute(ctx context.Context, payload []byte
 		"itemNumber", fmt.Sprintf("%d", evt.ItemNumber),
 		"title", evt.Title)
 
-	itemURL := fmt.Sprintf("%s/d/projects/%s/items/%d",
-		t.baseURL, evt.ProjectKey, evt.ItemNumber)
+	itemURL := t.urls.WorkItem(ctx, evt.ProjectID, evt.ProjectKey, evt.ItemNumber)
 
 	body := assignmentEmailHTML(lang, project.Name, assigner.DisplayName, evt.Title, evt.ProjectKey, evt.ItemNumber, itemURL)
 

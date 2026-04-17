@@ -13,24 +13,24 @@ import (
 
 // NotificationOncallRotationTask sends emails when an on-call rotation advances.
 type NotificationOncallRotationTask struct {
-	users   userRepository
-	sender  emailSender
-	baseURL string
-	logger  zerolog.Logger
+	users  userRepository
+	sender emailSender
+	urls   *URLBuilder
+	logger zerolog.Logger
 }
 
 // NewNotificationOncallRotationTask creates the task.
 func NewNotificationOncallRotationTask(
 	users userRepository,
 	sender emailSender,
-	baseURL string,
+	urls *URLBuilder,
 	logger zerolog.Logger,
 ) *NotificationOncallRotationTask {
 	return &NotificationOncallRotationTask{
-		users:   users,
-		sender:  sender,
-		baseURL: baseURL,
-		logger:  logger,
+		users:  users,
+		sender: sender,
+		urls:   urls,
+		logger: logger,
 	}
 }
 
@@ -60,7 +60,7 @@ func (t *NotificationOncallRotationTask) Execute(ctx context.Context, payload []
 	}
 
 	lang := "en"
-	oncallURL := oncallTabURL(t.baseURL, evt.ProjectKey, evt.TeamID)
+	oncallURL := t.urls.OncallTab(ctx, evt.ProjectID, evt.ProjectKey, evt.TeamID)
 
 	incomingSubject := i18n.T(lang, "email.oncall.incoming.subject", "projectKey", evt.ProjectKey, "teamName", evt.TeamName)
 	incomingBody := oncallIncomingEmailHTML(lang, evt.TeamName, evt.ProjectKey, evt.ProjectName, oncallURL)

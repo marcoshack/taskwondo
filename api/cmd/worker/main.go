@@ -125,67 +125,72 @@ func main() {
 	// Initialize watcher repository
 	watcherRepo := repository.NewWatcherRepository(db)
 
+	// URL builder: single source of truth for notification/email URLs.
+	// Resolves the correct namespace segment per project so links point at the
+	// right tenant (e.g. /mhack/projects/... rather than /d/projects/...).
+	urlBuilder := workers.NewURLBuilder(cfg.BaseURL, projectRepo)
+
 	// Register event-driven tasks
 	notifyAssignment := workers.NewNotificationAssignmentTask(
-		userRepo, projectRepo, userSettingRepo, emailSender, cfg.BaseURL, log.Logger,
+		userRepo, projectRepo, userSettingRepo, emailSender, urlBuilder, log.Logger,
 	)
 	dispatcher.Register(notifyAssignment)
 
 	notifyWatcher := workers.NewNotificationWatcherTask(
-		watcherRepo, userRepo, userSettingRepo, emailSender, cfg.BaseURL, log.Logger,
+		watcherRepo, userRepo, userSettingRepo, emailSender, urlBuilder, log.Logger,
 	)
 	dispatcher.Register(notifyWatcher)
 
 	notifyNewItem := workers.NewNotificationNewItemTask(
-		memberRepo, userSettingRepo, emailSender, cfg.BaseURL, log.Logger,
+		memberRepo, userSettingRepo, emailSender, urlBuilder, log.Logger,
 	)
 	dispatcher.Register(notifyNewItem)
 
 	notifyCommentAssigned := workers.NewNotificationCommentOnAssignedTask(
-		userRepo, userSettingRepo, emailSender, cfg.BaseURL, log.Logger,
+		userRepo, userSettingRepo, emailSender, urlBuilder, log.Logger,
 	)
 	dispatcher.Register(notifyCommentAssigned)
 
 	notifyStatusChange := workers.NewNotificationStatusChangeTask(
-		userRepo, userSettingRepo, emailSender, cfg.BaseURL, log.Logger,
+		userRepo, userSettingRepo, emailSender, urlBuilder, log.Logger,
 	)
 	dispatcher.Register(notifyStatusChange)
 
 	notifyMemberAdded := workers.NewNotificationMemberAddedTask(
-		userRepo, userSettingRepo, emailSender, cfg.BaseURL, log.Logger,
+		userRepo, userSettingRepo, emailSender, urlBuilder, log.Logger,
 	)
 	dispatcher.Register(notifyMemberAdded)
 
 	notifyInviteEmail := workers.NewNotificationInviteEmailTask(
-		emailSender, cfg.BaseURL, log.Logger,
+		emailSender, urlBuilder, log.Logger,
 	)
 	dispatcher.Register(notifyInviteEmail)
 
 	notifyNamespaceInviteEmail := workers.NewNotificationNamespaceInviteEmailTask(
-		emailSender, cfg.BaseURL, log.Logger,
+		emailSender, urlBuilder, log.Logger,
 	)
 	dispatcher.Register(notifyNamespaceInviteEmail)
 
 	// Register SLA breach notification task
 	notifySLABreach := workers.NewNotificationSLABreachTask(
-		escalationRepo, slaNotificationRepo, teamRepo, userSettingRepo, emailSender, cfg.BaseURL, log.Logger,
+		escalationRepo, slaNotificationRepo, teamRepo, userSettingRepo, emailSender, urlBuilder, log.Logger,
 	)
 	dispatcher.Register(notifySLABreach)
 
 	// Register on-call rotation notification task
 	notifyOncallRotation := workers.NewNotificationOncallRotationTask(
-		userRepo, emailSender, cfg.BaseURL, log.Logger,
+		userRepo, emailSender, urlBuilder, log.Logger,
 	)
 	dispatcher.Register(notifyOncallRotation)
 
 	// Register on-call override notification tasks
 	notifyOncallOverrideCreated := workers.NewNotificationOncallOverrideCreatedTask(
-		userRepo, emailSender, cfg.BaseURL, log.Logger,
+		userRepo, emailSender, urlBuilder, log.Logger,
 	)
 	dispatcher.Register(notifyOncallOverrideCreated)
 
 	notifyOncallOverrideCancelled := workers.NewNotificationOncallOverrideCancelledTask(
-		userRepo, emailSender, cfg.BaseURL, log.Logger,
+		userRepo, emailSender, urlBuilder, log.Logger,
 	)
 	dispatcher.Register(notifyOncallOverrideCancelled)
 

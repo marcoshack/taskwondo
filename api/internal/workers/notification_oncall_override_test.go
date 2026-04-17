@@ -24,10 +24,10 @@ func TestNotificationOncallOverrideCreated_Execute(t *testing.T) {
 	sender := &mockEmailSender{}
 
 	task := &NotificationOncallOverrideCreatedTask{
-		users:   users,
-		sender:  sender,
-		baseURL: "https://example.com",
-		logger:  zerolog.Nop(),
+		users:  users,
+		sender: sender,
+		urls:   newTestURLBuilder(),
+		logger: zerolog.Nop(),
 	}
 
 	teamID := uuid.New()
@@ -95,10 +95,10 @@ func TestNotificationOncallOverrideCancelled_Execute(t *testing.T) {
 	sender := &mockEmailSender{}
 
 	task := &NotificationOncallOverrideCancelledTask{
-		users:   users,
-		sender:  sender,
-		baseURL: "https://example.com",
-		logger:  zerolog.Nop(),
+		users:  users,
+		sender: sender,
+		urls:   newTestURLBuilder(),
+		logger: zerolog.Nop(),
 	}
 
 	teamID := uuid.New()

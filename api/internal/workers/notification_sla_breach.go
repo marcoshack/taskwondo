@@ -34,7 +34,7 @@ type NotificationSLABreachTask struct {
 	teamMembers   slaBreachTeamMemberRepository
 	settings      userSettingRepository
 	sender        emailSender
-	baseURL       string
+	urls          *URLBuilder
 	logger        zerolog.Logger
 }
 
@@ -45,7 +45,7 @@ func NewNotificationSLABreachTask(
 	teamMembers slaBreachTeamMemberRepository,
 	settings userSettingRepository,
 	sender emailSender,
-	baseURL string,
+	urls *URLBuilder,
 	logger zerolog.Logger,
 ) *NotificationSLABreachTask {
 	return &NotificationSLABreachTask{
@@ -54,7 +54,7 @@ func NewNotificationSLABreachTask(
 		teamMembers:   teamMembers,
 		settings:      settings,
 		sender:        sender,
-		baseURL:       baseURL,
+		urls:          urls,
 		logger:        logger,
 	}
 }
@@ -156,8 +156,7 @@ func (t *NotificationSLABreachTask) Execute(ctx context.Context, payload []byte)
 			"title", evt.Title,
 			"level", fmt.Sprintf("%d", evt.EscalationLevel))
 
-		itemURL := fmt.Sprintf("%s/d/projects/%s/items/%d",
-			t.baseURL, evt.ProjectKey, evt.ItemNumber)
+		itemURL := t.urls.WorkItem(ctx, evt.ProjectID, evt.ProjectKey, evt.ItemNumber)
 
 		body := slaBreachEmailHTML(lang, evt, itemURL)
 

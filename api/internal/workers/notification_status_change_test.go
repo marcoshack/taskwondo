@@ -37,7 +37,7 @@ func TestNotificationStatusChange_Execute_SendsIntermediateNotification(t *testi
 
 	task := &NotificationStatusChangeTask{
 		users: users, settings: settings, sender: sender,
-		baseURL: "https://example.com", logger: zerolog.Nop(),
+		urls: newTestURLBuilder(), logger: zerolog.Nop(),
 	}
 
 	evt := model.StatusChangeEvent{
@@ -79,7 +79,7 @@ func TestNotificationStatusChange_Execute_SendsFinalNotification(t *testing.T) {
 
 	task := &NotificationStatusChangeTask{
 		users: users, settings: settings, sender: sender,
-		baseURL: "https://example.com", logger: zerolog.Nop(),
+		urls: newTestURLBuilder(), logger: zerolog.Nop(),
 	}
 
 	evt := model.StatusChangeEvent{
@@ -116,7 +116,7 @@ func TestNotificationStatusChange_Execute_SkipsWhenIntermediateDisabled(t *testi
 
 	task := &NotificationStatusChangeTask{
 		users: users, settings: settings, sender: sender,
-		baseURL: "https://example.com", logger: zerolog.Nop(),
+		urls: newTestURLBuilder(), logger: zerolog.Nop(),
 	}
 
 	evt := model.StatusChangeEvent{
@@ -147,7 +147,7 @@ func TestNotificationStatusChange_Execute_SkipsWhenNoSettings(t *testing.T) {
 	task := &NotificationStatusChangeTask{
 		users: &mockUserRepo{users: map[uuid.UUID]*model.User{}},
 		settings: settings, sender: sender,
-		baseURL: "https://example.com", logger: zerolog.Nop(),
+		urls: newTestURLBuilder(), logger: zerolog.Nop(),
 	}
 
 	evt := model.StatusChangeEvent{
@@ -171,7 +171,7 @@ func TestNotificationStatusChange_Execute_InvalidPayload(t *testing.T) {
 	task := &NotificationStatusChangeTask{
 		users: &mockUserRepo{users: map[uuid.UUID]*model.User{}},
 		settings: &mockUserSettingRepo{settings: map[string]*model.UserSetting{}},
-		sender: &mockEmailSender{}, baseURL: "https://example.com", logger: zerolog.Nop(),
+		sender: &mockEmailSender{}, urls: newTestURLBuilder(), logger: zerolog.Nop(),
 	}
 
 	if err := task.Execute(context.Background(), []byte("not json")); err != nil {

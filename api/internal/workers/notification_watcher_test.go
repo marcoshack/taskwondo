@@ -575,7 +575,7 @@ func newTestWatcherTask(watchers watcherRepository, users userRepository, settin
 		users:    users,
 		settings: settings,
 		sender:   sender,
-		baseURL:  "https://example.com",
+		urls:     newTestURLBuilder(),
 		logger:   zerolog.Nop(),
 	}
 }

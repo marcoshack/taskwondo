@@ -17,7 +17,7 @@ type NotificationCommentOnAssignedTask struct {
 	users    userRepository
 	settings userSettingRepository
 	sender   emailSender
-	baseURL  string
+	urls     *URLBuilder
 	logger   zerolog.Logger
 }
 
@@ -26,14 +26,14 @@ func NewNotificationCommentOnAssignedTask(
 	users userRepository,
 	settings userSettingRepository,
 	sender emailSender,
-	baseURL string,
+	urls *URLBuilder,
 	logger zerolog.Logger,
 ) *NotificationCommentOnAssignedTask {
 	return &NotificationCommentOnAssignedTask{
 		users:    users,
 		settings: settings,
 		sender:   sender,
-		baseURL:  baseURL,
+		urls:     urls,
 		logger:   logger,
 	}
 }
@@ -79,8 +79,7 @@ func (t *NotificationCommentOnAssignedTask) Execute(ctx context.Context, payload
 		"itemNumber", fmt.Sprintf("%d", evt.ItemNumber),
 		"title", evt.Title)
 
-	itemURL := fmt.Sprintf("%s/d/projects/%s/items/%d",
-		t.baseURL, evt.ProjectKey, evt.ItemNumber)
+	itemURL := t.urls.WorkItem(ctx, evt.ProjectID, evt.ProjectKey, evt.ItemNumber)
 
 	body := commentOnAssignedEmailHTML(lang, commenter.DisplayName, evt.ProjectKey, evt.ItemNumber, evt.Title, evt.Preview, itemURL)
 

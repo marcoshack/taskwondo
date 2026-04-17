@@ -13,21 +13,21 @@ import (
 
 // NotificationInviteEmailTask sends an invite email to a user who does not yet have an account.
 type NotificationInviteEmailTask struct {
-	sender  emailSender
-	baseURL string
-	logger  zerolog.Logger
+	sender emailSender
+	urls   *URLBuilder
+	logger zerolog.Logger
 }
 
 // NewNotificationInviteEmailTask creates the task.
 func NewNotificationInviteEmailTask(
 	sender emailSender,
-	baseURL string,
+	urls *URLBuilder,
 	logger zerolog.Logger,
 ) *NotificationInviteEmailTask {
 	return &NotificationInviteEmailTask{
-		sender:  sender,
-		baseURL: baseURL,
-		logger:  logger,
+		sender: sender,
+		urls:   urls,
+		logger: logger,
 	}
 }
 
@@ -54,7 +54,7 @@ func (t *NotificationInviteEmailTask) Execute(ctx context.Context, payload []byt
 	subject := i18n.T(lang, "email.invite.subject",
 		"projectName", evt.ProjectName)
 
-	inviteURL := fmt.Sprintf("%s/invite/%s", t.baseURL, evt.InviteCode)
+	inviteURL := t.urls.Invite(evt.InviteCode)
 
 	body := inviteEmailHTML(lang, evt.InviterName, evt.ProjectName, evt.ProjectKey, evt.Role, inviteURL)
 

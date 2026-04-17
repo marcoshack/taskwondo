@@ -14,21 +14,21 @@ import (
 // NotificationNamespaceInviteEmailTask sends an email invite to a user inviting
 // them to join a namespace.
 type NotificationNamespaceInviteEmailTask struct {
-	sender  emailSender
-	baseURL string
-	logger  zerolog.Logger
+	sender emailSender
+	urls   *URLBuilder
+	logger zerolog.Logger
 }
 
 // NewNotificationNamespaceInviteEmailTask creates the task.
 func NewNotificationNamespaceInviteEmailTask(
 	sender emailSender,
-	baseURL string,
+	urls *URLBuilder,
 	logger zerolog.Logger,
 ) *NotificationNamespaceInviteEmailTask {
 	return &NotificationNamespaceInviteEmailTask{
-		sender:  sender,
-		baseURL: baseURL,
-		logger:  logger,
+		sender: sender,
+		urls:   urls,
+		logger: logger,
 	}
 }
 
@@ -55,7 +55,7 @@ func (t *NotificationNamespaceInviteEmailTask) Execute(ctx context.Context, payl
 	subject := i18n.T(lang, "email.namespace_invite.subject",
 		"namespaceName", evt.NamespaceDisplayName)
 
-	inviteURL := fmt.Sprintf("%s/invite/%s", t.baseURL, evt.InviteCode)
+	inviteURL := t.urls.Invite(evt.InviteCode)
 
 	body := namespaceInviteEmailHTML(lang, evt.InviterName, evt.NamespaceDisplayName, evt.NamespaceSlug, evt.Role, inviteURL)
 

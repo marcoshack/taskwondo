@@ -91,7 +91,7 @@ func TestNotificationSLABreach_Execute_SendsEmail(t *testing.T) {
 	sender := &mockEmailSender{}
 
 	task := NewNotificationSLABreachTask(
-		escRepo, notifRepo, &mockBreachTeamMemberRepo{members: map[uuid.UUID][]model.TeamMemberWithUser{}}, settings, sender, "https://example.com", zerolog.Nop(),
+		escRepo, notifRepo, &mockBreachTeamMemberRepo{members: map[uuid.UUID][]model.TeamMemberWithUser{}}, settings, sender, newTestURLBuilder(), zerolog.Nop(),
 	)
 
 	evt := model.SLABreachEvent{
@@ -196,7 +196,7 @@ func TestNotificationSLABreach_Execute_SkipsDisabledPreference(t *testing.T) {
 	sender := &mockEmailSender{}
 
 	task := NewNotificationSLABreachTask(
-		escRepo, notifRepo, &mockBreachTeamMemberRepo{members: map[uuid.UUID][]model.TeamMemberWithUser{}}, settings, sender, "https://example.com", zerolog.Nop(),
+		escRepo, notifRepo, &mockBreachTeamMemberRepo{members: map[uuid.UUID][]model.TeamMemberWithUser{}}, settings, sender, newTestURLBuilder(), zerolog.Nop(),
 	)
 
 	evt := model.SLABreachEvent{
@@ -256,7 +256,7 @@ func TestNotificationSLABreach_Execute_SendsToMultipleRecipients(t *testing.T) {
 	sender := &mockEmailSender{}
 
 	task := NewNotificationSLABreachTask(
-		escRepo, notifRepo, &mockBreachTeamMemberRepo{members: map[uuid.UUID][]model.TeamMemberWithUser{}}, settings, sender, "https://example.com", zerolog.Nop(),
+		escRepo, notifRepo, &mockBreachTeamMemberRepo{members: map[uuid.UUID][]model.TeamMemberWithUser{}}, settings, sender, newTestURLBuilder(), zerolog.Nop(),
 	)
 
 	evt := model.SLABreachEvent{
@@ -296,7 +296,7 @@ func TestNotificationSLABreach_Execute_InvalidPayload(t *testing.T) {
 		&mockBreachTeamMemberRepo{members: map[uuid.UUID][]model.TeamMemberWithUser{}},
 		&mockUserSettingRepo{settings: map[string]*model.UserSetting{}},
 		&mockEmailSender{},
-		"https://example.com",
+		newTestURLBuilder(),
 		zerolog.Nop(),
 	)
 
@@ -328,7 +328,7 @@ func TestNotificationSLABreach_Execute_EscalationLevelOutOfRange(t *testing.T) {
 		&mockBreachTeamMemberRepo{members: map[uuid.UUID][]model.TeamMemberWithUser{}},
 		&mockUserSettingRepo{settings: map[string]*model.UserSetting{}},
 		sender,
-		"https://example.com",
+		newTestURLBuilder(),
 		zerolog.Nop(),
 	)
 
@@ -387,7 +387,7 @@ func TestNotificationSLABreach_Execute_DefaultSLABreachEnabled(t *testing.T) {
 		&mockBreachTeamMemberRepo{members: map[uuid.UUID][]model.TeamMemberWithUser{}},
 		settings,
 		sender,
-		"https://example.com",
+		newTestURLBuilder(),
 		zerolog.Nop(),
 	)
 
@@ -508,7 +508,7 @@ func TestNotificationSLABreach_Execute_TeamWithOncall(t *testing.T) {
 	sender := &mockEmailSender{}
 
 	task := NewNotificationSLABreachTask(
-		escRepo, notifRepo, teamMemberRepo, settings, sender, "https://example.com", zerolog.Nop(),
+		escRepo, notifRepo, teamMemberRepo, settings, sender, newTestURLBuilder(), zerolog.Nop(),
 	)
 
 	evt := model.SLABreachEvent{
@@ -577,7 +577,7 @@ func TestNotificationSLABreach_Execute_TeamWithoutOncall(t *testing.T) {
 	sender := &mockEmailSender{}
 
 	task := NewNotificationSLABreachTask(
-		escRepo, notifRepo, teamMemberRepo, settings, sender, "https://example.com", zerolog.Nop(),
+		escRepo, notifRepo, teamMemberRepo, settings, sender, newTestURLBuilder(), zerolog.Nop(),
 	)
 
 	evt := model.SLABreachEvent{
@@ -642,7 +642,7 @@ func TestNotificationSLABreach_Execute_DeduplicatesUserAndTeam(t *testing.T) {
 	sender := &mockEmailSender{}
 
 	task := NewNotificationSLABreachTask(
-		escRepo, notifRepo, teamMemberRepo, settings, sender, "https://example.com", zerolog.Nop(),
+		escRepo, notifRepo, teamMemberRepo, settings, sender, newTestURLBuilder(), zerolog.Nop(),
 	)
 
 	evt := model.SLABreachEvent{

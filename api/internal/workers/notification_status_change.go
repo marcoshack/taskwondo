@@ -17,7 +17,7 @@ type NotificationStatusChangeTask struct {
 	users    userRepository
 	settings userSettingRepository
 	sender   emailSender
-	baseURL  string
+	urls     *URLBuilder
 	logger   zerolog.Logger
 }
 
@@ -26,14 +26,14 @@ func NewNotificationStatusChangeTask(
 	users userRepository,
 	settings userSettingRepository,
 	sender emailSender,
-	baseURL string,
+	urls *URLBuilder,
 	logger zerolog.Logger,
 ) *NotificationStatusChangeTask {
 	return &NotificationStatusChangeTask{
 		users:    users,
 		settings: settings,
 		sender:   sender,
-		baseURL:  baseURL,
+		urls:     urls,
 		logger:   logger,
 	}
 }
@@ -80,8 +80,7 @@ func (t *NotificationStatusChangeTask) Execute(ctx context.Context, payload []by
 		"newStatus", evt.NewStatus,
 		"title", evt.Title)
 
-	itemURL := fmt.Sprintf("%s/d/projects/%s/items/%d",
-		t.baseURL, evt.ProjectKey, evt.ItemNumber)
+	itemURL := t.urls.WorkItem(ctx, evt.ProjectID, evt.ProjectKey, evt.ItemNumber)
 
 	body := statusChangeEmailHTML(lang, actor.DisplayName, evt.ProjectKey, evt.ItemNumber, evt.Title, evt.OldStatus, evt.NewStatus, itemURL)
 

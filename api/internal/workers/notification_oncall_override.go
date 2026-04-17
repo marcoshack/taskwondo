@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 
 	"github.com/marcoshack/taskwondo/internal/i18n"
@@ -14,24 +13,24 @@ import (
 
 // NotificationOncallOverrideCreatedTask sends emails when an on-call override is created.
 type NotificationOncallOverrideCreatedTask struct {
-	users   userRepository
-	sender  emailSender
-	baseURL string
-	logger  zerolog.Logger
+	users  userRepository
+	sender emailSender
+	urls   *URLBuilder
+	logger zerolog.Logger
 }
 
 // NewNotificationOncallOverrideCreatedTask creates the task.
 func NewNotificationOncallOverrideCreatedTask(
 	users userRepository,
 	sender emailSender,
-	baseURL string,
+	urls *URLBuilder,
 	logger zerolog.Logger,
 ) *NotificationOncallOverrideCreatedTask {
 	return &NotificationOncallOverrideCreatedTask{
-		users:   users,
-		sender:  sender,
-		baseURL: baseURL,
-		logger:  logger,
+		users:  users,
+		sender: sender,
+		urls:   urls,
+		logger: logger,
 	}
 }
 
@@ -49,7 +48,7 @@ func (t *NotificationOncallOverrideCreatedTask) Execute(ctx context.Context, pay
 	}
 
 	lang := "en"
-	oncallURL := oncallTabURL(t.baseURL, evt.ProjectKey, evt.TeamID)
+	oncallURL := t.urls.OncallTab(ctx, evt.ProjectID, evt.ProjectKey, evt.TeamID)
 
 	// Notify override user (the person taking over)
 	overrideUser, err := t.users.GetByID(ctx, evt.OverrideUserID)
@@ -86,24 +85,24 @@ func (t *NotificationOncallOverrideCreatedTask) Execute(ctx context.Context, pay
 
 // NotificationOncallOverrideCancelledTask sends emails when an on-call override is cancelled.
 type NotificationOncallOverrideCancelledTask struct {
-	users   userRepository
-	sender  emailSender
-	baseURL string
-	logger  zerolog.Logger
+	users  userRepository
+	sender emailSender
+	urls   *URLBuilder
+	logger zerolog.Logger
 }
 
 // NewNotificationOncallOverrideCancelledTask creates the task.
 func NewNotificationOncallOverrideCancelledTask(
 	users userRepository,
 	sender emailSender,
-	baseURL string,
+	urls *URLBuilder,
 	logger zerolog.Logger,
 ) *NotificationOncallOverrideCancelledTask {
 	return &NotificationOncallOverrideCancelledTask{
-		users:   users,
-		sender:  sender,
-		baseURL: baseURL,
-		logger:  logger,
+		users:  users,
+		sender: sender,
+		urls:   urls,
+		logger: logger,
 	}
 }
 
@@ -128,7 +127,7 @@ func (t *NotificationOncallOverrideCancelledTask) Execute(ctx context.Context, p
 		return fmt.Errorf("loading override user: %w", err)
 	}
 
-	oncallURL := oncallTabURL(t.baseURL, evt.ProjectKey, evt.TeamID)
+	oncallURL := t.urls.OncallTab(ctx, evt.ProjectID, evt.ProjectKey, evt.TeamID)
 	subject := i18n.T(lang, "email.oncall.override.cancelled.subject", "projectKey", evt.ProjectKey, "teamName", evt.TeamName)
 	body := oncallOverrideCancelledEmailHTML(lang, evt.TeamName, evt.ProjectKey, evt.ProjectName, evt.StartAt.Format("2006-01-02 15:04 MST"), evt.EndAt.Format("2006-01-02 15:04 MST"), oncallURL)
 
@@ -167,9 +166,4 @@ func projectKeyBadge(projectKey string) string {
 		return ""
 	}
 	return fmt.Sprintf(`<span style="display: inline-block; padding: 2px 8px; background-color: #e0e7ff; color: #3730a3; border-radius: 4px; font-size: 12px; font-weight: 600; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.02em;">%s</span>`, projectKey)
-}
-
-// oncallTabURL builds the deep link to the on-call tab of a team's detail page.
-func oncallTabURL(baseURL, projectKey string, teamID uuid.UUID) string {
-	return fmt.Sprintf("%s/d/projects/%s/teams/%s?tab=oncall", baseURL, projectKey, teamID)
 }

@@ -22,7 +22,7 @@ type NotificationNewItemTask struct {
 	members  projectMemberRepository
 	settings userSettingRepository
 	sender   emailSender
-	baseURL  string
+	urls     *URLBuilder
 	logger   zerolog.Logger
 }
 
@@ -31,14 +31,14 @@ func NewNotificationNewItemTask(
 	members projectMemberRepository,
 	settings userSettingRepository,
 	sender emailSender,
-	baseURL string,
+	urls *URLBuilder,
 	logger zerolog.Logger,
 ) *NotificationNewItemTask {
 	return &NotificationNewItemTask{
 		members:  members,
 		settings: settings,
 		sender:   sender,
-		baseURL:  baseURL,
+		urls:     urls,
 		logger:   logger,
 	}
 }
@@ -66,7 +66,7 @@ func (t *NotificationNewItemTask) Execute(ctx context.Context, payload []byte) e
 		return fmt.Errorf("listing project members: %w", err)
 	}
 
-	itemURL := fmt.Sprintf("%s/d/projects/%s/items/%d", t.baseURL, evt.ProjectKey, evt.ItemNumber)
+	itemURL := t.urls.WorkItem(ctx, evt.ProjectID, evt.ProjectKey, evt.ItemNumber)
 
 	for _, m := range members {
 		// Skip the creator
