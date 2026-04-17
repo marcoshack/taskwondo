@@ -83,9 +83,10 @@ func (h *InviteHandler) GetInviteInfo(w http.ResponseWriter, r *http.Request) {
 // acceptInviteResponseUnified describes the accepted invite.
 type acceptInviteResponseUnified struct {
 	Type string `json:"type"` // "project" or "namespace"
-	// Project fields
-	Project *projectResponse `json:"project,omitempty"`
-	// Namespace fields
+	// Project fields (populated when type == "project")
+	Project              *projectResponse `json:"project,omitempty"`
+	ProjectNamespaceSlug string           `json:"project_namespace_slug,omitempty"`
+	// Namespace fields (populated when type == "namespace")
 	NamespaceSlug        string `json:"namespace_slug,omitempty"`
 	NamespaceDisplayName string `json:"namespace_display_name,omitempty"`
 
@@ -114,8 +115,9 @@ func (h *InviteHandler) AcceptInvite(w http.ResponseWriter, r *http.Request) {
 		}
 		proj := toProjectResponse(result.Project)
 		resp := acceptInviteResponseUnified{
-			Type:    "project",
-			Project: &proj,
+			Type:                 "project",
+			Project:              &proj,
+			ProjectNamespaceSlug: result.NamespaceSlug,
 		}
 		if result.RoleNotApplied {
 			resp.RoleNotApplied = true

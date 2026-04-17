@@ -205,6 +205,7 @@ export interface AcceptInviteResult {
   type: 'project' | 'namespace'
   // Present when type === 'project'
   project?: Project
+  project_namespace_slug?: string
   // Present when type === 'namespace'
   namespace_slug?: string
   namespace_display_name?: string

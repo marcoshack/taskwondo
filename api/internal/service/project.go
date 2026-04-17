@@ -1164,6 +1164,7 @@ func (s *ProjectService) GetInviteInfo(ctx context.Context, code string) (*model
 // AcceptInviteResult contains the result of accepting an invite.
 type AcceptInviteResult struct {
 	Project        *model.Project
+	NamespaceSlug  string // slug of the project's namespace, used to build links
 	RoleNotApplied bool   // true if user already had a higher role
 	ExistingRole   string // populated when RoleNotApplied is true
 	InviteRole     string // populated when RoleNotApplied is true
@@ -1217,8 +1218,16 @@ func (s *ProjectService) AcceptInvite(ctx context.Context, info *model.AuthInfo,
 		return nil, fmt.Errorf("invite has reached maximum uses: %w", model.ErrValidation)
 	}
 
-	// Check if already a member — only upgrade, never downgrade
+	// Resolve the namespace slug so callers can build the post-accept URL
+	// against the project's actual namespace, not the default one.
 	result := &AcceptInviteResult{Project: project}
+	if nsMap, err := s.projects.ResolveNamespacesByIDs(ctx, []uuid.UUID{project.ID}); err == nil {
+		if nsInfo, ok := nsMap[project.ID]; ok {
+			result.NamespaceSlug = nsInfo.NamespaceSlug
+		}
+	}
+
+	// Check if already a member — only upgrade, never downgrade
 	existing, err := s.members.GetByProjectAndUser(ctx, project.ID, info.UserID)
 	if err != nil && err != model.ErrNotFound {
 		return nil, fmt.Errorf("checking membership: %w", err)

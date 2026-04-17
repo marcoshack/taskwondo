@@ -21,7 +21,8 @@ function getPostAcceptPath(result: AcceptInviteResult): string {
     return `/${toUrlSegment(result.namespace_slug ?? 'd')}/projects`
   }
   if (result.project) {
-    return `/d/projects/${result.project.key}`
+    const nsSegment = toUrlSegment(result.project_namespace_slug ?? 'default')
+    return `/${nsSegment}/projects/${result.project.key}`
   }
   return '/d/projects'
 }
