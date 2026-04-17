@@ -833,6 +833,8 @@
   "projects.settings.deleteWarning": "Tous les éléments, commentaires et relations de ce projet seront supprimés définitivement.",
   "projects.settings.description": "Gérez les paramètres du projet.",
   "projects.settings.emailInviteButton": "Inviter",
+  "projects.settings.inviteByEmailRow": "Inviter \"{{email}}\" par e-mail",
+  "projects.settings.notInNamespaceInvite": "Pas dans cet espace — inviter par e-mail",
   "projects.settings.emailInviteConfirmBody": "Envoyer un e-mail d'invitation à <bold>{{email}}</bold> pour rejoindre ce projet en tant que <bold>{{role}}</bold> ? Si l'utilisateur a déjà un compte, il sera ajouté directement.",
   "projects.settings.emailInviteConfirmTitle": "Envoyer une invitation par e-mail",
   "projects.settings.emailInviteError": "Échec de l'envoi de l'invitation par e-mail.",

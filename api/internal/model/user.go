@@ -29,6 +29,14 @@ type User struct {
 	UpdatedAt    time.Time  `json:"updated_at"`
 }
 
+// UserWithNamespaces wraps a User with the slugs of namespaces they belong to,
+// so callers can decide whether the user is already a member of a particular
+// namespace without making a second round-trip.
+type UserWithNamespaces struct {
+	User
+	NamespaceSlugs []string `json:"namespace_slugs"`
+}
+
 // APIKey represents an API key for programmatic access (user or system).
 type APIKey struct {
 	ID          uuid.UUID  `json:"id"`

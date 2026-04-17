@@ -833,6 +833,8 @@
   "projects.settings.deleteWarning": "Alle Elemente, Kommentare und Verknüpfungen in diesem Projekt werden dauerhaft gelöscht.",
   "projects.settings.description": "Projekteinstellungen verwalten.",
   "projects.settings.emailInviteButton": "Einladen",
+  "projects.settings.inviteByEmailRow": "\"{{email}}\" per E-Mail einladen",
+  "projects.settings.notInNamespaceInvite": "Nicht in diesem Namespace — per E-Mail einladen",
   "projects.settings.emailInviteConfirmBody": "E-Mail-Einladung an <bold>{{email}}</bold> senden, um diesem Projekt als <bold>{{role}}</bold> beizutreten? Falls der Benutzer bereits ein Konto hat, wird er direkt hinzugefügt.",
   "projects.settings.emailInviteConfirmTitle": "E-Mail-Einladung senden",
   "projects.settings.emailInviteError": "E-Mail-Einladung konnte nicht gesendet werden.",

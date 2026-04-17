@@ -833,6 +833,8 @@
   "projects.settings.deleteWarning": "이 프로젝트의 모든 항목, 댓글, 관계가 영구 삭제됩니다.",
   "projects.settings.description": "프로젝트 설정을 관리합니다.",
   "projects.settings.emailInviteButton": "초대",
+  "projects.settings.inviteByEmailRow": "\"{{email}}\"을(를) 이메일로 초대",
+  "projects.settings.notInNamespaceInvite": "이 네임스페이스에 없음 — 이메일로 초대",
   "projects.settings.emailInviteConfirmBody": "<bold>{{email}}</bold>에게 <bold>{{role}}</bold>(으)로 이 프로젝트에 참여하도록 초대 이메일을 보내시겠습니까? 사용자가 이미 계정을 가지고 있으면 바로 추가됩니다.",
   "projects.settings.emailInviteConfirmTitle": "이메일 초대 보내기",
   "projects.settings.emailInviteError": "이메일 초대 전송에 실패했습니다.",

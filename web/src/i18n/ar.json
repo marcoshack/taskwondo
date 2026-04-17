@@ -833,6 +833,8 @@
   "projects.settings.deleteWarning": "سيتم حذف جميع العناصر والتعليقات والعلاقات في هذا المشروع نهائياً.",
   "projects.settings.description": "إدارة إعدادات المشروع.",
   "projects.settings.emailInviteButton": "دعوة",
+  "projects.settings.inviteByEmailRow": "دعوة \"{{email}}\" عبر البريد الإلكتروني",
+  "projects.settings.notInNamespaceInvite": "ليس في هذا النطاق — ادعُ عبر البريد الإلكتروني",
   "projects.settings.emailInviteConfirmBody": "إرسال بريد دعوة إلى <bold>{{email}}</bold> للانضمام إلى هذا المشروع بصفة <bold>{{role}}</bold>؟ إذا كان لدى المستخدم حساب بالفعل، فسيتم إضافته مباشرة.",
   "projects.settings.emailInviteConfirmTitle": "إرسال دعوة بالبريد الإلكتروني",
   "projects.settings.emailInviteError": "فشل إرسال الدعوة بالبريد الإلكتروني.",

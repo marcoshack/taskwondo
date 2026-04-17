@@ -234,13 +234,12 @@ export function ProjectSettingsPage() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
 
   // Members state
-  const [selectedUser, setSelectedUser] = useState<UserSearchResult | null>(null)
+  const [stagedUsers, setStagedUsers] = useState<UserSearchResult[]>([])
   const [newMemberRole, setNewMemberRole] = useState('member')
   const [memberError, setMemberError] = useState('')
   const [removeTarget, setRemoveTarget] = useState<{ userId: string; name: string } | null>(null)
   const [emailInput, setEmailInput] = useState('')
   const [showEmailInviteModal, setShowEmailInviteModal] = useState(false)
-  const [emailInviteRole, setEmailInviteRole] = useState('member')
   const [complexityInput, setComplexityInput] = useState<string | null>(null)
   const [complexityError, setComplexityError] = useState('')
 
@@ -381,23 +380,27 @@ export function ProjectSettingsPage() {
     })
   }
 
-  function handleAddMember() {
-    if (!selectedUser) return
+  async function handleAddMember() {
+    if (stagedUsers.length === 0) return
     setMemberError('')
 
-    addMemberMutation.mutate(
-      { user_id: selectedUser.id, role: newMemberRole },
-      {
-        onSuccess: () => {
-          setSelectedUser(null)
-          setNewMemberRole('member')
-          showSaved('addMember')
-        },
-        onError: (err) => {
-          setMemberError(getLocalizedError(err, t, 'projects.settings.addMemberError'))
-        },
-      },
-    )
+    const failures: string[] = []
+    for (const u of stagedUsers) {
+      try {
+        await addMemberMutation.mutateAsync({ user_id: u.id, role: newMemberRole })
+      } catch (err) {
+        failures.push(getLocalizedError(err, t, 'projects.settings.addMemberError'))
+      }
+    }
+
+    if (failures.length > 0) {
+      setMemberError(failures[0])
+      return
+    }
+
+    setStagedUsers([])
+    setNewMemberRole('member')
+    showSaved('addMember')
   }
 
   function handleEmailInvite() {
@@ -406,11 +409,10 @@ export function ProjectSettingsPage() {
     setShowEmailInviteModal(false)
 
     createInviteMutation.mutate(
-      { role: emailInviteRole, email: emailInput.trim() },
+      { role: newMemberRole, email: emailInput.trim() },
       {
         onSuccess: () => {
           setEmailInput('')
-          setEmailInviteRole('member')
           showSaved('emailInvite')
         },
         onError: (err) => {
@@ -418,6 +420,19 @@ export function ProjectSettingsPage() {
         },
       },
     )
+  }
+
+  function handleStageUser(user: UserSearchResult) {
+    setStagedUsers((prev) => (prev.some((u) => u.id === user.id) ? prev : [...prev, user]))
+  }
+
+  function handleUnstageUser(userId: string) {
+    setStagedUsers((prev) => prev.filter((u) => u.id !== userId))
+  }
+
+  function handleInviteByEmail(email: string) {
+    setEmailInput(email)
+    setShowEmailInviteModal(true)
   }
 
   function handleRoleChange(userId: string, role: string) {
@@ -577,26 +592,13 @@ export function ProjectSettingsPage() {
           {canManageMembers && (
             <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3">
               <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('projects.settings.addUser')}</h3>
-              <div className="flex gap-2 items-end">
-                {selectedUser ? (
-                  <div className="flex-1 min-w-0 flex items-center gap-2 rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm bg-white dark:bg-gray-800">
-                    <span className="shrink-0"><Avatar name={selectedUser.display_name} avatarUrl={selectedUser.avatar_url} size="xs" /></span>
-                    <span className="truncate text-gray-900 dark:text-gray-100">{selectedUser.display_name}</span>
-                    <span className="truncate text-gray-400 text-xs hidden sm:inline">{selectedUser.email}</span>
-                    <button
-                      type="button"
-                      className="shrink-0 ml-auto text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                      onClick={() => setSelectedUser(null)}
-                    >
-                      &times;
-                    </button>
-                  </div>
-                ) : (
-                  <UserSearchInput
-                    excludeUserIds={memberIds}
-                    onSelect={setSelectedUser}
-                  />
-                )}
+              <div className="flex gap-2 items-start">
+                <UserSearchInput
+                  excludeUserIds={[...memberIds, ...stagedUsers.map((u) => u.id)]}
+                  currentNamespaceSlug={project.namespace_slug}
+                  onSelectMember={handleStageUser}
+                  onInviteEmail={handleInviteByEmail}
+                />
                 <RoleSelect
                   value={newMemberRole}
                   onChange={setNewMemberRole}
@@ -604,45 +606,37 @@ export function ProjectSettingsPage() {
                   isOwner={isOwner}
                 />
                 <Button
-                  disabled={!selectedUser || addMemberMutation.isPending}
+                  disabled={stagedUsers.length === 0 || addMemberMutation.isPending}
                   onClick={handleAddMember}
                 >
                   {addMemberMutation.isPending ? t('common.saving') : t('common.add')}
                 </Button>
-                {saved.addMember && (
-                  <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
+                {(saved.addMember || saved.emailInvite) && (
+                  <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2] mt-2" />
                 )}
               </div>
-              <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500">
-                <div className="flex-1 border-t border-gray-200 dark:border-gray-700" />
-                <span>{t('common.or')}</span>
-                <div className="flex-1 border-t border-gray-200 dark:border-gray-700" />
-              </div>
-              <div className="flex gap-2 items-end">
-                <div className="flex-1 min-w-0">
-                  <Input
-                    placeholder={t('projects.settings.emailInvitePlaceholder')}
-                    value={emailInput}
-                    onChange={(e) => setEmailInput(e.target.value)}
-                    type="email"
-                  />
+              {stagedUsers.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {stagedUsers.map((u) => (
+                    <span
+                      key={u.id}
+                      className="inline-flex items-center gap-2 rounded-full bg-gray-100 dark:bg-gray-700 px-3 py-1 text-xs text-gray-800 dark:text-gray-200"
+                    >
+                      <Avatar name={u.display_name} avatarUrl={u.avatar_url} size="xs" />
+                      <span className="font-medium">{u.display_name}</span>
+                      <span className="text-gray-500 dark:text-gray-400 hidden sm:inline">{u.email}</span>
+                      <button
+                        type="button"
+                        className="ml-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                        onClick={() => handleUnstageUser(u.id)}
+                        aria-label={t('common.remove')}
+                      >
+                        &times;
+                      </button>
+                    </span>
+                  ))}
                 </div>
-                <RoleSelect
-                  value={emailInviteRole}
-                  onChange={setEmailInviteRole}
-                  roles={assignableRoles}
-                  isOwner={false}
-                />
-                <Button
-                  disabled={!emailInput.trim() || createInviteMutation.isPending}
-                  onClick={() => setShowEmailInviteModal(true)}
-                >
-                  {createInviteMutation.isPending ? t('common.saving') : t('projects.settings.emailInviteButton')}
-                </Button>
-                {saved.emailInvite && (
-                  <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
-                )}
-              </div>
+              )}
             </div>
           )}
 
@@ -1093,7 +1087,7 @@ export function ProjectSettingsPage() {
         <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
           <Trans
             i18nKey="projects.settings.emailInviteConfirmBody"
-            values={{ email: emailInput, role: t(`projects.settings.roles.${emailInviteRole}`) }}
+            values={{ email: emailInput, role: t(`projects.settings.roles.${newMemberRole}`) }}
             components={{ bold: <strong /> }}
           />
         </p>

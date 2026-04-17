@@ -833,6 +833,8 @@
   "projects.settings.deleteWarning": "该项目的所有条目、评论和关联将被永久删除。",
   "projects.settings.description": "管理项目设置。",
   "projects.settings.emailInviteButton": "邀请",
+  "projects.settings.inviteByEmailRow": "通过电子邮件邀请 \"{{email}}\"",
+  "projects.settings.notInNamespaceInvite": "不在此命名空间 — 通过电子邮件邀请",
   "projects.settings.emailInviteConfirmBody": "向 <bold>{{email}}</bold> 发送邀请邮件，以 <bold>{{role}}</bold> 身份加入此项目？如果用户已有账户，将直接添加。",
   "projects.settings.emailInviteConfirmTitle": "发送邮件邀请",
   "projects.settings.emailInviteError": "发送邮件邀请失败。",

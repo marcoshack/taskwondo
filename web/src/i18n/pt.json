@@ -833,6 +833,8 @@
   "projects.settings.deleteWarning": "Todos os itens, comentários e relações deste projeto serão excluídos permanentemente.",
   "projects.settings.description": "Gerencie as configurações do projeto.",
   "projects.settings.emailInviteButton": "Convidar",
+  "projects.settings.inviteByEmailRow": "Convidar \"{{email}}\" por e-mail",
+  "projects.settings.notInNamespaceInvite": "Não está neste namespace — convidar por e-mail",
   "projects.settings.emailInviteConfirmBody": "Enviar um e-mail de convite para <bold>{{email}}</bold> para participar deste projeto como <bold>{{role}}</bold>? Se o usuário já tiver uma conta, será adicionado diretamente.",
   "projects.settings.emailInviteConfirmTitle": "Enviar convite por e-mail",
   "projects.settings.emailInviteError": "Falha ao enviar convite por e-mail.",

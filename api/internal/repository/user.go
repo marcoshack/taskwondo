@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"github.com/marcoshack/taskwondo/internal/model"
 )
 
@@ -91,21 +92,27 @@ func (r *UserRepository) UpdateAvatarURL(ctx context.Context, id uuid.UUID, avat
 	return nil
 }
 
-// Search returns active users visible to the caller (co-project members).
+// Search returns active users visible to the caller (co-project members),
+// each augmented with the slugs of namespaces they're members of.
 // When query is non-empty, results are filtered by email or display_name (ILIKE).
 // Results are limited to 20.
-func (r *UserRepository) Search(ctx context.Context, callerID uuid.UUID, query string) ([]model.User, error) {
+func (r *UserRepository) Search(ctx context.Context, callerID uuid.UUID, query string) ([]model.UserWithNamespaces, error) {
 	q := "%" + query + "%"
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT DISTINCT u.id, u.email, u.display_name, u.password_hash, u.global_role, u.avatar_url,
-		        u.is_active, u.force_password_change, u.max_projects, u.max_namespaces, u.last_login_at, u.created_at, u.updated_at
+		`SELECT u.id, u.email, u.display_name, u.password_hash, u.global_role, u.avatar_url,
+		        u.is_active, u.force_password_change, u.max_projects, u.max_namespaces,
+		        u.last_login_at, u.created_at, u.updated_at,
+		        COALESCE(array_agg(DISTINCT ns.slug) FILTER (WHERE ns.slug IS NOT NULL), '{}') AS namespace_slugs
 		 FROM users u
 		 JOIN project_members pm1 ON pm1.user_id = u.id
 		 JOIN project_members pm2 ON pm2.project_id = pm1.project_id
+		 LEFT JOIN namespace_members nm ON nm.user_id = u.id
+		 LEFT JOIN namespaces ns ON ns.id = nm.namespace_id
 		 WHERE pm2.user_id = $1
 		   AND u.id != $1
 		   AND u.is_active = true
 		   AND ($2 = '%%' OR u.email ILIKE $2 OR u.display_name ILIKE $2)
+		 GROUP BY u.id
 		 ORDER BY u.display_name ASC
 		 LIMIT 20`, callerID, q)
 	if err != nil {
@@ -113,17 +120,19 @@ func (r *UserRepository) Search(ctx context.Context, callerID uuid.UUID, query s
 	}
 	defer rows.Close()
 
-	var users []model.User
+	var users []model.UserWithNamespaces
 	for rows.Next() {
-		var u model.User
+		var u model.UserWithNamespaces
 		var passwordHash sql.NullString
 		var avatarURL sql.NullString
 		var maxProjects sql.NullInt32
 		var maxNamespaces sql.NullInt32
 		var lastLoginAt sql.NullTime
+		var namespaceSlugs pq.StringArray
 		if err := rows.Scan(
 			&u.ID, &u.Email, &u.DisplayName, &passwordHash, &u.GlobalRole,
 			&avatarURL, &u.IsActive, &u.ForcePasswordChange, &maxProjects, &maxNamespaces, &lastLoginAt, &u.CreatedAt, &u.UpdatedAt,
+			&namespaceSlugs,
 		); err != nil {
 			return nil, fmt.Errorf("scanning user row: %w", err)
 		}
@@ -141,6 +150,7 @@ func (r *UserRepository) Search(ctx context.Context, callerID uuid.UUID, query s
 		if lastLoginAt.Valid {
 			u.LastLoginAt = &lastLoginAt.Time
 		}
+		u.NamespaceSlugs = []string(namespaceSlugs)
 		users = append(users, u)
 	}
 	return users, nil

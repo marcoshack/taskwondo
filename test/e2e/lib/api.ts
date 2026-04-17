@@ -800,6 +800,7 @@ export interface UserSearchResultE2E {
   email: string;
   display_name: string;
   global_role: string;
+  namespace_slugs?: string[];
 }
 
 export async function searchUsers(

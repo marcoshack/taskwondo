@@ -121,31 +121,38 @@ test.describe('Email-based Project Invites', () => {
     await expect(page.getByText(inviteeEmail)).toBeVisible({ timeout: 5000 });
   });
 
-  test('invite by email form works in the UI', async ({ page, testProject }) => {
-    // Navigate to project settings users tab (email invite form is in Add user section)
+  test('typing an unknown email surfaces the invite-by-email row and confirms an invite', async ({ page, request, testProject }) => {
+    // Navigate to project settings users tab (unified Add user input)
     await page.goto(`/d/projects/${testProject.key}/settings?tab=users`);
     await page.waitForLoadState('networkidle');
 
-    // Find the email invite input
-    const emailInput = page.getByPlaceholder('Invite by email address');
-    await expect(emailInput).toBeVisible();
+    // Find the unified search input
+    const searchInput = page.getByPlaceholder('Search by name or email...');
+    await expect(searchInput).toBeVisible();
 
-    // Type an email address
+    // Type an email address that doesn't match any namespace member
     const uniqueId = randomUUID().slice(0, 8);
     const email = `ui-invite-${uniqueId}@test.local`;
-    await emailInput.fill(email);
+    await searchInput.fill(email);
 
-    // Click Invite button
-    await page.getByRole('button', { name: /^Invite$/i }).click();
+    // The "Invite '<email>' by email" dropdown row should appear; click it
+    const inviteRow = page.getByRole('button', { name: new RegExp(`Invite "${email}" by email`) });
+    await expect(inviteRow).toBeVisible({ timeout: 5000 });
+    await inviteRow.click();
 
-    // Confirmation modal should appear
+    // Confirmation modal should appear with the typed email
     await expect(page.getByText('Send Email Invite')).toBeVisible();
     await expect(page.getByText(email)).toBeVisible();
 
     // Click Send Invite
     await page.getByRole('button', { name: 'Send Invite' }).click();
 
-    // Should see success checkmark
-    await expect(page.locator('.text-green-500').first()).toBeVisible({ timeout: 5000 });
+    // The pending invite should appear in the member list
+    await expect(page.getByText(email)).toBeVisible({ timeout: 5000 });
+
+    // Verify the invite was created via API
+    const invites = await api.listInvites(request, getAdminToken(), testProject.key);
+    const found = invites.find((inv: any) => inv.invitee_email === email);
+    expect(found).toBeTruthy();
   });
 });

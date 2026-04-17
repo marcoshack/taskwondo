@@ -833,6 +833,8 @@
   "projects.settings.deleteWarning": "このプロジェクトのすべてのアイテム、コメント、関連が完全に削除されます。",
   "projects.settings.description": "プロジェクト設定を管理します。",
   "projects.settings.emailInviteButton": "招待",
+  "projects.settings.inviteByEmailRow": "「{{email}}」をメールで招待",
+  "projects.settings.notInNamespaceInvite": "この名前空間にいません — メールで招待",
   "projects.settings.emailInviteConfirmBody": "<bold>{{email}}</bold>に<bold>{{role}}</bold>としてこのプロジェクトに参加する招待メールを送信しますか？ユーザーが既にアカウントを持っている場合は、直接追加されます。",
   "projects.settings.emailInviteConfirmTitle": "メール招待を送信",
   "projects.settings.emailInviteError": "メール招待の送信に失敗しました。",

@@ -6,6 +6,7 @@ export interface UserSearchResult {
   display_name: string
   global_role: string
   avatar_url?: string
+  namespace_slugs?: string[]
 }
 
 export async function searchUsers(query: string) {

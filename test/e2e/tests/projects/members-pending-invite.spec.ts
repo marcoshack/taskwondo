@@ -91,10 +91,13 @@ test.describe('Pending email invites in members list', () => {
     await page.goto(`/d/projects/${testProject.key}/settings?tab=users`);
     await page.waitForLoadState('networkidle');
 
-    // Use the email invite form to send an invite
-    const emailInput = page.getByPlaceholder('Invite by email address');
-    await emailInput.fill(inviteeEmail);
-    await page.getByRole('button', { name: /^Invite$/i }).click();
+    // Use the unified search input — typing an unknown email surfaces the
+    // "Invite by email" dropdown row.
+    const searchInput = page.getByPlaceholder('Search by name or email...');
+    await searchInput.fill(inviteeEmail);
+    await page
+      .getByRole('button', { name: new RegExp(`Invite "${inviteeEmail}" by email`) })
+      .click();
 
     // Confirm the invite modal
     await expect(page.getByText('Send Email Invite')).toBeVisible();

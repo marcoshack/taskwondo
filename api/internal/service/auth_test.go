@@ -93,12 +93,12 @@ func (m *mockUserRepo) UpdatePasswordHash(_ context.Context, id uuid.UUID, hash 
 	return nil
 }
 
-func (m *mockUserRepo) Search(_ context.Context, _ uuid.UUID, query string) ([]model.User, error) {
-	var result []model.User
+func (m *mockUserRepo) Search(_ context.Context, _ uuid.UUID, query string) ([]model.UserWithNamespaces, error) {
+	var result []model.UserWithNamespaces
 	q := strings.ToLower(query)
 	for _, u := range m.byID {
 		if u.IsActive && (strings.Contains(strings.ToLower(u.Email), q) || strings.Contains(strings.ToLower(u.DisplayName), q)) {
-			result = append(result, *u)
+			result = append(result, model.UserWithNamespaces{User: *u, NamespaceSlugs: []string{}})
 		}
 	}
 	return result, nil

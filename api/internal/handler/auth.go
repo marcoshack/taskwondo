@@ -378,11 +378,25 @@ func (h *AuthHandler) SearchUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := make([]userResponse, len(users))
+	resp := make([]userSearchResponse, len(users))
 	for i := range users {
-		resp[i] = toUserResponse(&users[i])
+		resp[i] = userSearchResponse{
+			userResponse:   toUserResponse(&users[i].User),
+			NamespaceSlugs: users[i].NamespaceSlugs,
+		}
+		if resp[i].NamespaceSlugs == nil {
+			resp[i].NamespaceSlugs = []string{}
+		}
 	}
 	writeData(w, http.StatusOK, resp)
+}
+
+// userSearchResponse augments userResponse with the slugs of namespaces the
+// user belongs to, so callers can decide whether to add the user directly or
+// route through an email invite.
+type userSearchResponse struct {
+	userResponse
+	NamespaceSlugs []string `json:"namespace_slugs"`
 }
 
 // SearchUsersDeprecated handles GET /api/v1/users/search?q=... (deprecated path).

@@ -224,6 +224,8 @@
   "projects.settings.addMemberError": "Failed to add member.",
   "projects.settings.emailInvitePlaceholder": "Invite by email address...",
   "projects.settings.emailInviteButton": "Invite",
+  "projects.settings.inviteByEmailRow": "Invite \"{{email}}\" by email",
+  "projects.settings.notInNamespaceInvite": "Not in this namespace — invite by email",
   "projects.settings.emailInviteConfirmTitle": "Send Email Invite",
   "projects.settings.emailInviteConfirmBody": "Send an invite email to <bold>{{email}}</bold> to join this project as <bold>{{role}}</bold>? If the user already has an account, they will be added directly.",
   "projects.settings.emailInviteSend": "Send Invite",
