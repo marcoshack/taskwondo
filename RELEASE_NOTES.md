@@ -1,3 +1,53 @@
+# v0.4.0
+
+Customer portal with support queues, teams and on-call rotations, email-based namespace invites, password reset flow, a dedicated authentication preferences page, and a tab-based reorganization of project and namespace settings.
+
+## New Features
+
+- **Support queues with customer portal** — customers can submit and track tickets through a dedicated portal sidebar, with project stickiness, own-items search scoping, and role-scoped access
+- **Teams** — group users into teams with member management, dedicated detail pages, and usage in escalation lists
+- **On-call rotations** — define rotations with schedule projections, overrides, and team-aware escalation routing
+- **Email-based namespace invites** — invite users to namespaces via email; pending invites shown in member lists and surfaced for registered users instead of auto-adding
+- **Unified invites table** — `project_invites` and `namespace_invites` merged into a single invites table
+- **Password reset flow** — self-service reset from the login screen
+- **Authentication preferences page** — dedicated page in User Preferences for credentials and OAuth connections
+- **Queue items redesign** — queue detail page now matches the work items list layout
+- **Teams/queues/milestones search** — these entity types now appear in FTS and semantic search results
+- **Search modal persistence** — query and results persist across open/close
+- **On-call email context** — notification emails now include project context and a link to the schedule
+- **Inbox refresh and filters** — refresh button on work items page, `work_item_id` filter on inbox, cross-namespace projects in inbox filter and New Item modal
+- **Mailpit dev service** — local SMTP inbox for email testing in the dev environment
+
+## Improvements
+
+- **Settings reorganization** — Namespace Settings split into General/Users tabs, Project Settings split into tabs, Workflows page split into Workflow and Escalation tabs
+- **Unified Add User search** — project Settings/Users merged into a single search field
+- **Portal handling** — removed exclusive portal view; customer role uses the standard sidebar with portal routes
+- **Browser tab title** — work item detail pages show the display ID
+- **Team pages** — redesigned add-member flow, on-call buttons, and improved mobile responsiveness
+- **Page spacing** — unified to `space-y-6` across all settings pages
+- **Bulk preference fetch** — user preference requests deduped into one bulk call
+- **Dependency pinning** — web dependencies pinned to exact versions from lockfile; Renovate config added for automated updates
+- **Untagged image cleanup** — switched to `dataaxiom/ghcr-cleanup-action` with matrix fault tolerance
+- **`make dev-stop`** — convenience target to stop all dev services
+
+## Bug Fixes
+
+- Fix post-accept redirect for project invites in non-default namespaces
+- Fix notification email links for non-default namespaces
+- Fix stale namespace slug in keyboard shortcut navigation
+- Fix cross-namespace routing in CreateWorkItem modal and watchlist
+- Fix infinite loading when opening cross-namespace work items
+- Fix inbox icon not showing as active for completed work items
+- Fix inbox project filter dropdown opening to wrong side
+- Fix portal-only detection, stale project key, and admin render crash
+- Fix role dropdown overflowing viewport when near bottom of page
+- Fix vertical scrollbar on tab containers
+- Add missing `search.entityType.team` i18n key across all languages
+- Fix various flaky E2E tests (SPA transition race, namespace toggle conflicts, board view race, search modal timing, authentication tab-switch)
+
+---
+
 # v0.3.0
 
 Namespace multi-tenancy, AI-powered semantic search, SLA breach monitoring with escalations, Prometheus observability, user profiles with avatars, admin dashboards, CI/CD with GitHub Actions, and 130+ commits across the full stack.
