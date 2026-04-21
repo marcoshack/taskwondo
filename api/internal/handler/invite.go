@@ -55,18 +55,18 @@ func (h *InviteHandler) GetInviteInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	} else if !errors.Is(err, model.ErrNotFound) {
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to get project invite info")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
 	nsInfo, err := h.namespaces.GetNamespaceInviteInfo(r.Context(), code)
 	if err != nil {
 		if errors.Is(err, model.ErrNotFound) {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "invite not found")
+			writeError(w, http.StatusNotFound, CodeNotFound, "invite not found")
 			return
 		}
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to get namespace invite info")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -100,7 +100,7 @@ type acceptInviteResponseUnified struct {
 func (h *InviteHandler) AcceptInvite(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -128,7 +128,7 @@ func (h *InviteHandler) AcceptInvite(w http.ResponseWriter, r *http.Request) {
 		return
 	} else if !errors.Is(err, model.ErrNotFound) {
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to look up project invite")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 

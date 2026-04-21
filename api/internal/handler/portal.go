@@ -147,7 +147,7 @@ func toPortalEventResponse(e *model.WorkItemEventWithActor) portalEventResponse 
 func (h *PortalHandler) ListQueues(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -200,7 +200,7 @@ func (h *PortalHandler) ListQueues(w http.ResponseWriter, r *http.Request) {
 func (h *PortalHandler) CreateTicket(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -208,14 +208,14 @@ func (h *PortalHandler) CreateTicket(w http.ResponseWriter, r *http.Request) {
 
 	var req createPortalTicketRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	// Auto-resolve the project's public queue
 	publicQueue, err := h.queues.GetPublicQueue(r.Context(), projectKey)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "project has no public queue configured")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "project has no public queue configured")
 		return
 	}
 
@@ -227,9 +227,8 @@ func (h *PortalHandler) CreateTicket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.CategoryID != nil {
-		id, err := uuid.Parse(*req.CategoryID)
-		if err != nil {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid category_id")
+		id, ok := parseOptionalUUID(w, req.CategoryID, "invalid category_id")
+		if !ok {
 			return
 		}
 		input.CategoryID = &id
@@ -248,7 +247,7 @@ func (h *PortalHandler) CreateTicket(w http.ResponseWriter, r *http.Request) {
 func (h *PortalHandler) ListTickets(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -305,14 +304,14 @@ func (h *PortalHandler) ListTickets(w http.ResponseWriter, r *http.Request) {
 func (h *PortalHandler) GetTicket(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
 	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid item number")
 		return
 	}
 
@@ -324,7 +323,7 @@ func (h *PortalHandler) GetTicket(w http.ResponseWriter, r *http.Request) {
 
 	// Customer can only see their own tickets — return 404 to avoid information leakage
 	if item.ReporterID != info.UserID {
-		writeError(w, http.StatusNotFound, "NOT_FOUND", "ticket not found")
+		writeError(w, http.StatusNotFound, CodeNotFound, "ticket not found")
 		return
 	}
 
@@ -341,14 +340,14 @@ type updatePortalTicketRequest struct {
 func (h *PortalHandler) UpdateTicket(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
 	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid item number")
 		return
 	}
 
@@ -359,13 +358,13 @@ func (h *PortalHandler) UpdateTicket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if item.ReporterID != info.UserID {
-		writeError(w, http.StatusNotFound, "NOT_FOUND", "ticket not found")
+		writeError(w, http.StatusNotFound, CodeNotFound, "ticket not found")
 		return
 	}
 
 	var req updatePortalTicketRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
@@ -385,14 +384,14 @@ func (h *PortalHandler) UpdateTicket(w http.ResponseWriter, r *http.Request) {
 func (h *PortalHandler) ListComments(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
 	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid item number")
 		return
 	}
 
@@ -403,7 +402,7 @@ func (h *PortalHandler) ListComments(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if item.ReporterID != info.UserID {
-		writeError(w, http.StatusNotFound, "NOT_FOUND", "ticket not found")
+		writeError(w, http.StatusNotFound, CodeNotFound, "ticket not found")
 		return
 	}
 
@@ -426,14 +425,14 @@ func (h *PortalHandler) ListComments(w http.ResponseWriter, r *http.Request) {
 func (h *PortalHandler) AddComment(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
 	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid item number")
 		return
 	}
 
@@ -444,13 +443,13 @@ func (h *PortalHandler) AddComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if item.ReporterID != info.UserID {
-		writeError(w, http.StatusNotFound, "NOT_FOUND", "ticket not found")
+		writeError(w, http.StatusNotFound, CodeNotFound, "ticket not found")
 		return
 	}
 
 	var req createPortalCommentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
@@ -480,14 +479,14 @@ func (h *PortalHandler) resolveAuthorName(ctx context.Context, authorID *uuid.UU
 func (h *PortalHandler) ListEvents(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
 	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid item number")
 		return
 	}
 
@@ -498,7 +497,7 @@ func (h *PortalHandler) ListEvents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if item.ReporterID != info.UserID {
-		writeError(w, http.StatusNotFound, "NOT_FOUND", "ticket not found")
+		writeError(w, http.StatusNotFound, CodeNotFound, "ticket not found")
 		return
 	}
 
@@ -520,24 +519,24 @@ func (h *PortalHandler) ListEvents(w http.ResponseWriter, r *http.Request) {
 
 func handlePortalError(w http.ResponseWriter, r *http.Request, err error, logMsg string) {
 	if errors.Is(err, model.ErrNotFound) {
-		writeError(w, http.StatusNotFound, "NOT_FOUND", "not found")
+		writeError(w, http.StatusNotFound, CodeNotFound, "not found")
 		return
 	}
 	if errors.Is(err, model.ErrForbidden) {
-		writeError(w, http.StatusForbidden, "FORBIDDEN", "insufficient permissions")
+		writeError(w, http.StatusForbidden, CodeForbidden, "insufficient permissions")
 		return
 	}
 	if errors.Is(err, model.ErrValidation) {
-		writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
+		writeErrorFromService(w, http.StatusBadRequest, CodeValidationError, err)
 		return
 	}
 	if errors.Is(err, model.ErrAlreadyExists) || errors.Is(err, model.ErrConflict) {
-		writeErrorFromService(w, http.StatusConflict, "CONFLICT", err)
+		writeErrorFromService(w, http.StatusConflict, CodeConflict, err)
 		return
 	}
 
 	log.Ctx(r.Context()).Error().Err(err).Msg(logMsg)
-	writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+	writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 }
 
 // --- Portal Attachment Handlers ---
@@ -567,14 +566,14 @@ func (h *PortalHandler) verifyTicketOwnership(r *http.Request, info *model.AuthI
 func (h *PortalHandler) ListAttachments(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
 	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid item number")
 		return
 	}
 
@@ -602,14 +601,14 @@ func (h *PortalHandler) ListAttachments(w http.ResponseWriter, r *http.Request) 
 func (h *PortalHandler) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
 	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid item number")
 		return
 	}
 
@@ -621,16 +620,16 @@ func (h *PortalHandler) UploadAttachment(w http.ResponseWriter, r *http.Request)
 	r.Body = http.MaxBytesReader(w, r.Body, h.maxUploadSize+1024*1024)
 	if err := r.ParseMultipartForm(32 << 20); err != nil {
 		if err.Error() == "http: request body too large" {
-			writeError(w, http.StatusRequestEntityTooLarge, "FILE_TOO_LARGE", "file exceeds maximum upload size")
+			writeError(w, http.StatusRequestEntityTooLarge, CodeFileTooLarge, "file exceeds maximum upload size")
 			return
 		}
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid multipart form")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid multipart form")
 		return
 	}
 
 	file, header, err := r.FormFile("file")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "file field is required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "file field is required")
 		return
 	}
 	defer file.Close()
@@ -657,20 +656,19 @@ func (h *PortalHandler) UploadAttachment(w http.ResponseWriter, r *http.Request)
 func (h *PortalHandler) DownloadAttachment(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
 	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid item number")
 		return
 	}
 
-	attachmentID, err := uuid.Parse(chi.URLParam(r, "attachmentId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid attachment ID")
+	attachmentID, ok := parseUUIDParam(w, r, "attachmentId", "invalid attachment ID")
+	if !ok {
 		return
 	}
 
@@ -697,20 +695,19 @@ func (h *PortalHandler) DownloadAttachment(w http.ResponseWriter, r *http.Reques
 func (h *PortalHandler) DeleteAttachment(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
 	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid item number")
 		return
 	}
 
-	attachmentID, err := uuid.Parse(chi.URLParam(r, "attachmentId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid attachment ID")
+	attachmentID, ok := parseUUIDParam(w, r, "attachmentId", "invalid attachment ID")
+	if !ok {
 		return
 	}
 
@@ -731,20 +728,19 @@ func (h *PortalHandler) DeleteAttachment(w http.ResponseWriter, r *http.Request)
 func (h *PortalHandler) UpdateAttachmentComment(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
 	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid item number")
 		return
 	}
 
-	attachmentID, err := uuid.Parse(chi.URLParam(r, "attachmentId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid attachment ID")
+	attachmentID, ok := parseUUIDParam(w, r, "attachmentId", "invalid attachment ID")
+	if !ok {
 		return
 	}
 
@@ -757,7 +753,7 @@ func (h *PortalHandler) UpdateAttachmentComment(w http.ResponseWriter, r *http.R
 		Comment string `json:"comment"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 

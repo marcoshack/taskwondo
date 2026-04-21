@@ -270,7 +270,10 @@ func (r *StatsRepository) backfillAtTime(ctx context.Context, t time.Time) (int6
 	if err != nil {
 		return 0, fmt.Errorf("inserting project-level backfill: %w", err)
 	}
-	projectRows, _ := result.RowsAffected()
+	projectRows, err := result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("checking rows affected: %w", err)
+	}
 
 	// Per-assignee breakdowns — also reconstruct assignee at time t
 	result, err = tx.ExecContext(ctx, `
@@ -326,7 +329,10 @@ func (r *StatsRepository) backfillAtTime(ctx context.Context, t time.Time) (int6
 	if err != nil {
 		return 0, fmt.Errorf("inserting per-assignee backfill: %w", err)
 	}
-	userRows, _ := result.RowsAffected()
+	userRows, err := result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("checking rows affected: %w", err)
+	}
 
 	if err := tx.Commit(); err != nil {
 		return 0, fmt.Errorf("committing backfill transaction: %w", err)

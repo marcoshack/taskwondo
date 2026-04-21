@@ -42,7 +42,7 @@ func toUserSettingResponse(s *model.UserSetting) userSettingResponse {
 func (h *UserSettingHandler) List(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -66,7 +66,7 @@ func (h *UserSettingHandler) List(w http.ResponseWriter, r *http.Request) {
 func (h *UserSettingHandler) Get(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -86,7 +86,7 @@ func (h *UserSettingHandler) Get(w http.ResponseWriter, r *http.Request) {
 func (h *UserSettingHandler) Set(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -95,12 +95,12 @@ func (h *UserSettingHandler) Set(w http.ResponseWriter, r *http.Request) {
 
 	var req setUserSettingRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	if len(req.Value) == 0 {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "value is required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "value is required")
 		return
 	}
 
@@ -117,7 +117,7 @@ func (h *UserSettingHandler) Set(w http.ResponseWriter, r *http.Request) {
 func (h *UserSettingHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -136,7 +136,7 @@ func (h *UserSettingHandler) Delete(w http.ResponseWriter, r *http.Request) {
 func (h *UserSettingHandler) ListGlobal(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -158,7 +158,7 @@ func (h *UserSettingHandler) ListGlobal(w http.ResponseWriter, r *http.Request) 
 func (h *UserSettingHandler) GetGlobal(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -177,7 +177,7 @@ func (h *UserSettingHandler) GetGlobal(w http.ResponseWriter, r *http.Request) {
 func (h *UserSettingHandler) SetGlobal(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -185,12 +185,12 @@ func (h *UserSettingHandler) SetGlobal(w http.ResponseWriter, r *http.Request) {
 
 	var req setUserSettingRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	if len(req.Value) == 0 {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "value is required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "value is required")
 		return
 	}
 
@@ -207,7 +207,7 @@ func (h *UserSettingHandler) SetGlobal(w http.ResponseWriter, r *http.Request) {
 func (h *UserSettingHandler) DeleteGlobal(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -223,17 +223,17 @@ func (h *UserSettingHandler) DeleteGlobal(w http.ResponseWriter, r *http.Request
 
 func handleUserSettingError(w http.ResponseWriter, r *http.Request, err error, logMsg string) {
 	if errors.Is(err, model.ErrNotFound) {
-		writeError(w, http.StatusNotFound, "NOT_FOUND", "setting not found")
+		writeError(w, http.StatusNotFound, CodeNotFound, "setting not found")
 		return
 	}
 	if errors.Is(err, model.ErrForbidden) {
-		writeError(w, http.StatusForbidden, "FORBIDDEN", "insufficient permissions")
+		writeError(w, http.StatusForbidden, CodeForbidden, "insufficient permissions")
 		return
 	}
 	if errors.Is(err, model.ErrValidation) {
-		writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
+		writeErrorFromService(w, http.StatusBadRequest, CodeValidationError, err)
 		return
 	}
 	log.Ctx(r.Context()).Error().Err(err).Msg(logMsg)
-	writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+	writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 }

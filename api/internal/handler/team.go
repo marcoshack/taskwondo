@@ -90,7 +90,7 @@ func toTeamMemberResponse(m *model.TeamMemberWithUser) teamMemberResponse {
 func (h *TeamHandler) List(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -114,7 +114,7 @@ func (h *TeamHandler) List(w http.ResponseWriter, r *http.Request) {
 func (h *TeamHandler) Create(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -122,7 +122,7 @@ func (h *TeamHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	var req createTeamRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
@@ -144,14 +144,13 @@ func (h *TeamHandler) Create(w http.ResponseWriter, r *http.Request) {
 func (h *TeamHandler) Get(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
-	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid team ID")
+	teamID, ok := parseUUIDParam(w, r, "teamId", "invalid team ID")
+	if !ok {
 		return
 	}
 
@@ -168,41 +167,42 @@ func (h *TeamHandler) Get(w http.ResponseWriter, r *http.Request) {
 func (h *TeamHandler) Update(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
-	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid team ID")
+	teamID, ok := parseUUIDParam(w, r, "teamId", "invalid team ID")
+	if !ok {
 		return
 	}
 
 	// Decode to raw map for explicit null detection
 	raw := make(map[string]json.RawMessage)
 	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	var input service.UpdateTeamInput
 
 	if v, ok := raw["name"]; ok {
-		var name string
-		if err := json.Unmarshal(v, &name); err == nil {
-			input.Name = &name
+		name, ok := unmarshalField[string](w, v, "name")
+		if !ok {
+			return
 		}
+		input.Name = &name
 	}
 
 	if v, ok := raw["description"]; ok {
 		if string(v) == "null" {
 			input.ClearDescription = true
 		} else {
-			var desc string
-			if err := json.Unmarshal(v, &desc); err == nil {
-				input.Description = &desc
+			desc, ok := unmarshalField[string](w, v, "description")
+			if !ok {
+				return
 			}
+			input.Description = &desc
 		}
 	}
 
@@ -219,14 +219,13 @@ func (h *TeamHandler) Update(w http.ResponseWriter, r *http.Request) {
 func (h *TeamHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
-	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid team ID")
+	teamID, ok := parseUUIDParam(w, r, "teamId", "invalid team ID")
+	if !ok {
 		return
 	}
 
@@ -242,14 +241,13 @@ func (h *TeamHandler) Delete(w http.ResponseWriter, r *http.Request) {
 func (h *TeamHandler) ListMembers(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
-	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid team ID")
+	teamID, ok := parseUUIDParam(w, r, "teamId", "invalid team ID")
+	if !ok {
 		return
 	}
 
@@ -271,26 +269,25 @@ func (h *TeamHandler) ListMembers(w http.ResponseWriter, r *http.Request) {
 func (h *TeamHandler) AddMember(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
-	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid team ID")
+	teamID, ok := parseUUIDParam(w, r, "teamId", "invalid team ID")
+	if !ok {
 		return
 	}
 
 	var req addTeamMemberRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	userID, err := uuid.Parse(req.UserID)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid user_id")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid user_id")
 		return
 	}
 
@@ -307,20 +304,18 @@ func (h *TeamHandler) AddMember(w http.ResponseWriter, r *http.Request) {
 func (h *TeamHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
-	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid team ID")
+	teamID, ok := parseUUIDParam(w, r, "teamId", "invalid team ID")
+	if !ok {
 		return
 	}
 
-	userID, err := uuid.Parse(chi.URLParam(r, "userId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid user ID")
+	userID, ok := parseUUIDParam(w, r, "userId", "invalid user ID")
+	if !ok {
 		return
 	}
 
@@ -334,22 +329,22 @@ func (h *TeamHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 
 func handleTeamError(w http.ResponseWriter, r *http.Request, err error, logMsg string) {
 	if errors.Is(err, model.ErrNotFound) {
-		writeError(w, http.StatusNotFound, "NOT_FOUND", "team not found")
+		writeError(w, http.StatusNotFound, CodeNotFound, "team not found")
 		return
 	}
 	if errors.Is(err, model.ErrForbidden) {
-		writeError(w, http.StatusForbidden, "FORBIDDEN", "insufficient permissions")
+		writeError(w, http.StatusForbidden, CodeForbidden, "insufficient permissions")
 		return
 	}
 	if errors.Is(err, model.ErrValidation) {
-		writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
+		writeErrorFromService(w, http.StatusBadRequest, CodeValidationError, err)
 		return
 	}
 	if errors.Is(err, model.ErrAlreadyExists) || errors.Is(err, model.ErrConflict) {
-		writeErrorFromService(w, http.StatusConflict, "CONFLICT", err)
+		writeErrorFromService(w, http.StatusConflict, CodeConflict, err)
 		return
 	}
 
 	log.Ctx(r.Context()).Error().Err(err).Msg(logMsg)
-	writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+	writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 }

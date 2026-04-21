@@ -126,7 +126,10 @@ func (r *WatcherRepository) RemoveByProjectID(ctx context.Context, projectID uui
 	if err != nil {
 		return 0, fmt.Errorf("removing watchers by project: %w", err)
 	}
-	n, _ := result.RowsAffected()
+	n, err := result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("checking rows affected: %w", err)
+	}
 	return int(n), nil
 }
 

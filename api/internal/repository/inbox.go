@@ -41,7 +41,10 @@ func (r *InboxRepository) Remove(ctx context.Context, userID, workItemID uuid.UU
 	if err != nil {
 		return fmt.Errorf("deleting inbox item: %w", err)
 	}
-	n, _ := result.RowsAffected()
+	n, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("checking rows affected: %w", err)
+	}
 	if n == 0 {
 		return model.ErrNotFound
 	}
@@ -56,7 +59,10 @@ func (r *InboxRepository) RemoveByID(ctx context.Context, id, userID uuid.UUID) 
 	if err != nil {
 		return fmt.Errorf("deleting inbox item: %w", err)
 	}
-	n, _ := result.RowsAffected()
+	n, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("checking rows affected: %w", err)
+	}
 	if n == 0 {
 		return model.ErrNotFound
 	}
@@ -93,7 +99,7 @@ func (r *InboxRepository) List(ctx context.Context, userID uuid.UUID, excludeCom
 		qb.conditions = append(qb.conditions, fmt.Sprintf("p.key IN (%s)", strings.Join(placeholders, ", ")))
 	}
 
-	whereClause := "WHERE " + strings.Join(qb.conditions, " AND ")
+	whereClause := qb.whereClause()
 
 	joinClause := `FROM inbox_items i
 		 JOIN work_items wi ON i.work_item_id = wi.id
@@ -117,7 +123,7 @@ func (r *InboxRepository) List(ctx context.Context, userID uuid.UUID, excludeCom
 			`SELECT position FROM inbox_items WHERE id = $1 AND user_id = $2`, *cursor, userID).Scan(&cursorPos)
 		if err == nil {
 			qb.add("(i.position, i.id) > (?, ?)", cursorPos, *cursor)
-			whereClause = "WHERE " + strings.Join(qb.conditions, " AND ")
+			whereClause = qb.whereClause()
 		}
 	}
 
@@ -232,7 +238,10 @@ func (r *InboxRepository) UpdatePosition(ctx context.Context, id, userID uuid.UU
 	if err != nil {
 		return fmt.Errorf("updating inbox item position: %w", err)
 	}
-	n, _ := result.RowsAffected()
+	n, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("checking rows affected: %w", err)
+	}
 	if n == 0 {
 		return model.ErrNotFound
 	}
@@ -268,7 +277,10 @@ func (r *InboxRepository) RemoveCompleted(ctx context.Context, userID uuid.UUID)
 	if err != nil {
 		return 0, fmt.Errorf("removing completed inbox items: %w", err)
 	}
-	n, _ := result.RowsAffected()
+	n, err := result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("checking rows affected: %w", err)
+	}
 	return int(n), nil
 }
 
@@ -281,7 +293,10 @@ func (r *InboxRepository) RemoveByProjectID(ctx context.Context, projectID uuid.
 	if err != nil {
 		return 0, fmt.Errorf("removing inbox items by project: %w", err)
 	}
-	n, _ := result.RowsAffected()
+	n, err := result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("checking rows affected: %w", err)
+	}
 	return int(n), nil
 }
 

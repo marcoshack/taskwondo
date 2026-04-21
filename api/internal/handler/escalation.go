@@ -124,7 +124,7 @@ func toEscalationListResponse(el *model.EscalationList) escalationListResponse {
 func (h *EscalationHandler) List(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -148,7 +148,7 @@ func (h *EscalationHandler) List(w http.ResponseWriter, r *http.Request) {
 func (h *EscalationHandler) Create(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -156,13 +156,13 @@ func (h *EscalationHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	var req createEscalationListRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	input, err := toEscalationInput(req)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+		writeError(w, http.StatusBadRequest, CodeValidationError, err.Error())
 		return
 	}
 
@@ -179,14 +179,13 @@ func (h *EscalationHandler) Create(w http.ResponseWriter, r *http.Request) {
 func (h *EscalationHandler) Get(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
-	listID, err := uuid.Parse(chi.URLParam(r, "listId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid escalation list ID")
+	listID, ok := parseUUIDParam(w, r, "listId", "invalid escalation list ID")
+	if !ok {
 		return
 	}
 
@@ -203,26 +202,25 @@ func (h *EscalationHandler) Get(w http.ResponseWriter, r *http.Request) {
 func (h *EscalationHandler) Update(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
-	listID, err := uuid.Parse(chi.URLParam(r, "listId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid escalation list ID")
+	listID, ok := parseUUIDParam(w, r, "listId", "invalid escalation list ID")
+	if !ok {
 		return
 	}
 
 	var req createEscalationListRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	input, err := toEscalationInput(req)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+		writeError(w, http.StatusBadRequest, CodeValidationError, err.Error())
 		return
 	}
 
@@ -239,14 +237,13 @@ func (h *EscalationHandler) Update(w http.ResponseWriter, r *http.Request) {
 func (h *EscalationHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
-	listID, err := uuid.Parse(chi.URLParam(r, "listId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid escalation list ID")
+	listID, ok := parseUUIDParam(w, r, "listId", "invalid escalation list ID")
+	if !ok {
 		return
 	}
 
@@ -262,7 +259,7 @@ func (h *EscalationHandler) Delete(w http.ResponseWriter, r *http.Request) {
 func (h *EscalationHandler) ListMappings(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -289,7 +286,7 @@ func (h *EscalationHandler) ListMappings(w http.ResponseWriter, r *http.Request)
 func (h *EscalationHandler) UpdateMapping(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -298,13 +295,13 @@ func (h *EscalationHandler) UpdateMapping(w http.ResponseWriter, r *http.Request
 
 	var req updateMappingRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	listID, err := uuid.Parse(req.EscalationListID)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid escalation_list_id")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid escalation_list_id")
 		return
 	}
 
@@ -324,7 +321,7 @@ func (h *EscalationHandler) UpdateMapping(w http.ResponseWriter, r *http.Request
 func (h *EscalationHandler) DeleteMapping(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -375,15 +372,15 @@ func toEscalationInput(req createEscalationListRequest) (service.CreateEscalatio
 func handleEscalationError(w http.ResponseWriter, r *http.Request, err error, logMsg string) {
 	switch {
 	case errors.Is(err, model.ErrNotFound):
-		writeError(w, http.StatusNotFound, "NOT_FOUND", "escalation list not found")
+		writeError(w, http.StatusNotFound, CodeNotFound, "escalation list not found")
 	case errors.Is(err, model.ErrForbidden):
-		writeError(w, http.StatusForbidden, "FORBIDDEN", "insufficient permissions")
+		writeError(w, http.StatusForbidden, CodeForbidden, "insufficient permissions")
 	case errors.Is(err, model.ErrValidation):
-		writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
+		writeErrorFromService(w, http.StatusBadRequest, CodeValidationError, err)
 	case errors.Is(err, model.ErrAlreadyExists) || errors.Is(err, model.ErrConflict):
-		writeErrorFromService(w, http.StatusConflict, "CONFLICT", err)
+		writeErrorFromService(w, http.StatusConflict, CodeConflict, err)
 	default:
 		log.Ctx(r.Context()).Error().Err(err).Msg(logMsg)
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 	}
 }

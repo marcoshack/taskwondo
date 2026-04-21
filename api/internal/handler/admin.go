@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
@@ -70,7 +69,7 @@ func (h *AdminHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	users, err := h.admin.ListUsers(r.Context())
 	if err != nil {
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to list users")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -99,27 +98,27 @@ type resetPasswordResponse struct {
 func (h *AdminHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	var req createUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	if req.Email == "" || req.DisplayName == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "email and display_name are required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "email and display_name are required")
 		return
 	}
 
 	user, password, err := h.admin.CreateUser(r.Context(), req.Email, req.DisplayName)
 	if err != nil {
 		if errors.Is(err, model.ErrAlreadyExists) {
-			writeError(w, http.StatusConflict, "CONFLICT", "a user with this email already exists")
+			writeError(w, http.StatusConflict, CodeConflict, "a user with this email already exists")
 			return
 		}
 		if errors.Is(err, model.ErrValidation) {
-			writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
+			writeErrorFromService(w, http.StatusBadRequest, CodeValidationError, err)
 			return
 		}
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to create user")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -131,20 +130,19 @@ func (h *AdminHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 
 // ResetUserPassword handles POST /api/v1/admin/users/{userId}/reset-password.
 func (h *AdminHandler) ResetUserPassword(w http.ResponseWriter, r *http.Request) {
-	userID, err := uuid.Parse(chi.URLParam(r, "userId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid user ID")
+	userID, ok := parseUUIDParam(w, r, "userId", "invalid user ID")
+	if !ok {
 		return
 	}
 
 	password, err := h.admin.ResetUserPassword(r.Context(), userID)
 	if err != nil {
 		if errors.Is(err, model.ErrNotFound) {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "user not found")
+			writeError(w, http.StatusNotFound, CodeNotFound, "user not found")
 			return
 		}
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to reset user password")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -164,35 +162,34 @@ type updateUserRequest struct {
 func (h *AdminHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 
-	userID, err := uuid.Parse(chi.URLParam(r, "userId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid user ID")
+	userID, ok := parseUUIDParam(w, r, "userId", "invalid user ID")
+	if !ok {
 		return
 	}
 
 	var req updateUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	if req.GlobalRole == nil && req.IsActive == nil && req.MaxProjects == nil && req.MaxNamespaces == nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "at least one field must be provided")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "at least one field must be provided")
 		return
 	}
 
 	user, err := h.admin.UpdateUser(r.Context(), info.UserID, userID, req.GlobalRole, req.IsActive, req.MaxProjects, req.MaxNamespaces)
 	if err != nil {
 		if errors.Is(err, model.ErrNotFound) {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "user not found")
+			writeError(w, http.StatusNotFound, CodeNotFound, "user not found")
 			return
 		}
 		if errors.Is(err, model.ErrValidation) {
-			writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
+			writeErrorFromService(w, http.StatusBadRequest, CodeValidationError, err)
 			return
 		}
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to update user")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -201,16 +198,15 @@ func (h *AdminHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 
 // ListUserProjects handles GET /api/v1/admin/users/{userId}/projects.
 func (h *AdminHandler) ListUserProjects(w http.ResponseWriter, r *http.Request) {
-	userID, err := uuid.Parse(chi.URLParam(r, "userId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid user ID")
+	userID, ok := parseUUIDParam(w, r, "userId", "invalid user ID")
+	if !ok {
 		return
 	}
 
 	memberships, err := h.admin.ListUserProjects(r.Context(), userID)
 	if err != nil {
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to list user projects")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -236,44 +232,43 @@ type addUserToProjectRequest struct {
 
 // AddUserToProject handles POST /api/v1/admin/users/{userId}/projects.
 func (h *AdminHandler) AddUserToProject(w http.ResponseWriter, r *http.Request) {
-	userID, err := uuid.Parse(chi.URLParam(r, "userId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid user ID")
+	userID, ok := parseUUIDParam(w, r, "userId", "invalid user ID")
+	if !ok {
 		return
 	}
 
 	var req addUserToProjectRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	if req.ProjectID == "" || req.Role == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "project_id and role are required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "project_id and role are required")
 		return
 	}
 
 	projectID, err := uuid.Parse(req.ProjectID)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid project ID")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid project ID")
 		return
 	}
 
 	if err := h.admin.AddUserToProject(r.Context(), userID, projectID, req.Role); err != nil {
 		if errors.Is(err, model.ErrNotFound) {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "user or project not found")
+			writeError(w, http.StatusNotFound, CodeNotFound, "user or project not found")
 			return
 		}
 		if errors.Is(err, model.ErrAlreadyExists) {
-			writeError(w, http.StatusConflict, "CONFLICT", "user is already a member of this project")
+			writeError(w, http.StatusConflict, CodeConflict, "user is already a member of this project")
 			return
 		}
 		if errors.Is(err, model.ErrValidation) {
-			writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
+			writeErrorFromService(w, http.StatusBadRequest, CodeValidationError, err)
 			return
 		}
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to add user to project")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -286,40 +281,38 @@ type updateUserProjectRoleRequest struct {
 
 // UpdateUserProjectRole handles PATCH /api/v1/admin/users/{userId}/projects/{projectId}.
 func (h *AdminHandler) UpdateUserProjectRole(w http.ResponseWriter, r *http.Request) {
-	userID, err := uuid.Parse(chi.URLParam(r, "userId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid user ID")
+	userID, ok := parseUUIDParam(w, r, "userId", "invalid user ID")
+	if !ok {
 		return
 	}
 
-	projectID, err := uuid.Parse(chi.URLParam(r, "projectId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid project ID")
+	projectID, ok := parseUUIDParam(w, r, "projectId", "invalid project ID")
+	if !ok {
 		return
 	}
 
 	var req updateUserProjectRoleRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	if req.Role == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "role is required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "role is required")
 		return
 	}
 
 	if err := h.admin.UpdateUserProjectRole(r.Context(), userID, projectID, req.Role); err != nil {
 		if errors.Is(err, model.ErrNotFound) {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "membership not found")
+			writeError(w, http.StatusNotFound, CodeNotFound, "membership not found")
 			return
 		}
 		if errors.Is(err, model.ErrValidation) {
-			writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
+			writeErrorFromService(w, http.StatusBadRequest, CodeValidationError, err)
 			return
 		}
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to update user project role")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -328,25 +321,23 @@ func (h *AdminHandler) UpdateUserProjectRole(w http.ResponseWriter, r *http.Requ
 
 // RemoveUserFromProject handles DELETE /api/v1/admin/users/{userId}/projects/{projectId}.
 func (h *AdminHandler) RemoveUserFromProject(w http.ResponseWriter, r *http.Request) {
-	userID, err := uuid.Parse(chi.URLParam(r, "userId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid user ID")
+	userID, ok := parseUUIDParam(w, r, "userId", "invalid user ID")
+	if !ok {
 		return
 	}
 
-	projectID, err := uuid.Parse(chi.URLParam(r, "projectId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid project ID")
+	projectID, ok := parseUUIDParam(w, r, "projectId", "invalid project ID")
+	if !ok {
 		return
 	}
 
 	if err := h.admin.RemoveUserFromProject(r.Context(), userID, projectID); err != nil {
 		if errors.Is(err, model.ErrNotFound) {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "membership not found")
+			writeError(w, http.StatusNotFound, CodeNotFound, "membership not found")
 			return
 		}
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to remove user from project")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -358,7 +349,7 @@ func (h *AdminHandler) GetStats(w http.ResponseWriter, r *http.Request) {
 	stats, err := h.admin.GetStats(r.Context())
 	if err != nil {
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to get admin stats")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 	writeData(w, http.StatusOK, stats)
@@ -374,7 +365,7 @@ func (h *AdminHandler) ListAllProjects(w http.ResponseWriter, r *http.Request) {
 	if v := q.Get("limit"); v != "" {
 		parsed, err := strconv.Atoi(v)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid limit parameter")
+			writeError(w, http.StatusBadRequest, CodeValidationError, "invalid limit parameter")
 			return
 		}
 		limit = parsed
@@ -383,7 +374,7 @@ func (h *AdminHandler) ListAllProjects(w http.ResponseWriter, r *http.Request) {
 	result, err := h.admin.ListAllProjects(r.Context(), search, cursor, limit)
 	if err != nil {
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to list admin projects")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -406,7 +397,7 @@ func (h *AdminHandler) ListAllNamespaces(w http.ResponseWriter, r *http.Request)
 	if v := q.Get("limit"); v != "" {
 		parsed, err := strconv.Atoi(v)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid limit parameter")
+			writeError(w, http.StatusBadRequest, CodeValidationError, "invalid limit parameter")
 			return
 		}
 		limit = parsed
@@ -415,7 +406,7 @@ func (h *AdminHandler) ListAllNamespaces(w http.ResponseWriter, r *http.Request)
 	result, err := h.admin.ListAllNamespaces(r.Context(), search, cursor, limit)
 	if err != nil {
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to list admin namespaces")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 

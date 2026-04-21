@@ -84,7 +84,7 @@ func toQueueResponse(q *model.Queue) queueResponse {
 func (h *QueueHandler) List(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -108,7 +108,7 @@ func (h *QueueHandler) List(w http.ResponseWriter, r *http.Request) {
 func (h *QueueHandler) Create(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -116,7 +116,7 @@ func (h *QueueHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	var req createQueueRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
@@ -129,18 +129,16 @@ func (h *QueueHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.DefaultAssigneeID != nil {
-		id, err := uuid.Parse(*req.DefaultAssigneeID)
-		if err != nil {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid default_assignee_id")
+		id, ok := parseOptionalUUID(w, req.DefaultAssigneeID, "invalid default_assignee_id")
+		if !ok {
 			return
 		}
 		input.DefaultAssigneeID = &id
 	}
 
 	if req.WorkflowID != nil {
-		id, err := uuid.Parse(*req.WorkflowID)
-		if err != nil {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid workflow_id")
+		id, ok := parseOptionalUUID(w, req.WorkflowID, "invalid workflow_id")
+		if !ok {
 			return
 		}
 		input.WorkflowID = &id
@@ -159,14 +157,13 @@ func (h *QueueHandler) Create(w http.ResponseWriter, r *http.Request) {
 func (h *QueueHandler) Get(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
-	queueID, err := uuid.Parse(chi.URLParam(r, "queueId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid queue ID")
+	queueID, ok := parseUUIDParam(w, r, "queueId", "invalid queue ID")
+	if !ok {
 		return
 	}
 
@@ -183,94 +180,90 @@ func (h *QueueHandler) Get(w http.ResponseWriter, r *http.Request) {
 func (h *QueueHandler) Update(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
-	queueID, err := uuid.Parse(chi.URLParam(r, "queueId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid queue ID")
+	queueID, ok := parseUUIDParam(w, r, "queueId", "invalid queue ID")
+	if !ok {
 		return
 	}
 
 	// Decode to raw map for explicit null detection
 	raw := make(map[string]json.RawMessage)
 	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	var input service.UpdateQueueInput
 
 	if v, ok := raw["name"]; ok {
-		var name string
-		if err := json.Unmarshal(v, &name); err == nil {
-			input.Name = &name
+		name, ok := unmarshalField[string](w, v, "name")
+		if !ok {
+			return
 		}
+		input.Name = &name
 	}
 
 	if v, ok := raw["description"]; ok {
 		if string(v) == "null" {
 			input.ClearDescription = true
 		} else {
-			var desc string
-			if err := json.Unmarshal(v, &desc); err == nil {
-				input.Description = &desc
+			desc, ok := unmarshalField[string](w, v, "description")
+			if !ok {
+				return
 			}
+			input.Description = &desc
 		}
 	}
 
 	if v, ok := raw["queue_type"]; ok {
-		var qt string
-		if err := json.Unmarshal(v, &qt); err == nil {
-			input.QueueType = &qt
+		qt, ok := unmarshalField[string](w, v, "queue_type")
+		if !ok {
+			return
 		}
+		input.QueueType = &qt
 	}
 
 	if v, ok := raw["is_public"]; ok {
-		var ip bool
-		if err := json.Unmarshal(v, &ip); err == nil {
-			input.IsPublic = &ip
+		ip, ok := unmarshalField[bool](w, v, "is_public")
+		if !ok {
+			return
 		}
+		input.IsPublic = &ip
 	}
 
 	if v, ok := raw["default_priority"]; ok {
-		var dp string
-		if err := json.Unmarshal(v, &dp); err == nil {
-			input.DefaultPriority = &dp
+		dp, ok := unmarshalField[string](w, v, "default_priority")
+		if !ok {
+			return
 		}
+		input.DefaultPriority = &dp
 	}
 
 	if v, ok := raw["default_assignee_id"]; ok {
-		if string(v) == "null" {
+		id, cleared, ok := unmarshalNullableUUID(w, v, "default_assignee_id")
+		if !ok {
+			return
+		}
+		if cleared {
 			input.ClearDefaultAssignee = true
 		} else {
-			var idStr string
-			if err := json.Unmarshal(v, &idStr); err == nil {
-				id, err := uuid.Parse(idStr)
-				if err != nil {
-					writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid default_assignee_id")
-					return
-				}
-				input.DefaultAssigneeID = &id
-			}
+			input.DefaultAssigneeID = &id
 		}
 	}
 
 	if v, ok := raw["workflow_id"]; ok {
-		if string(v) == "null" {
+		id, cleared, ok := unmarshalNullableUUID(w, v, "workflow_id")
+		if !ok {
+			return
+		}
+		if cleared {
 			input.ClearWorkflow = true
 		} else {
-			var idStr string
-			if err := json.Unmarshal(v, &idStr); err == nil {
-				id, err := uuid.Parse(idStr)
-				if err != nil {
-					writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid workflow_id")
-					return
-				}
-				input.WorkflowID = &id
-			}
+			input.WorkflowID = &id
 		}
 	}
 
@@ -287,14 +280,13 @@ func (h *QueueHandler) Update(w http.ResponseWriter, r *http.Request) {
 func (h *QueueHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
-	queueID, err := uuid.Parse(chi.URLParam(r, "queueId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid queue ID")
+	queueID, ok := parseUUIDParam(w, r, "queueId", "invalid queue ID")
+	if !ok {
 		return
 	}
 
@@ -374,14 +366,13 @@ func toQueueTeamResponse(t *model.Team) queueTeamResponse {
 func (h *QueueHandler) ListCategories(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
-	queueID, err := uuid.Parse(chi.URLParam(r, "queueId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid queue ID")
+	queueID, ok := parseUUIDParam(w, r, "queueId", "invalid queue ID")
+	if !ok {
 		return
 	}
 
@@ -403,20 +394,19 @@ func (h *QueueHandler) ListCategories(w http.ResponseWriter, r *http.Request) {
 func (h *QueueHandler) CreateCategory(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
-	queueID, err := uuid.Parse(chi.URLParam(r, "queueId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid queue ID")
+	queueID, ok := parseUUIDParam(w, r, "queueId", "invalid queue ID")
+	if !ok {
 		return
 	}
 
 	var req createCategoryRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
@@ -439,54 +429,55 @@ func (h *QueueHandler) CreateCategory(w http.ResponseWriter, r *http.Request) {
 func (h *QueueHandler) UpdateCategory(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
-	queueID, err := uuid.Parse(chi.URLParam(r, "queueId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid queue ID")
+	queueID, ok := parseUUIDParam(w, r, "queueId", "invalid queue ID")
+	if !ok {
 		return
 	}
-	categoryID, err := uuid.Parse(chi.URLParam(r, "categoryId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid category ID")
+	categoryID, ok := parseUUIDParam(w, r, "categoryId", "invalid category ID")
+	if !ok {
 		return
 	}
 
 	// Decode to raw map for explicit null detection on description
 	raw := make(map[string]json.RawMessage)
 	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	var input service.UpdateCategoryInput
 
 	if v, ok := raw["name"]; ok {
-		var name string
-		if err := json.Unmarshal(v, &name); err == nil {
-			input.Name = &name
+		name, ok := unmarshalField[string](w, v, "name")
+		if !ok {
+			return
 		}
+		input.Name = &name
 	}
 
 	if v, ok := raw["description"]; ok {
 		if string(v) == "null" {
 			input.ClearDescription = true
 		} else {
-			var desc string
-			if err := json.Unmarshal(v, &desc); err == nil {
-				input.Description = &desc
+			desc, ok := unmarshalField[string](w, v, "description")
+			if !ok {
+				return
 			}
+			input.Description = &desc
 		}
 	}
 
 	if v, ok := raw["position"]; ok {
-		var pos int
-		if err := json.Unmarshal(v, &pos); err == nil {
-			input.Position = &pos
+		pos, ok := unmarshalField[int](w, v, "position")
+		if !ok {
+			return
 		}
+		input.Position = &pos
 	}
 
 	cat, err := h.queues.UpdateCategory(r.Context(), info, projectKey, queueID, categoryID, input)
@@ -502,19 +493,17 @@ func (h *QueueHandler) UpdateCategory(w http.ResponseWriter, r *http.Request) {
 func (h *QueueHandler) DeleteCategory(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
-	queueID, err := uuid.Parse(chi.URLParam(r, "queueId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid queue ID")
+	queueID, ok := parseUUIDParam(w, r, "queueId", "invalid queue ID")
+	if !ok {
 		return
 	}
-	categoryID, err := uuid.Parse(chi.URLParam(r, "categoryId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid category ID")
+	categoryID, ok := parseUUIDParam(w, r, "categoryId", "invalid category ID")
+	if !ok {
 		return
 	}
 
@@ -532,14 +521,13 @@ func (h *QueueHandler) DeleteCategory(w http.ResponseWriter, r *http.Request) {
 func (h *QueueHandler) ListQueueTeams(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
-	queueID, err := uuid.Parse(chi.URLParam(r, "queueId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid queue ID")
+	queueID, ok := parseUUIDParam(w, r, "queueId", "invalid queue ID")
+	if !ok {
 		return
 	}
 
@@ -561,26 +549,25 @@ func (h *QueueHandler) ListQueueTeams(w http.ResponseWriter, r *http.Request) {
 func (h *QueueHandler) AssignQueueTeam(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
-	queueID, err := uuid.Parse(chi.URLParam(r, "queueId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid queue ID")
+	queueID, ok := parseUUIDParam(w, r, "queueId", "invalid queue ID")
+	if !ok {
 		return
 	}
 
 	var req addQueueTeamRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	teamID, err := uuid.Parse(req.TeamID)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid team_id")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid team_id")
 		return
 	}
 
@@ -596,19 +583,17 @@ func (h *QueueHandler) AssignQueueTeam(w http.ResponseWriter, r *http.Request) {
 func (h *QueueHandler) UnassignQueueTeam(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
-	queueID, err := uuid.Parse(chi.URLParam(r, "queueId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid queue ID")
+	queueID, ok := parseUUIDParam(w, r, "queueId", "invalid queue ID")
+	if !ok {
 		return
 	}
-	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid team ID")
+	teamID, ok := parseUUIDParam(w, r, "teamId", "invalid team ID")
+	if !ok {
 		return
 	}
 
@@ -622,22 +607,22 @@ func (h *QueueHandler) UnassignQueueTeam(w http.ResponseWriter, r *http.Request)
 
 func handleQueueError(w http.ResponseWriter, r *http.Request, err error, logMsg string) {
 	if errors.Is(err, model.ErrNotFound) {
-		writeError(w, http.StatusNotFound, "NOT_FOUND", "queue not found")
+		writeError(w, http.StatusNotFound, CodeNotFound, "queue not found")
 		return
 	}
 	if errors.Is(err, model.ErrForbidden) {
-		writeError(w, http.StatusForbidden, "FORBIDDEN", "insufficient permissions")
+		writeError(w, http.StatusForbidden, CodeForbidden, "insufficient permissions")
 		return
 	}
 	if errors.Is(err, model.ErrValidation) {
-		writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
+		writeErrorFromService(w, http.StatusBadRequest, CodeValidationError, err)
 		return
 	}
 	if errors.Is(err, model.ErrAlreadyExists) || errors.Is(err, model.ErrConflict) {
-		writeErrorFromService(w, http.StatusConflict, "CONFLICT", err)
+		writeErrorFromService(w, http.StatusConflict, CodeConflict, err)
 		return
 	}
 
 	log.Ctx(r.Context()).Error().Err(err).Msg(logMsg)
-	writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+	writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 }

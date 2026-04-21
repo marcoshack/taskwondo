@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
@@ -128,7 +127,7 @@ func (h *InboxHandler) List(w http.ResponseWriter, r *http.Request) {
 	if wi := r.URL.Query().Get("work_item_id"); wi != "" {
 		parsed, err := uuid.Parse(wi)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid work_item_id")
+			writeError(w, http.StatusBadRequest, CodeValidationError, "invalid work_item_id")
 			return
 		}
 		workItemID = &parsed
@@ -148,7 +147,7 @@ func (h *InboxHandler) List(w http.ResponseWriter, r *http.Request) {
 	if c := r.URL.Query().Get("cursor"); c != "" {
 		parsed, err := uuid.Parse(c)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid cursor")
+			writeError(w, http.StatusBadRequest, CodeValidationError, "invalid cursor")
 			return
 		}
 		cursor = &parsed
@@ -158,7 +157,7 @@ func (h *InboxHandler) List(w http.ResponseWriter, r *http.Request) {
 	if l := r.URL.Query().Get("limit"); l != "" {
 		parsed, err := strconv.Atoi(l)
 		if err != nil || parsed < 1 {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid limit")
+			writeError(w, http.StatusBadRequest, CodeValidationError, "invalid limit")
 			return
 		}
 		limit = parsed
@@ -204,13 +203,13 @@ func (h *InboxHandler) Add(w http.ResponseWriter, r *http.Request) {
 
 	var req addInboxItemRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	workItemID, err := uuid.Parse(req.WorkItemID)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid work_item_id")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid work_item_id")
 		return
 	}
 
@@ -226,9 +225,8 @@ func (h *InboxHandler) Add(w http.ResponseWriter, r *http.Request) {
 func (h *InboxHandler) Remove(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 
-	inboxItemID, err := uuid.Parse(chi.URLParam(r, "inboxItemId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid inbox item ID")
+	inboxItemID, ok := parseUUIDParam(w, r, "inboxItemId", "invalid inbox item ID")
+	if !ok {
 		return
 	}
 
@@ -244,15 +242,14 @@ func (h *InboxHandler) Remove(w http.ResponseWriter, r *http.Request) {
 func (h *InboxHandler) Reorder(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 
-	inboxItemID, err := uuid.Parse(chi.URLParam(r, "inboxItemId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid inbox item ID")
+	inboxItemID, ok := parseUUIDParam(w, r, "inboxItemId", "invalid inbox item ID")
+	if !ok {
 		return
 	}
 
 	var req reorderInboxItemRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
@@ -292,22 +289,22 @@ func (h *InboxHandler) Count(w http.ResponseWriter, r *http.Request) {
 
 func handleInboxError(w http.ResponseWriter, r *http.Request, err error, logMsg string) {
 	if errors.Is(err, model.ErrNotFound) {
-		writeError(w, http.StatusNotFound, "NOT_FOUND", "item not found")
+		writeError(w, http.StatusNotFound, CodeNotFound, "item not found")
 		return
 	}
 	if errors.Is(err, model.ErrForbidden) {
-		writeError(w, http.StatusForbidden, "FORBIDDEN", "insufficient permissions")
+		writeError(w, http.StatusForbidden, CodeForbidden, "insufficient permissions")
 		return
 	}
 	if errors.Is(err, model.ErrValidation) {
-		writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
+		writeErrorFromService(w, http.StatusBadRequest, CodeValidationError, err)
 		return
 	}
 	if errors.Is(err, model.ErrAlreadyExists) {
-		writeErrorFromService(w, http.StatusConflict, "CONFLICT", err)
+		writeErrorFromService(w, http.StatusConflict, CodeConflict, err)
 		return
 	}
 
 	log.Ctx(r.Context()).Error().Err(err).Msg(logMsg)
-	writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+	writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 }

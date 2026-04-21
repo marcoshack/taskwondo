@@ -59,13 +59,13 @@ type errorEventPayload struct {
 func (h *SearchHandler) Search(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "authentication required")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "authentication required")
 		return
 	}
 
 	query := r.URL.Query().Get("q")
 	if query == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "q parameter is required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "q parameter is required")
 		return
 	}
 
@@ -97,7 +97,7 @@ func (h *SearchHandler) Search(w http.ResponseWriter, r *http.Request) {
 func (h *SearchHandler) searchSSE(w http.ResponseWriter, r *http.Request, info *model.AuthInfo, filter *model.SearchFilter) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "streaming unsupported")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "streaming unsupported")
 		return
 	}
 
@@ -233,7 +233,7 @@ func (h *SearchHandler) searchJSON(w http.ResponseWriter, r *http.Request, info 
 
 	if ftsErr != nil {
 		log.Ctx(ctx).Error().Err(ftsErr).Msg("FTS search failed")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "search failed")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "search failed")
 		return
 	}
 

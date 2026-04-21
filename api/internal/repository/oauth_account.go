@@ -88,7 +88,10 @@ func (r *OAuthAccountRepository) Delete(ctx context.Context, id, userID uuid.UUI
 	if err != nil {
 		return fmt.Errorf("deleting oauth account: %w", err)
 	}
-	rows, _ := result.RowsAffected()
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("checking rows affected: %w", err)
+	}
 	if rows == 0 {
 		return model.ErrNotFound
 	}

@@ -128,30 +128,29 @@ func toMemberResponse(m *model.ProjectMemberWithUser) memberResponse {
 func (h *ProjectHandler) Create(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	var req createProjectRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	if req.Name == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "name is required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "name is required")
 		return
 	}
 	if req.Key == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "key is required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "key is required")
 		return
 	}
 
 	var workflowID *uuid.UUID
 	if req.DefaultWorkflowID != nil {
-		id, err := uuid.Parse(*req.DefaultWorkflowID)
-		if err != nil {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid default_workflow_id format")
+		id, ok := parseOptionalUUID(w, req.DefaultWorkflowID, "invalid default_workflow_id format")
+		if !ok {
 			return
 		}
 		workflowID = &id
@@ -170,28 +169,28 @@ func (h *ProjectHandler) Create(w http.ResponseWriter, r *http.Request) {
 func (h *ProjectHandler) List(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projects, err := h.projects.ListWithSummary(r.Context(), info)
 	if err != nil {
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to list projects")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
 	ownedCount, err := h.projects.CountOwnedByUser(r.Context(), info.UserID)
 	if err != nil {
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to count owned projects")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
 	effectiveLimit, err := h.projects.ResolveEffectiveLimit(r.Context(), info)
 	if err != nil {
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to resolve project limit")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -236,7 +235,7 @@ func (h *ProjectHandler) List(w http.ResponseWriter, r *http.Request) {
 func (h *ProjectHandler) Get(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -255,7 +254,7 @@ func (h *ProjectHandler) Get(w http.ResponseWriter, r *http.Request) {
 func (h *ProjectHandler) Update(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -263,7 +262,7 @@ func (h *ProjectHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	var req updateProjectRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
@@ -279,9 +278,8 @@ func (h *ProjectHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	var workflowID *uuid.UUID
 	if req.DefaultWorkflowID != nil {
-		id, err := uuid.Parse(*req.DefaultWorkflowID)
-		if err != nil {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid default_workflow_id format")
+		id, ok := parseOptionalUUID(w, req.DefaultWorkflowID, "invalid default_workflow_id format")
+		if !ok {
 			return
 		}
 		workflowID = &id
@@ -311,7 +309,7 @@ func (h *ProjectHandler) Update(w http.ResponseWriter, r *http.Request) {
 func (h *ProjectHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -331,7 +329,7 @@ func (h *ProjectHandler) Delete(w http.ResponseWriter, r *http.Request) {
 func (h *ProjectHandler) AddMember(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -339,23 +337,23 @@ func (h *ProjectHandler) AddMember(w http.ResponseWriter, r *http.Request) {
 
 	var req addMemberRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	if req.UserID == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "user_id is required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "user_id is required")
 		return
 	}
 
 	userID, err := uuid.Parse(req.UserID)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid user_id format")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid user_id format")
 		return
 	}
 
 	if req.Role == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "role is required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "role is required")
 		return
 	}
 
@@ -377,7 +375,7 @@ func (h *ProjectHandler) AddMember(w http.ResponseWriter, r *http.Request) {
 func (h *ProjectHandler) ListMembers(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -404,26 +402,25 @@ func (h *ProjectHandler) ListMembers(w http.ResponseWriter, r *http.Request) {
 func (h *ProjectHandler) UpdateMemberRole(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
 
-	userID, err := uuid.Parse(chi.URLParam(r, "userId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid user ID")
+	userID, ok := parseUUIDParam(w, r, "userId", "invalid user ID")
+	if !ok {
 		return
 	}
 
 	var req updateMemberRoleRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	if req.Role == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "role is required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "role is required")
 		return
 	}
 
@@ -439,15 +436,14 @@ func (h *ProjectHandler) UpdateMemberRole(w http.ResponseWriter, r *http.Request
 func (h *ProjectHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
 
-	userID, err := uuid.Parse(chi.URLParam(r, "userId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid user ID")
+	userID, ok := parseUUIDParam(w, r, "userId", "invalid user ID")
+	if !ok {
 		return
 	}
 
@@ -474,7 +470,7 @@ type updateTypeWorkflowRequest struct {
 func (h *ProjectHandler) ListTypeWorkflows(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -501,7 +497,7 @@ func (h *ProjectHandler) ListTypeWorkflows(w http.ResponseWriter, r *http.Reques
 func (h *ProjectHandler) UpdateTypeWorkflow(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -510,18 +506,18 @@ func (h *ProjectHandler) UpdateTypeWorkflow(w http.ResponseWriter, r *http.Reque
 
 	var req updateTypeWorkflowRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	if req.WorkflowID == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "workflow_id is required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "workflow_id is required")
 		return
 	}
 
 	workflowID, err := uuid.Parse(req.WorkflowID)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid workflow_id format")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid workflow_id format")
 		return
 	}
 
@@ -593,7 +589,7 @@ func (h *ProjectHandler) toInviteResponse(inv *model.Invite) inviteResponse {
 func (h *ProjectHandler) CreateInvite(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -601,12 +597,12 @@ func (h *ProjectHandler) CreateInvite(w http.ResponseWriter, r *http.Request) {
 
 	var req createInviteRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	if req.Role == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "role is required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "role is required")
 		return
 	}
 
@@ -614,7 +610,7 @@ func (h *ProjectHandler) CreateInvite(w http.ResponseWriter, r *http.Request) {
 	if req.ExpiresIn != "" {
 		d, err := parseExpiresIn(req.ExpiresIn)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+			writeError(w, http.StatusBadRequest, CodeValidationError, err.Error())
 			return
 		}
 		t := time.Now().Add(d)
@@ -650,7 +646,7 @@ func (h *ProjectHandler) CreateInvite(w http.ResponseWriter, r *http.Request) {
 func (h *ProjectHandler) ListInvites(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -674,15 +670,14 @@ func (h *ProjectHandler) ListInvites(w http.ResponseWriter, r *http.Request) {
 func (h *ProjectHandler) DeleteInvite(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
 
-	inviteID, err := uuid.Parse(chi.URLParam(r, "inviteId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid invite ID")
+	inviteID, ok := parseUUIDParam(w, r, "inviteId", "invalid invite ID")
+	if !ok {
 		return
 	}
 
@@ -717,7 +712,7 @@ func (h *ProjectHandler) GetInviteInfo(w http.ResponseWriter, r *http.Request) {
 func (h *ProjectHandler) AcceptInvite(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -759,26 +754,26 @@ func parseExpiresIn(s string) (time.Duration, error) {
 // handleProjectError maps service errors to HTTP responses.
 func handleProjectError(w http.ResponseWriter, r *http.Request, err error, logMsg string) {
 	if errors.Is(err, model.ErrNotFound) {
-		writeError(w, http.StatusNotFound, "NOT_FOUND", "resource not found")
+		writeError(w, http.StatusNotFound, CodeNotFound, "resource not found")
 		return
 	}
 	if errors.Is(err, model.ErrForbidden) {
-		writeError(w, http.StatusForbidden, "FORBIDDEN", "insufficient permissions")
+		writeError(w, http.StatusForbidden, CodeForbidden, "insufficient permissions")
 		return
 	}
 	if errors.Is(err, model.ErrAlreadyExists) {
-		writeErrorFromService(w, http.StatusConflict, "CONFLICT", err)
+		writeErrorFromService(w, http.StatusConflict, CodeConflict, err)
 		return
 	}
 	if errors.Is(err, model.ErrValidation) {
-		writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
+		writeErrorFromService(w, http.StatusBadRequest, CodeValidationError, err)
 		return
 	}
 	if errors.Is(err, model.ErrConflict) {
-		writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
+		writeErrorFromService(w, http.StatusBadRequest, CodeValidationError, err)
 		return
 	}
 
 	log.Ctx(r.Context()).Error().Err(err).Msg(logMsg)
-	writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+	writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 }

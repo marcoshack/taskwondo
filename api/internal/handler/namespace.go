@@ -105,22 +105,22 @@ func toNamespaceMemberResponse(m *model.NamespaceMemberWithUser) namespaceMember
 func (h *NamespaceHandler) Create(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	var req createNamespaceRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	if req.Slug == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "slug is required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "slug is required")
 		return
 	}
 	if req.DisplayName == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "display_name is required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "display_name is required")
 		return
 	}
 
@@ -137,28 +137,28 @@ func (h *NamespaceHandler) Create(w http.ResponseWriter, r *http.Request) {
 func (h *NamespaceHandler) List(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	namespaces, err := h.namespaces.ListUserNamespaces(r.Context(), info)
 	if err != nil {
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to list namespaces")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
 	ownedCount, err := h.namespaces.CountOwnedByUser(r.Context(), info.UserID)
 	if err != nil {
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to count owned namespaces")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
 	effectiveLimit, err := h.namespaces.ResolveEffectiveLimit(r.Context(), info)
 	if err != nil {
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to resolve namespace limit")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -180,7 +180,7 @@ func (h *NamespaceHandler) List(w http.ResponseWriter, r *http.Request) {
 func (h *NamespaceHandler) Get(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -199,7 +199,7 @@ func (h *NamespaceHandler) Get(w http.ResponseWriter, r *http.Request) {
 func (h *NamespaceHandler) Update(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -207,7 +207,7 @@ func (h *NamespaceHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	var req updateNamespaceRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
@@ -224,7 +224,7 @@ func (h *NamespaceHandler) Update(w http.ResponseWriter, r *http.Request) {
 func (h *NamespaceHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -244,7 +244,7 @@ func (h *NamespaceHandler) Delete(w http.ResponseWriter, r *http.Request) {
 func (h *NamespaceHandler) AddMember(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -252,23 +252,23 @@ func (h *NamespaceHandler) AddMember(w http.ResponseWriter, r *http.Request) {
 
 	var req addNamespaceMemberRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	if req.UserID == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "user_id is required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "user_id is required")
 		return
 	}
 
 	userID, err := uuid.Parse(req.UserID)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid user_id format")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid user_id format")
 		return
 	}
 
 	if req.Role == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "role is required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "role is required")
 		return
 	}
 
@@ -289,7 +289,7 @@ func (h *NamespaceHandler) AddMember(w http.ResponseWriter, r *http.Request) {
 func (h *NamespaceHandler) ListMembers(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -313,26 +313,25 @@ func (h *NamespaceHandler) ListMembers(w http.ResponseWriter, r *http.Request) {
 func (h *NamespaceHandler) UpdateMemberRole(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	slug := chi.URLParam(r, "slug")
 
-	userID, err := uuid.Parse(chi.URLParam(r, "userId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid user ID")
+	userID, ok := parseUUIDParam(w, r, "userId", "invalid user ID")
+	if !ok {
 		return
 	}
 
 	var req updateNamespaceMemberRoleRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	if req.Role == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "role is required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "role is required")
 		return
 	}
 
@@ -348,15 +347,14 @@ func (h *NamespaceHandler) UpdateMemberRole(w http.ResponseWriter, r *http.Reque
 func (h *NamespaceHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	slug := chi.URLParam(r, "slug")
 
-	userID, err := uuid.Parse(chi.URLParam(r, "userId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid user ID")
+	userID, ok := parseUUIDParam(w, r, "userId", "invalid user ID")
+	if !ok {
 		return
 	}
 
@@ -407,7 +405,7 @@ func (h *NamespaceHandler) toInviteResponse(inv *model.Invite) namespaceInviteRe
 func (h *NamespaceHandler) CreateInvite(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -415,16 +413,16 @@ func (h *NamespaceHandler) CreateInvite(w http.ResponseWriter, r *http.Request) 
 
 	var req createNamespaceInviteRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	if req.Role == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "role is required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "role is required")
 		return
 	}
 	if req.Email == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "email is required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "email is required")
 		return
 	}
 
@@ -432,7 +430,7 @@ func (h *NamespaceHandler) CreateInvite(w http.ResponseWriter, r *http.Request) 
 	if req.ExpiresIn != "" {
 		d, err := parseExpiresIn(req.ExpiresIn)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+			writeError(w, http.StatusBadRequest, CodeValidationError, err.Error())
 			return
 		}
 		t := time.Now().Add(d)
@@ -452,7 +450,7 @@ func (h *NamespaceHandler) CreateInvite(w http.ResponseWriter, r *http.Request) 
 func (h *NamespaceHandler) ListInvites(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -476,15 +474,14 @@ func (h *NamespaceHandler) ListInvites(w http.ResponseWriter, r *http.Request) {
 func (h *NamespaceHandler) DeleteInvite(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	slug := chi.URLParam(r, "slug")
 
-	inviteID, err := uuid.Parse(chi.URLParam(r, "inviteId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid invite ID")
+	inviteID, ok := parseUUIDParam(w, r, "inviteId", "invalid invite ID")
+	if !ok {
 		return
 	}
 
@@ -502,7 +499,7 @@ func (h *NamespaceHandler) DeleteInvite(w http.ResponseWriter, r *http.Request) 
 func (h *NamespaceHandler) MigrateProject(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -511,12 +508,12 @@ func (h *NamespaceHandler) MigrateProject(w http.ResponseWriter, r *http.Request
 
 	var req migrateProjectRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	if req.TargetNamespace == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "target_namespace is required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "target_namespace is required")
 		return
 	}
 
@@ -531,34 +528,34 @@ func (h *NamespaceHandler) MigrateProject(w http.ResponseWriter, r *http.Request
 // handleNamespaceError maps service errors to HTTP responses.
 func handleNamespaceError(w http.ResponseWriter, r *http.Request, err error, logMsg string) {
 	if errors.Is(err, model.ErrNotFound) {
-		writeError(w, http.StatusNotFound, "NOT_FOUND", "resource not found")
+		writeError(w, http.StatusNotFound, CodeNotFound, "resource not found")
 		return
 	}
 	if errors.Is(err, model.ErrForbidden) {
-		writeError(w, http.StatusForbidden, "FORBIDDEN", "insufficient permissions")
+		writeError(w, http.StatusForbidden, CodeForbidden, "insufficient permissions")
 		return
 	}
 	if errors.Is(err, model.ErrAlreadyExists) {
-		writeErrorFromService(w, http.StatusConflict, "CONFLICT", err)
+		writeErrorFromService(w, http.StatusConflict, CodeConflict, err)
 		return
 	}
 	if errors.Is(err, model.ErrNamespacesDisabled) {
-		writeError(w, http.StatusForbidden, "NAMESPACES_DISABLED", "namespace feature is not enabled")
+		writeError(w, http.StatusForbidden, CodeNamespacesDisabled, "namespace feature is not enabled")
 		return
 	}
 	if errors.Is(err, model.ErrNamespaceNotEmpty) {
-		writeErrorFromService(w, http.StatusConflict, "NAMESPACE_NOT_EMPTY", err)
+		writeErrorFromService(w, http.StatusConflict, CodeNamespaceNotEmpty, err)
 		return
 	}
 	if errors.Is(err, model.ErrValidation) {
-		writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
+		writeErrorFromService(w, http.StatusBadRequest, CodeValidationError, err)
 		return
 	}
 	if errors.Is(err, model.ErrConflict) {
-		writeErrorFromService(w, http.StatusConflict, "CONFLICT", err)
+		writeErrorFromService(w, http.StatusConflict, CodeConflict, err)
 		return
 	}
 
 	log.Ctx(r.Context()).Error().Err(err).Msg(logMsg)
-	writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+	writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 }

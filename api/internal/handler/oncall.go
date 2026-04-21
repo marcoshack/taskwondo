@@ -206,14 +206,13 @@ func toOncallHistoryResponse(h *model.OncallRotationHistoryWithUser) oncallHisto
 func (h *OncallHandler) Get(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
-	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid team ID")
+	teamID, ok := parseUUIDParam(w, r, "teamId", "invalid team ID")
+	if !ok {
 		return
 	}
 
@@ -223,27 +222,27 @@ func (h *OncallHandler) Get(w http.ResponseWriter, r *http.Request) {
 	if startStr != "" && endStr != "" {
 		s, err := time.Parse("2006-01-02", startStr)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid start date: expected YYYY-MM-DD")
+			writeError(w, http.StatusBadRequest, CodeValidationError, "invalid start date: expected YYYY-MM-DD")
 			return
 		}
 		e, err := time.Parse("2006-01-02", endStr)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid end date: expected YYYY-MM-DD")
+			writeError(w, http.StatusBadRequest, CodeValidationError, "invalid end date: expected YYYY-MM-DD")
 			return
 		}
 		e = e.AddDate(0, 0, 1) // exclusive end
 		if !s.Before(e) {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "start must be before end")
+			writeError(w, http.StatusBadRequest, CodeValidationError, "start must be before end")
 			return
 		}
 		if e.Sub(s) > 90*24*time.Hour {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "date range must not exceed 90 days")
+			writeError(w, http.StatusBadRequest, CodeValidationError, "date range must not exceed 90 days")
 			return
 		}
 		rangeStart = &s
 		rangeEnd = &e
 	} else if startStr != "" || endStr != "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "both start and end query parameters are required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "both start and end query parameters are required")
 		return
 	}
 
@@ -260,26 +259,25 @@ func (h *OncallHandler) Get(w http.ResponseWriter, r *http.Request) {
 func (h *OncallHandler) Create(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
-	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid team ID")
+	teamID, ok := parseUUIDParam(w, r, "teamId", "invalid team ID")
+	if !ok {
 		return
 	}
 
 	var req createOncallRotationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	memberIDs, err := parseUUIDs(req.MemberIDs)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid member_ids")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid member_ids")
 		return
 	}
 
@@ -304,30 +302,30 @@ func (h *OncallHandler) Create(w http.ResponseWriter, r *http.Request) {
 func (h *OncallHandler) Update(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
-	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid team ID")
+	teamID, ok := parseUUIDParam(w, r, "teamId", "invalid team ID")
+	if !ok {
 		return
 	}
 
 	var req updateOncallRotationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	var memberIDs []uuid.UUID
 	if req.MemberIDs != nil {
-		memberIDs, err = parseUUIDs(req.MemberIDs)
+		ids, err := parseUUIDs(req.MemberIDs)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid member_ids")
+			writeError(w, http.StatusBadRequest, CodeValidationError, "invalid member_ids")
 			return
 		}
+		memberIDs = ids
 	}
 
 	input := service.UpdateOncallRotationInput{
@@ -351,14 +349,13 @@ func (h *OncallHandler) Update(w http.ResponseWriter, r *http.Request) {
 func (h *OncallHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
-	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid team ID")
+	teamID, ok := parseUUIDParam(w, r, "teamId", "invalid team ID")
+	if !ok {
 		return
 	}
 
@@ -374,14 +371,13 @@ func (h *OncallHandler) Delete(w http.ResponseWriter, r *http.Request) {
 func (h *OncallHandler) ListHistory(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
-	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid team ID")
+	teamID, ok := parseUUIDParam(w, r, "teamId", "invalid team ID")
+	if !ok {
 		return
 	}
 
@@ -423,38 +419,37 @@ func (h *OncallHandler) ListHistory(w http.ResponseWriter, r *http.Request) {
 func (h *OncallHandler) CreateOverride(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
-	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid team ID")
+	teamID, ok := parseUUIDParam(w, r, "teamId", "invalid team ID")
+	if !ok {
 		return
 	}
 
 	var req createOncallOverrideRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	overrideUserID, err := uuid.Parse(req.OverrideUserID)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid override_user_id")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid override_user_id")
 		return
 	}
 
 	startAt, err := time.Parse(time.RFC3339, req.StartAt)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid start_at: expected RFC3339 format")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid start_at: expected RFC3339 format")
 		return
 	}
 
 	endAt, err := time.Parse(time.RFC3339, req.EndAt)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid end_at: expected RFC3339 format")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid end_at: expected RFC3339 format")
 		return
 	}
 
@@ -478,14 +473,13 @@ func (h *OncallHandler) CreateOverride(w http.ResponseWriter, r *http.Request) {
 func (h *OncallHandler) ListOverrides(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
-	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid team ID")
+	teamID, ok := parseUUIDParam(w, r, "teamId", "invalid team ID")
+	if !ok {
 		return
 	}
 
@@ -507,35 +501,32 @@ func (h *OncallHandler) ListOverrides(w http.ResponseWriter, r *http.Request) {
 func (h *OncallHandler) UpdateOverride(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
-	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid team ID")
+	teamID, ok := parseUUIDParam(w, r, "teamId", "invalid team ID")
+	if !ok {
 		return
 	}
 
-	overrideID, err := uuid.Parse(chi.URLParam(r, "overrideId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid override ID")
+	overrideID, ok := parseUUIDParam(w, r, "overrideId", "invalid override ID")
+	if !ok {
 		return
 	}
 
 	var req updateOncallOverrideRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	input := service.UpdateOncallOverrideInput{}
 
 	if req.OverrideUserID != nil {
-		id, err := uuid.Parse(*req.OverrideUserID)
-		if err != nil {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid override_user_id")
+		id, ok := parseOptionalUUID(w, req.OverrideUserID, "invalid override_user_id")
+		if !ok {
 			return
 		}
 		input.OverrideUserID = &id
@@ -543,7 +534,7 @@ func (h *OncallHandler) UpdateOverride(w http.ResponseWriter, r *http.Request) {
 	if req.StartAt != nil {
 		t, err := time.Parse(time.RFC3339, *req.StartAt)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid start_at: expected RFC3339 format")
+			writeError(w, http.StatusBadRequest, CodeValidationError, "invalid start_at: expected RFC3339 format")
 			return
 		}
 		input.StartAt = &t
@@ -551,7 +542,7 @@ func (h *OncallHandler) UpdateOverride(w http.ResponseWriter, r *http.Request) {
 	if req.EndAt != nil {
 		t, err := time.Parse(time.RFC3339, *req.EndAt)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid end_at: expected RFC3339 format")
+			writeError(w, http.StatusBadRequest, CodeValidationError, "invalid end_at: expected RFC3339 format")
 			return
 		}
 		input.EndAt = &t
@@ -578,20 +569,18 @@ func (h *OncallHandler) UpdateOverride(w http.ResponseWriter, r *http.Request) {
 func (h *OncallHandler) DeleteOverride(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
-	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid team ID")
+	teamID, ok := parseUUIDParam(w, r, "teamId", "invalid team ID")
+	if !ok {
 		return
 	}
 
-	overrideID, err := uuid.Parse(chi.URLParam(r, "overrideId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid override ID")
+	overrideID, ok := parseUUIDParam(w, r, "overrideId", "invalid override ID")
+	if !ok {
 		return
 	}
 
@@ -631,15 +620,15 @@ func parseUUIDs(strs []string) ([]uuid.UUID, error) {
 func handleOncallError(w http.ResponseWriter, r *http.Request, err error, logMsg string) {
 	switch {
 	case errors.Is(err, model.ErrNotFound):
-		writeError(w, http.StatusNotFound, "NOT_FOUND", "not found")
+		writeError(w, http.StatusNotFound, CodeNotFound, "not found")
 	case errors.Is(err, model.ErrForbidden):
-		writeError(w, http.StatusForbidden, "FORBIDDEN", "insufficient permissions")
+		writeError(w, http.StatusForbidden, CodeForbidden, "insufficient permissions")
 	case errors.Is(err, model.ErrValidation):
-		writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
+		writeErrorFromService(w, http.StatusBadRequest, CodeValidationError, err)
 	case errors.Is(err, model.ErrAlreadyExists) || errors.Is(err, model.ErrConflict):
-		writeErrorFromService(w, http.StatusConflict, "CONFLICT", err)
+		writeErrorFromService(w, http.StatusConflict, CodeConflict, err)
 	default:
 		log.Ctx(r.Context()).Error().Err(err).Msg(logMsg)
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 	}
 }

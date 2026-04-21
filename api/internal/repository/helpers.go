@@ -4,9 +4,45 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 )
+
+// queryBuilder accumulates WHERE-clause conditions and their bound parameters,
+// translating each `?` placeholder in a condition into the next `$N` for
+// lib/pq. Use add() for conditions with parameters and addRaw() for literal
+// fragments.
+type queryBuilder struct {
+	conditions []string
+	args       []interface{}
+	argIndex   int
+}
+
+// add appends a condition containing one or more `?` placeholders. Each `?` is
+// replaced with the next `$N` and the matching arg is bound.
+func (qb *queryBuilder) add(condition string, args ...interface{}) {
+	for _, arg := range args {
+		qb.argIndex++
+		condition = strings.Replace(condition, "?", fmt.Sprintf("$%d", qb.argIndex), 1)
+		qb.args = append(qb.args, arg)
+	}
+	qb.conditions = append(qb.conditions, condition)
+}
+
+// addRaw appends a condition with no bound parameters.
+func (qb *queryBuilder) addRaw(condition string) {
+	qb.conditions = append(qb.conditions, condition)
+}
+
+// whereClause returns a WHERE clause assembled from the accumulated conditions
+// joined by AND, or an empty string when no conditions have been added.
+func (qb *queryBuilder) whereClause() string {
+	if len(qb.conditions) == 0 {
+		return ""
+	}
+	return "WHERE " + strings.Join(qb.conditions, " AND ")
+}
 
 // listAllIDs returns all non-deleted entity IDs from the given table with pagination.
 // Used by backfill operations to iterate through all entities.

@@ -73,7 +73,7 @@ func toSLATargetResponse(t *model.SLAStatusTarget) slaTargetResponse {
 func (h *SLAHandler) List(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -97,7 +97,7 @@ func (h *SLAHandler) List(w http.ResponseWriter, r *http.Request) {
 func (h *SLAHandler) BulkUpsert(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -105,18 +105,18 @@ func (h *SLAHandler) BulkUpsert(w http.ResponseWriter, r *http.Request) {
 
 	var req bulkUpsertSLARequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	if req.WorkItemType == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "work_item_type is required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "work_item_type is required")
 		return
 	}
 
 	workflowID, err := uuid.Parse(req.WorkflowID)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid workflow_id format")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid workflow_id format")
 		return
 	}
 
@@ -128,7 +128,7 @@ func (h *SLAHandler) BulkUpsert(w http.ResponseWriter, r *http.Request) {
 			calendarMode = model.CalendarMode24x7
 		}
 		if t.Priority == "" {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "priority is required for each target")
+			writeError(w, http.StatusBadRequest, CodeValidationError, "priority is required for each target")
 			return
 		}
 		slaTargets[i] = service.SLATargetInput{
@@ -163,15 +163,14 @@ func (h *SLAHandler) BulkUpsert(w http.ResponseWriter, r *http.Request) {
 func (h *SLAHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
 
-	targetID, err := uuid.Parse(chi.URLParam(r, "targetId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid target ID format")
+	targetID, ok := parseUUIDParam(w, r, "targetId", "invalid target ID format")
+	if !ok {
 		return
 	}
 
@@ -186,13 +185,13 @@ func (h *SLAHandler) Delete(w http.ResponseWriter, r *http.Request) {
 func handleSLAError(w http.ResponseWriter, r *http.Request, err error, msg string) {
 	switch {
 	case errors.Is(err, model.ErrNotFound):
-		writeError(w, http.StatusNotFound, "NOT_FOUND", "resource not found")
+		writeError(w, http.StatusNotFound, CodeNotFound, "resource not found")
 	case errors.Is(err, model.ErrForbidden):
-		writeError(w, http.StatusForbidden, "FORBIDDEN", "insufficient permissions")
+		writeError(w, http.StatusForbidden, CodeForbidden, "insufficient permissions")
 	case errors.Is(err, model.ErrValidation):
-		writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
+		writeErrorFromService(w, http.StatusBadRequest, CodeValidationError, err)
 	default:
 		log.Ctx(r.Context()).Error().Err(err).Msg(msg)
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 	}
 }

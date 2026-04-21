@@ -128,7 +128,7 @@ func toWorkItemResponse(item *model.WorkItem, projectKey string) workItemRespons
 func (h *WorkItemHandler) Create(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -136,16 +136,16 @@ func (h *WorkItemHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	var req createWorkItemRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	if req.Type == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "type is required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "type is required")
 		return
 	}
 	if req.Title == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "title is required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "title is required")
 		return
 	}
 
@@ -161,36 +161,32 @@ func (h *WorkItemHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.AssigneeID != nil {
-		id, err := uuid.Parse(*req.AssigneeID)
-		if err != nil {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid assignee_id format")
+		id, ok := parseOptionalUUID(w, req.AssigneeID, "invalid assignee_id format")
+		if !ok {
 			return
 		}
 		input.AssigneeID = &id
 	}
 
 	if req.ParentID != nil {
-		id, err := uuid.Parse(*req.ParentID)
-		if err != nil {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid parent_id format")
+		id, ok := parseOptionalUUID(w, req.ParentID, "invalid parent_id format")
+		if !ok {
 			return
 		}
 		input.ParentID = &id
 	}
 
 	if req.QueueID != nil {
-		id, err := uuid.Parse(*req.QueueID)
-		if err != nil {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid queue_id format")
+		id, ok := parseOptionalUUID(w, req.QueueID, "invalid queue_id format")
+		if !ok {
 			return
 		}
 		input.QueueID = &id
 	}
 
 	if req.MilestoneID != nil {
-		id, err := uuid.Parse(*req.MilestoneID)
-		if err != nil {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid milestone_id format")
+		id, ok := parseOptionalUUID(w, req.MilestoneID, "invalid milestone_id format")
+		if !ok {
 			return
 		}
 		input.MilestoneID = &id
@@ -199,7 +195,7 @@ func (h *WorkItemHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if req.DueDate != nil {
 		t, err := time.Parse("2006-01-02", *req.DueDate)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid due_date format, expected YYYY-MM-DD")
+			writeError(w, http.StatusBadRequest, CodeValidationError, "invalid due_date format, expected YYYY-MM-DD")
 			return
 		}
 		input.DueDate = &t
@@ -208,7 +204,7 @@ func (h *WorkItemHandler) Create(w http.ResponseWriter, r *http.Request) {
 	for _, idStr := range req.WatcherIDs {
 		id, err := uuid.Parse(idStr)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid watcher_ids format")
+			writeError(w, http.StatusBadRequest, CodeValidationError, "invalid watcher_ids format")
 			return
 		}
 		input.WatcherIDs = append(input.WatcherIDs, id)
@@ -231,7 +227,7 @@ func (h *WorkItemHandler) Create(w http.ResponseWriter, r *http.Request) {
 func (h *WorkItemHandler) List(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -259,7 +255,7 @@ func (h *WorkItemHandler) List(w http.ResponseWriter, r *http.Request) {
 	assigneeOld := q.Get("assignee")
 	assigneesNew := q.Get("assignees")
 	if assigneeOld != "" && assigneesNew != "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "cannot use both 'assignee' and 'assignees' parameters")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "cannot use both 'assignee' and 'assignees' parameters")
 		return
 	}
 	assigneeRaw := assigneesNew
@@ -278,7 +274,7 @@ func (h *WorkItemHandler) List(w http.ResponseWriter, r *http.Request) {
 			default:
 				id, err := uuid.Parse(part)
 				if err != nil {
-					writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid assignee parameter")
+					writeError(w, http.StatusBadRequest, CodeValidationError, "invalid assignee parameter")
 					return
 				}
 				filter.AssigneeIDs = append(filter.AssigneeIDs, id)
@@ -290,7 +286,7 @@ func (h *WorkItemHandler) List(w http.ResponseWriter, r *http.Request) {
 	if v := q.Get("queue"); v != "" {
 		id, err := uuid.Parse(v)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid queue parameter")
+			writeError(w, http.StatusBadRequest, CodeValidationError, "invalid queue parameter")
 			return
 		}
 		filter.QueueID = &id
@@ -300,7 +296,7 @@ func (h *WorkItemHandler) List(w http.ResponseWriter, r *http.Request) {
 	milestoneOld := q.Get("milestone")
 	milestonesNew := q.Get("milestones")
 	if milestoneOld != "" && milestonesNew != "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "cannot use both 'milestone' and 'milestones' parameters")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "cannot use both 'milestone' and 'milestones' parameters")
 		return
 	}
 	milestoneRaw := milestonesNew
@@ -317,7 +313,7 @@ func (h *WorkItemHandler) List(w http.ResponseWriter, r *http.Request) {
 			}
 			id, err := uuid.Parse(part)
 			if err != nil {
-				writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid milestone parameter")
+				writeError(w, http.StatusBadRequest, CodeValidationError, "invalid milestone parameter")
 				return
 			}
 			filter.MilestoneIDs = append(filter.MilestoneIDs, id)
@@ -336,7 +332,7 @@ func (h *WorkItemHandler) List(w http.ResponseWriter, r *http.Request) {
 		} else {
 			id, err := uuid.Parse(v)
 			if err != nil {
-				writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid parent parameter")
+				writeError(w, http.StatusBadRequest, CodeValidationError, "invalid parent parameter")
 				return
 			}
 			filter.ParentID = &id
@@ -347,7 +343,7 @@ func (h *WorkItemHandler) List(w http.ResponseWriter, r *http.Request) {
 	if v := q.Get("cursor"); v != "" {
 		id, err := uuid.Parse(v)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid cursor parameter")
+			writeError(w, http.StatusBadRequest, CodeValidationError, "invalid cursor parameter")
 			return
 		}
 		filter.Cursor = &id
@@ -357,7 +353,7 @@ func (h *WorkItemHandler) List(w http.ResponseWriter, r *http.Request) {
 	if v := q.Get("limit"); v != "" {
 		limit, err := strconv.Atoi(v)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid limit parameter")
+			writeError(w, http.StatusBadRequest, CodeValidationError, "invalid limit parameter")
 			return
 		}
 		filter.Limit = limit
@@ -392,14 +388,14 @@ func (h *WorkItemHandler) List(w http.ResponseWriter, r *http.Request) {
 func (h *WorkItemHandler) Get(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
 	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid item number")
 		return
 	}
 
@@ -420,31 +416,32 @@ func (h *WorkItemHandler) Get(w http.ResponseWriter, r *http.Request) {
 func (h *WorkItemHandler) Update(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
 	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid item number")
 		return
 	}
 
 	// Decode into raw JSON to detect explicit nulls
 	var raw map[string]json.RawMessage
 	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	var input service.UpdateWorkItemInput
 
 	if v, ok := raw["title"]; ok {
-		var title string
-		if err := json.Unmarshal(v, &title); err == nil {
-			input.Title = &title
+		title, ok := unmarshalField[string](w, v, "title")
+		if !ok {
+			return
 		}
+		input.Title = &title
 	}
 
 	if v, ok := raw["description"]; ok {
@@ -452,125 +449,111 @@ func (h *WorkItemHandler) Update(w http.ResponseWriter, r *http.Request) {
 			empty := ""
 			input.Description = &empty
 		} else {
-			var desc string
-			if err := json.Unmarshal(v, &desc); err == nil {
-				input.Description = &desc
+			desc, ok := unmarshalField[string](w, v, "description")
+			if !ok {
+				return
 			}
+			input.Description = &desc
 		}
 	}
 
 	if v, ok := raw["status"]; ok {
-		var status string
-		if err := json.Unmarshal(v, &status); err == nil {
-			input.Status = &status
+		status, ok := unmarshalField[string](w, v, "status")
+		if !ok {
+			return
 		}
+		input.Status = &status
 	}
 
 	if v, ok := raw["priority"]; ok {
-		var priority string
-		if err := json.Unmarshal(v, &priority); err == nil {
-			input.Priority = &priority
+		priority, ok := unmarshalField[string](w, v, "priority")
+		if !ok {
+			return
 		}
+		input.Priority = &priority
 	}
 
 	if v, ok := raw["type"]; ok {
-		var itemType string
-		if err := json.Unmarshal(v, &itemType); err == nil {
-			input.Type = &itemType
+		itemType, ok := unmarshalField[string](w, v, "type")
+		if !ok {
+			return
 		}
+		input.Type = &itemType
 	}
 
 	if v, ok := raw["assignee_id"]; ok {
-		if string(v) == "null" {
+		id, cleared, ok := unmarshalNullableUUID(w, v, "assignee_id")
+		if !ok {
+			return
+		}
+		if cleared {
 			input.ClearAssignee = true
 		} else {
-			var idStr string
-			if err := json.Unmarshal(v, &idStr); err == nil {
-				id, err := uuid.Parse(idStr)
-				if err != nil {
-					writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid assignee_id format")
-					return
-				}
-				input.AssigneeID = &id
-			}
+			input.AssigneeID = &id
 		}
 	}
 
 	if v, ok := raw["labels"]; ok {
-		var labels []string
-		if err := json.Unmarshal(v, &labels); err == nil {
-			input.Labels = &labels
+		labels, ok := unmarshalField[[]string](w, v, "labels")
+		if !ok {
+			return
 		}
+		input.Labels = &labels
 	}
 
 	if v, ok := raw["visibility"]; ok {
-		var visibility string
-		if err := json.Unmarshal(v, &visibility); err == nil {
-			input.Visibility = &visibility
+		visibility, ok := unmarshalField[string](w, v, "visibility")
+		if !ok {
+			return
 		}
+		input.Visibility = &visibility
 	}
 
 	if v, ok := raw["due_date"]; ok {
-		if string(v) == "null" {
+		t, cleared, ok := unmarshalNullableDate(w, v, "due_date")
+		if !ok {
+			return
+		}
+		if cleared {
 			input.ClearDueDate = true
 		} else {
-			var dateStr string
-			if err := json.Unmarshal(v, &dateStr); err == nil {
-				t, err := time.Parse("2006-01-02", dateStr)
-				if err != nil {
-					writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid due_date format, expected YYYY-MM-DD")
-					return
-				}
-				input.DueDate = &t
-			}
+			input.DueDate = &t
 		}
 	}
 
 	if v, ok := raw["parent_id"]; ok {
-		if string(v) == "null" {
+		id, cleared, ok := unmarshalNullableUUID(w, v, "parent_id")
+		if !ok {
+			return
+		}
+		if cleared {
 			input.ClearParent = true
 		} else {
-			var idStr string
-			if err := json.Unmarshal(v, &idStr); err == nil {
-				id, err := uuid.Parse(idStr)
-				if err != nil {
-					writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid parent_id format")
-					return
-				}
-				input.ParentID = &id
-			}
+			input.ParentID = &id
 		}
 	}
 
 	if v, ok := raw["queue_id"]; ok {
-		if string(v) == "null" {
+		id, cleared, ok := unmarshalNullableUUID(w, v, "queue_id")
+		if !ok {
+			return
+		}
+		if cleared {
 			input.ClearQueue = true
 		} else {
-			var idStr string
-			if err := json.Unmarshal(v, &idStr); err == nil {
-				id, err := uuid.Parse(idStr)
-				if err != nil {
-					writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid queue_id format")
-					return
-				}
-				input.QueueID = &id
-			}
+			input.QueueID = &id
 		}
 	}
 
 	if v, ok := raw["milestone_id"]; ok {
-		if string(v) == "null" {
+		id, cleared, ok := unmarshalNullableUUID(w, v, "milestone_id")
+		if !ok {
+			return
+		}
+		if cleared {
 			input.ClearMilestone = true
 		} else {
-			var idStr string
-			if err := json.Unmarshal(v, &idStr); err == nil {
-				id, err := uuid.Parse(idStr)
-				if err != nil {
-					writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid milestone_id format")
-					return
-				}
-				input.MilestoneID = &id
-			}
+			input.MilestoneID = &id
 		}
 	}
 
@@ -578,9 +561,8 @@ func (h *WorkItemHandler) Update(w http.ResponseWriter, r *http.Request) {
 		if string(v) == "null" {
 			input.ClearComplexity = true
 		} else {
-			var complexity int
-			if err := json.Unmarshal(v, &complexity); err != nil {
-				writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "complexity must be an integer")
+			complexity, ok := unmarshalField[int](w, v, "complexity")
+			if !ok {
 				return
 			}
 			input.Complexity = &complexity
@@ -591,9 +573,8 @@ func (h *WorkItemHandler) Update(w http.ResponseWriter, r *http.Request) {
 		if string(v) == "null" {
 			input.ClearEstimate = true
 		} else {
-			var est int
-			if err := json.Unmarshal(v, &est); err != nil {
-				writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "estimated_seconds must be an integer")
+			est, ok := unmarshalField[int](w, v, "estimated_seconds")
+			if !ok {
 				return
 			}
 			input.EstimatedSeconds = &est
@@ -601,10 +582,11 @@ func (h *WorkItemHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if v, ok := raw["custom_fields"]; ok {
-		var cf map[string]interface{}
-		if err := json.Unmarshal(v, &cf); err == nil {
-			input.CustomFields = cf
+		cf, ok := unmarshalField[map[string]interface{}](w, v, "custom_fields")
+		if !ok {
+			return
 		}
+		input.CustomFields = cf
 	}
 
 	item, err := h.items.Update(r.Context(), info, projectKey, itemNumber, input)
@@ -624,14 +606,14 @@ func (h *WorkItemHandler) Update(w http.ResponseWriter, r *http.Request) {
 func (h *WorkItemHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
 	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid item number")
 		return
 	}
 
@@ -765,25 +747,25 @@ func toEventResponse(e *model.WorkItemEventWithActor) eventResponse {
 func (h *WorkItemHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
 	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid item number")
 		return
 	}
 
 	var req createCommentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	if req.Body == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "body is required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "body is required")
 		return
 	}
 
@@ -803,14 +785,14 @@ func (h *WorkItemHandler) CreateComment(w http.ResponseWriter, r *http.Request) 
 func (h *WorkItemHandler) ListComments(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
 	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid item number")
 		return
 	}
 
@@ -834,31 +816,30 @@ func (h *WorkItemHandler) ListComments(w http.ResponseWriter, r *http.Request) {
 func (h *WorkItemHandler) UpdateComment(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
 	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid item number")
 		return
 	}
 
-	commentID, err := uuid.Parse(chi.URLParam(r, "commentId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid comment ID")
+	commentID, ok := parseUUIDParam(w, r, "commentId", "invalid comment ID")
+	if !ok {
 		return
 	}
 
 	var req updateCommentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	if req.Body == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "body is required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "body is required")
 		return
 	}
 
@@ -875,20 +856,19 @@ func (h *WorkItemHandler) UpdateComment(w http.ResponseWriter, r *http.Request) 
 func (h *WorkItemHandler) DeleteComment(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
 	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid item number")
 		return
 	}
 
-	commentID, err := uuid.Parse(chi.URLParam(r, "commentId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid comment ID")
+	commentID, ok := parseUUIDParam(w, r, "commentId", "invalid comment ID")
+	if !ok {
 		return
 	}
 
@@ -906,29 +886,29 @@ func (h *WorkItemHandler) DeleteComment(w http.ResponseWriter, r *http.Request) 
 func (h *WorkItemHandler) CreateRelation(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
 	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid item number")
 		return
 	}
 
 	var req createRelationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	if req.TargetDisplayID == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "target_display_id is required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "target_display_id is required")
 		return
 	}
 	if req.RelationType == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "relation_type is required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "relation_type is required")
 		return
 	}
 
@@ -948,14 +928,14 @@ func (h *WorkItemHandler) CreateRelation(w http.ResponseWriter, r *http.Request)
 func (h *WorkItemHandler) ListRelations(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
 	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid item number")
 		return
 	}
 
@@ -977,20 +957,19 @@ func (h *WorkItemHandler) ListRelations(w http.ResponseWriter, r *http.Request) 
 func (h *WorkItemHandler) DeleteRelation(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
 	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid item number")
 		return
 	}
 
-	relationID, err := uuid.Parse(chi.URLParam(r, "relationId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid relation ID")
+	relationID, ok := parseUUIDParam(w, r, "relationId", "invalid relation ID")
+	if !ok {
 		return
 	}
 
@@ -1008,14 +987,14 @@ func (h *WorkItemHandler) DeleteRelation(w http.ResponseWriter, r *http.Request)
 func (h *WorkItemHandler) ListEvents(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
 	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid item number")
 		return
 	}
 
@@ -1070,14 +1049,14 @@ func toAttachmentResponse(a *model.Attachment, namespace, projectKey string, ite
 func (h *WorkItemHandler) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
 	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid item number")
 		return
 	}
 
@@ -1086,16 +1065,16 @@ func (h *WorkItemHandler) UploadAttachment(w http.ResponseWriter, r *http.Reques
 
 	if err := r.ParseMultipartForm(32 << 20); err != nil {
 		if err.Error() == "http: request body too large" {
-			writeError(w, http.StatusRequestEntityTooLarge, "FILE_TOO_LARGE", "file exceeds maximum upload size")
+			writeError(w, http.StatusRequestEntityTooLarge, CodeFileTooLarge, "file exceeds maximum upload size")
 			return
 		}
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid multipart form")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid multipart form")
 		return
 	}
 
 	file, header, err := r.FormFile("file")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "file field is required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "file field is required")
 		return
 	}
 	defer file.Close()
@@ -1123,14 +1102,14 @@ func (h *WorkItemHandler) UploadAttachment(w http.ResponseWriter, r *http.Reques
 func (h *WorkItemHandler) ListAttachments(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
 	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid item number")
 		return
 	}
 
@@ -1153,20 +1132,19 @@ func (h *WorkItemHandler) ListAttachments(w http.ResponseWriter, r *http.Request
 func (h *WorkItemHandler) DownloadAttachment(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
 	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid item number")
 		return
 	}
 
-	attachmentID, err := uuid.Parse(chi.URLParam(r, "attachmentId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid attachment ID")
+	attachmentID, ok := parseUUIDParam(w, r, "attachmentId", "invalid attachment ID")
+	if !ok {
 		return
 	}
 
@@ -1189,20 +1167,19 @@ func (h *WorkItemHandler) DownloadAttachment(w http.ResponseWriter, r *http.Requ
 func (h *WorkItemHandler) DeleteAttachment(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
 	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid item number")
 		return
 	}
 
-	attachmentID, err := uuid.Parse(chi.URLParam(r, "attachmentId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid attachment ID")
+	attachmentID, ok := parseUUIDParam(w, r, "attachmentId", "invalid attachment ID")
+	if !ok {
 		return
 	}
 
@@ -1218,20 +1195,19 @@ func (h *WorkItemHandler) DeleteAttachment(w http.ResponseWriter, r *http.Reques
 func (h *WorkItemHandler) UpdateAttachmentComment(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
 	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid item number")
 		return
 	}
 
-	attachmentID, err := uuid.Parse(chi.URLParam(r, "attachmentId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid attachment ID")
+	attachmentID, ok := parseUUIDParam(w, r, "attachmentId", "invalid attachment ID")
+	if !ok {
 		return
 	}
 
@@ -1239,7 +1215,7 @@ func (h *WorkItemHandler) UpdateAttachmentComment(w http.ResponseWriter, r *http
 		Comment string `json:"comment"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid JSON body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid JSON body")
 		return
 	}
 
@@ -1255,32 +1231,32 @@ func (h *WorkItemHandler) UpdateAttachmentComment(w http.ResponseWriter, r *http
 // handleWorkItemError maps service errors to HTTP responses.
 func handleWorkItemError(w http.ResponseWriter, r *http.Request, err error, logMsg string) {
 	if errors.Is(err, model.ErrNotFound) {
-		writeError(w, http.StatusNotFound, "NOT_FOUND", "resource not found")
+		writeError(w, http.StatusNotFound, CodeNotFound, "resource not found")
 		return
 	}
 	if errors.Is(err, model.ErrForbidden) {
-		writeError(w, http.StatusForbidden, "FORBIDDEN", "insufficient permissions")
+		writeError(w, http.StatusForbidden, CodeForbidden, "insufficient permissions")
 		return
 	}
 	if errors.Is(err, model.ErrInvalidTransition) {
-		writeErrorFromService(w, http.StatusConflict, "INVALID_TRANSITION", err)
+		writeErrorFromService(w, http.StatusConflict, CodeInvalidTransition, err)
 		return
 	}
 	if errors.Is(err, model.ErrStatusIncompatible) {
-		writeErrorFromService(w, http.StatusConflict, "STATUS_INCOMPATIBLE", err)
+		writeErrorFromService(w, http.StatusConflict, CodeStatusIncompatible, err)
 		return
 	}
 	if errors.Is(err, model.ErrValidation) {
-		writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
+		writeErrorFromService(w, http.StatusBadRequest, CodeValidationError, err)
 		return
 	}
 	if errors.Is(err, model.ErrConflict) {
-		writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
+		writeErrorFromService(w, http.StatusBadRequest, CodeValidationError, err)
 		return
 	}
 
 	log.Ctx(r.Context()).Error().Err(err).Msg(logMsg)
-	writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+	writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 }
 
 // dangerousContentTypes are MIME types that browsers may execute as code.
@@ -1379,31 +1355,31 @@ type timeEntrySummaryResponse struct {
 func (h *WorkItemHandler) CreateTimeEntry(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
 	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid item number")
 		return
 	}
 
 	var req createTimeEntryRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	if req.DurationSeconds <= 0 {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "duration_seconds must be positive")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "duration_seconds must be positive")
 		return
 	}
 
 	startedAt, err := time.Parse(time.RFC3339, req.StartedAt)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid started_at format, expected RFC3339")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid started_at format, expected RFC3339")
 		return
 	}
 
@@ -1424,14 +1400,14 @@ func (h *WorkItemHandler) CreateTimeEntry(w http.ResponseWriter, r *http.Request
 func (h *WorkItemHandler) ListTimeEntries(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
 	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid item number")
 		return
 	}
 
@@ -1462,48 +1438,47 @@ func (h *WorkItemHandler) ListTimeEntries(w http.ResponseWriter, r *http.Request
 func (h *WorkItemHandler) UpdateTimeEntry(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
 	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid item number")
 		return
 	}
 
-	entryID, err := uuid.Parse(chi.URLParam(r, "timeEntryId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid time entry ID")
+	entryID, ok := parseUUIDParam(w, r, "timeEntryId", "invalid time entry ID")
+	if !ok {
 		return
 	}
 
 	// Decode into raw JSON to detect explicit nulls
 	var raw map[string]json.RawMessage
 	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	var input service.UpdateTimeEntryInput
 
 	if v, ok := raw["started_at"]; ok {
-		var s string
-		if err := json.Unmarshal(v, &s); err == nil {
-			t, err := time.Parse(time.RFC3339, s)
-			if err != nil {
-				writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid started_at format, expected RFC3339")
-				return
-			}
-			input.StartedAt = &t
+		s, ok := unmarshalField[string](w, v, "started_at")
+		if !ok {
+			return
 		}
+		t, err := time.Parse(time.RFC3339, s)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, CodeValidationError, "invalid started_at format, expected RFC3339")
+			return
+		}
+		input.StartedAt = &t
 	}
 
 	if v, ok := raw["duration_seconds"]; ok {
-		var dur int
-		if err := json.Unmarshal(v, &dur); err != nil {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "duration_seconds must be an integer")
+		dur, ok := unmarshalField[int](w, v, "duration_seconds")
+		if !ok {
 			return
 		}
 		input.DurationSeconds = &dur
@@ -1513,10 +1488,11 @@ func (h *WorkItemHandler) UpdateTimeEntry(w http.ResponseWriter, r *http.Request
 		if string(v) == "null" {
 			input.ClearDescription = true
 		} else {
-			var desc string
-			if err := json.Unmarshal(v, &desc); err == nil {
-				input.Description = &desc
+			desc, ok := unmarshalField[string](w, v, "description")
+			if !ok {
+				return
 			}
+			input.Description = &desc
 		}
 	}
 
@@ -1533,20 +1509,19 @@ func (h *WorkItemHandler) UpdateTimeEntry(w http.ResponseWriter, r *http.Request
 func (h *WorkItemHandler) DeleteTimeEntry(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
 	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid item number")
 		return
 	}
 
-	entryID, err := uuid.Parse(chi.URLParam(r, "timeEntryId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid time entry ID")
+	entryID, ok := parseUUIDParam(w, r, "timeEntryId", "invalid time entry ID")
+	if !ok {
 		return
 	}
 
@@ -1595,14 +1570,14 @@ type toggleWatchResponse struct {
 func (h *WorkItemHandler) ListWatchers(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
 	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid item number")
 		return
 	}
 
@@ -1646,31 +1621,31 @@ func (h *WorkItemHandler) ListWatchers(w http.ResponseWriter, r *http.Request) {
 func (h *WorkItemHandler) AddWatcher(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
 	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid item number")
 		return
 	}
 
 	var req addWatcherRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	if req.UserID == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "user_id is required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "user_id is required")
 		return
 	}
 
 	userID, err := uuid.Parse(req.UserID)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid user_id")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid user_id")
 		return
 	}
 
@@ -1692,20 +1667,19 @@ func (h *WorkItemHandler) AddWatcher(w http.ResponseWriter, r *http.Request) {
 func (h *WorkItemHandler) RemoveWatcher(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
 	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid item number")
 		return
 	}
 
-	userID, err := uuid.Parse(chi.URLParam(r, "userId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid user ID")
+	userID, ok := parseUUIDParam(w, r, "userId", "invalid user ID")
+	if !ok {
 		return
 	}
 
@@ -1721,14 +1695,14 @@ func (h *WorkItemHandler) RemoveWatcher(w http.ResponseWriter, r *http.Request) 
 func (h *WorkItemHandler) ToggleWatch(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
 	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid item number")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid item number")
 		return
 	}
 
@@ -1747,7 +1721,7 @@ func (h *WorkItemHandler) ToggleWatch(w http.ResponseWriter, r *http.Request) {
 func (h *WorkItemHandler) ListWatchedItemIDs(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -1789,7 +1763,7 @@ func (h *WorkItemHandler) ListWatchedItemIDs(w http.ResponseWriter, r *http.Requ
 				default:
 					id, err := uuid.Parse(part)
 					if err != nil {
-						writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid assignee parameter")
+						writeError(w, http.StatusBadRequest, CodeValidationError, "invalid assignee parameter")
 						return
 					}
 					filter.AssigneeIDs = append(filter.AssigneeIDs, id)
@@ -1806,7 +1780,7 @@ func (h *WorkItemHandler) ListWatchedItemIDs(w http.ResponseWriter, r *http.Requ
 				}
 				id, err := uuid.Parse(part)
 				if err != nil {
-					writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid milestone parameter")
+					writeError(w, http.StatusBadRequest, CodeValidationError, "invalid milestone parameter")
 					return
 				}
 				filter.MilestoneIDs = append(filter.MilestoneIDs, id)
@@ -1815,7 +1789,7 @@ func (h *WorkItemHandler) ListWatchedItemIDs(w http.ResponseWriter, r *http.Requ
 		if v := q.Get("cursor"); v != "" {
 			id, err := uuid.Parse(v)
 			if err != nil {
-				writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid cursor")
+				writeError(w, http.StatusBadRequest, CodeValidationError, "invalid cursor")
 				return
 			}
 			filter.Cursor = &id

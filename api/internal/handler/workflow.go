@@ -160,14 +160,14 @@ func toWorkflowDetailResponse(wf *model.Workflow) workflowDetailResponse {
 func (h *WorkflowHandler) List(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	workflows, err := h.workflows.List(r.Context())
 	if err != nil {
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to list workflows")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -183,18 +183,18 @@ func (h *WorkflowHandler) List(w http.ResponseWriter, r *http.Request) {
 func (h *WorkflowHandler) Create(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	var req createWorkflowRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	if req.Name == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "name is required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "name is required")
 		return
 	}
 
@@ -236,13 +236,12 @@ func (h *WorkflowHandler) Create(w http.ResponseWriter, r *http.Request) {
 func (h *WorkflowHandler) Get(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
-	workflowID, err := uuid.Parse(chi.URLParam(r, "workflowId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid workflow ID")
+	workflowID, ok := parseUUIDParam(w, r, "workflowId", "invalid workflow ID")
+	if !ok {
 		return
 	}
 
@@ -259,19 +258,18 @@ func (h *WorkflowHandler) Get(w http.ResponseWriter, r *http.Request) {
 func (h *WorkflowHandler) Update(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
-	workflowID, err := uuid.Parse(chi.URLParam(r, "workflowId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid workflow ID")
+	workflowID, ok := parseUUIDParam(w, r, "workflowId", "invalid workflow ID")
+	if !ok {
 		return
 	}
 
 	var req updateWorkflowRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
@@ -317,13 +315,12 @@ func (h *WorkflowHandler) Update(w http.ResponseWriter, r *http.Request) {
 func (h *WorkflowHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
-	workflowID, err := uuid.Parse(chi.URLParam(r, "workflowId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid workflow ID")
+	workflowID, ok := parseUUIDParam(w, r, "workflowId", "invalid workflow ID")
+	if !ok {
 		return
 	}
 
@@ -339,14 +336,14 @@ func (h *WorkflowHandler) Delete(w http.ResponseWriter, r *http.Request) {
 func (h *WorkflowHandler) ListSystemStatuses(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	statuses, err := h.workflows.ListAllStatuses(r.Context())
 	if err != nil {
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to list available statuses")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -369,13 +366,12 @@ func (h *WorkflowHandler) ListSystemStatuses(w http.ResponseWriter, r *http.Requ
 func (h *WorkflowHandler) ListTransitions(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
-	workflowID, err := uuid.Parse(chi.URLParam(r, "workflowId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid workflow ID")
+	workflowID, ok := parseUUIDParam(w, r, "workflowId", "invalid workflow ID")
+	if !ok {
 		return
 	}
 
@@ -409,7 +405,7 @@ func (h *WorkflowHandler) ListTransitions(w http.ResponseWriter, r *http.Request
 func (h *WorkflowHandler) ListProjectWorkflows(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -423,7 +419,7 @@ func (h *WorkflowHandler) ListProjectWorkflows(w http.ResponseWriter, r *http.Re
 	workflows, err := h.workflows.ListByProject(r.Context(), project.ID)
 	if err != nil {
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to list project workflows")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -439,7 +435,7 @@ func (h *WorkflowHandler) ListProjectWorkflows(w http.ResponseWriter, r *http.Re
 func (h *WorkflowHandler) GetProjectWorkflow(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -450,9 +446,8 @@ func (h *WorkflowHandler) GetProjectWorkflow(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	workflowID, err := uuid.Parse(chi.URLParam(r, "workflowId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid workflow ID")
+	workflowID, ok := parseUUIDParam(w, r, "workflowId", "invalid workflow ID")
+	if !ok {
 		return
 	}
 
@@ -464,7 +459,7 @@ func (h *WorkflowHandler) GetProjectWorkflow(w http.ResponseWriter, r *http.Requ
 
 	// Verify the workflow is either a system workflow or belongs to this project
 	if wf.ProjectID != nil && *wf.ProjectID != project.ID {
-		writeError(w, http.StatusNotFound, "NOT_FOUND", "workflow not found")
+		writeError(w, http.StatusNotFound, CodeNotFound, "workflow not found")
 		return
 	}
 
@@ -475,7 +470,7 @@ func (h *WorkflowHandler) GetProjectWorkflow(w http.ResponseWriter, r *http.Requ
 func (h *WorkflowHandler) CreateProjectWorkflow(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -488,12 +483,12 @@ func (h *WorkflowHandler) CreateProjectWorkflow(w http.ResponseWriter, r *http.R
 
 	var req createWorkflowRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	if req.Name == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "name is required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "name is required")
 		return
 	}
 
@@ -536,7 +531,7 @@ func (h *WorkflowHandler) CreateProjectWorkflow(w http.ResponseWriter, r *http.R
 func (h *WorkflowHandler) UpdateProjectWorkflow(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -547,9 +542,8 @@ func (h *WorkflowHandler) UpdateProjectWorkflow(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	workflowID, err := uuid.Parse(chi.URLParam(r, "workflowId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid workflow ID")
+	workflowID, ok := parseUUIDParam(w, r, "workflowId", "invalid workflow ID")
+	if !ok {
 		return
 	}
 
@@ -560,17 +554,17 @@ func (h *WorkflowHandler) UpdateProjectWorkflow(w http.ResponseWriter, r *http.R
 		return
 	}
 	if existing.IsDefault || existing.ProjectID == nil {
-		writeError(w, http.StatusForbidden, "FORBIDDEN", "system workflows cannot be edited from project settings")
+		writeError(w, http.StatusForbidden, CodeForbidden, "system workflows cannot be edited from project settings")
 		return
 	}
 	if *existing.ProjectID != project.ID {
-		writeError(w, http.StatusNotFound, "NOT_FOUND", "workflow not found")
+		writeError(w, http.StatusNotFound, CodeNotFound, "workflow not found")
 		return
 	}
 
 	var req updateWorkflowRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
@@ -616,7 +610,7 @@ func (h *WorkflowHandler) UpdateProjectWorkflow(w http.ResponseWriter, r *http.R
 func (h *WorkflowHandler) DeleteProjectWorkflow(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -627,9 +621,8 @@ func (h *WorkflowHandler) DeleteProjectWorkflow(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	workflowID, err := uuid.Parse(chi.URLParam(r, "workflowId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid workflow ID")
+	workflowID, ok := parseUUIDParam(w, r, "workflowId", "invalid workflow ID")
+	if !ok {
 		return
 	}
 
@@ -640,7 +633,7 @@ func (h *WorkflowHandler) DeleteProjectWorkflow(w http.ResponseWriter, r *http.R
 		return
 	}
 	if existing.ProjectID == nil || *existing.ProjectID != project.ID {
-		writeError(w, http.StatusNotFound, "NOT_FOUND", "workflow not found")
+		writeError(w, http.StatusNotFound, CodeNotFound, "workflow not found")
 		return
 	}
 
@@ -656,7 +649,7 @@ func (h *WorkflowHandler) DeleteProjectWorkflow(w http.ResponseWriter, r *http.R
 func (h *WorkflowHandler) ListAvailableStatuses(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -669,7 +662,7 @@ func (h *WorkflowHandler) ListAvailableStatuses(w http.ResponseWriter, r *http.R
 	statuses, err := h.workflows.ListAllStatuses(r.Context())
 	if err != nil {
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to list available statuses")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -690,18 +683,18 @@ func (h *WorkflowHandler) ListAvailableStatuses(w http.ResponseWriter, r *http.R
 
 func handleWorkflowError(w http.ResponseWriter, r *http.Request, err error, logMsg string) {
 	if errors.Is(err, model.ErrNotFound) {
-		writeError(w, http.StatusNotFound, "NOT_FOUND", "workflow not found")
+		writeError(w, http.StatusNotFound, CodeNotFound, "workflow not found")
 		return
 	}
 	if errors.Is(err, model.ErrValidation) {
-		writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
+		writeErrorFromService(w, http.StatusBadRequest, CodeValidationError, err)
 		return
 	}
 	if errors.Is(err, model.ErrForbidden) {
-		writeErrorFromService(w, http.StatusForbidden, "FORBIDDEN", err)
+		writeErrorFromService(w, http.StatusForbidden, CodeForbidden, err)
 		return
 	}
 
 	log.Ctx(r.Context()).Error().Err(err).Msg(logMsg)
-	writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+	writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 }

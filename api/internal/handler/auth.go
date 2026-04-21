@@ -83,27 +83,27 @@ func toUserResponse(u *model.User) userResponse {
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req loginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	if req.Email == "" || req.Password == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "email and password are required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "email and password are required")
 		return
 	}
 
 	token, user, err := h.auth.Login(r.Context(), req.Email, req.Password)
 	if err != nil {
 		if errors.Is(err, model.ErrInvalidCredentials) {
-			writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "invalid email or password")
+			writeError(w, http.StatusUnauthorized, CodeUnauthorized, "invalid email or password")
 			return
 		}
 		if errors.Is(err, model.ErrAccountDisabled) {
-			writeError(w, http.StatusForbidden, "FORBIDDEN", "account is disabled")
+			writeError(w, http.StatusForbidden, CodeForbidden, "account is disabled")
 			return
 		}
 		log.Ctx(r.Context()).Error().Err(err).Msg("login failed")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -121,18 +121,18 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	token, err := h.auth.Refresh(r.Context(), info)
 	if err != nil {
 		if errors.Is(err, model.ErrAccountDisabled) {
-			writeError(w, http.StatusForbidden, "FORBIDDEN", "account is disabled")
+			writeError(w, http.StatusForbidden, CodeForbidden, "account is disabled")
 			return
 		}
 		log.Ctx(r.Context()).Error().Err(err).Msg("token refresh failed")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -145,14 +145,14 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	user, err := h.auth.GetUser(r.Context(), info.UserID)
 	if err != nil {
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to get user")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -216,7 +216,7 @@ func (h *AuthHandler) OAuthAuth(w http.ResponseWriter, r *http.Request) {
 
 	authURL, err := h.auth.OAuthURL(r.Context(), provider)
 	if err != nil {
-		writeError(w, http.StatusNotFound, "NOT_CONFIGURED", provider+" oauth is not configured")
+		writeError(w, http.StatusNotFound, CodeNotConfigured, provider+" oauth is not configured")
 		return
 	}
 
@@ -231,23 +231,23 @@ func (h *AuthHandler) OAuthCallback(w http.ResponseWriter, r *http.Request) {
 
 	var req oauthCallbackRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	if req.Code == "" || req.State == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "code and state are required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "code and state are required")
 		return
 	}
 
 	token, user, err := h.auth.OAuthCallback(r.Context(), provider, req.Code, req.State)
 	if err != nil {
 		if errors.Is(err, model.ErrAccountDisabled) {
-			writeError(w, http.StatusForbidden, "FORBIDDEN", "account is disabled")
+			writeError(w, http.StatusForbidden, CodeForbidden, "account is disabled")
 			return
 		}
 		log.Ctx(r.Context()).Error().Err(err).Msg(provider + " oauth callback failed")
-		writeError(w, http.StatusUnauthorized, "OAUTH_ERROR", provider+" authentication failed")
+		writeError(w, http.StatusUnauthorized, CodeOAuthError, provider+" authentication failed")
 		return
 	}
 
@@ -294,7 +294,7 @@ func (h *AuthHandler) ListAPIKeys(w http.ResponseWriter, r *http.Request) {
 	keys, err := h.auth.ListAPIKeys(r.Context(), info.UserID)
 	if err != nil {
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to list api keys")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -312,12 +312,12 @@ func (h *AuthHandler) CreateAPIKey(w http.ResponseWriter, r *http.Request) {
 
 	var req createAPIKeyRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	if req.Name == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "name is required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "name is required")
 		return
 	}
 
@@ -325,11 +325,11 @@ func (h *AuthHandler) CreateAPIKey(w http.ResponseWriter, r *http.Request) {
 	if req.ExpiresAt != nil {
 		t, err := time.Parse(time.RFC3339, *req.ExpiresAt)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "expires_at must be in RFC3339 format")
+			writeError(w, http.StatusBadRequest, CodeValidationError, "expires_at must be in RFC3339 format")
 			return
 		}
 		if t.Before(time.Now()) {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "expires_at must be in the future")
+			writeError(w, http.StatusBadRequest, CodeValidationError, "expires_at must be in the future")
 			return
 		}
 		expiresAt = &t
@@ -342,11 +342,11 @@ func (h *AuthHandler) CreateAPIKey(w http.ResponseWriter, r *http.Request) {
 	apiKey, fullKey, err := h.auth.CreateAPIKey(r.Context(), info.UserID, req.Name, req.Permissions, expiresAt)
 	if err != nil {
 		if errors.Is(err, model.ErrValidation) {
-			writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
+			writeErrorFromService(w, http.StatusBadRequest, CodeValidationError, err)
 			return
 		}
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to create api key")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -365,7 +365,7 @@ func (h *AuthHandler) CreateAPIKey(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) SearchUsers(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -374,7 +374,7 @@ func (h *AuthHandler) SearchUsers(w http.ResponseWriter, r *http.Request) {
 	users, err := h.auth.SearchUsers(r.Context(), info.UserID, query)
 	if err != nil {
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to search users")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -414,32 +414,32 @@ type changePasswordRequest struct {
 func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	var req changePasswordRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	if req.NewPassword == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "new_password is required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "new_password is required")
 		return
 	}
 
 	if err := h.auth.ChangePassword(r.Context(), info.UserID, req.OldPassword, req.NewPassword); err != nil {
 		if errors.Is(err, model.ErrInvalidCredentials) {
-			writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "invalid current password")
+			writeError(w, http.StatusUnauthorized, CodeUnauthorized, "invalid current password")
 			return
 		}
 		if errors.Is(err, model.ErrValidation) {
-			writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
+			writeErrorFromService(w, http.StatusBadRequest, CodeValidationError, err)
 			return
 		}
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to change password")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -447,7 +447,7 @@ func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	user, err := h.auth.GetUser(r.Context(), info.UserID)
 	if err != nil {
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to get user after password change")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -458,7 +458,7 @@ func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to generate token after password change")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -475,29 +475,28 @@ type renameAPIKeyRequest struct {
 func (h *AuthHandler) RenameAPIKey(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 
-	keyID, err := uuid.Parse(chi.URLParam(r, "keyId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid key ID")
+	keyID, ok := parseUUIDParam(w, r, "keyId", "invalid key ID")
+	if !ok {
 		return
 	}
 
 	var req renameAPIKeyRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	if err := h.auth.RenameAPIKey(r.Context(), keyID, info.UserID, req.Name); err != nil {
 		if errors.Is(err, model.ErrValidation) {
-			writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
+			writeErrorFromService(w, http.StatusBadRequest, CodeValidationError, err)
 			return
 		}
 		if errors.Is(err, model.ErrNotFound) {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "api key not found")
+			writeError(w, http.StatusNotFound, CodeNotFound, "api key not found")
 			return
 		}
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to rename api key")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -508,19 +507,18 @@ func (h *AuthHandler) RenameAPIKey(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) DeleteAPIKey(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 
-	keyID, err := uuid.Parse(chi.URLParam(r, "keyId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid key ID")
+	keyID, ok := parseUUIDParam(w, r, "keyId", "invalid key ID")
+	if !ok {
 		return
 	}
 
 	if err := h.auth.DeleteAPIKey(r.Context(), keyID, info.UserID); err != nil {
 		if errors.Is(err, model.ErrNotFound) {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "api key not found")
+			writeError(w, http.StatusNotFound, CodeNotFound, "api key not found")
 			return
 		}
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to delete api key")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -545,7 +543,7 @@ func (h *AuthHandler) ListConnectedAccounts(w http.ResponseWriter, r *http.Reque
 	accounts, err := h.auth.ListConnectedAccounts(r.Context(), info.UserID)
 	if err != nil {
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to list connected accounts")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -568,19 +566,18 @@ func (h *AuthHandler) ListConnectedAccounts(w http.ResponseWriter, r *http.Reque
 func (h *AuthHandler) UnlinkConnectedAccount(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 
-	accountID, err := uuid.Parse(chi.URLParam(r, "accountId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid account ID")
+	accountID, ok := parseUUIDParam(w, r, "accountId", "invalid account ID")
+	if !ok {
 		return
 	}
 
 	if err := h.auth.UnlinkConnectedAccount(r.Context(), accountID, info.UserID); err != nil {
 		if errors.Is(err, model.ErrNotFound) {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "connected account not found")
+			writeError(w, http.StatusNotFound, CodeNotFound, "connected account not found")
 			return
 		}
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to unlink connected account")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -624,7 +621,7 @@ func (h *AuthHandler) ListSystemAPIKeys(w http.ResponseWriter, r *http.Request) 
 	keys, err := h.auth.ListSystemAPIKeys(r.Context())
 	if err != nil {
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to list system api keys")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -642,12 +639,12 @@ func (h *AuthHandler) CreateSystemAPIKey(w http.ResponseWriter, r *http.Request)
 
 	var req createSystemAPIKeyRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	if req.Name == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "name is required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "name is required")
 		return
 	}
 
@@ -655,11 +652,11 @@ func (h *AuthHandler) CreateSystemAPIKey(w http.ResponseWriter, r *http.Request)
 	if req.ExpiresAt != nil {
 		t, err := time.Parse(time.RFC3339, *req.ExpiresAt)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "expires_at must be in RFC3339 format")
+			writeError(w, http.StatusBadRequest, CodeValidationError, "expires_at must be in RFC3339 format")
 			return
 		}
 		if t.Before(time.Now()) {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "expires_at must be in the future")
+			writeError(w, http.StatusBadRequest, CodeValidationError, "expires_at must be in the future")
 			return
 		}
 		expiresAt = &t
@@ -672,11 +669,11 @@ func (h *AuthHandler) CreateSystemAPIKey(w http.ResponseWriter, r *http.Request)
 	apiKey, fullKey, err := h.auth.CreateSystemAPIKey(r.Context(), info.UserID, req.Name, req.Permissions, expiresAt)
 	if err != nil {
 		if errors.Is(err, model.ErrValidation) {
-			writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
+			writeErrorFromService(w, http.StatusBadRequest, CodeValidationError, err)
 			return
 		}
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to create system api key")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -694,29 +691,28 @@ func (h *AuthHandler) CreateSystemAPIKey(w http.ResponseWriter, r *http.Request)
 
 // RenameSystemAPIKey updates the display name of a system API key. Admin-only (enforced at router level).
 func (h *AuthHandler) RenameSystemAPIKey(w http.ResponseWriter, r *http.Request) {
-	keyID, err := uuid.Parse(chi.URLParam(r, "keyId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid key ID")
+	keyID, ok := parseUUIDParam(w, r, "keyId", "invalid key ID")
+	if !ok {
 		return
 	}
 
 	var req renameAPIKeyRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	if err := h.auth.RenameSystemAPIKey(r.Context(), keyID, req.Name); err != nil {
 		if errors.Is(err, model.ErrValidation) {
-			writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
+			writeErrorFromService(w, http.StatusBadRequest, CodeValidationError, err)
 			return
 		}
 		if errors.Is(err, model.ErrNotFound) {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "system api key not found")
+			writeError(w, http.StatusNotFound, CodeNotFound, "system api key not found")
 			return
 		}
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to rename system api key")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -725,19 +721,18 @@ func (h *AuthHandler) RenameSystemAPIKey(w http.ResponseWriter, r *http.Request)
 
 // DeleteSystemAPIKey deletes a system API key by ID. Admin-only (enforced at router level).
 func (h *AuthHandler) DeleteSystemAPIKey(w http.ResponseWriter, r *http.Request) {
-	keyID, err := uuid.Parse(chi.URLParam(r, "keyId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid key ID")
+	keyID, ok := parseUUIDParam(w, r, "keyId", "invalid key ID")
+	if !ok {
 		return
 	}
 
 	if err := h.auth.DeleteSystemAPIKey(r.Context(), keyID); err != nil {
 		if errors.Is(err, model.ErrNotFound) {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "system api key not found")
+			writeError(w, http.StatusNotFound, CodeNotFound, "system api key not found")
 			return
 		}
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to delete system api key")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -756,30 +751,30 @@ type registerRequest struct {
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var req registerRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	if req.Email == "" || req.DisplayName == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "email and display_name are required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "email and display_name are required")
 		return
 	}
 
 	if err := h.auth.RequestRegistration(r.Context(), req.Email, req.DisplayName, req.InviteCode); err != nil {
 		if errors.Is(err, model.ErrForbidden) {
-			writeError(w, http.StatusForbidden, "FORBIDDEN", "email registration is disabled")
+			writeError(w, http.StatusForbidden, CodeForbidden, "email registration is disabled")
 			return
 		}
 		if errors.Is(err, model.ErrAlreadyExists) {
-			writeError(w, http.StatusConflict, "CONFLICT", "a user with this email already exists")
+			writeError(w, http.StatusConflict, CodeConflict, "a user with this email already exists")
 			return
 		}
 		if errors.Is(err, model.ErrValidation) {
-			writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
+			writeErrorFromService(w, http.StatusBadRequest, CodeValidationError, err)
 			return
 		}
 		log.Ctx(r.Context()).Error().Err(err).Msg("registration failed")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -797,35 +792,35 @@ type verifyEmailRequest struct {
 func (h *AuthHandler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	var req verifyEmailRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	if req.Token == "" || req.Password == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "token and password are required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "token and password are required")
 		return
 	}
 
 	result, err := h.auth.VerifyEmailAndCreateUser(r.Context(), req.Token, req.Password)
 	if err != nil {
 		if errors.Is(err, model.ErrNotFound) {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "invalid or expired verification token")
+			writeError(w, http.StatusNotFound, CodeNotFound, "invalid or expired verification token")
 			return
 		}
 		if errors.Is(err, model.ErrAlreadyExists) {
-			writeError(w, http.StatusConflict, "CONFLICT", "a user with this email already exists")
+			writeError(w, http.StatusConflict, CodeConflict, "a user with this email already exists")
 			return
 		}
 		if errors.Is(err, model.ErrValidation) {
-			writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
+			writeErrorFromService(w, http.StatusBadRequest, CodeValidationError, err)
 			return
 		}
 		if errors.Is(err, model.ErrForbidden) {
-			writeError(w, http.StatusForbidden, "FORBIDDEN", "email registration is not configured")
+			writeError(w, http.StatusForbidden, CodeForbidden, "email registration is not configured")
 			return
 		}
 		log.Ctx(r.Context()).Error().Err(err).Msg("email verification failed")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -858,26 +853,26 @@ type forgotPasswordRequest struct {
 func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 	var req forgotPasswordRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	if req.Email == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "email is required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "email is required")
 		return
 	}
 
 	if err := h.auth.RequestPasswordReset(r.Context(), req.Email); err != nil {
 		if errors.Is(err, model.ErrForbidden) {
-			writeError(w, http.StatusForbidden, "FORBIDDEN", "password reset is not available")
+			writeError(w, http.StatusForbidden, CodeForbidden, "password reset is not available")
 			return
 		}
 		if errors.Is(err, model.ErrValidation) {
-			writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
+			writeErrorFromService(w, http.StatusBadRequest, CodeValidationError, err)
 			return
 		}
 		log.Ctx(r.Context()).Error().Err(err).Msg("password reset request failed")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -896,31 +891,31 @@ type resetPasswordRequest struct {
 func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	var req resetPasswordRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	if req.Token == "" || req.Password == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "token and password are required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "token and password are required")
 		return
 	}
 
 	token, user, err := h.auth.ResetPasswordWithToken(r.Context(), req.Token, req.Password)
 	if err != nil {
 		if errors.Is(err, model.ErrNotFound) {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "invalid or expired reset token")
+			writeError(w, http.StatusNotFound, CodeNotFound, "invalid or expired reset token")
 			return
 		}
 		if errors.Is(err, model.ErrValidation) {
-			writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
+			writeErrorFromService(w, http.StatusBadRequest, CodeValidationError, err)
 			return
 		}
 		if errors.Is(err, model.ErrForbidden) {
-			writeError(w, http.StatusForbidden, "FORBIDDEN", "password reset is not available")
+			writeError(w, http.StatusForbidden, CodeForbidden, "password reset is not available")
 			return
 		}
 		log.Ctx(r.Context()).Error().Err(err).Msg("password reset failed")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -940,24 +935,24 @@ type updateProfileRequest struct {
 func (h *AuthHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	var req updateProfileRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	user, err := h.auth.UpdateProfile(r.Context(), info.UserID, req.DisplayName)
 	if err != nil {
 		if errors.Is(err, model.ErrValidation) {
-			writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
+			writeErrorFromService(w, http.StatusBadRequest, CodeValidationError, err)
 			return
 		}
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to update profile")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -968,41 +963,41 @@ func (h *AuthHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	if err := r.ParseMultipartForm(2 << 20); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid multipart form")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid multipart form")
 		return
 	}
 
 	file, header, err := r.FormFile("file")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "file is required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "file is required")
 		return
 	}
 	defer file.Close()
 
 	contentType := header.Header.Get("Content-Type")
 	if contentType != "image/jpeg" && contentType != "image/png" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "only JPEG and PNG files are allowed")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "only JPEG and PNG files are allowed")
 		return
 	}
 
 	if header.Size > 2<<20 {
-		writeError(w, http.StatusRequestEntityTooLarge, "VALIDATION_ERROR", "file must be under 2 MB")
+		writeError(w, http.StatusRequestEntityTooLarge, CodeValidationError, "file must be under 2 MB")
 		return
 	}
 
 	user, err := h.auth.UploadAvatar(r.Context(), info.UserID, file, header.Size, contentType)
 	if err != nil {
 		if errors.Is(err, model.ErrValidation) {
-			writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
+			writeErrorFromService(w, http.StatusBadRequest, CodeValidationError, err)
 			return
 		}
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to upload avatar")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -1013,14 +1008,14 @@ func (h *AuthHandler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) DeleteAvatar(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	user, err := h.auth.DeleteAvatar(r.Context(), info.UserID)
 	if err != nil {
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to delete avatar")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -1029,9 +1024,8 @@ func (h *AuthHandler) DeleteAvatar(w http.ResponseWriter, r *http.Request) {
 
 // GetUserAvatar handles GET /api/v1/users/{userId}/avatar.
 func (h *AuthHandler) GetUserAvatar(w http.ResponseWriter, r *http.Request) {
-	userID, err := uuid.Parse(chi.URLParam(r, "userId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid user ID")
+	userID, ok := parseUUIDParam(w, r, "userId", "invalid user ID")
+	if !ok {
 		return
 	}
 
@@ -1039,11 +1033,11 @@ func (h *AuthHandler) GetUserAvatar(w http.ResponseWriter, r *http.Request) {
 	reader, contentType, err := h.auth.GetAvatarFile(r.Context(), userID, size)
 	if err != nil {
 		if errors.Is(err, model.ErrNotFound) {
-			writeError(w, http.StatusNotFound, "NOT_FOUND", "avatar not found")
+			writeError(w, http.StatusNotFound, CodeNotFound, "avatar not found")
 			return
 		}
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to get avatar")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 	defer reader.Close()

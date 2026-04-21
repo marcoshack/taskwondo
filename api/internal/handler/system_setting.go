@@ -42,7 +42,7 @@ func toSystemSettingResponse(s *model.SystemSetting) systemSettingResponse {
 func (h *SystemSettingHandler) List(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -64,7 +64,7 @@ func (h *SystemSettingHandler) List(w http.ResponseWriter, r *http.Request) {
 func (h *SystemSettingHandler) Get(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -83,7 +83,7 @@ func (h *SystemSettingHandler) Get(w http.ResponseWriter, r *http.Request) {
 func (h *SystemSettingHandler) Set(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -91,12 +91,12 @@ func (h *SystemSettingHandler) Set(w http.ResponseWriter, r *http.Request) {
 
 	var req setUserSettingRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	if len(req.Value) == 0 {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "value is required")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "value is required")
 		return
 	}
 
@@ -113,7 +113,7 @@ func (h *SystemSettingHandler) Set(w http.ResponseWriter, r *http.Request) {
 func (h *SystemSettingHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -132,7 +132,7 @@ func (h *SystemSettingHandler) GetPublic(w http.ResponseWriter, r *http.Request)
 	settings, err := h.settings.GetPublic(r.Context())
 	if err != nil {
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to get public settings")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -143,7 +143,7 @@ func (h *SystemSettingHandler) GetPublic(w http.ResponseWriter, r *http.Request)
 func (h *SystemSettingHandler) GetSMTP(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -165,7 +165,7 @@ func (h *SystemSettingHandler) GetSMTP(w http.ResponseWriter, r *http.Request) {
 	var cfg model.SMTPConfig
 	if err := json.Unmarshal(setting.Value, &cfg); err != nil {
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to parse smtp config")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -181,13 +181,13 @@ func (h *SystemSettingHandler) GetSMTP(w http.ResponseWriter, r *http.Request) {
 func (h *SystemSettingHandler) SetSMTP(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	var cfg model.SMTPConfig
 	if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
@@ -211,7 +211,7 @@ func (h *SystemSettingHandler) SetSMTP(w http.ResponseWriter, r *http.Request) {
 		encrypted, err := h.encryptor.Encrypt(cfg.Password)
 		if err != nil {
 			log.Ctx(r.Context()).Error().Err(err).Msg("failed to encrypt smtp password")
-			writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+			writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 			return
 		}
 		cfg.Password = encrypted
@@ -219,7 +219,7 @@ func (h *SystemSettingHandler) SetSMTP(w http.ResponseWriter, r *http.Request) {
 
 	value, err := json.Marshal(cfg)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -239,17 +239,17 @@ func (h *SystemSettingHandler) SetSMTP(w http.ResponseWriter, r *http.Request) {
 func (h *SystemSettingHandler) TestSMTP(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 	if info.GlobalRole != model.RoleAdmin {
-		writeError(w, http.StatusForbidden, "FORBIDDEN", "insufficient permissions")
+		writeError(w, http.StatusForbidden, CodeForbidden, "insufficient permissions")
 		return
 	}
 
 	if err := h.email.SendTest(r.Context(), info.Email); err != nil {
 		log.Ctx(r.Context()).Error().Err(err).Msg("smtp test email failed")
-		writeError(w, http.StatusBadRequest, "SMTP_ERROR", err.Error())
+		writeError(w, http.StatusBadRequest, CodeSMTPError, err.Error())
 		return
 	}
 
@@ -268,13 +268,13 @@ var validOAuthProviders = map[string]bool{
 func (h *SystemSettingHandler) GetOAuthConfig(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	provider := chi.URLParam(r, "provider")
 	if !validOAuthProviders[provider] {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid oauth provider")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid oauth provider")
 		return
 	}
 
@@ -292,7 +292,7 @@ func (h *SystemSettingHandler) GetOAuthConfig(w http.ResponseWriter, r *http.Req
 	var cfg model.OAuthProviderConfig
 	if err := json.Unmarshal(setting.Value, &cfg); err != nil {
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to parse oauth config")
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -308,19 +308,19 @@ func (h *SystemSettingHandler) GetOAuthConfig(w http.ResponseWriter, r *http.Req
 func (h *SystemSettingHandler) SetOAuthConfig(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	provider := chi.URLParam(r, "provider")
 	if !validOAuthProviders[provider] {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid oauth provider")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid oauth provider")
 		return
 	}
 
 	var cfg model.OAuthProviderConfig
 	if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
@@ -345,7 +345,7 @@ func (h *SystemSettingHandler) SetOAuthConfig(w http.ResponseWriter, r *http.Req
 		encrypted, err := h.encryptor.Encrypt(cfg.ClientSecret)
 		if err != nil {
 			log.Ctx(r.Context()).Error().Err(err).Msg("failed to encrypt oauth client secret")
-			writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+			writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 			return
 		}
 		cfg.ClientSecret = encrypted
@@ -353,7 +353,7 @@ func (h *SystemSettingHandler) SetOAuthConfig(w http.ResponseWriter, r *http.Req
 
 	value, err := json.Marshal(cfg)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
 
@@ -371,17 +371,17 @@ func (h *SystemSettingHandler) SetOAuthConfig(w http.ResponseWriter, r *http.Req
 
 func handleSystemSettingError(w http.ResponseWriter, r *http.Request, err error, logMsg string) {
 	if errors.Is(err, model.ErrNotFound) {
-		writeError(w, http.StatusNotFound, "NOT_FOUND", "setting not found")
+		writeError(w, http.StatusNotFound, CodeNotFound, "setting not found")
 		return
 	}
 	if errors.Is(err, model.ErrForbidden) {
-		writeError(w, http.StatusForbidden, "FORBIDDEN", "insufficient permissions")
+		writeError(w, http.StatusForbidden, CodeForbidden, "insufficient permissions")
 		return
 	}
 	if errors.Is(err, model.ErrValidation) {
-		writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
+		writeErrorFromService(w, http.StatusBadRequest, CodeValidationError, err)
 		return
 	}
 	log.Ctx(r.Context()).Error().Err(err).Msg(logMsg)
-	writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+	writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 }

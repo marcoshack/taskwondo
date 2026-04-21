@@ -85,7 +85,7 @@ func toMilestoneResponse(mp *model.MilestoneWithProgress) milestoneResponse {
 func (h *MilestoneHandler) List(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -109,7 +109,7 @@ func (h *MilestoneHandler) List(w http.ResponseWriter, r *http.Request) {
 func (h *MilestoneHandler) Create(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
@@ -117,7 +117,7 @@ func (h *MilestoneHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	var req createMilestoneRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
@@ -129,7 +129,7 @@ func (h *MilestoneHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if req.DueDate != nil {
 		t, err := time.Parse(time.DateOnly, *req.DueDate)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid due_date format, expected YYYY-MM-DD")
+			writeError(w, http.StatusBadRequest, CodeValidationError, "invalid due_date format, expected YYYY-MM-DD")
 			return
 		}
 		input.DueDate = &t
@@ -148,14 +148,13 @@ func (h *MilestoneHandler) Create(w http.ResponseWriter, r *http.Request) {
 func (h *MilestoneHandler) Get(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
-	milestoneID, err := uuid.Parse(chi.URLParam(r, "milestoneId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid milestone ID")
+	milestoneID, ok := parseUUIDParam(w, r, "milestoneId", "invalid milestone ID")
+	if !ok {
 		return
 	}
 
@@ -172,65 +171,63 @@ func (h *MilestoneHandler) Get(w http.ResponseWriter, r *http.Request) {
 func (h *MilestoneHandler) Update(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
-	milestoneID, err := uuid.Parse(chi.URLParam(r, "milestoneId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid milestone ID")
+	milestoneID, ok := parseUUIDParam(w, r, "milestoneId", "invalid milestone ID")
+	if !ok {
 		return
 	}
 
 	// Decode to raw map for explicit null detection
 	raw := make(map[string]json.RawMessage)
 	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid request body")
 		return
 	}
 
 	var input service.UpdateMilestoneInput
 
 	if v, ok := raw["name"]; ok {
-		var name string
-		if err := json.Unmarshal(v, &name); err == nil {
-			input.Name = &name
+		name, ok := unmarshalField[string](w, v, "name")
+		if !ok {
+			return
 		}
+		input.Name = &name
 	}
 
 	if v, ok := raw["description"]; ok {
 		if string(v) == "null" {
 			input.ClearDescription = true
 		} else {
-			var desc string
-			if err := json.Unmarshal(v, &desc); err == nil {
-				input.Description = &desc
+			desc, ok := unmarshalField[string](w, v, "description")
+			if !ok {
+				return
 			}
+			input.Description = &desc
 		}
 	}
 
 	if v, ok := raw["due_date"]; ok {
-		if string(v) == "null" {
+		t, cleared, ok := unmarshalNullableDate(w, v, "due_date")
+		if !ok {
+			return
+		}
+		if cleared {
 			input.ClearDueDate = true
 		} else {
-			var dateStr string
-			if err := json.Unmarshal(v, &dateStr); err == nil {
-				t, err := time.Parse(time.DateOnly, dateStr)
-				if err != nil {
-					writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid due_date format, expected YYYY-MM-DD")
-					return
-				}
-				input.DueDate = &t
-			}
+			input.DueDate = &t
 		}
 	}
 
 	if v, ok := raw["status"]; ok {
-		var status string
-		if err := json.Unmarshal(v, &status); err == nil {
-			input.Status = &status
+		status, ok := unmarshalField[string](w, v, "status")
+		if !ok {
+			return
 		}
+		input.Status = &status
 	}
 
 	mp, err := h.milestones.Update(r.Context(), info, projectKey, milestoneID, input)
@@ -246,14 +243,13 @@ func (h *MilestoneHandler) Update(w http.ResponseWriter, r *http.Request) {
 func (h *MilestoneHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
-	milestoneID, err := uuid.Parse(chi.URLParam(r, "milestoneId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid milestone ID")
+	milestoneID, ok := parseUUIDParam(w, r, "milestoneId", "invalid milestone ID")
+	if !ok {
 		return
 	}
 
@@ -269,14 +265,13 @@ func (h *MilestoneHandler) Delete(w http.ResponseWriter, r *http.Request) {
 func (h *MilestoneHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "not authenticated")
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
 		return
 	}
 
 	projectKey := chi.URLParam(r, "projectKey")
-	milestoneID, err := uuid.Parse(chi.URLParam(r, "milestoneId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid milestone ID")
+	milestoneID, ok := parseUUIDParam(w, r, "milestoneId", "invalid milestone ID")
+	if !ok {
 		return
 	}
 
@@ -291,18 +286,18 @@ func (h *MilestoneHandler) Stats(w http.ResponseWriter, r *http.Request) {
 
 func handleMilestoneError(w http.ResponseWriter, r *http.Request, err error, logMsg string) {
 	if errors.Is(err, model.ErrNotFound) {
-		writeError(w, http.StatusNotFound, "NOT_FOUND", "milestone not found")
+		writeError(w, http.StatusNotFound, CodeNotFound, "milestone not found")
 		return
 	}
 	if errors.Is(err, model.ErrForbidden) {
-		writeError(w, http.StatusForbidden, "FORBIDDEN", "insufficient permissions")
+		writeError(w, http.StatusForbidden, CodeForbidden, "insufficient permissions")
 		return
 	}
 	if errors.Is(err, model.ErrValidation) {
-		writeErrorFromService(w, http.StatusBadRequest, "VALIDATION_ERROR", err)
+		writeErrorFromService(w, http.StatusBadRequest, CodeValidationError, err)
 		return
 	}
 
 	log.Ctx(r.Context()).Error().Err(err).Msg(logMsg)
-	writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
+	writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 }

@@ -199,7 +199,7 @@ func (r *WorkItemRepository) List(ctx context.Context, projectID uuid.UUID, filt
 		qb.add("(search_vector @@ plainto_tsquery('english', ?) OR search_vector @@ plainto_tsquery('simple', ?))", filter.Search, filter.Search)
 	}
 
-	whereClause := "WHERE " + strings.Join(qb.conditions, " AND ")
+	whereClause := qb.whereClause()
 
 	// Count total (without cursor/limit)
 	countQuery := "SELECT COUNT(*) FROM work_items " + whereClause
@@ -248,7 +248,7 @@ func (r *WorkItemRepository) List(ctx context.Context, projectID uuid.UUID, filt
 				qb.add("("+sortCol+", id) > (?, ?)", cursorVal, *filter.Cursor)
 			}
 			// Rebuild WHERE clause with cursor condition
-			whereClause = "WHERE " + strings.Join(qb.conditions, " AND ")
+			whereClause = qb.whereClause()
 		}
 	}
 
@@ -362,72 +362,63 @@ func (r *WorkItemRepository) TouchUpdatedAt(ctx context.Context, id uuid.UUID) e
 	return err
 }
 
-// --- Query builder ---
-
-type queryBuilder struct {
-	conditions []string
-	args       []interface{}
-	argIndex   int
-}
-
-// add appends a condition with parameters. Each ? is replaced with $N.
-func (qb *queryBuilder) add(condition string, args ...interface{}) {
-	for _, arg := range args {
-		qb.argIndex++
-		condition = strings.Replace(condition, "?", fmt.Sprintf("$%d", qb.argIndex), 1)
-		qb.args = append(qb.args, arg)
-	}
-	qb.conditions = append(qb.conditions, condition)
-}
-
-// addRaw appends a condition with no parameters.
-func (qb *queryBuilder) addRaw(condition string) {
-	qb.conditions = append(qb.conditions, condition)
-}
-
 // --- Scan helpers ---
+
+// workItemScanCols holds the nullable columns scanned from work_items queries.
+// It lets a single Scan args slice feed both *sql.Row and *sql.Rows callers.
+type workItemScanCols struct {
+	description      sql.NullString
+	queueID          uuid.NullUUID
+	milestoneID      uuid.NullUUID
+	parentID         uuid.NullUUID
+	assigneeID       uuid.NullUUID
+	portalContactID  uuid.NullUUID
+	complexity       sql.NullInt64
+	dueDate          sql.NullTime
+	resolvedAt       sql.NullTime
+	slaTargetAt      sql.NullTime
+	estimatedSeconds sql.NullInt64
+	labels           pq.StringArray
+	customFieldsRaw  []byte
+	reporterName     sql.NullString
+}
+
+// scanArgs returns the pointer list for the standard work_items SELECT column
+// order used by GetByID, List, and related queries.
+func (c *workItemScanCols) scanArgs(item *model.WorkItem) []interface{} {
+	return []interface{}{
+		&item.ID, &item.ProjectID, &c.queueID, &c.milestoneID, &c.parentID, &item.ItemNumber, &item.DisplayID,
+		&item.Type, &item.Title, &c.description, &item.Status, &item.Priority,
+		&c.assigneeID, &item.ReporterID, &c.portalContactID, &item.Visibility,
+		&c.labels, &c.complexity, &c.customFieldsRaw, &c.dueDate, &c.resolvedAt, &c.slaTargetAt, &c.estimatedSeconds,
+		&item.CreatedAt, &item.UpdatedAt,
+		&c.reporterName,
+	}
+}
+
+// apply copies scanned nullable values into the item. Returns an error if the
+// custom_fields blob cannot be unmarshaled.
+func (c *workItemScanCols) apply(item *model.WorkItem) error {
+	if c.reporterName.Valid {
+		item.ReporterName = c.reporterName.String
+	}
+	return populateWorkItem(item, c.description, c.queueID, c.milestoneID, c.parentID, c.assigneeID,
+		c.portalContactID, c.complexity, c.dueDate, c.resolvedAt, c.slaTargetAt, c.estimatedSeconds, c.labels, c.customFieldsRaw)
+}
 
 func scanWorkItem(row *sql.Row) (*model.WorkItem, error) {
 	var item model.WorkItem
-	var (
-		description      sql.NullString
-		queueID          uuid.NullUUID
-		milestoneID      uuid.NullUUID
-		parentID         uuid.NullUUID
-		assigneeID       uuid.NullUUID
-		portalContactID  uuid.NullUUID
-		complexity       sql.NullInt64
-		dueDate          sql.NullTime
-		resolvedAt       sql.NullTime
-		slaTargetAt      sql.NullTime
-		estimatedSeconds sql.NullInt64
-		labels           pq.StringArray
-		customFieldsRaw  []byte
-	)
-
-	var reporterName sql.NullString
-	err := row.Scan(
-		&item.ID, &item.ProjectID, &queueID, &milestoneID, &parentID, &item.ItemNumber, &item.DisplayID,
-		&item.Type, &item.Title, &description, &item.Status, &item.Priority,
-		&assigneeID, &item.ReporterID, &portalContactID, &item.Visibility,
-		&labels, &complexity, &customFieldsRaw, &dueDate, &resolvedAt, &slaTargetAt, &estimatedSeconds,
-		&item.CreatedAt, &item.UpdatedAt,
-		&reporterName,
-	)
+	var cols workItemScanCols
+	err := row.Scan(cols.scanArgs(&item)...)
 	if err == sql.ErrNoRows {
 		return nil, model.ErrNotFound
 	}
 	if err != nil {
 		return nil, fmt.Errorf("scanning work item: %w", err)
 	}
-
-	if reporterName.Valid {
-		item.ReporterName = reporterName.String
+	if err := cols.apply(&item); err != nil {
+		return nil, err
 	}
-
-	populateWorkItem(&item, description, queueID, milestoneID, parentID, assigneeID,
-		portalContactID, complexity, dueDate, resolvedAt, slaTargetAt, estimatedSeconds, labels, customFieldsRaw)
-
 	return &item, nil
 }
 
@@ -435,44 +426,15 @@ func scanWorkItems(rows *sql.Rows) ([]model.WorkItem, error) {
 	var items []model.WorkItem
 	for rows.Next() {
 		var item model.WorkItem
-		var (
-			description      sql.NullString
-			queueID          uuid.NullUUID
-			milestoneID      uuid.NullUUID
-			parentID         uuid.NullUUID
-			assigneeID       uuid.NullUUID
-			portalContactID  uuid.NullUUID
-			complexity       sql.NullInt64
-			dueDate          sql.NullTime
-			resolvedAt       sql.NullTime
-			slaTargetAt      sql.NullTime
-			estimatedSeconds sql.NullInt64
-			labels           pq.StringArray
-			customFieldsRaw  []byte
-		)
-
-		var reporterName sql.NullString
-		if err := rows.Scan(
-			&item.ID, &item.ProjectID, &queueID, &milestoneID, &parentID, &item.ItemNumber, &item.DisplayID,
-			&item.Type, &item.Title, &description, &item.Status, &item.Priority,
-			&assigneeID, &item.ReporterID, &portalContactID, &item.Visibility,
-			&labels, &complexity, &customFieldsRaw, &dueDate, &resolvedAt, &slaTargetAt, &estimatedSeconds,
-			&item.CreatedAt, &item.UpdatedAt,
-			&reporterName,
-		); err != nil {
+		var cols workItemScanCols
+		if err := rows.Scan(cols.scanArgs(&item)...); err != nil {
 			return nil, fmt.Errorf("scanning work item row: %w", err)
 		}
-
-		if reporterName.Valid {
-			item.ReporterName = reporterName.String
+		if err := cols.apply(&item); err != nil {
+			return nil, err
 		}
-
-		populateWorkItem(&item, description, queueID, milestoneID, parentID, assigneeID,
-			portalContactID, complexity, dueDate, resolvedAt, slaTargetAt, estimatedSeconds, labels, customFieldsRaw)
-
 		items = append(items, item)
 	}
-
 	return items, rows.Err()
 }
 
@@ -485,7 +447,7 @@ func populateWorkItem(
 	estimatedSeconds sql.NullInt64,
 	labels pq.StringArray,
 	customFieldsRaw []byte,
-) {
+) error {
 	if description.Valid {
 		item.Description = &description.String
 	}
@@ -529,8 +491,11 @@ func populateWorkItem(
 
 	item.CustomFields = make(map[string]interface{})
 	if len(customFieldsRaw) > 0 {
-		json.Unmarshal(customFieldsRaw, &item.CustomFields)
+		if err := json.Unmarshal(customFieldsRaw, &item.CustomFields); err != nil {
+			return fmt.Errorf("unmarshaling custom_fields for work item %s: %w", item.ID, err)
+		}
 	}
+	return nil
 }
 
 // SearchFTS performs a cross-project full-text search across all accessible projects.
@@ -570,7 +535,7 @@ func (r *WorkItemRepository) SearchFTS(ctx context.Context, query string, access
 		)
 	}
 
-	whereClause := "WHERE " + strings.Join(qb.conditions, " AND ")
+	whereClause := qb.whereClause()
 
 	// Boost display ID exact matches: if the query looks like a display ID (e.g. "TF-42"),
 	// add a large bonus so it sorts first.
