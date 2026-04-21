@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -1170,23 +1171,18 @@ type AcceptInviteResult struct {
 	InviteRole     string // populated when RoleNotApplied is true
 }
 
-// roleRank returns a numeric rank for project roles (higher = more access).
-func roleRank(role string) int {
-	switch role {
-	case model.ProjectRoleOwner:
-		return 4
-	case model.ProjectRoleAdmin:
-		return 3
-	case model.ProjectRoleMember:
-		return 2
-	case model.ProjectRoleViewer:
-		return 1
-	case model.ProjectRoleCustomer:
-		return 0
-	default:
-		return 0
-	}
+// projectRoleRanks maps each project role to its numeric rank (higher = more access).
+// Roles not in the map rank as 0.
+var projectRoleRanks = map[string]int{
+	model.ProjectRoleOwner:    4,
+	model.ProjectRoleAdmin:    3,
+	model.ProjectRoleMember:   2,
+	model.ProjectRoleViewer:   1,
+	model.ProjectRoleCustomer: 0,
 }
+
+// roleRank returns the numeric rank for a project role.
+func roleRank(role string) int { return projectRoleRanks[role] }
 
 // AcceptInvite uses an invite code to join a project. Requires authentication.
 // Returns ErrNotFound if the code belongs to a namespace invite.
@@ -1299,13 +1295,16 @@ func generateInviteCode() (string, error) {
 	return string(code), nil
 }
 
-func isValidInviteRole(role string) bool {
-	switch role {
-	case model.ProjectRoleAdmin, model.ProjectRoleMember, model.ProjectRoleViewer, model.ProjectRoleCustomer:
-		return true
-	}
-	return false
+// validInviteRoles is the set of project roles allowed in an invite.
+// Owner is intentionally excluded: owners are promoted manually, not via invite.
+var validInviteRoles = []string{
+	model.ProjectRoleAdmin,
+	model.ProjectRoleMember,
+	model.ProjectRoleViewer,
+	model.ProjectRoleCustomer,
 }
+
+func isValidInviteRole(role string) bool { return slices.Contains(validInviteRoles, role) }
 
 // requireMembership checks that the user is a member of the project or a global admin.
 // Returns ErrNotFound (not ErrForbidden) to avoid leaking project existence.
@@ -1380,11 +1379,7 @@ func (s *ProjectService) RequireProjectRole(ctx context.Context, info *model.Aut
 }
 
 func isValidProjectRole(role string) bool {
-	switch role {
-	case model.ProjectRoleOwner, model.ProjectRoleAdmin, model.ProjectRoleMember, model.ProjectRoleViewer, model.ProjectRoleCustomer:
-		return true
-	}
-	return false
+	return slices.Contains(model.AvailableProjectRoles(), role)
 }
 
 func validateBusinessHours(bh *model.BusinessHoursConfig) error {

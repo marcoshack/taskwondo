@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -518,27 +519,27 @@ func (s *NamespaceService) RemoveNamespaceMember(ctx context.Context, info *mode
 
 // --- Namespace Invites ---
 
-// namespaceRoleRank returns a numeric rank for namespace roles (higher = more access).
-func namespaceRoleRank(role string) int {
-	switch role {
-	case model.NamespaceRoleOwner:
-		return 3
-	case model.NamespaceRoleAdmin:
-		return 2
-	case model.NamespaceRoleMember:
-		return 1
-	default:
-		return 0
-	}
+// namespaceRoleRanks maps each namespace role to its numeric rank (higher = more access).
+// Roles not in the map rank as 0.
+var namespaceRoleRanks = map[string]int{
+	model.NamespaceRoleOwner:  3,
+	model.NamespaceRoleAdmin:  2,
+	model.NamespaceRoleMember: 1,
+}
+
+// namespaceRoleRank returns the numeric rank for a namespace role.
+func namespaceRoleRank(role string) int { return namespaceRoleRanks[role] }
+
+// validNamespaceInviteRoles is the set of namespace roles allowed in an invite.
+// Owner is intentionally excluded.
+var validNamespaceInviteRoles = []string{
+	model.NamespaceRoleAdmin,
+	model.NamespaceRoleMember,
 }
 
 // isValidNamespaceInviteRole returns true if the role can be used in an invite (owner not allowed).
 func isValidNamespaceInviteRole(role string) bool {
-	switch role {
-	case model.NamespaceRoleAdmin, model.NamespaceRoleMember:
-		return true
-	}
-	return false
+	return slices.Contains(validNamespaceInviteRoles, role)
 }
 
 // CreateNamespaceEmailInviteResult contains the result of an email-based namespace invite.
@@ -1181,13 +1182,14 @@ func (s *NamespaceService) CountOwnedByUser(ctx context.Context, userID uuid.UUI
 	return s.members.CountOwnedByUser(ctx, userID)
 }
 
-func isValidNamespaceRole(role string) bool {
-	switch role {
-	case model.NamespaceRoleOwner, model.NamespaceRoleAdmin, model.NamespaceRoleMember:
-		return true
-	}
-	return false
+// validNamespaceRoles is the full set of assignable namespace roles.
+var validNamespaceRoles = []string{
+	model.NamespaceRoleOwner,
+	model.NamespaceRoleAdmin,
+	model.NamespaceRoleMember,
 }
+
+func isValidNamespaceRole(role string) bool { return slices.Contains(validNamespaceRoles, role) }
 
 // checkReservedSlug checks the slug against the admin-managed deny list.
 func (s *NamespaceService) checkReservedSlug(ctx context.Context, slug string) error {

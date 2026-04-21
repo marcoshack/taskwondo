@@ -1038,7 +1038,12 @@ func workItemTestSetup(t *testing.T) (*WorkItemHandler, *model.AuthInfo, string)
 	store := newMockStorage()
 	slaSvc := service.NewSLAService(slaRepo, projectRepo, memberRepo, workflowRepo)
 	watcherRepo := newMockWatcherRepo()
-	svc := service.NewWorkItemService(itemRepo, eventRepo, commentRepo, relationRepo, attachRepo, timeEntryRepo, watcherRepo, projectRepo, memberRepo, workflowRepo, typeWorkflowRepo, queueRepo, milestoneRepo, slaRepo, slaSvc, store, 50*1024*1024)
+	svc := service.NewWorkItemService(
+		service.WithWorkItemRepos(itemRepo, eventRepo, commentRepo, relationRepo, attachRepo, timeEntryRepo, watcherRepo),
+		service.WithProjectContext(projectRepo, memberRepo, workflowRepo, typeWorkflowRepo, queueRepo, milestoneRepo),
+		service.WithSLA(slaRepo, slaSvc),
+		service.WithStorage(store, 50*1024*1024),
+	)
 	h := NewWorkItemHandler(svc, slaSvc, 50*1024*1024)
 
 	info := &model.AuthInfo{
@@ -1089,7 +1094,12 @@ func workItemTestSetupWithSLA(t *testing.T) *workItemSLASetup {
 	store := newMockStorage()
 	slaSvc := service.NewSLAService(slaRepo, projectRepo, memberRepo, workflowRepo)
 	watcherRepo := newMockWatcherRepo()
-	svc := service.NewWorkItemService(itemRepo, eventRepo, commentRepo, relationRepo, attachRepo, timeEntryRepo, watcherRepo, projectRepo, memberRepo, workflowRepo, typeWorkflowRepo, queueRepo, milestoneRepo, slaRepo, slaSvc, store, 50*1024*1024)
+	svc := service.NewWorkItemService(
+		service.WithWorkItemRepos(itemRepo, eventRepo, commentRepo, relationRepo, attachRepo, timeEntryRepo, watcherRepo),
+		service.WithProjectContext(projectRepo, memberRepo, workflowRepo, typeWorkflowRepo, queueRepo, milestoneRepo),
+		service.WithSLA(slaRepo, slaSvc),
+		service.WithStorage(store, 50*1024*1024),
+	)
 	h := NewWorkItemHandler(svc, slaSvc, 50*1024*1024)
 
 	info := &model.AuthInfo{

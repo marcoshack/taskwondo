@@ -46,9 +46,10 @@ func newPortalTestSetup(t *testing.T) *portalTestSetup {
 	slaSvc := service.NewSLAService(slaRepo, projectRepo, memberRepo, workflowRepo)
 	watcherRepo := newMockWatcherRepo()
 	workItemSvc := service.NewWorkItemService(
-		itemRepo, eventRepo, commentRepo, relationRepo, attachRepo, timeEntryRepo,
-		watcherRepo, projectRepo, memberRepo, workflowRepo, typeWorkflowRepo,
-		queueRepo, milestoneRepo, slaRepo, slaSvc, store, 50*1024*1024,
+		service.WithWorkItemRepos(itemRepo, eventRepo, commentRepo, relationRepo, attachRepo, timeEntryRepo, watcherRepo),
+		service.WithProjectContext(projectRepo, memberRepo, workflowRepo, typeWorkflowRepo, queueRepo, milestoneRepo),
+		service.WithSLA(slaRepo, slaSvc),
+		service.WithStorage(store, 50*1024*1024),
 	)
 	categoryRepo := newMockQueueCategoryRepo()
 	queueTeamRepo := newMockQueueTeamRepo()

@@ -83,19 +83,25 @@ func Auth(authenticator Authenticator) func(http.Handler) http.Handler {
 	}
 }
 
-// resourceFromPath maps an API request path to a resource constant for system key authorization.
+// resourceFromPath maps an API request path to a resource constant for system
+// key authorization. Matches are strict on path shape:
+//   - /metrics[...]          → ResourceMetrics
+//   - /api/v1/{ns}/projects/{key}/items[/...] → ResourceItems
+//
+// Earlier versions of this function scanned every path segment for the literal
+// "items", which would have treated a namespace slug or project key of "items"
+// as a work-item route. The explicit index checks below prevent that.
 func resourceFromPath(path string) string {
 	if strings.HasPrefix(path, "/metrics") {
 		return model.ResourceMetrics
 	}
 
-	// Match /api/v1/{namespace}/projects/{key}/items paths
-	parts := strings.Split(strings.TrimPrefix(path, "/"), "/")
-	// Pattern: api/v1/{namespace}/projects/{key}/items[/...]
-	for i, p := range parts {
-		if p == "items" && i >= 4 {
-			return model.ResourceItems
-		}
+	parts := strings.Split(strings.Trim(path, "/"), "/")
+	// Expected layout: ["api", "v1", "{ns}", "projects", "{key}", "items", ...]
+	if len(parts) >= 6 &&
+		parts[0] == "api" && parts[1] == "v1" &&
+		parts[3] == "projects" && parts[5] == "items" {
+		return model.ResourceItems
 	}
 
 	return ""

@@ -211,8 +211,12 @@ type WorkItemService struct {
 	embedCache    *FeatureFlagCache
 }
 
-// NewWorkItemService creates a new WorkItemService.
-func NewWorkItemService(
+// WorkItemServiceOption configures a WorkItemService at construction time.
+// See the functional-options pattern: https://dave.cheney.net/2014/10/17/functional-options-for-friendly-apis
+type WorkItemServiceOption func(*WorkItemService)
+
+// WithWorkItemRepos sets the core work-item repositories.
+func WithWorkItemRepos(
 	items WorkItemRepository,
 	events WorkItemEventRepository,
 	comments CommentRepository,
@@ -220,42 +224,89 @@ func NewWorkItemService(
 	attachments AttachmentRepository,
 	timeEntries TimeEntryRepository,
 	watchers WatcherRepository,
+) WorkItemServiceOption {
+	return func(s *WorkItemService) {
+		s.items = items
+		s.events = events
+		s.comments = comments
+		s.relations = relations
+		s.attachments = attachments
+		s.timeEntries = timeEntries
+		s.watchers = watchers
+	}
+}
+
+// WithProjectContext sets project / workflow / queue / milestone repositories
+// used for cross-entity validation and lookups.
+func WithProjectContext(
 	projects ProjectRepository,
 	members ProjectMemberRepository,
 	workflows WorkflowRepository,
 	typeWorkflows ProjectTypeWorkflowRepository,
 	queues QueueRepository,
 	milestones MilestoneRepository,
-	sla SLARepository,
-	slaService *SLAService,
-	fileStorage storage.Storage,
-	maxUploadSize int64,
-) *WorkItemService {
-	return &WorkItemService{
-		items:         items,
-		events:        events,
-		comments:      comments,
-		relations:     relations,
-		attachments:   attachments,
-		timeEntries:   timeEntries,
-		watchers:      watchers,
-		projects:      projects,
-		members:       members,
-		workflows:     workflows,
-		typeWorkflows: typeWorkflows,
-		queues:        queues,
-		milestones:    milestones,
-		sla:           sla,
-		slaService:    slaService,
-		fileStorage:   fileStorage,
-		maxUploadSize: maxUploadSize,
+) WorkItemServiceOption {
+	return func(s *WorkItemService) {
+		s.projects = projects
+		s.members = members
+		s.workflows = workflows
+		s.typeWorkflows = typeWorkflows
+		s.queues = queues
+		s.milestones = milestones
 	}
 }
 
-// SetPublisher configures the event publisher for async notifications.
-func (s *WorkItemService) SetPublisher(p EventPublisher) {
-	s.publisher = p
+// WithSLA wires SLA storage, service, and (optionally) notification clearing.
+func WithSLA(sla SLARepository, svc *SLAService) WorkItemServiceOption {
+	return func(s *WorkItemService) {
+		s.sla = sla
+		s.slaService = svc
+	}
 }
+
+// WithSLANotifications enables clearing of sent SLA notifications on status
+// transitions. Optional — leaving it unset skips that behavior.
+func WithSLANotifications(repo SLANotificationRepository) WorkItemServiceOption {
+	return func(s *WorkItemService) { s.slaNotifications = repo }
+}
+
+// WithStorage configures file attachment storage and the max upload size.
+func WithStorage(store storage.Storage, maxUploadSize int64) WorkItemServiceOption {
+	return func(s *WorkItemService) {
+		s.fileStorage = store
+		s.maxUploadSize = maxUploadSize
+	}
+}
+
+// WithPublisher wires an async event publisher for downstream notifications.
+// Optional.
+func WithPublisher(p EventPublisher) WorkItemServiceOption {
+	return func(s *WorkItemService) { s.publisher = p }
+}
+
+// WithEmbedCache enables the semantic-search feature-flag cache. Optional.
+func WithEmbedCache(cache *FeatureFlagCache) WorkItemServiceOption {
+	return func(s *WorkItemService) { s.embedCache = cache }
+}
+
+// NewWorkItemService creates a WorkItemService from the given options. Callers
+// are expected to supply the core repository options (WithWorkItemRepos,
+// WithProjectContext, WithSLA, WithStorage); optional features are enabled by
+// additional With*/options.
+func NewWorkItemService(opts ...WorkItemServiceOption) *WorkItemService {
+	s := &WorkItemService{}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
+}
+
+// The setters below cover genuinely-late dependencies (NATS publisher, SLA
+// notifications, embed-cache feature flag) that are created after the service
+// during application startup. They are not escape hatches for argument sprawl.
+
+// SetPublisher configures the event publisher for async notifications.
+func (s *WorkItemService) SetPublisher(p EventPublisher) { s.publisher = p }
 
 // SetSLANotifications configures the SLA notification repository for clearing
 // sent notifications on status transitions.
@@ -264,9 +315,7 @@ func (s *WorkItemService) SetSLANotifications(repo SLANotificationRepository) {
 }
 
 // SetEmbedCache configures the feature flag cache for semantic search indexing.
-func (s *WorkItemService) SetEmbedCache(cache *FeatureFlagCache) {
-	s.embedCache = cache
-}
+func (s *WorkItemService) SetEmbedCache(cache *FeatureFlagCache) { s.embedCache = cache }
 
 // Create creates a new work item in the given project.
 func (s *WorkItemService) Create(ctx context.Context, info *model.AuthInfo, projectKey string, input CreateWorkItemInput) (*model.WorkItem, error) {
@@ -288,6 +337,18 @@ func (s *WorkItemService) Create(ctx context.Context, info *model.AuthInfo, proj
 	// Validate title
 	if strings.TrimSpace(input.Title) == "" {
 		return nil, fmt.Errorf("title is required: %w", model.ErrValidation)
+	}
+	if err := validateWorkItemTitle(input.Title); err != nil {
+		return nil, err
+	}
+	if err := validateWorkItemDescription(input.Description); err != nil {
+		return nil, err
+	}
+	if err := validateWorkItemLabels(input.Labels); err != nil {
+		return nil, err
+	}
+	if err := validateWorkItemCustomFields(input.CustomFields); err != nil {
+		return nil, err
 	}
 
 	// Default and validate priority
@@ -527,12 +588,18 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 		if strings.TrimSpace(*input.Title) == "" {
 			return nil, fmt.Errorf("title cannot be empty: %w", model.ErrValidation)
 		}
+		if err := validateWorkItemTitle(*input.Title); err != nil {
+			return nil, err
+		}
 		s.recordFieldChange(ctx, item.ID, info, "title", item.Title, *input.Title)
 		watcherChanges = append(watcherChanges, fieldChange{"title", item.Title, *input.Title})
 		item.Title = *input.Title
 	}
 
 	if input.Description != nil {
+		if err := validateWorkItemDescription(input.Description); err != nil {
+			return nil, err
+		}
 		oldDesc := ""
 		if item.Description != nil {
 			oldDesc = *item.Description
@@ -722,6 +789,9 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 	}
 
 	if input.Labels != nil {
+		if err := validateWorkItemLabels(*input.Labels); err != nil {
+			return nil, err
+		}
 		oldLabels := strings.Join(item.Labels, ",")
 		newLabels := strings.Join(*input.Labels, ",")
 		if oldLabels != newLabels {
@@ -823,6 +893,9 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 	}
 
 	if input.CustomFields != nil {
+		if err := validateWorkItemCustomFields(input.CustomFields); err != nil {
+			return nil, err
+		}
 		item.CustomFields = input.CustomFields
 	}
 
@@ -928,6 +1001,12 @@ func (s *WorkItemService) CreatePortalTicket(ctx context.Context, info *model.Au
 	// Validate title
 	if strings.TrimSpace(input.Title) == "" {
 		return nil, fmt.Errorf("title is required: %w", model.ErrValidation)
+	}
+	if err := validateWorkItemTitle(input.Title); err != nil {
+		return nil, err
+	}
+	if err := validateWorkItemDescription(input.Description); err != nil {
+		return nil, err
 	}
 
 	// Default and validate priority
@@ -2157,6 +2236,55 @@ func (s *WorkItemService) accumulateElapsedOnLeave(ctx context.Context, project 
 }
 
 // --- Validation helpers ---
+
+// validateWorkItemTitle checks length bounds on a work item title.
+// Empty-title checks remain with callers since some paths allow empty (e.g. no-op update).
+func validateWorkItemTitle(title string) error {
+	if len(title) > model.MaxWorkItemTitleLen {
+		return fmt.Errorf("title exceeds %d characters: %w", model.MaxWorkItemTitleLen, model.ErrValidation)
+	}
+	return nil
+}
+
+// validateWorkItemDescription enforces a max length on description content.
+func validateWorkItemDescription(desc *string) error {
+	if desc == nil {
+		return nil
+	}
+	if len(*desc) > model.MaxWorkItemDescriptionLen {
+		return fmt.Errorf("description exceeds %d characters: %w", model.MaxWorkItemDescriptionLen, model.ErrValidation)
+	}
+	return nil
+}
+
+// validateWorkItemLabels caps both the number and per-label length of labels.
+func validateWorkItemLabels(labels []string) error {
+	if len(labels) > model.MaxWorkItemLabels {
+		return fmt.Errorf("too many labels (max %d): %w", model.MaxWorkItemLabels, model.ErrValidation)
+	}
+	for _, l := range labels {
+		if len(l) > model.MaxWorkItemLabelLen {
+			return fmt.Errorf("label exceeds %d characters: %w", model.MaxWorkItemLabelLen, model.ErrValidation)
+		}
+	}
+	return nil
+}
+
+// validateWorkItemCustomFields caps both the number of custom fields and the
+// size of each key. Values aren't individually sized — the serialized blob
+// size is capped by MaxWorkItemDescriptionLen in effect, since the repository
+// stores the whole map as a JSON column.
+func validateWorkItemCustomFields(cf map[string]interface{}) error {
+	if len(cf) > model.MaxWorkItemCustomFields {
+		return fmt.Errorf("too many custom fields (max %d): %w", model.MaxWorkItemCustomFields, model.ErrValidation)
+	}
+	for k := range cf {
+		if len(k) > model.MaxWorkItemCustomFieldKey {
+			return fmt.Errorf("custom field key exceeds %d characters: %w", model.MaxWorkItemCustomFieldKey, model.ErrValidation)
+		}
+	}
+	return nil
+}
 
 func isValidWorkItemType(t string) bool {
 	switch t {

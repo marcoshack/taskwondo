@@ -76,29 +76,32 @@ func (r *WorkItemRepository) ListAllIDs(ctx context.Context, limit, offset int) 
 	return listAllIDs(ctx, r.db, "work_items", limit, offset)
 }
 
+// workItemSelectColumns is the standard column list returned by scanWorkItem /
+// scanWorkItems. The qualifier `wi` must match the alias applied to the
+// work_items table in the surrounding query.
+const workItemSelectColumns = `wi.id, wi.project_id, wi.queue_id, wi.milestone_id, wi.parent_id, wi.item_number, wi.display_id,
+	wi.type, wi.title, wi.description, wi.status, wi.priority,
+	wi.assignee_id, wi.reporter_id, wi.portal_contact_id, wi.visibility,
+	wi.labels, wi.complexity, wi.custom_fields, wi.due_date, wi.resolved_at, wi.sla_target_at, wi.estimated_seconds,
+	wi.created_at, wi.updated_at, u.display_name AS reporter_name`
+
 // GetByID returns a work item by its UUID.
 func (r *WorkItemRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.WorkItem, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, project_id, queue_id, milestone_id, parent_id, item_number, display_id, type, title, description,
-		        status, priority, assignee_id, reporter_id, portal_contact_id, visibility,
-		        labels, complexity, custom_fields, due_date, resolved_at, sla_target_at, estimated_seconds,
-		        created_at, updated_at,
-		        (SELECT display_name FROM users WHERE users.id = work_items.reporter_id) AS reporter_name
-		 FROM work_items
-		 WHERE id = $1 AND deleted_at IS NULL`, id)
+		`SELECT `+workItemSelectColumns+`
+		 FROM work_items wi
+		 LEFT JOIN users u ON u.id = wi.reporter_id
+		 WHERE wi.id = $1 AND wi.deleted_at IS NULL`, id)
 	return scanWorkItem(row)
 }
 
 // GetByProjectAndNumber returns a work item by project ID and item number.
 func (r *WorkItemRepository) GetByProjectAndNumber(ctx context.Context, projectID uuid.UUID, itemNumber int) (*model.WorkItem, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, project_id, queue_id, milestone_id, parent_id, item_number, display_id, type, title, description,
-		        status, priority, assignee_id, reporter_id, portal_contact_id, visibility,
-		        labels, complexity, custom_fields, due_date, resolved_at, sla_target_at, estimated_seconds,
-		        created_at, updated_at,
-		        (SELECT display_name FROM users WHERE users.id = work_items.reporter_id) AS reporter_name
-		 FROM work_items
-		 WHERE project_id = $1 AND item_number = $2 AND deleted_at IS NULL`,
+		`SELECT `+workItemSelectColumns+`
+		 FROM work_items wi
+		 LEFT JOIN users u ON u.id = wi.reporter_id
+		 WHERE wi.project_id = $1 AND wi.item_number = $2 AND wi.deleted_at IS NULL`,
 		projectID, itemNumber)
 	return scanWorkItem(row)
 }
@@ -189,9 +192,10 @@ func (r *WorkItemRepository) List(ctx context.Context, projectID uuid.UUID, filt
 		qb.add("parent_id = ?", *filter.ParentID)
 	}
 
-	// Item IDs filter (for watchlist)
+	// Item IDs filter (for watchlist). Qualified because the outer query joins
+	// users, whose table also has an `id` column.
 	if len(filter.ItemIDs) > 0 {
-		qb.add("id = ANY(?)", pq.Array(filter.ItemIDs))
+		qb.add("wi.id = ANY(?)", pq.Array(filter.ItemIDs))
 	}
 
 	// Full-text search (OR simple config to match display_id tokens like "TF-29")
@@ -201,23 +205,26 @@ func (r *WorkItemRepository) List(ctx context.Context, projectID uuid.UUID, filt
 
 	whereClause := qb.whereClause()
 
-	// Count total (without cursor/limit)
-	countQuery := "SELECT COUNT(*) FROM work_items " + whereClause
+	// Count total (without cursor/limit). Aliased so `wi.id` in qb.conditions
+	// (added above for watchlist) resolves here.
+	countQuery := "SELECT COUNT(*) FROM work_items wi " + whereClause
 	var total int
 	if err := r.db.QueryRowContext(ctx, countQuery, qb.args...).Scan(&total); err != nil {
 		return nil, fmt.Errorf("counting work items: %w", err)
 	}
 
-	// Determine sort column and order
-	sortCol := "created_at"
+	// Determine sort column and order. The column name is qualified with `wi.`
+	// so it's unambiguous under the `LEFT JOIN users u` in the SELECT query;
+	// ambiguity would otherwise bite on created_at / updated_at / id.
+	sortCol := "wi.created_at"
 	switch filter.Sort {
 	case "updated_at", "due_date", "item_number", "type", "title", "status":
-		sortCol = filter.Sort
+		sortCol = "wi." + filter.Sort
 	case "priority":
 		// Use CASE expression for semantic ordering: critical(1) > high(2) > medium(3) > low(4)
-		sortCol = "CASE priority WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 WHEN 'low' THEN 4 ELSE 5 END"
+		sortCol = "CASE wi.priority WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 WHEN 'low' THEN 4 ELSE 5 END"
 	case "sla_target_at":
-		sortCol = filter.Sort // COALESCE applied below
+		sortCol = "wi.sla_target_at" // COALESCE applied below
 	}
 	sortOrder := "DESC"
 	if filter.Order == "asc" {
@@ -227,11 +234,11 @@ func (r *WorkItemRepository) List(ctx context.Context, projectID uuid.UUID, filt
 	// Push NULL sla_target_at values to the end regardless of sort direction.
 	// Use extreme but parseable timestamps instead of PostgreSQL infinity/-infinity,
 	// which lib/pq cannot scan into time.Time (breaking cursor pagination).
-	if sortCol == "sla_target_at" {
+	if sortCol == "wi.sla_target_at" {
 		if sortOrder == "ASC" {
-			sortCol = "COALESCE(sla_target_at, '9999-12-31T23:59:59Z'::timestamptz)"
+			sortCol = "COALESCE(wi.sla_target_at, '9999-12-31T23:59:59Z'::timestamptz)"
 		} else {
-			sortCol = "COALESCE(sla_target_at, '0001-01-01T00:00:00Z'::timestamptz)"
+			sortCol = "COALESCE(wi.sla_target_at, '0001-01-01T00:00:00Z'::timestamptz)"
 		}
 	}
 
@@ -240,12 +247,12 @@ func (r *WorkItemRepository) List(ctx context.Context, projectID uuid.UUID, filt
 	if filter.Cursor != nil {
 		var cursorVal interface{}
 		err := r.db.QueryRowContext(ctx,
-			fmt.Sprintf(`SELECT %s FROM work_items WHERE id = $1`, sortCol), *filter.Cursor).Scan(&cursorVal)
+			fmt.Sprintf(`SELECT %s FROM work_items wi WHERE wi.id = $1`, sortCol), *filter.Cursor).Scan(&cursorVal)
 		if err == nil && cursorVal != nil {
 			if sortOrder == "DESC" {
-				qb.add("("+sortCol+", id) < (?, ?)", cursorVal, *filter.Cursor)
+				qb.add("("+sortCol+", wi.id) < (?, ?)", cursorVal, *filter.Cursor)
 			} else {
-				qb.add("("+sortCol+", id) > (?, ?)", cursorVal, *filter.Cursor)
+				qb.add("("+sortCol+", wi.id) > (?, ?)", cursorVal, *filter.Cursor)
 			}
 			// Rebuild WHERE clause with cursor condition
 			whereClause = qb.whereClause()
@@ -261,13 +268,11 @@ func (r *WorkItemRepository) List(ctx context.Context, projectID uuid.UUID, filt
 	}
 
 	selectQuery := fmt.Sprintf(
-		`SELECT id, project_id, queue_id, milestone_id, parent_id, item_number, display_id, type, title, description,
-		        status, priority, assignee_id, reporter_id, portal_contact_id, visibility,
-		        labels, complexity, custom_fields, due_date, resolved_at, sla_target_at, estimated_seconds,
-		        created_at, updated_at,
-		        (SELECT display_name FROM users WHERE users.id = work_items.reporter_id) AS reporter_name
-		 FROM work_items %s
-		 ORDER BY %s %s, id %s
+		`SELECT `+workItemSelectColumns+`
+		 FROM work_items wi
+		 LEFT JOIN users u ON u.id = wi.reporter_id
+		 %s
+		 ORDER BY %s %s, wi.id %s
 		 LIMIT %d`,
 		whereClause, sortCol, sortOrder, sortOrder, limit+1)
 
@@ -277,7 +282,7 @@ func (r *WorkItemRepository) List(ctx context.Context, projectID uuid.UUID, filt
 	}
 	defer rows.Close()
 
-	items, err := scanWorkItems(rows)
+	items, err := scanWorkItems(rows, limit+1)
 	if err != nil {
 		return nil, err
 	}
@@ -422,8 +427,11 @@ func scanWorkItem(row *sql.Row) (*model.WorkItem, error) {
 	return &item, nil
 }
 
-func scanWorkItems(rows *sql.Rows) ([]model.WorkItem, error) {
-	var items []model.WorkItem
+// scanWorkItems scans rows into a slice. capacityHint should be the expected
+// number of rows (e.g. the query limit) to pre-size the slice and avoid
+// repeated growth; pass 0 if unknown.
+func scanWorkItems(rows *sql.Rows, capacityHint int) ([]model.WorkItem, error) {
+	items := make([]model.WorkItem, 0, capacityHint)
 	for rows.Next() {
 		var item model.WorkItem
 		var cols workItemScanCols
@@ -610,19 +618,16 @@ func (r *WorkItemRepository) SearchFTS(ctx context.Context, query string, access
 // given type that have sla_target_at IS NULL. Used for backfilling SLA deadlines.
 func (r *WorkItemRepository) ListByProjectTypeNullSLA(ctx context.Context, projectID uuid.UUID, workItemType string) ([]model.WorkItem, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, project_id, queue_id, milestone_id, parent_id, item_number, display_id, type, title, description,
-		        status, priority, assignee_id, reporter_id, portal_contact_id, visibility,
-		        labels, complexity, custom_fields, due_date, resolved_at, sla_target_at, estimated_seconds,
-		        created_at, updated_at,
-		        (SELECT display_name FROM users WHERE users.id = work_items.reporter_id) AS reporter_name
-		 FROM work_items
-		 WHERE project_id = $1 AND type = $2 AND sla_target_at IS NULL AND deleted_at IS NULL`,
+		`SELECT `+workItemSelectColumns+`
+		 FROM work_items wi
+		 LEFT JOIN users u ON u.id = wi.reporter_id
+		 WHERE wi.project_id = $1 AND wi.type = $2 AND wi.sla_target_at IS NULL AND wi.deleted_at IS NULL`,
 		projectID, workItemType)
 	if err != nil {
 		return nil, fmt.Errorf("listing items for SLA backfill: %w", err)
 	}
 	defer rows.Close()
-	return scanWorkItems(rows)
+	return scanWorkItems(rows, 0)
 }
 
 // UpdateSLATargetAt updates only the sla_target_at column for a work item.

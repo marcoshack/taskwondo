@@ -81,6 +81,9 @@ func (s *SearchService) Search(ctx context.Context, info *model.AuthInfo, filter
 // SearchFTS performs a cross-project full-text search with RBAC filtering.
 // Queries work items, teams, queues, and milestones and merges results.
 func (s *SearchService) SearchFTS(ctx context.Context, info *model.AuthInfo, filter *model.SearchFilter) ([]model.SearchResult, error) {
+	if len(filter.Query) > model.MaxSearchQueryLen {
+		return nil, fmt.Errorf("search query exceeds %d characters: %w", model.MaxSearchQueryLen, model.ErrValidation)
+	}
 	access, err := s.resolveAccess(ctx, info.UserID, filter.ProjectIDs)
 	if err != nil {
 		return nil, err
@@ -130,6 +133,9 @@ func (s *SearchService) SearchFTS(ctx context.Context, info *model.AuthInfo, fil
 
 // SearchSemantic performs a semantic (vector) search with RBAC filtering.
 func (s *SearchService) SearchSemantic(ctx context.Context, info *model.AuthInfo, filter *model.SearchFilter) ([]model.SearchResult, error) {
+	if len(filter.Query) > model.MaxSearchQueryLen {
+		return nil, fmt.Errorf("search query exceeds %d characters: %w", model.MaxSearchQueryLen, model.ErrValidation)
+	}
 	access, err := s.resolveAccess(ctx, info.UserID, filter.ProjectIDs)
 	if err != nil {
 		return nil, err

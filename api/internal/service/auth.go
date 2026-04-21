@@ -241,7 +241,7 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (string
 	}
 
 	if err := s.users.UpdateLastLogin(ctx, user.ID); err != nil {
-		log.Ctx(ctx).Warn().Err(err).Msg("failed to update last login")
+		log.Ctx(ctx).Warn().Err(err).Str("user_id", user.ID.String()).Msg("failed to update last login")
 	}
 
 	return token, user, nil
@@ -788,7 +788,7 @@ func (s *AuthService) VerifyEmailAndCreateUser(ctx context.Context, rawToken, pa
 	}
 
 	if err := s.users.UpdateLastLogin(ctx, user.ID); err != nil {
-		log.Ctx(ctx).Warn().Err(err).Msg("failed to update last login")
+		log.Ctx(ctx).Warn().Err(err).Str("user_id", user.ID.String()).Msg("failed to update last login")
 	}
 
 	log.Ctx(ctx).Info().Str("email", user.Email).Msg("user created via email verification")
@@ -915,7 +915,7 @@ func (s *AuthService) ResetPasswordWithToken(ctx context.Context, rawToken, pass
 	}
 
 	if err := s.users.UpdateLastLogin(ctx, user.ID); err != nil {
-		log.Ctx(ctx).Warn().Err(err).Msg("failed to update last login")
+		log.Ctx(ctx).Warn().Err(err).Str("user_id", user.ID.String()).Msg("failed to update last login")
 	}
 
 	log.Ctx(ctx).Info().Str("email", user.Email).Msg("password reset completed")
@@ -1003,7 +1003,7 @@ func (s *AuthService) OAuthCallback(ctx context.Context, providerName, code, sta
 	}
 
 	if err := s.users.UpdateLastLogin(ctx, user.ID); err != nil {
-		log.Ctx(ctx).Warn().Err(err).Msg("failed to update last login")
+		log.Ctx(ctx).Warn().Err(err).Str("user_id", user.ID.String()).Msg("failed to update last login")
 	}
 
 	return token, user, nil

@@ -999,7 +999,12 @@ func newTestWorkItemSetup() *testWorkItemSetup {
 	slaRepo := newMockSLARepo()
 	slaService := NewSLAService(slaRepo, projectRepo, memberRepo, workflowRepo)
 	store := newMockStorage()
-	svc := NewWorkItemService(itemRepo, eventRepo, commentRepo, relationRepo, attachRepo, timeEntryRepo, watcherRepo, projectRepo, memberRepo, workflowRepo, typeWorkflowRepo, queueRepo, milestoneRepo, slaRepo, slaService, store, 50*1024*1024)
+	svc := NewWorkItemService(
+		WithWorkItemRepos(itemRepo, eventRepo, commentRepo, relationRepo, attachRepo, timeEntryRepo, watcherRepo),
+		WithProjectContext(projectRepo, memberRepo, workflowRepo, typeWorkflowRepo, queueRepo, milestoneRepo),
+		WithSLA(slaRepo, slaService),
+		WithStorage(store, 50*1024*1024),
+	)
 	return &testWorkItemSetup{
 		svc:              svc,
 		itemRepo:         itemRepo,

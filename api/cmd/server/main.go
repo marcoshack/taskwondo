@@ -158,7 +158,12 @@ func main() {
 	slaService := service.NewSLAService(slaRepo, projectRepo, projectMemberRepo, workflowRepo)
 	slaService.SetBackfiller(workItemRepo)
 	escalationService := service.NewEscalationService(escalationRepo, projectRepo, projectMemberRepo, userRepo)
-	workItemService := service.NewWorkItemService(workItemRepo, workItemEventRepo, commentRepo, relationRepo, attachmentRepo, timeEntryRepo, watcherRepo, projectRepo, projectMemberRepo, workflowRepo, typeWorkflowRepo, queueRepo, milestoneRepo, slaRepo, slaService, store, cfg.MaxUploadSize)
+	workItemService := service.NewWorkItemService(
+		service.WithWorkItemRepos(workItemRepo, workItemEventRepo, commentRepo, relationRepo, attachmentRepo, timeEntryRepo, watcherRepo),
+		service.WithProjectContext(projectRepo, projectMemberRepo, workflowRepo, typeWorkflowRepo, queueRepo, milestoneRepo),
+		service.WithSLA(slaRepo, slaService),
+		service.WithStorage(store, cfg.MaxUploadSize),
+	)
 	inboxService := service.NewInboxService(inboxRepo, projectMemberRepo)
 	userSettingService := service.NewUserSettingService(userSettingRepo, projectRepo, projectMemberRepo)
 	systemSettingService := service.NewSystemSettingService(systemSettingRepo)
@@ -347,14 +352,18 @@ func main() {
 		r.With(authLimiter).Post("/auth/forgot-password", auth.ForgotPassword)
 		r.With(authLimiter).Post("/auth/reset-password", auth.ResetPassword)
 		r.Get("/auth/providers", auth.AuthProviders)
-		r.Get("/auth/{provider}", auth.OAuthAuth)
+		// Rate-limited: the OAuth URL endpoint creates a signed state token and
+		// hits the configured providers per-call. Unlimited invocations could
+		// be used to probe provider availability or exhaust state storage.
+		r.With(authLimiter).Get("/auth/{provider}", auth.OAuthAuth)
 		r.With(authLimiter).Post("/auth/{provider}/callback", auth.OAuthCallback)
 
 		// Public settings (unauthenticated)
 		r.Get("/settings/public", systemSettings.GetPublic)
 
-		// Public invite info (unauthenticated) — resolves project or namespace invites
-		r.Get("/invites/{code}", invites.GetInviteInfo)
+		// Public invite info (unauthenticated) — resolves project or namespace invites.
+		// Rate-limited to prevent enumeration of valid invite codes.
+		r.With(authLimiter).Get("/invites/{code}", invites.GetInviteInfo)
 
 		// Public avatar serving (loaded by <img> tags which can't send JWT)
 		r.Get("/users/{userId}/avatar", auth.GetUserAvatar)

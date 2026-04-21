@@ -30,6 +30,18 @@ const (
 	VisibilityPublic   = "public"
 )
 
+// Work item input size limits. Enforced at the service layer to prevent
+// pathological payloads from hitting the database.
+const (
+	MaxWorkItemTitleLen       = 500
+	MaxWorkItemDescriptionLen = 100_000
+	MaxWorkItemLabels         = 50
+	MaxWorkItemLabelLen       = 100
+	MaxWorkItemCustomFields   = 50
+	MaxWorkItemCustomFieldKey = 100
+	MaxSearchQueryLen         = 200
+)
+
 // WorkItem represents a task, ticket, bug, feedback item, or epic.
 type WorkItem struct {
 	ID              uuid.UUID              `json:"id"`
