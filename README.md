@@ -137,22 +137,7 @@ The MCP server connects to a running Taskwondo instance via API key. Set the `TA
 
 ## Development
 
-Requires Go 1.25+, Node.js 22+, Docker.
-
-```bash
-./install.sh --manual-setup -y # generate .env with secrets and defaults
-make setup                     # configure git hooks
-make dev                       # starts Postgres + MinIO + API (hot-reload) + Vite dev server
-```
-
-Run tests:
-
-```bash
-make test                      # Go tests + frontend build
-make test-e2e                  # Playwright E2E tests (fully containerized)
-```
-
-See [AGENTS.md](AGENTS.md) for full architecture notes and conventions.
+See [README_DEV.md](README_DEV.md) for development setup instructions (Docker, Colima on macOS, running tests, etc.).
 
 ## License
 

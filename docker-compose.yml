@@ -4,6 +4,8 @@ services:
     build:
       context: ./api
       dockerfile: ../docker/Dockerfile.api
+      args:
+        - GOPROXY
     depends_on:
       postgres:
         condition: service_healthy
@@ -70,6 +72,8 @@ services:
     build:
       context: ./api
       dockerfile: ../docker/Dockerfile.worker
+      args:
+        - GOPROXY
     depends_on:
       postgres:
         condition: service_healthy

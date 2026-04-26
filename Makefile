@@ -1,4 +1,4 @@
-.PHONY: build push help setup dev dev-stop dev-db dev-api dev-web dev-worker up down logs logs-api migrate migrate-new test test-api test-web test-e2e test-e2e-dev test-e2e-report check-env release build-mcp build-mcp-linux build-mcp-windows build-mcpb build-worker lint-ci
+.PHONY: build push help setup dev dev-stop dev-db dev-api dev-web dev-worker up down logs logs-api migrate migrate-new test test-api test-web test-e2e test-e2e-dev test-e2e-report check-env check-tools check-air release build-mcp build-mcp-linux build-mcp-windows build-mcpb build-worker lint-ci
 
 # Required environment variables (checked by sourcing .env)
 REQUIRED_VARS := POSTGRES_USER POSTGRES_PASSWORD MINIO_ROOT_USER MINIO_ROOT_PASSWORD JWT_SECRET DATABASE_URL STORAGE_ACCESS_KEY STORAGE_SECRET_KEY
@@ -17,11 +17,55 @@ build: test build-worker build-mcp ## Build all Docker images, worker, MCP serve
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-setup: ## Set up local dev environment (git hooks, etc.)
+setup: ## Set up local dev environment (verify tools, install air, configure git hooks)
+	@printf "$(CYAN)## Checking required tools...$(RESET)\n"
+	@missing=""; \
+	for cmd in go node npm docker; do \
+		if ! command -v $$cmd >/dev/null 2>&1; then missing="$$missing $$cmd"; fi; \
+	done; \
+	if [ -n "$$missing" ]; then \
+		printf "\033[31m## Error: missing required tools:%s\033[0m\n" "$$missing"; \
+		echo "Install the missing tools and ensure they are on your PATH, then re-run 'make setup'."; \
+		echo "  - Go 1.25+:  https://go.dev/dl/"; \
+		echo "  - Node 22+:  https://nodejs.org/"; \
+		echo "  - Docker:    https://docs.docker.com/get-docker/"; \
+		exit 1; \
+	fi
+	@printf "$(GREEN)## Required tools OK (go, node, npm, docker)$(RESET)\n"
+	@printf "$(CYAN)## Installing air (Go hot-reload)...$(RESET)\n"
+	@go install github.com/air-verse/air@latest
+	@if ! command -v air >/dev/null 2>&1; then \
+		gobin="$$(go env GOBIN)"; \
+		[ -z "$$gobin" ] && gobin="$$(go env GOPATH)/bin"; \
+		printf "\033[33m## air installed to %s but not on PATH.\033[0m\n" "$$gobin"; \
+		printf "\033[33m## Add it to your shell profile, e.g.: export PATH=\"\$$PATH:%s\"\033[0m\n" "$$gobin"; \
+		exit 1; \
+	fi
+	@printf "$(GREEN)## air installed: %s$(RESET)\n" "$$(command -v air)"
 	@git config core.hooksPath .githooks
 	@printf "$(GREEN)## Git hooks configured (.githooks/)$(RESET)\n"
 
-check-env: ## Verify .env exists and has all required variables
+check-tools: ## Verify required tools are installed (go, node, npm, docker)
+	@missing=""; \
+	for cmd in go node npm docker; do \
+		if ! command -v $$cmd >/dev/null 2>&1; then missing="$$missing $$cmd"; fi; \
+	done; \
+	if [ -n "$$missing" ]; then \
+		printf "\033[31mError: missing required tools:%s\033[0m\n" "$$missing"; \
+		echo "Please install the missing tools and ensure they are on your PATH."; \
+		exit 1; \
+	fi
+
+check-air: ## Verify air is installed (required for Go hot-reload in dev)
+	@if ! command -v air >/dev/null 2>&1; then \
+		printf "\033[31mError: air is not installed (required for hot-reload).\033[0m\n"; \
+		echo "Run: make setup"; \
+		echo "Or install manually: go install github.com/air-verse/air@latest"; \
+		echo "(ensure \$$(go env GOPATH)/bin is on your PATH)"; \
+		exit 1; \
+	fi
+
+check-env: check-tools ## Verify .env exists and has all required variables
 	@if [ ! -f .env ]; then \
 		printf "\033[31mError: .env file not found\033[0m\n"; \
 		echo "Run: cp .env.template .env"; \
@@ -41,7 +85,7 @@ check-env: ## Verify .env exists and has all required variables
 
 # --- Development ---
 
-dev: check-env dev-services ## Start all services for development (API + Web + Worker)
+dev: check-env check-air dev-services ## Start all services for development (API + Web + Worker)
 	trap 'kill 0' EXIT; \
 	(set -a && . ./.env && set +a && export DISCORD_REDIRECT_URI=http://localhost:5173/auth/discord/callback && cd api && air) & \
 	(cd web && npm run dev -- --host) & \
@@ -62,13 +106,13 @@ dev-services: check-env ## Start PostgreSQL, MinIO, NATS, Mailpit and Ollama
 
 dev-db: dev-services ## Alias for dev-services (legacy)
 
-dev-api: check-env dev-services ## Start API server with hot reload (requires air: go install github.com/air-verse/air@latest)
+dev-api: check-env check-air dev-services ## Start API server with hot reload (air is installed by 'make setup')
 	set -a && . ./.env && set +a && export DISCORD_REDIRECT_URI=http://localhost:5173/auth/discord/callback && cd api && air
 
 dev-web: ## Start frontend dev server (Vite on :5173, proxies /api to :8080)
 	cd web && npm run dev
 
-dev-worker: check-env dev-services ## Start worker with hot reload (requires air)
+dev-worker: check-env check-air dev-services ## Start worker with hot reload (air is installed by 'make setup')
 	set -a && . ./.env && set +a && cd api && air -c .air-worker.toml
 
 # --- Docker ---
@@ -146,12 +190,12 @@ _release:
 	rm -rf build/release
 	mkdir -p build/release/taskwondo-server-$(VERSION)/bin build/release/taskwondo-server-$(VERSION)/html
 	@printf "$(CYAN)## Building API binary (Docker)...$(RESET)\n"
-	docker build -f docker/Dockerfile.api --target builder -t taskwondo-api-builder api
+	docker build -f docker/Dockerfile.api --target builder --build-arg GOPROXY -t taskwondo-api-builder api
 	docker create --name taskwondo-api-extract taskwondo-api-builder true
 	docker cp taskwondo-api-extract:/bin/taskwondo build/release/taskwondo-server-$(VERSION)/bin/taskwondo-api
 	docker rm taskwondo-api-extract
 	@printf "$(CYAN)## Building Worker binary (Docker)...$(RESET)\n"
-	docker build -f docker/Dockerfile.worker --target builder -t taskwondo-worker-builder api
+	docker build -f docker/Dockerfile.worker --target builder --build-arg GOPROXY -t taskwondo-worker-builder api
 	docker create --name taskwondo-worker-extract taskwondo-worker-builder true
 	docker cp taskwondo-worker-extract:/bin/taskwondo-worker build/release/taskwondo-server-$(VERSION)/bin/taskwondo-worker
 	docker rm taskwondo-worker-extract
@@ -207,7 +251,7 @@ build-mcpb: build-mcp-windows ## Build the MCPB bundle for Claude Desktop (usage
 
 # --- CI Linting ---
 
-lint-ci: ## Lint GitHub Actions workflows and check for deprecated Node.js runtimes (non-blocking)
+lint-ci: check-tools ## Lint GitHub Actions workflows and check for deprecated Node.js runtimes (non-blocking)
 	@echo ""
 	@printf "$(CYAN)## Linting GitHub Actions workflows...$(RESET)\n"
 	@docker run --rm -v "$$(pwd)/.github:/repo/.github:ro" --entrypoint sh \
@@ -246,18 +290,18 @@ LIGHT_BLUE := \033[94m
 
 test: test-api test-web lint-ci ## Run all tests (API + frontend + CI lint)
 
-test-api: ## Run Go API tests
+test-api: check-tools ## Run Go API tests
 	@echo ""
 	@printf "$(CYAN)## Running Go tests...$(RESET)\n"
 	cd api && go test ./... -v -race -cover 2>&1 | tee /tmp/taskwondo-test-output.txt
 	@echo ""
 	@printf "$(LIGHT_BLUE)## Coverage by package:$(RESET)\n"
 	@grep -E '^ok\s' /tmp/taskwondo-test-output.txt | sed 's|github.com/marcoshack/taskwondo/||' | awk '{pkg=$$2; for(i=1;i<=NF;i++) if($$i ~ /^coverage:/) {pct=$$(i+1); gsub(/%/,"",pct); printf "$(LIGHT_BLUE)   %-40s %s%%$(RESET)\n", pkg, pct}}' | sort
-	@total=$$(grep -oP 'coverage: \K[0-9.]+' /tmp/taskwondo-test-output.txt | awk '{s+=$$1; n++} END {if(n>0) printf "%.1f", s/n; else print "0"}'); \
+	@total=$$(sed -n 's/.*coverage: \([0-9.]*\)%.*/\1/p' /tmp/taskwondo-test-output.txt | awk '{s+=$$1; n++} END {if(n>0) printf "%.1f", s/n; else print "0"}'); \
 	printf "$(LIGHT_BLUE)   %-40s %s%%$(RESET)\n" "TOTAL (avg)" "$$total"
 	@printf "$(GREEN)## Go tests passed$(RESET)\n"
 
-test-web: ## Run frontend tests and build (install, Vitest, tsc + vite build)
+test-web: check-tools ## Run frontend tests and build (install, Vitest, tsc + vite build)
 	@echo ""
 	@printf "$(CYAN)## Installing frontend dependencies...$(RESET)\n"
 	cd web && npm ci
