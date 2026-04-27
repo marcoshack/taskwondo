@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { Check, ChevronDown, ChevronRight, Copy, KeyRound, Save, Trash2 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAdminUsers, useUpdateUser, useCreateUser, useResetUserPassword, useUserProjects, useAddUserToProject, useUpdateUserProjectRole, useRemoveUserFromProject } from '@/hooks/useAdmin'
 import { usePreference, useSetPreference } from '@/hooks/usePreferences'
 import { useProjects } from '@/hooks/useProjects'
-import { useSystemSetting, useSetSystemSetting, usePublicSettings } from '@/hooks/useSystemSettings'
+import { usePublicSettings } from '@/hooks/useSystemSettings'
+import { useDebounce } from '@/hooks/useDebounce'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import { ProjectKeyBadge } from '@/components/ui/ProjectKeyBadge'
@@ -29,29 +30,135 @@ function parseStatusFilter(v: unknown): string[] {
   return ['active']
 }
 
-export function AdminUsersPage() {
+const USER_SORT_ACCESSORS: Record<string, (u: AdminUser) => string | number> = {
+  name: (u) => u.display_name.toLowerCase(),
+  maxProjects: (u) => u.max_projects ?? Number.POSITIVE_INFINITY,
+  maxNamespaces: (u) => u.max_namespaces ?? Number.POSITIVE_INFINITY,
+  role: (u) => u.global_role,
+  status: (u) => (u.is_active ? 0 : 1),
+  lastLogin: (u) => u.last_login_at ?? '',
+  created: (u) => u.created_at,
+}
+
+function compareValues(a: string | number, b: string | number, order: 'asc' | 'desc'): number {
+  let cmp: number
+  if (typeof a === 'number' && typeof b === 'number') cmp = a - b
+  else cmp = String(a).localeCompare(String(b))
+  return order === 'asc' ? cmp : -cmp
+}
+
+function SortIndicator({ active, direction }: { active: boolean; direction?: 'asc' | 'desc' }) {
+  if (!active) {
+    return (
+      <svg className="w-3 h-3 text-gray-300 dark:text-gray-600" viewBox="0 0 10 14" fill="currentColor">
+        <path d="M5 0L9 5H1L5 0Z" />
+        <path d="M5 14L1 9H9L5 14Z" />
+      </svg>
+    )
+  }
+  if (direction === 'asc') {
+    return (
+      <svg className="w-3 h-3 text-indigo-600 dark:text-indigo-400" viewBox="0 0 10 7" fill="currentColor">
+        <path d="M5 0L10 7H0L5 0Z" />
+      </svg>
+    )
+  }
+  return (
+    <svg className="w-3 h-3 text-indigo-600 dark:text-indigo-400" viewBox="0 0 10 7" fill="currentColor">
+      <path d="M5 7L0 0H10L5 7Z" />
+    </svg>
+  )
+}
+
+function SortableHeader({
+  sortKey,
+  active,
+  order,
+  onSort,
+  className,
+  children,
+  align = 'left',
+}: {
+  sortKey: string
+  active: boolean
+  order: 'asc' | 'desc'
+  onSort: (key: string) => void
+  className?: string
+  children: React.ReactNode
+  align?: 'left' | 'center' | 'right'
+}) {
+  const justify = align === 'right' ? 'justify-end' : align === 'center' ? 'justify-center' : 'justify-start'
+  return (
+    <button
+      type="button"
+      onClick={() => onSort(sortKey)}
+      className={`flex items-center gap-1 ${justify} text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 cursor-pointer select-none ${className ?? ''}`}
+    >
+      <span>{children}</span>
+      <SortIndicator active={active} direction={active ? order : undefined} />
+    </button>
+  )
+}
+
+function formatCreated(iso: string): string {
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return '—'
+  return d.toLocaleDateString()
+}
+
+export function DirectoryUsersTab() {
   const { t } = useTranslation()
   const { user: currentUser } = useAuth()
   const { data: users, isLoading } = useAdminUsers()
   const updateUserMutation = useUpdateUser()
   const createUserMutation = useCreateUser()
   const resetPasswordMutation = useResetUserPassword()
+  const { data: publicSettings } = usePublicSettings()
+  const namespacesEnabled = publicSettings?.namespaces_enabled === true
 
   const { data: savedFilter } = usePreference<string>(PREFERENCE_KEY)
   const setPref = useSetPreference()
   const statusFilter = parseStatusFilter(savedFilter)
 
+  const [search, setSearch] = useState('')
+  const debouncedSearch = useDebounce(search, 300)
+  const [sortBy, setSortBy] = useState<string | null>(null)
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+
   function handleStatusFilterChange(selected: string[]) {
     setPref.mutate({ key: PREFERENCE_KEY, value: JSON.stringify(selected) })
   }
 
+  function handleSort(key: string) {
+    if (sortBy === key) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortBy(key)
+      setSortOrder('asc')
+    }
+  }
+
   const filteredUsers = useMemo(() => {
     if (!users) return []
-    if (statusFilter.length === 0 || statusFilter.length === 2) return users
-    if (statusFilter.includes('active')) return users.filter((u) => u.is_active)
-    if (statusFilter.includes('disabled')) return users.filter((u) => !u.is_active)
-    return users
-  }, [users, statusFilter])
+    let result = users
+    if (statusFilter.length > 0 && statusFilter.length < 2) {
+      if (statusFilter.includes('active')) result = result.filter((u) => u.is_active)
+      else if (statusFilter.includes('disabled')) result = result.filter((u) => !u.is_active)
+    }
+    const q = debouncedSearch.trim().toLowerCase()
+    if (q) {
+      result = result.filter((u) =>
+        u.display_name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q),
+      )
+    }
+    if (sortBy) {
+      const accessor = USER_SORT_ACCESSORS[sortBy]
+      if (accessor) {
+        result = [...result].sort((a, b) => compareValues(accessor(a), accessor(b), sortOrder))
+      }
+    }
+    return result
+  }, [users, statusFilter, debouncedSearch, sortBy, sortOrder])
 
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null)
   const [saved, setSaved] = useState<Record<string, boolean>>({})
@@ -66,30 +173,6 @@ export function AdminUsersPage() {
   const [resetTarget, setResetTarget] = useState<AdminUser | null>(null)
   const [copied, setCopied] = useState(false)
 
-  // Global default project limit
-  const { data: savedProjectLimit, isLoading: limitLoading } = useSystemSetting<number>('max_projects_per_user')
-  const setSettingMutation = useSetSystemSetting()
-  const [projectLimit, setProjectLimit] = useState('')
-  const [limitSaved, setLimitSaved] = useState(false)
-
-  useEffect(() => {
-    if (savedProjectLimit !== undefined) {
-      setProjectLimit(savedProjectLimit != null ? String(savedProjectLimit) : '5')
-    }
-  }, [savedProjectLimit])
-
-  const limitDirty = projectLimit !== (savedProjectLimit != null ? String(savedProjectLimit) : '5')
-
-  function handleLimitSave() {
-    setLimitSaved(false)
-    const value = parseInt(projectLimit, 10)
-    if (isNaN(value) || value < 0) return
-    setSettingMutation.mutate(
-      { key: 'max_projects_per_user', value },
-      { onSuccess: () => setLimitSaved(true) },
-    )
-  }
-
   // Per-user project limit
   const [userLimitInputs, setUserLimitInputs] = useState<Record<string, string>>({})
 
@@ -102,9 +185,8 @@ export function AdminUsersPage() {
     if (raw === undefined) return
     const trimmed = raw.trim()
 
-    // Empty means "reset to default" (send -1)
     if (trimmed === '') {
-      if (currentMaxProjects == null) return // already default, no-op
+      if (currentMaxProjects == null) return
       updateUserMutation.mutate(
         { userId, input: { max_projects: -1 } },
         { onSuccess: () => showSaved(`limit:${userId}`) },
@@ -114,7 +196,7 @@ export function AdminUsersPage() {
 
     const value = parseInt(trimmed, 10)
     if (isNaN(value) || value < 0) return
-    if (currentMaxProjects != null && value === currentMaxProjects) return // unchanged
+    if (currentMaxProjects != null && value === currentMaxProjects) return
     updateUserMutation.mutate(
       { userId, input: { max_projects: value } },
       { onSuccess: () => showSaved(`limit:${userId}`) },
@@ -132,31 +214,6 @@ export function AdminUsersPage() {
     if (raw === undefined) return false
     const current = u.max_projects != null ? String(u.max_projects) : ''
     return raw !== current
-  }
-
-  // Global default namespace limit
-  const { data: publicSettings } = usePublicSettings()
-  const namespacesEnabled = publicSettings?.namespaces_enabled === true
-  const { data: savedNamespaceLimit, isLoading: nsLimitLoading } = useSystemSetting<number>('max_namespaces_per_user')
-  const [namespaceLimit, setNamespaceLimit] = useState('')
-  const [nsLimitSaved, setNsLimitSaved] = useState(false)
-
-  useEffect(() => {
-    if (savedNamespaceLimit !== undefined) {
-      setNamespaceLimit(savedNamespaceLimit != null ? String(savedNamespaceLimit) : '1')
-    }
-  }, [savedNamespaceLimit])
-
-  const nsLimitDirty = namespaceLimit !== (savedNamespaceLimit != null ? String(savedNamespaceLimit) : '1')
-
-  function handleNsLimitSave() {
-    setNsLimitSaved(false)
-    const value = parseInt(namespaceLimit, 10)
-    if (isNaN(value) || value < 0) return
-    setSettingMutation.mutate(
-      { key: 'max_namespaces_per_user', value },
-      { onSuccess: () => setNsLimitSaved(true) },
-    )
   }
 
   // Per-user namespace limit
@@ -318,12 +375,14 @@ export function AdminUsersPage() {
   }
 
   return (
-    <div className="max-w-3xl space-y-6">
-      <div className="space-y-3 sm:space-y-0 sm:flex sm:items-start sm:justify-between sm:gap-4">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('admin.users.title')}</h2>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('admin.users.description')}</p>
-        </div>
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <Input
+          placeholder={t('admin.directory.search.users')}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="max-w-sm"
+        />
         <div className="flex items-center gap-2 flex-shrink-0">
           <MultiSelect
             options={[
@@ -341,72 +400,6 @@ export function AdminUsersPage() {
         </div>
       </div>
 
-      {/* Global default project limit */}
-      <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-        <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
-          {t('admin.general.projectLimit.title')}
-        </h3>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-          {t('admin.general.projectLimit.help')}
-        </p>
-        <div className="flex items-end gap-3">
-          <Input
-            label={t('admin.general.projectLimit.label')}
-            type="number"
-            min={0}
-            value={projectLimit}
-            onChange={(e) => { setProjectLimit(e.target.value); setLimitSaved(false) }}
-            className="w-24"
-            disabled={limitLoading}
-          />
-          <Button
-            onClick={handleLimitSave}
-            disabled={!limitDirty || setSettingMutation.isPending}
-          >
-            {setSettingMutation.isPending ? t('common.saving') : t('common.save')}
-          </Button>
-          {limitSaved && (
-            <span className="text-sm text-green-600 dark:text-green-400 pb-2">
-              {t('admin.general.projectLimit.saved')}
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Global default namespace limit — only when namespaces feature is enabled */}
-      {namespacesEnabled && (
-        <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-          <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
-            {t('admin.general.namespaceLimit.title')}
-          </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-            {t('admin.general.namespaceLimit.help')}
-          </p>
-          <div className="flex items-end gap-3">
-            <Input
-              label={t('admin.general.namespaceLimit.label')}
-              type="number"
-              min={0}
-              value={namespaceLimit}
-              onChange={(e) => { setNamespaceLimit(e.target.value); setNsLimitSaved(false) }}
-              className="w-24"
-              disabled={nsLimitLoading}
-            />
-            <Button
-              onClick={handleNsLimitSave}
-              disabled={!nsLimitDirty || setSettingMutation.isPending}
-            >
-              {setSettingMutation.isPending ? t('common.saving') : t('common.save')}
-            </Button>
-            {nsLimitSaved && (
-              <span className="text-sm text-green-600 dark:text-green-400 pb-2">
-                {t('admin.general.namespaceLimit.saved')}
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-
       {error && (
         <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
       )}
@@ -414,69 +407,99 @@ export function AdminUsersPage() {
       {filteredUsers.length === 0 ? (
         <p className="text-sm text-gray-500 dark:text-gray-400">{t('admin.users.noUsers')}</p>
       ) : (
-        <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
+        (() => {
+          const dataCols = namespacesEnabled ? 6 : 5
+          const gridStyle: React.CSSProperties = {
+            gridTemplateColumns: `25% repeat(${dataCols}, minmax(0, 1fr)) 2rem`,
+          }
+          return (
+        <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+          {/* Desktop column headers */}
+          <div
+            className="hidden sm:grid items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700"
+            style={gridStyle}
+          >
+            <SortableHeader sortKey="name" active={sortBy === 'name'} order={sortOrder} onSort={handleSort}>
+              {t('admin.directory.col.user')}
+            </SortableHeader>
+            <SortableHeader sortKey="maxProjects" active={sortBy === 'maxProjects'} order={sortOrder} onSort={handleSort} align="center">
+              {t('admin.directory.col.maxProjects')}
+            </SortableHeader>
+            {namespacesEnabled && (
+              <SortableHeader sortKey="maxNamespaces" active={sortBy === 'maxNamespaces'} order={sortOrder} onSort={handleSort} align="center">
+                {t('admin.directory.col.maxNamespaces')}
+              </SortableHeader>
+            )}
+            <SortableHeader sortKey="role" active={sortBy === 'role'} order={sortOrder} onSort={handleSort} align="center">
+              {t('admin.directory.col.role')}
+            </SortableHeader>
+            <SortableHeader sortKey="status" active={sortBy === 'status'} order={sortOrder} onSort={handleSort} align="center">
+              {t('admin.directory.col.status')}
+            </SortableHeader>
+            <SortableHeader sortKey="lastLogin" active={sortBy === 'lastLogin'} order={sortOrder} onSort={handleSort} align="right">
+              {t('admin.directory.col.lastLogin')}
+            </SortableHeader>
+            <SortableHeader sortKey="created" active={sortBy === 'created'} order={sortOrder} onSort={handleSort} align="right">
+              {t('admin.directory.col.created')}
+            </SortableHeader>
+            <span aria-hidden="true" />
+          </div>
+          <div className="divide-y divide-gray-200 dark:divide-gray-700">
           {filteredUsers.map((u) => {
             const isSelf = u.id === currentUser?.id
             const isExpanded = expandedUserId === u.id
 
             return (
               <div key={u.id}>
+                {/* Desktop row */}
                 <div
-                  className="p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  className="hidden sm:grid items-center gap-3 px-3 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  style={gridStyle}
                   onClick={() => setExpandedUserId(isExpanded ? null : u.id)}
                 >
-                  {/* Row 1: identity */}
                   <div className="flex items-center gap-3 min-w-0">
-                    <button className="text-gray-400 shrink-0">
+                    <button className="text-gray-400 shrink-0" type="button">
                       {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                     </button>
                     <Avatar name={u.display_name} avatarUrl={u.avatar_url} size="sm" />
                     <div className="min-w-0 flex-1">
-                      {/* Desktop: name + email on separate lines */}
-                      <div className="hidden sm:block">
-                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                          {u.display_name}
-                          {isSelf && <span className="ml-1 text-xs text-gray-400">({t('common.you')})</span>}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{u.email}</p>
-                      </div>
-                      {/* Mobile: name + email inline, horizontally scrollable */}
-                      <div className="sm:hidden overflow-x-auto scrollbar-none">
-                        <p className="text-sm whitespace-nowrap">
-                          <span className="font-medium text-gray-900 dark:text-gray-100">{u.display_name}</span>
-                          {isSelf && <span className="ml-1 text-xs text-gray-400">({t('common.you')})</span>}
-                          <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">{u.email}</span>
-                        </p>
-                      </div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                        {u.display_name}
+                        {isSelf && <span className="ml-1 text-xs text-gray-400">({t('common.you')})</span>}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{u.email}</p>
                     </div>
-                    {/* Desktop-only: controls inline on row 1 */}
-                    <div className="hidden sm:flex items-center gap-3 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                      {(saved[`role:${u.id}`] || saved[`status:${u.id}`] || saved[`limit:${u.id}`] || saved[`nslimit:${u.id}`]) && (
-                        <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
-                      )}
+                  </div>
+                  <div className="flex items-center justify-center gap-1 min-w-0" onClick={(e) => e.stopPropagation()}>
+                    {u.global_role !== 'admin' && (
+                      <Tooltip content={t('admin.users.maxProjectsHelp')}>
+                        <span className="inline-flex items-center gap-1">
+                          <input
+                            type="number"
+                            min={0}
+                            className="w-14 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-1 py-1 text-xs text-center shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            placeholder={t('admin.users.maxProjectsDefault')}
+                            value={getUserLimitDisplay(u)}
+                            onChange={(e) => handleUserLimitChange(u.id, e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') handleUserLimitSave(u.id, u.max_projects) }}
+                          />
+                          <button
+                            className={`px-1 py-1 rounded-md border ${isUserLimitDirty(u) ? 'border-indigo-400 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-500 dark:text-indigo-400 dark:hover:bg-indigo-900/30' : 'border-gray-300 text-gray-300 cursor-default dark:border-gray-600 dark:text-gray-600'}`}
+                            onClick={() => isUserLimitDirty(u) && handleUserLimitSave(u.id, u.max_projects)}
+                            disabled={!isUserLimitDirty(u)}
+                          >
+                            <Save className="h-3.5 w-3.5" />
+                          </button>
+                        </span>
+                      </Tooltip>
+                    )}
+                    {saved[`limit:${u.id}`] && (
+                      <Check className="h-4 w-4 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
+                    )}
+                  </div>
+                  {namespacesEnabled && (
+                    <div className="flex items-center justify-center gap-1 min-w-0" onClick={(e) => e.stopPropagation()}>
                       {u.global_role !== 'admin' && (
-                        <Tooltip content={t('admin.users.maxProjectsHelp')}>
-                          <span className="inline-flex items-center gap-1">
-                            <input
-                              type="number"
-                              min={0}
-                              className="w-14 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-1 py-1 text-xs text-center shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                              placeholder={t('admin.users.maxProjectsDefault')}
-                              value={getUserLimitDisplay(u)}
-                              onChange={(e) => handleUserLimitChange(u.id, e.target.value)}
-                              onKeyDown={(e) => { if (e.key === 'Enter') handleUserLimitSave(u.id, u.max_projects) }}
-                            />
-                            <button
-                              className={`px-1 py-1 rounded-md border ${isUserLimitDirty(u) ? 'border-indigo-400 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-500 dark:text-indigo-400 dark:hover:bg-indigo-900/30' : 'border-gray-300 text-gray-300 cursor-default dark:border-gray-600 dark:text-gray-600'}`}
-                              onClick={() => isUserLimitDirty(u) && handleUserLimitSave(u.id, u.max_projects)}
-                              disabled={!isUserLimitDirty(u)}
-                            >
-                              <Save className="h-3.5 w-3.5" />
-                            </button>
-                          </span>
-                        </Tooltip>
-                      )}
-                      {u.global_role !== 'admin' && namespacesEnabled && (
                         <Tooltip content={t('admin.users.maxNamespacesHelp')}>
                           <span className="inline-flex items-center gap-1">
                             <input
@@ -498,59 +521,88 @@ export function AdminUsersPage() {
                           </span>
                         </Tooltip>
                       )}
-                      {!isSelf ? (
-                        <select
-                          className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                          value={u.global_role}
-                          onChange={(e) => handleRoleChange(u.id, e.target.value)}
-                          disabled={updateUserMutation.isPending}
-                        >
-                          <option value="admin">{t('admin.users.roles.admin')}</option>
-                          <option value="user">{t('admin.users.roles.user')}</option>
-                        </select>
-                      ) : (
-                        <Badge color={u.global_role === 'admin' ? 'blue' : 'gray'}>
-                          {t(`admin.users.roles.${u.global_role}`)}
-                        </Badge>
+                      {saved[`nslimit:${u.id}`] && (
+                        <Check className="h-4 w-4 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
                       )}
-                      {u.is_active ? (
-                        !isSelf ? (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setDisableTarget(u)}
-                          >
-                            {t('admin.users.active')}
-                          </Button>
-                        ) : (
-                          <Badge color="green">{t('admin.users.active')}</Badge>
-                        )
-                      ) : (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEnable(u.id)}
-                        >
-                          <span className="text-red-600 dark:text-red-400">{t('admin.users.disabled')}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-center gap-1 min-w-0" onClick={(e) => e.stopPropagation()}>
+                    {!isSelf ? (
+                      <select
+                        className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        value={u.global_role}
+                        onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                        disabled={updateUserMutation.isPending}
+                      >
+                        <option value="admin">{t('admin.users.roles.admin')}</option>
+                        <option value="user">{t('admin.users.roles.user')}</option>
+                      </select>
+                    ) : (
+                      <Badge color={u.global_role === 'admin' ? 'blue' : 'gray'}>
+                        {t(`admin.users.roles.${u.global_role}`)}
+                      </Badge>
+                    )}
+                    {saved[`role:${u.id}`] && (
+                      <Check className="h-4 w-4 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
+                    )}
+                  </div>
+                  <div className="flex items-center justify-center gap-1 min-w-0" onClick={(e) => e.stopPropagation()}>
+                    {u.is_active ? (
+                      !isSelf ? (
+                        <Button variant="ghost" size="sm" onClick={() => setDisableTarget(u)}>
+                          {t('admin.users.active')}
                         </Button>
-                      )}
-                      {!isSelf && (
-                        <Tooltip content={t('admin.users.resetPasswordButton')}>
-                          <button
-                            className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                            onClick={() => setResetTarget(u)}
-                          >
-                            <KeyRound className="h-4 w-4" />
-                          </button>
-                        </Tooltip>
-                      )}
-                      <span className="text-xs text-gray-400 w-16 text-right">
-                        {formatLastLogin(u.last_login_at)}
-                      </span>
+                      ) : (
+                        <Badge color="green">{t('admin.users.active')}</Badge>
+                      )
+                    ) : (
+                      <Button variant="ghost" size="sm" onClick={() => handleEnable(u.id)}>
+                        <span className="text-red-600 dark:text-red-400">{t('admin.users.disabled')}</span>
+                      </Button>
+                    )}
+                    {saved[`status:${u.id}`] && (
+                      <Check className="h-4 w-4 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
+                    )}
+                  </div>
+                  <div className="text-right text-xs text-gray-400 truncate min-w-0">
+                    {formatLastLogin(u.last_login_at)}
+                  </div>
+                  <div className="text-right text-xs text-gray-400 truncate min-w-0">
+                    {formatCreated(u.created_at)}
+                  </div>
+                  <div className="flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
+                    {!isSelf && (
+                      <Tooltip content={t('admin.users.resetPasswordButton')}>
+                        <button
+                          className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                          onClick={() => setResetTarget(u)}
+                        >
+                          <KeyRound className="h-4 w-4" />
+                        </button>
+                      </Tooltip>
+                    )}
+                  </div>
+                </div>
+
+                {/* Mobile row */}
+                <div
+                  className="sm:hidden p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  onClick={() => setExpandedUserId(isExpanded ? null : u.id)}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <button className="text-gray-400 shrink-0" type="button">
+                      {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                    </button>
+                    <Avatar name={u.display_name} avatarUrl={u.avatar_url} size="sm" />
+                    <div className="min-w-0 flex-1 overflow-x-auto scrollbar-none">
+                      <p className="text-sm whitespace-nowrap">
+                        <span className="font-medium text-gray-900 dark:text-gray-100">{u.display_name}</span>
+                        {isSelf && <span className="ml-1 text-xs text-gray-400">({t('common.you')})</span>}
+                        <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">{u.email}</span>
+                      </p>
                     </div>
                   </div>
-                  {/* Row 2: mobile-only controls */}
-                  <div className="flex sm:hidden items-center gap-2 mt-2 pl-11" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center gap-2 mt-2 pl-11" onClick={(e) => e.stopPropagation()}>
                     {(saved[`role:${u.id}`] || saved[`status:${u.id}`] || saved[`limit:${u.id}`]) && (
                       <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
                     )}
@@ -571,22 +623,14 @@ export function AdminUsersPage() {
                     )}
                     {u.is_active ? (
                       !isSelf ? (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setDisableTarget(u)}
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => setDisableTarget(u)}>
                           {t('admin.users.active')}
                         </Button>
                       ) : (
                         <Badge color="green">{t('admin.users.active')}</Badge>
                       )
                     ) : (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEnable(u.id)}
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => handleEnable(u.id)}>
                         <span className="text-red-600 dark:text-red-400">{t('admin.users.disabled')}</span>
                       </Button>
                     )}
@@ -624,7 +668,10 @@ export function AdminUsersPage() {
               </div>
             )
           })}
+          </div>
         </div>
+          )
+        })()
       )}
 
       {/* Disable user confirmation modal */}
@@ -779,7 +826,6 @@ function UserProjectsPanel({
     setTimeout(() => setSaved((prev) => ({ ...prev, [key]: false })), 2000)
   }
 
-  // Filter out projects the user is already a member of
   const memberProjectIds = new Set(userProjects?.map((p) => p.project_id) ?? [])
   const availableProjects = allProjects?.filter((p) => !memberProjectIds.has(p.id)) ?? []
   const selectedProject = availableProjects.find((p) => p.id === selectedProjectId)

@@ -22,7 +22,7 @@ const test = base.extend({
   },
 });
 
-test.describe('Admin users page mobile', () => {
+test.describe('Admin directory — Users tab on mobile', () => {
   // Ensure a non-admin user exists for tests that expect a role combobox
   test.beforeAll(async ({ request }) => {
     const adminToken = getAdminToken();
@@ -30,27 +30,24 @@ test.describe('Admin users page mobile', () => {
     await api.createUser(request, adminToken, `mobile-${uniqueId}@e2e.local`, `Mobile User ${uniqueId}`);
   });
 
-  test('users page header and controls are accessible on mobile', async ({ page }) => {
+  test('directory page header and Users tab controls are accessible on mobile', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto('/admin/users');
+    await page.goto('/admin/directory');
 
-    // Title should be visible
-    await expect(page.getByRole('heading', { name: 'Users' })).toBeVisible({ timeout: 10000 });
+    // Title should be visible (Directory page heading)
+    await expect(page.getByRole('heading', { name: 'Directory' })).toBeVisible({ timeout: 10000 });
 
-    // Description text should be visible and not cut off
-    await expect(page.getByText('Manage user accounts')).toBeVisible();
-
-    // The "New User" button should be visible and clickable
+    // The "New User" button on the Users tab should be visible and clickable
     const newUserBtn = page.getByRole('button', { name: /New User/i });
     await expect(newUserBtn).toBeVisible();
 
-    // The status filter should be visible
-    await expect(page.getByRole('button', { name: /Users/i }).first()).toBeVisible();
+    // The search bar specific to the Users tab should be visible
+    await expect(page.getByPlaceholder(/Search users/i)).toBeVisible();
   });
 
   test('user row controls are visible on mobile without overlapping name', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto('/admin/users');
+    await page.goto('/admin/directory');
 
     // Wait for the user list to load by checking for a role combobox (non-admin users)
     const firstCombobox = page.getByRole('combobox').first();
@@ -66,7 +63,7 @@ test.describe('Admin users page mobile', () => {
 
   test('expanding a user row shows project limit on mobile', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto('/admin/users');
+    await page.goto('/admin/directory');
 
     // Wait for a combobox to appear (non-admin user loaded)
     const firstCombobox = page.getByRole('combobox').first();
@@ -79,9 +76,36 @@ test.describe('Admin users page mobile', () => {
     await userRow.click();
 
     // The expanded section should show a project limit input on mobile
-    // (hidden on desktop, shown in expanded panel on mobile)
+    // (hidden on desktop, shown in expanded panel on mobile). The Users tab
+    // no longer shows the global default panels — those moved to the Settings
+    // tab — so the per-user limit is the first spinbutton on the page.
     const spinbuttons = page.getByRole('spinbutton');
-    // There should be at least 2: the global "Max projects per user" + per-user limit
-    await expect(spinbuttons.nth(1)).toBeVisible({ timeout: 5000 });
+    await expect(spinbuttons.first()).toBeVisible({ timeout: 5000 });
+  });
+
+  test('Users tab search filters the user list', async ({ page, request }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+
+    // Create two users with very distinct display names so we can test the filter
+    const adminToken = getAdminToken();
+    const tag = randomUUID().slice(0, 6);
+    const matchEmail = `match-${tag}@e2e.local`;
+    const otherEmail = `other-${tag}@e2e.local`;
+    await api.createUser(request, adminToken, matchEmail, `Findable Person ${tag}`);
+    await api.createUser(request, adminToken, otherEmail, `Hidden Person ${tag}`);
+
+    await page.goto('/admin/directory');
+    await expect(page.getByRole('heading', { name: 'Directory' })).toBeVisible({ timeout: 10000 });
+
+    const searchInput = page.getByPlaceholder(/Search users/i);
+    await searchInput.fill(`Findable Person ${tag}`);
+
+    // Wait past the debounce window. The user list renders both the desktop
+    // and mobile variants in the DOM (one hidden via CSS), so `.locator('visible=true').first()`
+    // narrows to whichever is shown for the current viewport.
+    await expect(
+      page.getByText(`Findable Person ${tag}`).locator('visible=true').first(),
+    ).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(`Hidden Person ${tag}`)).toHaveCount(0);
   });
 });

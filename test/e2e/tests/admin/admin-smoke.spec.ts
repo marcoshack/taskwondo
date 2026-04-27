@@ -51,8 +51,7 @@ function collectPageErrors(page: Page): () => string[] {
 // the route and a heading role-locator that confirms the page body rendered.
 const ADMIN_PAGES: { route: string; heading: string }[] = [
   { route: '/admin/general', heading: 'General' },
-  { route: '/admin/users', heading: 'Users' },
-  { route: '/admin/project-overview', heading: 'Projects & Namespaces' },
+  { route: '/admin/directory', heading: 'Directory' },
   { route: '/admin/workflows', heading: 'Workflows' },
   { route: '/admin/integrations', heading: 'Integrations' },
   { route: '/admin/authentication', heading: 'Authentication' },
@@ -78,12 +77,12 @@ test.describe('Admin pages — smoke tests', () => {
   }
 });
 
-// Regression test for the nil-slice bug on the admin project-overview page.
-// Previously AdminRepository.ListProjects / ListNamespaces used `var items []T`,
+// Regression test for the nil-slice bug on the admin directory's projects/namespaces
+// tabs. Previously AdminRepository.ListProjects / ListNamespaces used `var items []T`,
 // which marshals to JSON `null` when the DB has no rows. The frontend then did
 // `pages.flatMap(p => p.data)` producing `[null]` and the DataTable crashed
 // reading `row.key` on null.
-test.describe('Admin project-overview — empty state regression', () => {
+test.describe('Admin directory — empty state regression', () => {
   test('renders without errors when the API returns empty lists', async ({ page }) => {
     const getErrors = collectPageErrors(page);
 
@@ -112,15 +111,15 @@ test.describe('Admin project-overview — empty state regression', () => {
       });
     });
 
-    await page.goto('/admin/project-overview');
+    await page.goto('/admin/directory?tab=projects');
     await page.waitForLoadState('networkidle');
 
     // Page heading must still render
     await expect(
-      page.getByRole('heading', { name: 'Projects & Namespaces', exact: true }),
+      page.getByRole('heading', { name: 'Directory', exact: true }),
     ).toBeVisible({ timeout: 10000 });
 
-    // Projects tab (default) should show its empty-state message
+    // Projects tab should show its empty-state message
     await expect(page.getByText('No projects found', { exact: false })).toBeVisible({
       timeout: 10000,
     });
@@ -134,7 +133,29 @@ test.describe('Admin project-overview — empty state regression', () => {
     const errors = getErrors();
     expect(
       errors,
-      `empty-state regression — unexpected errors on /admin/project-overview:\n${errors.join('\n')}`,
+      `empty-state regression — unexpected errors on /admin/directory:\n${errors.join('\n')}`,
     ).toEqual([]);
+  });
+});
+
+// Backward-compat: the old /admin/users and /admin/project-overview paths must
+// redirect into the new directory page so existing bookmarks keep working.
+test.describe('Admin directory — legacy redirects', () => {
+  test('/admin/users redirects to the Users tab of the directory', async ({ page }) => {
+    await page.goto('/admin/users');
+    await page.waitForLoadState('networkidle');
+    await expect(page).toHaveURL(/\/admin\/directory\?tab=users$/);
+    await expect(page.getByRole('heading', { name: 'Directory', exact: true })).toBeVisible({
+      timeout: 10000,
+    });
+  });
+
+  test('/admin/project-overview redirects to the Projects tab of the directory', async ({ page }) => {
+    await page.goto('/admin/project-overview');
+    await page.waitForLoadState('networkidle');
+    await expect(page).toHaveURL(/\/admin\/directory\?tab=projects$/);
+    await expect(page.getByRole('heading', { name: 'Directory', exact: true })).toBeVisible({
+      timeout: 10000,
+    });
   });
 });

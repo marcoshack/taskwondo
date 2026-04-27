@@ -163,6 +163,9 @@ const SAME_VALUE_ALLOWED = new Set([
   'portal.category',
   'portal.queue',
   'portal.ticketDescription',
+
+  // Directory column headers: "Status" is a cognate in German and Portuguese
+  'admin.directory.col.status',
 ])
 
 describe('i18n completeness', () => {

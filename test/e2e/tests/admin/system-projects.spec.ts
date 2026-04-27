@@ -226,10 +226,10 @@ test.describe('Admin Projects & Namespaces — UI', () => {
   test.describe.configure({ mode: 'serial' });
 
   test('admin projects page is accessible', async ({ page }, testInfo) => {
-    await page.goto('/admin/project-overview');
+    await page.goto('/admin/directory?tab=projects');
     await page.waitForLoadState('networkidle');
 
-    await expect(page.getByRole('heading', { name: 'Projects & Namespaces' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Directory' })).toBeVisible({ timeout: 10000 });
 
     // Verify tabs are shown (use button role to distinguish from sidebar links)
     await expect(page.getByRole('button', { name: 'Projects' })).toBeVisible();
@@ -246,11 +246,11 @@ test.describe('Admin Projects & Namespaces — UI', () => {
     // Create a project via API to ensure at least one exists
     await api.createProject(request, adminToken, key, name);
 
-    await page.goto('/admin/project-overview');
+    await page.goto('/admin/directory?tab=projects');
     await page.waitForLoadState('networkidle');
 
     // Wait for the admin page to fully render
-    await expect(page.getByRole('heading', { name: 'Projects & Namespaces' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Directory' })).toBeVisible({ timeout: 10000 });
 
     // The DataTable should contain the project key
     await expect(page.getByText(key)).toBeVisible({ timeout: 10000 });
@@ -258,11 +258,11 @@ test.describe('Admin Projects & Namespaces — UI', () => {
   });
 
   test('admin namespaces tab shows namespaces', async ({ page }, testInfo) => {
-    await page.goto('/admin/project-overview');
+    await page.goto('/admin/directory?tab=projects');
     await page.waitForLoadState('networkidle');
 
     // Wait for page to load then click the "Namespaces" tab
-    await expect(page.getByRole('heading', { name: 'Projects & Namespaces' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Directory' })).toBeVisible({ timeout: 10000 });
     await page.getByRole('button', { name: 'Namespaces' }).click();
     await page.waitForLoadState('networkidle');
 
@@ -277,9 +277,9 @@ test.describe('Admin Projects & Namespaces — UI', () => {
     // Get current stats from API for comparison
     const stats = await api.getAdminStats(request, adminToken);
 
-    await page.goto('/admin/project-overview');
+    await page.goto('/admin/directory?tab=projects');
     await page.waitForLoadState('networkidle');
-    await expect(page.getByRole('heading', { name: 'Projects & Namespaces' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Directory' })).toBeVisible({ timeout: 10000 });
 
     // Stat labels should be visible (at least one of mobile/desktop variant)
     // Use filter with visible to avoid matching the hidden responsive variant
@@ -385,9 +385,9 @@ test.describe('Admin Deny Lists — UI', () => {
     await api.setSystemSetting(request, adminToken, 'reserved_namespace_slugs', ['admin', 'taskwondo']);
     await api.setSystemSetting(request, adminToken, 'reserved_project_keys', []);
 
-    await page.goto('/admin/project-overview');
+    await page.goto('/admin/directory?tab=projects');
     await page.waitForLoadState('networkidle');
-    await expect(page.getByRole('heading', { name: 'Projects & Namespaces' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Directory' })).toBeVisible({ timeout: 10000 });
 
     // Click the Settings tab
     await page.getByRole('button', { name: 'Settings' }).click();
@@ -409,9 +409,9 @@ test.describe('Admin Deny Lists — UI', () => {
     // Reset deny list to clean state via API before navigating
     await api.setSystemSetting(request, adminToken, 'reserved_namespace_slugs', ['admin', 'taskwondo']);
 
-    await page.goto('/admin/project-overview');
+    await page.goto('/admin/directory?tab=projects');
     await page.waitForLoadState('networkidle');
-    await expect(page.getByRole('heading', { name: 'Projects & Namespaces' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Directory' })).toBeVisible({ timeout: 10000 });
     await page.getByRole('button', { name: 'Settings' }).click();
     await expect(page.getByText('Reserved Namespace Slugs')).toBeVisible({ timeout: 10000 });
 
