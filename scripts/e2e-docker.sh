@@ -11,14 +11,14 @@ COMPOSE="docker compose -f $COMPOSE_FILE -p $PROJECT_NAME"
 cleanup() {
     echo ""
     echo "==> Tearing down E2E stack..."
-    $COMPOSE down -v --remove-orphans 2>/dev/null || true
+    $COMPOSE down -v --rmi local --remove-orphans 2>/dev/null || true
 }
 
 trap cleanup EXIT
 
 # Pre-clean any leftover stack from a previous crashed run
 echo "==> Cleaning up any previous E2E stack..."
-$COMPOSE down -v --remove-orphans 2>/dev/null || true
+$COMPOSE down -v --rmi local --remove-orphans 2>/dev/null || true
 
 # Clean previous test results (may be owned by root from Docker)
 docker run --rm -v "$(pwd)/test/e2e:/e2e" alpine sh -c "rm -rf /e2e/test-results /e2e/playwright-report" 2>/dev/null || true
