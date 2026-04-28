@@ -2,6 +2,8 @@
 
 A self-hosted, open-source project management and issue tracking platform. Namespaces, kanban boards, customizable workflows, semantic search, email notifications, AI integration via MCP, and 9 languages — all included out of the box. Deploy with a single Docker Compose command. No paid tiers, no strings attached. Your backlog doesn't stand a chance! 🥋
 
+Try it out at https://taskwondo.org/
+
 ## Screenshots
 
 <p align="center">
