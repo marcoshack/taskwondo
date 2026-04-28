@@ -129,9 +129,10 @@ Taskwondo includes an [MCP server](https://modelcontextprotocol.io/) with 50+ to
 
 **Downloads** — available on the [Releases](https://github.com/marcoshack/taskwondo/releases) page:
 
-- `taskwondo-mcp` — MCP server binary (Linux/amd64)
-- `taskwondo-mcp.exe` — MCP server binary (Windows/amd64)
-- `taskwondo.mcpb` — MCP bundle for [Claude Desktop](https://claude.ai/download) (Windows)
+- `taskwondo-mcp-linux-amd64` — MCP server binary (Linux/amd64)
+- `taskwondo-mcp-darwin-arm64` — MCP server binary (macOS/arm64, Apple Silicon)
+- `taskwondo-mcp-windows-amd64.exe` — MCP server binary (Windows/amd64)
+- `taskwondo.mcpb` — MCP bundle for [Claude Desktop](https://claude.ai/download) (Windows + macOS)
 
 The MCP server connects to a running Taskwondo instance via API key. Set the `TASKWONDO_URL` and `TASKWONDO_API_KEY` environment variables, then run the binary as a stdio transport.
 

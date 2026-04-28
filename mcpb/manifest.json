@@ -16,14 +16,18 @@
   "license": "MIT",
   "server": {
     "type": "binary",
-    "entry_point": "server/taskwondo-mcp.exe",
+    "entry_point": "server/taskwondo-mcp",
     "mcp_config": {
-      "command": "${__dirname}/server/taskwondo-mcp.exe",
+      "command": "${__dirname}/server/taskwondo-mcp",
       "env": {
         "TASKWONDO_URL": "${user_config.server_url}",
         "TASKWONDO_API_KEY": "${user_config.api_key}"
       },
-      "platform_overrides": {}
+      "platform_overrides": {
+        "win32": {
+          "command": "${__dirname}/server/taskwondo-mcp.exe"
+        }
+      }
     }
   },
   "user_config": {
@@ -42,7 +46,7 @@
     }
   },
   "compatibility": {
-    "platforms": ["win32"]
+    "platforms": ["win32", "darwin"]
   },
   "tools_generated": true,
   "keywords": ["project-management", "work-items", "task-tracking", "taskwondo"]

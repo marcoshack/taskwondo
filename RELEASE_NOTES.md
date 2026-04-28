@@ -1,3 +1,29 @@
+# v0.4.1
+
+macOS development support, a hardened Go API with stricter validation and rate limiting, MCP server binaries cross-compiled for Linux, macOS, and Windows, and an MCPB bundle that now installs on Claude Desktop for macOS.
+
+## New Features
+
+- **macOS development support** — `README_DEV.md` with Colima setup; `install.sh` and Makefile made portable for macOS's default Bash 3.2; `GOPROXY` plumbed through Docker builds
+- **Cross-platform MCP server binaries** — `taskwondo-mcp-linux-amd64`, `taskwondo-mcp-darwin-arm64`, and `taskwondo-mcp-windows-amd64.exe` built via Go cross-compile from any host
+- **MCPB bundle for Claude Desktop on macOS** — bundle now ships both Windows and macOS (Apple Silicon) binaries via `platform_overrides`; previously Windows-only
+
+## Improvements
+
+- **Unified admin Directory page** — `/admin/users` and `/admin/project-overview` merged into `/admin/directory` with Users / Projects / Namespaces / Settings tabs; old routes redirect with `?tab=` query params
+- **Go API hardening (TF-64)** — error code constants replacing ~460 literal strings across handlers; shared `parseUUIDParam` / `unmarshalField` / `unmarshalNullableUUID` helpers; functional-options DI for `WorkItemService`; `JOIN users` replaces correlated subqueries on the work items list path; partial indexes for soft-delete queries
+- **Input validation and size limits** — enforced max title/description/label/custom-field sizes on work items; reject oversize FTS and semantic search queries
+- **Rate limits on unauthenticated endpoints** — `/auth/{provider}` (OAuth URL) and `/invites/{code}` (invite info) were previously unlimited
+- **Stricter resource-path matching** — `resourceFromPath` no longer false-matches a project key or namespace slug literally named `items`
+
+## Bug Fixes
+
+- Surface validation errors from `workitem` / `time-entry` / `queue` / `team` / `milestone` Update handlers (previously dropped silently when `json.Unmarshal` returned `nil`)
+- Propagate `custom_fields` unmarshal errors so corrupt DB rows no longer deserialize to an empty map
+- Check `RowsAffected()` errors in watcher, inbox, OAuth account, and stats repositories (previously discarded with `_`)
+
+---
+
 # v0.4.0
 
 Customer portal with support queues, teams and on-call rotations, email-based namespace invites, password reset flow, a dedicated authentication preferences page, and a tab-based reorganization of project and namespace settings.

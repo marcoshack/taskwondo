@@ -1,4 +1,4 @@
-.PHONY: build push help setup dev dev-stop dev-db dev-api dev-web dev-worker up down logs logs-api migrate migrate-new test test-api test-web test-e2e test-e2e-dev test-e2e-report check-env check-tools check-air release build-mcp build-mcp-linux build-mcp-windows build-mcpb build-worker lint-ci
+.PHONY: build push help setup dev dev-stop dev-db dev-api dev-web dev-worker up down logs logs-api migrate migrate-new test test-api test-web test-e2e test-e2e-dev test-e2e-report check-env check-tools check-air release build-mcp build-mcp-linux build-mcp-darwin build-mcp-windows build-mcpb build-worker lint-ci
 
 # Required environment variables (checked by sourcing .env)
 REQUIRED_VARS := POSTGRES_USER POSTGRES_PASSWORD MINIO_ROOT_USER MINIO_ROOT_PASSWORD JWT_SECRET DATABASE_URL STORAGE_ACCESS_KEY STORAGE_SECRET_KEY
@@ -227,23 +227,29 @@ build-worker: ## Build the worker binary
 
 # --- MCP Server ---
 
-build-mcp: build-mcp-linux build-mcp-windows build-mcpb ## Build all MCP artifacts (Linux + Windows + MCPB bundle)
+build-mcp: build-mcp-linux build-mcp-darwin build-mcp-windows build-mcpb ## Build all MCP artifacts (Linux + macOS + Windows + MCPB bundle)
 
-build-mcp-linux: ## Build the MCP server binary for Linux
+build-mcp-linux: ## Build the MCP server binary for Linux/amd64
 	@echo ""
-	@printf "$(CYAN)## Building MCP server...$(RESET)\n"
-	$(MAKE) -C mcp build
-	@printf "$(GREEN)## MCP server built successfully$(RESET)\n"
+	@printf "$(CYAN)## Building MCP server for Linux/amd64...$(RESET)\n"
+	$(MAKE) -C mcp build-linux
+	@printf "$(GREEN)## MCP server (Linux/amd64) built successfully$(RESET)\n"
 
-build-mcp-windows: ## Build the MCP server binary for Windows
+build-mcp-darwin: ## Build the MCP server binary for macOS/arm64
 	@echo ""
-	@printf "$(CYAN)## Building MCP server for Windows...$(RESET)\n"
+	@printf "$(CYAN)## Building MCP server for macOS/arm64...$(RESET)\n"
+	$(MAKE) -C mcp build-darwin
+	@printf "$(GREEN)## MCP server (macOS/arm64) built successfully$(RESET)\n"
+
+build-mcp-windows: ## Build the MCP server binary for Windows/amd64
+	@echo ""
+	@printf "$(CYAN)## Building MCP server for Windows/amd64...$(RESET)\n"
 	$(MAKE) -C mcp build-windows
-	@printf "$(GREEN)## MCP server (Windows) built successfully$(RESET)\n"
+	@printf "$(GREEN)## MCP server (Windows/amd64) built successfully$(RESET)\n"
 
 # --- MCPB Bundle ---
 
-build-mcpb: build-mcp-windows ## Build the MCPB bundle for Claude Desktop (usage: RELEASE_VERSION=0.3.0 make build-mcpb)
+build-mcpb: build-mcp-windows build-mcp-darwin ## Build the MCPB bundle for Claude Desktop, Windows + macOS (usage: RELEASE_VERSION=0.3.0 make build-mcpb)
 	@echo ""
 	@printf "$(CYAN)## Building MCPB bundle...$(RESET)\n"
 	$(MAKE) -C mcpb build VERSION=$(RELEASE_VERSION)

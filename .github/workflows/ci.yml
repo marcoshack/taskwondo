@@ -137,9 +137,10 @@ jobs:
             api/go.sum
             mcp/go.sum
 
-      - name: Build MCP server (Linux + Windows)
+      - name: Build MCP server (Linux + macOS + Windows)
         run: |
           make build-mcp-linux
+          make build-mcp-darwin
           make build-mcp-windows
 
       - name: Build MCPB bundle
@@ -161,9 +162,10 @@ jobs:
 
           ### Assets
           - \`taskwondo-server-dev.tar.gz\` — Server bundle (API + Worker + Web) for manual installation
-          - \`taskwondo-mcp\` — MCP server (Linux/amd64)
-          - \`taskwondo-mcp.exe\` — MCP server (Windows/amd64)
-          - \`taskwondo.mcpb\` — MCP bundle for Claude Desktop (Windows)"
+          - \`taskwondo-mcp-linux-amd64\` — MCP server (Linux/amd64)
+          - \`taskwondo-mcp-darwin-arm64\` — MCP server (macOS/arm64)
+          - \`taskwondo-mcp-windows-amd64.exe\` — MCP server (Windows/amd64)
+          - \`taskwondo.mcpb\` — MCP bundle for Claude Desktop (Windows + macOS)"
 
           if gh release view dev > /dev/null 2>&1; then
             gh release edit dev --title "Dev Build" --notes "$NOTES" --prerelease
@@ -173,8 +175,9 @@ jobs:
 
           gh release upload dev --clobber \
             build/release/taskwondo-server-dev.tar.gz \
-            build/mcp/taskwondo-mcp \
-            build/mcp/taskwondo-mcp.exe \
+            build/mcp/taskwondo-mcp-linux-amd64 \
+            build/mcp/taskwondo-mcp-darwin-arm64 \
+            build/mcp/taskwondo-mcp-windows-amd64.exe \
             build/mcpb/taskwondo.mcpb
 
   release:
@@ -195,9 +198,10 @@ jobs:
             api/go.sum
             mcp/go.sum
 
-      - name: Build MCP server (Linux + Windows)
+      - name: Build MCP server (Linux + macOS + Windows)
         run: |
           make build-mcp-linux
+          make build-mcp-darwin
           make build-mcp-windows
 
       - name: Build MCPB bundle
@@ -217,6 +221,7 @@ jobs:
             --generate-notes \
             --draft \
             build/release/taskwondo-server-${VERSION#v}.tar.gz \
-            build/mcp/taskwondo-mcp \
-            build/mcp/taskwondo-mcp.exe \
+            build/mcp/taskwondo-mcp-linux-amd64 \
+            build/mcp/taskwondo-mcp-darwin-arm64 \
+            build/mcp/taskwondo-mcp-windows-amd64.exe \
             build/mcpb/taskwondo-v${VERSION#v}.mcpb
