@@ -4,6 +4,8 @@ A self-hosted, open-source project management and issue tracking platform. Names
 
 Try it out at https://taskwondo.org/
 
+Join our Discord server: https://discord.gg/mUAag4CtBH
+
 ## Screenshots
 
 <p align="center">
@@ -90,7 +92,6 @@ See [more screenshots](docs/overview.md) for a full walkthrough of features.
 - **Dark mode**, configurable font size, expanded/centered layout modes
 - **Configurable brand name** in system settings
 - **Keyboard shortcuts**, responsive mobile layout
-- **Strikethrough styling** for completed items
 
 ## Tech Stack
 
