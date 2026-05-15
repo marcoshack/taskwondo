@@ -503,8 +503,8 @@ export function WorkItemDetailPage() {
           <div className="group/desc">
             <div className="flex items-center gap-1 mb-1">
               <h3
-                className={`text-sm font-medium text-gray-500 dark:text-gray-400 ${!readOnly ? 'cursor-pointer' : ''}`}
-                onClick={readOnly ? undefined : () => { setDescDraft(item.description ?? ''); setEditingDesc(true) }}
+                className="text-sm font-medium text-gray-500 dark:text-gray-400 select-none"
+                onDoubleClick={readOnly ? undefined : () => { setDescDraft(item.description ?? ''); setEditingDesc(true) }}
               >{t('workitems.detail.description')}</h3>
               <ConfirmCheck visible={descConfirmed} />
               {!readOnly && !editingDesc && (
@@ -559,9 +559,14 @@ export function WorkItemDetailPage() {
               </div>
             ) : (
               <div
-                className={`border border-transparent hover:border-gray-300 dark:hover:border-gray-600 rounded p-2 min-h-[2rem] ${!readOnly ? 'cursor-pointer' : ''}`}
-                onClick={readOnly ? undefined : () => { setDescDraft(item.description ?? ''); setEditingDesc(true) }}
+                className="relative group/descbody border border-transparent hover:border-gray-300 dark:hover:border-gray-600 rounded p-2 min-h-[2rem]"
+                onDoubleClick={readOnly ? undefined : () => { setDescDraft(item.description ?? ''); setEditingDesc(true) }}
               >
+                {!readOnly && (
+                  <span className="pointer-events-none absolute top-2 right-2 px-2 py-1 text-xs text-white bg-gray-900 dark:bg-gray-700 rounded whitespace-nowrap opacity-0 group-hover/descbody:opacity-100 transition-opacity z-10">
+                    {t('workitems.detail.descriptionEditHint')}
+                  </span>
+                )}
                 {item.description ? (
                   <div className="prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 break-words">
                     <Markdown remarkPlugins={[remarkGfm]} components={descMarkdownComponents}>{item.description}</Markdown>

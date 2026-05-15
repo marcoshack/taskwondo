@@ -1345,9 +1345,10 @@ func TestGetSchedule_Integration(t *testing.T) {
 		t.Fatalf("create rotation failed: %v", err)
 	}
 
-	// Get schedule for April
-	rangeStart := time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)
-	rangeEnd := time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)
+	// Get schedule for a one-month window starting today
+	now := time.Now().UTC()
+	rangeStart := now.AddDate(0, 0, -1)
+	rangeEnd := now.AddDate(0, 1, 0)
 
 	result, err := svc.GetRotation(context.Background(), info, "TEST", team.ID, &rangeStart, &rangeEnd)
 	if err != nil {
@@ -1370,8 +1371,8 @@ func TestGetSchedule_Integration(t *testing.T) {
 		ID:             uuid.Must(uuid.NewV7()),
 		RotationID:     rot.ID,
 		OverrideUserID: memberIDs[2],
-		StartAt:        time.Date(2026, 4, 10, 0, 0, 0, 0, time.UTC),
-		EndAt:          time.Date(2026, 4, 12, 0, 0, 0, 0, time.UTC),
+		StartAt:        now.AddDate(0, 0, 7),
+		EndAt:          now.AddDate(0, 0, 9),
 		CreatedBy:      info.UserID,
 		CreatedAt:      time.Now(),
 	}

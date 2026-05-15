@@ -88,6 +88,7 @@ Path alias: `@/` → `src/`. Vite proxies `/api` to `:8080` in dev.
 - **Destructive actions**: Always `<Modal>` with cancel/confirm. Never `window.confirm()`.
 - **Success feedback**: Inline green checkmark (`<Check>` from lucide-react), never layout-shifting toasts. Pattern: `savedId` state + `setTimeout(~2s)`.
 - **Settings pages**: Danger Zone is always the last section.
+- **Tooltips**: Never use the native HTML `title` attribute for tooltips. Use the stylized Tailwind pattern: wrap the trigger with `relative group/<name>` and render an absolutely-positioned `<span>` child with `pointer-events-none absolute ... px-2 py-1 text-xs text-white bg-gray-900 dark:bg-gray-700 rounded whitespace-nowrap opacity-0 group-hover/<name>:opacity-100 transition-opacity`. See `WorkItemDetailPage.tsx` (pencil edit button) and `AppSidebar.tsx` for canonical examples.
 
 ### API Compatibility
 Always ask before making breaking API changes. Deprecation pattern: keep old param working, log warning, reject requests using both old and new params (400).
