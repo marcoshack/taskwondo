@@ -232,7 +232,7 @@ export function DescriptionWithInlineComments({
       if (el) rect = el.getBoundingClientRect()
     }
     // Left-align to the text column; vertical position tracks the line.
-    setThreadPos({ top: rect ? rect.bottom - wRect.top + 6 : 0, left: 30 })
+    setThreadPos({ top: rect ? rect.bottom - wRect.top + 6 : 0, left: 36 })
   }, [openRoot, description, comments])
 
   const threadRef = useRef<HTMLDivElement>(null)
@@ -303,7 +303,7 @@ export function DescriptionWithInlineComments({
       <div
         ref={proseRef}
         data-testid="description-body"
-        className="prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 break-words pl-[30px]"
+        className="prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 break-words pl-9"
       >
         <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSourcePos]} components={baseComponents}>
           {description}
