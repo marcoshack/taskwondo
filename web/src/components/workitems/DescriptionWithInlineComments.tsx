@@ -269,10 +269,14 @@ export function DescriptionWithInlineComments({
     [composer, createInline, onOpenThread],
   )
 
+  // The gutter and its reserved space only exist once the description has at
+  // least one anchored comment — an empty description gets no left inset.
+  const hasInlineComments = roots.length > 0
+
   return (
     // -ml-2 cancels the description box's left padding so the gutter sits
-    // flush against the box edge.
-    <div ref={wrapperRef} className="relative -ml-2">
+    // flush against the box edge (only when there is a gutter to show).
+    <div ref={wrapperRef} className={`relative ${hasInlineComments ? '-ml-2' : ''}`}>
       {/* Left gutter with a comment marker per anchored line. */}
       <div className="absolute left-0 top-0 bottom-0 w-6" aria-hidden={gutter.length === 0}>
         {gutter.map((m) => (
@@ -303,7 +307,7 @@ export function DescriptionWithInlineComments({
       <div
         ref={proseRef}
         data-testid="description-body"
-        className="prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 break-words pl-9"
+        className={`prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 break-words ${hasInlineComments ? 'pl-9' : ''}`}
       >
         <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSourcePos]} components={baseComponents}>
           {description}
