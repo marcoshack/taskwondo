@@ -232,7 +232,7 @@ export function DescriptionWithInlineComments({
       if (el) rect = el.getBoundingClientRect()
     }
     // Left-align to the text column; vertical position tracks the line.
-    setThreadPos({ top: rect ? rect.bottom - wRect.top + 6 : 0, left: 36 })
+    setThreadPos({ top: rect ? rect.bottom - wRect.top + 6 : 0, left: 30 })
   }, [openRoot, description, comments])
 
   const threadRef = useRef<HTMLDivElement>(null)
@@ -270,9 +270,11 @@ export function DescriptionWithInlineComments({
   )
 
   return (
-    <div ref={wrapperRef} className="relative">
+    // -ml-2 cancels the description box's left padding so the gutter sits
+    // flush against the box edge.
+    <div ref={wrapperRef} className="relative -ml-2">
       {/* Left gutter with a comment marker per anchored line. */}
-      <div className="absolute left-0 top-0 bottom-0 w-7" aria-hidden={gutter.length === 0}>
+      <div className="absolute left-0 top-0 bottom-0 w-6" aria-hidden={gutter.length === 0}>
         {gutter.map((m) => (
           <button
             key={m.rootId}
@@ -301,7 +303,7 @@ export function DescriptionWithInlineComments({
       <div
         ref={proseRef}
         data-testid="description-body"
-        className="prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 break-words pl-9"
+        className="prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 break-words pl-[30px]"
       >
         <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSourcePos]} components={baseComponents}>
           {description}
