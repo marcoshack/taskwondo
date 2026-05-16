@@ -45,14 +45,22 @@ test.describe('Team CRUD', () => {
     // Navigate to settings tab
     await page.getByRole('button', { name: 'Settings', exact: true }).click();
 
-    // Update name and description
+    // The settings form is a controlled component whose inputs are seeded
+    // from the team API response. Wait for the original values to land
+    // before editing — otherwise a late re-render during initial page load
+    // can overwrite what we typed, silently dropping the new name.
     const nameInput = page.getByRole('textbox', { name: 'Name' });
-    await nameInput.clear();
-    await nameInput.fill('New Name');
-
     const descTextarea = page.locator('textarea');
-    await descTextarea.clear();
-    await descTextarea.fill('New description');
+    await expect(nameInput).toHaveValue('Old Name');
+    await expect(descTextarea).toHaveValue('Old description');
+
+    // Update name and description, retrying until both values stick.
+    await expect(async () => {
+      await nameInput.fill('New Name');
+      await descTextarea.fill('New description');
+      await expect(nameInput).toHaveValue('New Name', { timeout: 1000 });
+      await expect(descTextarea).toHaveValue('New description', { timeout: 1000 });
+    }).toPass({ timeout: 15000 });
 
     await page.getByRole('button', { name: 'Save', exact: true }).click();
 

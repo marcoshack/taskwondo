@@ -2,6 +2,15 @@ import { test as base, expect } from '../../lib/fixtures';
 import { getAdminToken } from '../../lib/fixtures';
 import * as api from '../../lib/api';
 
+// The "Admin Settings" and "Login Page" suites below both mutate the same
+// global system settings (auth_microsoft_enabled and oauth_microsoft_config).
+// Each describe block is already serial internally, but with fullyParallel
+// the two blocks run concurrently on separate workers and stomp on each
+// other's global state — e.g. an Admin Settings test clears the OAuth config
+// while a Login Page test expects Microsoft enabled. Run the whole file
+// serially so the two suites can't race.
+base.describe.configure({ mode: 'serial' });
+
 // Admin-authenticated context for admin settings pages
 const adminTest = base.extend({
   storageState: async ({}, use) => {
