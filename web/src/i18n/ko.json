@@ -1497,5 +1497,7 @@
   "inlineComments.reply": "답글",
   "inlineComments.replyPlaceholder": "답글 입력... (Cmd/Ctrl+Enter로 제출)",
   "inlineComments.gutterTooltip_one": "인라인 댓글 {{count}}개",
-  "inlineComments.gutterTooltip_other": "인라인 댓글 {{count}}개"
+  "inlineComments.gutterTooltip_other": "인라인 댓글 {{count}}개",
+  "inlineComments.prevComment": "이전 댓글",
+  "inlineComments.nextComment": "다음 댓글"
 }

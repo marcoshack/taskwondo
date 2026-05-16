@@ -87,6 +87,34 @@ export function DescriptionWithInlineComments({
     [roots, openThreadRootId],
   )
 
+  // All anchored comments in reading order — by line, then column, then age.
+  // Drives the prev/next navigation in the thread overlay, so comments that
+  // share a line (same gutter marker) are all still reachable.
+  const orderedRoots = useMemo(
+    () =>
+      [...roots].sort((a, b) => {
+        const aa = a.anchor!
+        const ba = b.anchor!
+        if (aa.start_line !== ba.start_line) return aa.start_line - ba.start_line
+        if (aa.start_col !== ba.start_col) return aa.start_col - ba.start_col
+        return a.created_at.localeCompare(b.created_at)
+      }),
+    [roots],
+  )
+  const openIndex = useMemo(
+    () => orderedRoots.findIndex((c) => c.id === openThreadRootId),
+    [orderedRoots, openThreadRootId],
+  )
+  const navigateThread = useCallback(
+    (delta: number) => {
+      if (orderedRoots.length === 0) return
+      const base = openIndex < 0 ? 0 : openIndex
+      const next = (base + delta + orderedRoots.length) % orderedRoots.length
+      onOpenThread?.(orderedRoots[next].id)
+    },
+    [orderedRoots, openIndex, onOpenThread],
+  )
+
   // --- Gutter marker positioning -------------------------------------------
   const recomputeGutter = useCallback(() => {
     const prose = proseRef.current
@@ -258,6 +286,14 @@ export function DescriptionWithInlineComments({
             <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
               <path d="M2 4a2 2 0 012-2h12a2 2 0 012 2v8a2 2 0 01-2 2H7l-4 4v-4H4a2 2 0 01-2-2V4z" />
             </svg>
+            {m.count > 1 && (
+              <span
+                data-testid="inline-comment-gutter-count"
+                className="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[14px] h-[14px] px-0.5 rounded-full bg-indigo-600 text-white text-[9px] font-semibold leading-none"
+              >
+                {m.count}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -321,6 +357,10 @@ export function DescriptionWithInlineComments({
             members={members ?? []}
             readOnly={readOnly}
             onClose={() => onOpenThread?.(null)}
+            position={openIndex + 1}
+            total={orderedRoots.length}
+            onPrev={() => navigateThread(-1)}
+            onNext={() => navigateThread(1)}
           />
         </div>
       )}

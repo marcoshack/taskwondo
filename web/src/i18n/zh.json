@@ -1497,5 +1497,7 @@
   "inlineComments.reply": "回复",
   "inlineComments.replyPlaceholder": "输入回复...（Cmd/Ctrl+Enter 提交）",
   "inlineComments.gutterTooltip_one": "{{count}} 条内联评论",
-  "inlineComments.gutterTooltip_other": "{{count}} 条内联评论"
+  "inlineComments.gutterTooltip_other": "{{count}} 条内联评论",
+  "inlineComments.prevComment": "上一条评论",
+  "inlineComments.nextComment": "下一条评论"
 }

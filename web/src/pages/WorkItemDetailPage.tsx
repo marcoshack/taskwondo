@@ -521,6 +521,11 @@ export function WorkItemDetailPage() {
               {!editingDesc && item.description && (
                 <CopyButton text={item.description} className="opacity-0 group-hover/desc:opacity-100" />
               )}
+              {!readOnly && !editingDesc && (
+                <span className="ml-auto text-xs text-gray-400 dark:text-gray-500 opacity-0 group-hover/desc:opacity-100 transition-opacity select-none pointer-events-none">
+                  {t('workitems.detail.descriptionEditHint')}
+                </span>
+              )}
             </div>
             {!readOnly && editingDesc ? (
               <div className="space-y-2">
@@ -560,11 +565,6 @@ export function WorkItemDetailPage() {
                 className="relative group/descbody border border-transparent hover:border-gray-300 dark:hover:border-gray-600 rounded p-2 min-h-[2rem]"
                 onDoubleClick={readOnly ? undefined : () => { setDescDraft(item.description ?? ''); setEditingDesc(true) }}
               >
-                {!readOnly && (
-                  <span className="pointer-events-none absolute top-2 right-2 px-2 py-1 text-xs text-white bg-gray-900 dark:bg-gray-700 rounded whitespace-nowrap opacity-0 group-hover/descbody:opacity-100 transition-opacity z-10">
-                    {t('workitems.detail.descriptionEditHint')}
-                  </span>
-                )}
                 {item.description ? (
                   <DescriptionWithInlineComments
                     projectKey={projectKey ?? ''}

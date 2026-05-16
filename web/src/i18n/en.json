@@ -469,6 +469,8 @@
   "inlineComments.replyPlaceholder": "Write a reply... (Cmd/Ctrl+Enter to submit)",
   "inlineComments.gutterTooltip_one": "{{count}} inline comment",
   "inlineComments.gutterTooltip_other": "{{count}} inline comments",
+  "inlineComments.prevComment": "Previous comment",
+  "inlineComments.nextComment": "Next comment",
 
   "activity.noActivity": "No activity yet.",
   "activity.createdItem": "created this item",

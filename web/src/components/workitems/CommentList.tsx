@@ -65,12 +65,6 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
   const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null)
   const showVisibilityToggle = itemVisibility === 'portal'
 
-  // Threaded replies are shown inside their inline thread, not the flat feed.
-  const feedComments = useMemo(
-    () => (comments ?? []).filter((c) => !c.parent_comment_id),
-    [comments],
-  )
-
   const addCommentRef = useRef<HTMLDivElement>(null)
   const [addCommentVisible, setAddCommentVisible] = useState(true)
 
@@ -216,7 +210,7 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
         </div>
       )}
 
-      {(sortOrder === 'desc' ? [...feedComments].reverse() : feedComments).map((c) => (
+      {(sortOrder === 'desc' ? [...(comments ?? [])].reverse() : (comments ?? [])).map((c) => (
         <div
           key={c.id}
           ref={c.id === highlightedCommentId ? highlightRef : undefined}
@@ -304,7 +298,7 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
                       type="button"
                       className="ml-auto text-indigo-600 dark:text-indigo-400 hover:underline text-xs"
                       data-testid="inline-comment-view"
-                      onClick={() => onViewInline?.(c.id)}
+                      onClick={() => onViewInline?.(c.parent_comment_id ?? c.id)}
                     >
                       {t('inlineComments.view')}
                     </button>

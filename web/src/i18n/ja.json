@@ -1497,5 +1497,7 @@
   "inlineComments.reply": "返信",
   "inlineComments.replyPlaceholder": "返信を入力... (Cmd/Ctrl+Enterで送信)",
   "inlineComments.gutterTooltip_one": "{{count}}件のインラインコメント",
-  "inlineComments.gutterTooltip_other": "{{count}}件のインラインコメント"
+  "inlineComments.gutterTooltip_other": "{{count}}件のインラインコメント",
+  "inlineComments.prevComment": "前のコメント",
+  "inlineComments.nextComment": "次のコメント"
 }

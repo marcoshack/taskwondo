@@ -108,6 +108,46 @@ test.describe('Inline description comments (TF-350)', () => {
     await expect(thread.getByText('Opened from the gutter.')).toBeVisible();
   });
 
+  test('two comments on one line: the gutter marker is badged and prev/next cycles them', async ({
+    page,
+    request,
+    testUser,
+    testProject,
+  }) => {
+    const item = await api.createWorkItem(request, testUser.token, testProject.key, {
+      title: `InlineMulti-${Date.now()}`,
+      type: 'task',
+      description: DESCRIPTION,
+    });
+    const anchor = { start_line: 3, end_line: 3, snippet: 'Second paragraph is the anchor target.' };
+    await api.addInlineComment(request, testUser.token, testProject.key, item.item_number, 'First on the line.', anchor);
+    await api.addInlineComment(request, testUser.token, testProject.key, item.item_number, 'Second on the line.', anchor);
+
+    await page.goto(`/d/projects/${testProject.key}/items/${item.item_number}`);
+    await expect(page.getByText(item.title)).toBeVisible({ timeout: 5000 });
+
+    // A single gutter marker for the line, badged with the comment count.
+    const gutter = page.getByTestId('inline-comment-gutter-icon');
+    await expect(gutter).toHaveCount(1);
+    await expect(page.getByTestId('inline-comment-gutter-count')).toHaveText('2');
+    await gutter.click();
+
+    const thread = page.getByTestId('inline-comment-thread');
+    await expect(thread).toBeVisible();
+    await expect(thread.getByText('First on the line.')).toBeVisible();
+    await expect(thread.getByTestId('inline-comment-position')).toHaveText('1 / 2');
+
+    // Next advances to the second comment.
+    await thread.getByTestId('inline-comment-next').click();
+    await expect(thread.getByText('Second on the line.')).toBeVisible();
+    await expect(thread.getByTestId('inline-comment-position')).toHaveText('2 / 2');
+
+    // Next again wraps back to the first.
+    await thread.getByTestId('inline-comment-next').click();
+    await expect(thread.getByText('First on the line.')).toBeVisible();
+    await expect(thread.getByTestId('inline-comment-position')).toHaveText('1 / 2');
+  });
+
   test('the feed "View" link opens the thread and a reply is shown inside it', async ({
     page,
     request,
@@ -141,6 +181,9 @@ test.describe('Inline description comments (TF-350)', () => {
 
     await expect(thread.getByText('A reply to the root.')).toBeVisible({ timeout: 5000 });
     await expect(thread.getByTestId('inline-comment-thread-item')).toHaveCount(2);
+
+    // The reply is also listed in the comments feed (root + reply).
+    await expect(page.getByTestId('inline-comment-view')).toHaveCount(2);
   });
 
   test('replies are stored as child comments sharing the root anchor', async ({

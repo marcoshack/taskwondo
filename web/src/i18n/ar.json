@@ -1497,5 +1497,7 @@
   "inlineComments.reply": "رد",
   "inlineComments.replyPlaceholder": "اكتب ردًا... (Cmd/Ctrl+Enter للإرسال)",
   "inlineComments.gutterTooltip_one": "{{count}} تعليق مضمّن",
-  "inlineComments.gutterTooltip_other": "{{count}} تعليقات مضمّنة"
+  "inlineComments.gutterTooltip_other": "{{count}} تعليقات مضمّنة",
+  "inlineComments.prevComment": "التعليق السابق",
+  "inlineComments.nextComment": "التعليق التالي"
 }

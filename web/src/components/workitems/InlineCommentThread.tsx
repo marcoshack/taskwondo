@@ -25,6 +25,12 @@ interface InlineCommentThreadProps {
   members: Member[]
   readOnly?: boolean
   onClose: () => void
+  /** 1-based position of this thread among all anchored comments. */
+  position: number
+  /** Total number of anchored comments on the description. */
+  total: number
+  onPrev: () => void
+  onNext: () => void
 }
 
 /**
@@ -39,6 +45,10 @@ export function InlineCommentThread({
   members,
   readOnly = false,
   onClose,
+  position,
+  total,
+  onPrev,
+  onNext,
 }: InlineCommentThreadProps) {
   const { t } = useTranslation()
   const [replyBody, setReplyBody] = useState('')
@@ -84,11 +94,40 @@ export function InlineCommentThread({
             {t('inlineComments.outdated')}
           </span>
         )}
+        {total > 1 && (
+          <span className="ml-auto flex items-center gap-1 text-gray-500 dark:text-gray-400">
+            <button
+              type="button"
+              aria-label={t('inlineComments.prevComment')}
+              data-testid="inline-comment-prev"
+              className="inline-flex items-center justify-center w-5 h-5 rounded hover:bg-indigo-100 dark:hover:bg-indigo-900/40 hover:text-indigo-600"
+              onClick={onPrev}
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10 3L5 8l5 5" />
+              </svg>
+            </button>
+            <span data-testid="inline-comment-position" className="text-xs tabular-nums">
+              {position} / {total}
+            </span>
+            <button
+              type="button"
+              aria-label={t('inlineComments.nextComment')}
+              data-testid="inline-comment-next"
+              className="inline-flex items-center justify-center w-5 h-5 rounded hover:bg-indigo-100 dark:hover:bg-indigo-900/40 hover:text-indigo-600"
+              onClick={onNext}
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 3l5 5-5 5" />
+              </svg>
+            </button>
+          </span>
+        )}
         <button
           type="button"
           aria-label={t('common.close')}
           data-testid="inline-comment-thread-close"
-          className="ml-auto text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          className={`${total > 1 ? '' : 'ml-auto'} text-gray-400 hover:text-gray-600 dark:hover:text-gray-300`}
           onClick={onClose}
         >
           <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">

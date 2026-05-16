@@ -1497,5 +1497,7 @@
   "inlineComments.reply": "Antworten",
   "inlineComments.replyPlaceholder": "Antwort schreiben... (Cmd/Ctrl+Enter zum Absenden)",
   "inlineComments.gutterTooltip_one": "{{count}} Inline-Kommentar",
-  "inlineComments.gutterTooltip_other": "{{count}} Inline-Kommentare"
+  "inlineComments.gutterTooltip_other": "{{count}} Inline-Kommentare",
+  "inlineComments.prevComment": "Vorheriger Kommentar",
+  "inlineComments.nextComment": "Nächster Kommentar"
 }
