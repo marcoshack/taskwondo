@@ -221,6 +221,96 @@ export async function updateComment(
   if (!res.ok()) throw new Error(`Update comment failed (${res.status()}): ${await res.text()}`);
 }
 
+interface CommentAnchorResponse {
+  revision_id: string;
+  revision_number: number;
+  start_line: number;
+  start_col: number;
+  end_line: number;
+  end_col: number;
+  snippet: string;
+  status: 'active' | 'outdated';
+}
+
+interface CommentResponse {
+  id: string;
+  body: string;
+  anchor?: CommentAnchorResponse | null;
+  parent_comment_id?: string | null;
+}
+
+export async function addInlineComment(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  itemNumber: number,
+  body: string,
+  anchor: { start_line: number; start_col?: number; end_line: number; end_col?: number; snippet: string },
+): Promise<CommentResponse> {
+  const res = await request.post(`${BASE_URL}/api/v1/default/projects/${projectKey}/items/${itemNumber}/comments`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: {
+      body,
+      anchor: { start_col: 1, end_col: 1, ...anchor },
+    },
+  });
+  if (!res.ok()) throw new Error(`Add inline comment failed (${res.status()}): ${await res.text()}`);
+  const json = await res.json();
+  return json.data;
+}
+
+export async function addInlineReply(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  itemNumber: number,
+  body: string,
+  parentCommentId: string,
+): Promise<CommentResponse> {
+  const res = await request.post(`${BASE_URL}/api/v1/default/projects/${projectKey}/items/${itemNumber}/comments`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { body, parent_comment_id: parentCommentId },
+  });
+  if (!res.ok()) throw new Error(`Add inline reply failed (${res.status()}): ${await res.text()}`);
+  const json = await res.json();
+  return json.data;
+}
+
+export async function listComments(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  itemNumber: number,
+): Promise<CommentResponse[]> {
+  const res = await request.get(`${BASE_URL}/api/v1/default/projects/${projectKey}/items/${itemNumber}/comments`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`List comments failed (${res.status()}): ${await res.text()}`);
+  const json = await res.json();
+  return json.data;
+}
+
+interface DescriptionRevisionResponse {
+  id: string;
+  revision_number: number;
+  content: string;
+  content_hash: string;
+}
+
+export async function listDescriptionRevisions(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  itemNumber: number,
+): Promise<DescriptionRevisionResponse[]> {
+  const res = await request.get(`${BASE_URL}/api/v1/default/projects/${projectKey}/items/${itemNumber}/description-revisions`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`List description revisions failed (${res.status()}): ${await res.text()}`);
+  const json = await res.json();
+  return json.data;
+}
+
 export async function createTimeEntry(
   request: APIRequestContext,
   token: string,

@@ -95,14 +95,58 @@ export interface UpdateWorkItemInput {
   estimated_seconds?: number | null
 }
 
+export type AnchorStatus = 'active' | 'outdated'
+
+export interface CommentAnchor {
+  revision_id: string
+  revision_number: number
+  // 1-based source line numbers (inclusive).
+  start_line: number
+  end_line: number
+  // 1-based character offsets within their line; end_col is exclusive.
+  // 0 means a whole-block anchor with no sub-line precision.
+  start_col: number
+  end_col: number
+  snippet: string
+  status: AnchorStatus
+}
+
 export interface Comment {
   id: string
   author_id: string | null
   body: string
   visibility: string
   edit_count: number
+  anchor?: CommentAnchor | null
+  // Set on threaded replies; points at the inline comment they answer.
+  parent_comment_id?: string | null
   created_at: string
   updated_at: string
+}
+
+export interface DescriptionRevision {
+  id: string
+  revision_number: number
+  content: string
+  content_hash: string
+  author_id: string | null
+  created_at: string
+}
+
+export interface CreateInlineCommentInput {
+  body: string
+  visibility?: string
+  // Provided when starting a new thread (root inline comment). Omitted on
+  // replies, which inherit their thread root's anchor.
+  anchor?: {
+    start_line: number
+    start_col: number
+    end_line: number
+    end_col: number
+    snippet: string
+  }
+  // Provided on a threaded reply; the id of the inline comment being answered.
+  parent_comment_id?: string
 }
 
 export interface Relation {
@@ -212,6 +256,32 @@ export async function listComments(projectKey: string, itemNumber: number) {
 
 export async function createComment(projectKey: string, itemNumber: number, body: string, visibility?: string) {
   const res = await api.post<DataResponse<Comment>>(`${nsPrefix()}/projects/${projectKey}/items/${itemNumber}/comments`, { body, visibility })
+  return res.data.data
+}
+
+export async function createInlineComment(
+  projectKey: string,
+  itemNumber: number,
+  input: CreateInlineCommentInput,
+) {
+  const res = await api.post<DataResponse<Comment>>(
+    `${nsPrefix()}/projects/${projectKey}/items/${itemNumber}/comments`,
+    input,
+  )
+  return res.data.data
+}
+
+export async function listDescriptionRevisions(projectKey: string, itemNumber: number) {
+  const res = await api.get<DataResponse<DescriptionRevision[]>>(
+    `${nsPrefix()}/projects/${projectKey}/items/${itemNumber}/description-revisions`,
+  )
+  return res.data.data
+}
+
+export async function getDescriptionRevision(projectKey: string, itemNumber: number, revId: string) {
+  const res = await api.get<DataResponse<DescriptionRevision>>(
+    `${nsPrefix()}/projects/${projectKey}/items/${itemNumber}/description-revisions/${revId}`,
+  )
   return res.data.data
 }
 

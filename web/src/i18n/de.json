@@ -1484,5 +1484,18 @@
   "workitems.visibilities.portal": "Portal",
   "workitems.visibilities.portal.description": "Kunden sehen eingeschränkte Informationen, Mitglieder sehen alles",
   "workitems.visibilities.public": "öffentlich",
-  "workitems.visibilities.public.description": "Jeder mit dem Link sieht eingeschränkte Informationen, Mitglieder sehen alles"
+  "workitems.visibilities.public.description": "Jeder mit dem Link sieht eingeschränkte Informationen, Mitglieder sehen alles",
+  "inlineComments.commentButton": "Kommentieren",
+  "inlineComments.composerHeader": "Markierten Text kommentieren",
+  "inlineComments.placeholder": "Kommentar schreiben... (Cmd/Ctrl+Enter zum Absenden, Esc zum Abbrechen)",
+  "inlineComments.submit": "Kommentieren",
+  "inlineComments.submitting": "Wird hinzugefügt...",
+  "inlineComments.outdated": "Veraltet",
+  "inlineComments.view": "Anzeigen",
+  "inlineComments.anchorLabel": "Inline-Kommentar zur Beschreibung",
+  "inlineComments.threadHeader": "Inline-Kommentar",
+  "inlineComments.reply": "Antworten",
+  "inlineComments.replyPlaceholder": "Antwort schreiben... (Cmd/Ctrl+Enter zum Absenden)",
+  "inlineComments.gutterTooltip_one": "{{count}} Inline-Kommentar",
+  "inlineComments.gutterTooltip_other": "{{count}} Inline-Kommentare"
 }

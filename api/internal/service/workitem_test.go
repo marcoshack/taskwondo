@@ -440,6 +440,16 @@ func (m *mockCommentRepo) ListByWorkItem(_ context.Context, workItemID uuid.UUID
 	return result, nil
 }
 
+func (m *mockCommentRepo) ListInlineByWorkItem(_ context.Context, workItemID uuid.UUID) ([]model.Comment, error) {
+	var result []model.Comment
+	for _, c := range m.comments {
+		if c.WorkItemID == workItemID && c.Anchor != nil {
+			result = append(result, *c)
+		}
+	}
+	return result, nil
+}
+
 func (m *mockCommentRepo) Update(_ context.Context, comment *model.Comment) error {
 	existing, ok := m.comments[comment.ID]
 	if !ok {
@@ -451,12 +461,85 @@ func (m *mockCommentRepo) Update(_ context.Context, comment *model.Comment) erro
 	return nil
 }
 
+func (m *mockCommentRepo) UpdateAnchor(_ context.Context, commentID uuid.UUID, anchor *model.CommentAnchor) error {
+	existing, ok := m.comments[commentID]
+	if !ok {
+		return model.ErrNotFound
+	}
+	existing.Anchor = anchor
+	return nil
+}
+
 func (m *mockCommentRepo) Delete(_ context.Context, id uuid.UUID) error {
 	if _, ok := m.comments[id]; !ok {
 		return model.ErrNotFound
 	}
 	delete(m.comments, id)
+	// Mirror the repository: deleting a thread root removes its replies too.
+	for cid, c := range m.comments {
+		if c.ParentCommentID != nil && *c.ParentCommentID == id {
+			delete(m.comments, cid)
+		}
+	}
 	return nil
+}
+
+// --- Mock description revision repository ---
+
+type mockRevisionRepo struct {
+	revisions map[uuid.UUID]*model.DescriptionRevision
+}
+
+func newMockRevisionRepo() *mockRevisionRepo {
+	return &mockRevisionRepo{revisions: make(map[uuid.UUID]*model.DescriptionRevision)}
+}
+
+func (m *mockRevisionRepo) Create(_ context.Context, rev *model.DescriptionRevision) error {
+	next := 0
+	for _, r := range m.revisions {
+		if r.WorkItemID == rev.WorkItemID && r.RevisionNumber > next {
+			next = r.RevisionNumber
+		}
+	}
+	rev.RevisionNumber = next + 1
+	rev.CreatedAt = time.Now()
+	stored := *rev
+	m.revisions[rev.ID] = &stored
+	return nil
+}
+
+func (m *mockRevisionRepo) GetByID(_ context.Context, id uuid.UUID) (*model.DescriptionRevision, error) {
+	r, ok := m.revisions[id]
+	if !ok {
+		return nil, model.ErrNotFound
+	}
+	return r, nil
+}
+
+func (m *mockRevisionRepo) GetLatest(_ context.Context, workItemID uuid.UUID) (*model.DescriptionRevision, error) {
+	var latest *model.DescriptionRevision
+	for _, r := range m.revisions {
+		if r.WorkItemID != workItemID {
+			continue
+		}
+		if latest == nil || r.RevisionNumber > latest.RevisionNumber {
+			latest = r
+		}
+	}
+	if latest == nil {
+		return nil, model.ErrNotFound
+	}
+	return latest, nil
+}
+
+func (m *mockRevisionRepo) ListByWorkItem(_ context.Context, workItemID uuid.UUID) ([]model.DescriptionRevision, error) {
+	var out []model.DescriptionRevision
+	for _, r := range m.revisions {
+		if r.WorkItemID == workItemID {
+			out = append(out, *r)
+		}
+	}
+	return out, nil
 }
 
 // --- Mock relation repository ---
@@ -974,6 +1057,7 @@ type testWorkItemSetup struct {
 	attachRepo       *mockAttachmentRepo
 	timeEntryRepo    *mockTimeEntryRepo
 	watcherRepo      *mockWatcherRepo
+	revisionRepo     *mockRevisionRepo
 	storage          *mockStorage
 }
 
@@ -996,6 +1080,7 @@ func newTestWorkItemSetup() *testWorkItemSetup {
 	attachRepo := newMockAttachmentRepo()
 	timeEntryRepo := newMockTimeEntryRepo()
 	watcherRepo := newMockWatcherRepo()
+	revisionRepo := newMockRevisionRepo()
 	slaRepo := newMockSLARepo()
 	slaService := NewSLAService(slaRepo, projectRepo, memberRepo, workflowRepo)
 	store := newMockStorage()
@@ -1004,6 +1089,7 @@ func newTestWorkItemSetup() *testWorkItemSetup {
 		WithProjectContext(projectRepo, memberRepo, workflowRepo, typeWorkflowRepo, queueRepo, milestoneRepo),
 		WithSLA(slaRepo, slaService),
 		WithStorage(store, 50*1024*1024),
+		WithDescriptionRevisions(revisionRepo),
 	)
 	return &testWorkItemSetup{
 		svc:              svc,
@@ -1020,6 +1106,7 @@ func newTestWorkItemSetup() *testWorkItemSetup {
 		attachRepo:       attachRepo,
 		timeEntryRepo:    timeEntryRepo,
 		watcherRepo:      watcherRepo,
+		revisionRepo:     revisionRepo,
 		storage:          store,
 	}
 }

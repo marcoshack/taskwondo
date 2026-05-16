@@ -1484,5 +1484,18 @@
   "workitems.visibilities.portal": "门户",
   "workitems.visibilities.portal.description": "客户查看有限信息，成员查看全部",
   "workitems.visibilities.public": "公开",
-  "workitems.visibilities.public.description": "拥有链接的人查看有限信息，成员查看全部"
+  "workitems.visibilities.public.description": "拥有链接的人查看有限信息，成员查看全部",
+  "inlineComments.commentButton": "评论",
+  "inlineComments.composerHeader": "评论所选文本",
+  "inlineComments.placeholder": "输入评论...（Cmd/Ctrl+Enter 提交，Esc 取消）",
+  "inlineComments.submit": "评论",
+  "inlineComments.submitting": "添加中...",
+  "inlineComments.outdated": "已过时",
+  "inlineComments.view": "查看",
+  "inlineComments.anchorLabel": "描述上的内联评论",
+  "inlineComments.threadHeader": "内联评论",
+  "inlineComments.reply": "回复",
+  "inlineComments.replyPlaceholder": "输入回复...（Cmd/Ctrl+Enter 提交）",
+  "inlineComments.gutterTooltip_one": "{{count}} 条内联评论",
+  "inlineComments.gutterTooltip_other": "{{count}} 条内联评论"
 }

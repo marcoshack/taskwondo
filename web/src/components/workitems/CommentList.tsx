@@ -27,9 +27,11 @@ interface CommentListProps {
   onDraftChange?: (value: string) => void
   readOnly?: boolean
   itemVisibility?: string
+  /** Opens the inline conversation thread for an anchored comment. */
+  onViewInline?: (rootCommentId: string) => void
 }
 
-export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highlightedCommentId, onHighlightClear, onImageClick, onAttachmentLinkClick, draft, onDraftChange, readOnly = false, itemVisibility }: CommentListProps) {
+export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highlightedCommentId, onHighlightClear, onImageClick, onAttachmentLinkClick, draft, onDraftChange, readOnly = false, itemVisibility, onViewInline }: CommentListProps) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const { data: comments, isLoading } = useComments(projectKey, itemNumber)
@@ -62,6 +64,12 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
   const [editVisibility, setEditVisibility] = useState<'internal' | 'public'>('internal')
   const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null)
   const showVisibilityToggle = itemVisibility === 'portal'
+
+  // Threaded replies are shown inside their inline thread, not the flat feed.
+  const feedComments = useMemo(
+    () => (comments ?? []).filter((c) => !c.parent_comment_id),
+    [comments],
+  )
 
   const addCommentRef = useRef<HTMLDivElement>(null)
   const [addCommentVisible, setAddCommentVisible] = useState(true)
@@ -208,7 +216,7 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
         </div>
       )}
 
-      {(sortOrder === 'desc' ? [...(comments ?? [])].reverse() : (comments ?? [])).map((c) => (
+      {(sortOrder === 'desc' ? [...feedComments].reverse() : feedComments).map((c) => (
         <div
           key={c.id}
           ref={c.id === highlightedCommentId ? highlightRef : undefined}
@@ -283,6 +291,29 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
             </div>
           ) : (
             <>
+              {c.anchor && (
+                <div className="mb-2 ml-8 rounded-md border-l-4 border-indigo-300 dark:border-indigo-600 bg-indigo-50/40 dark:bg-indigo-900/20 px-3 py-2">
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600 dark:text-gray-400 mb-1">
+                    <span>{t('inlineComments.anchorLabel')}</span>
+                    {c.anchor.status === 'outdated' && (
+                      <span data-testid="inline-comment-outdated-badge" className="inline-flex items-center px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 text-[10px] uppercase tracking-wide">
+                        {t('inlineComments.outdated')}
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      className="ml-auto text-indigo-600 dark:text-indigo-400 hover:underline text-xs"
+                      data-testid="inline-comment-view"
+                      onClick={() => onViewInline?.(c.id)}
+                    >
+                      {t('inlineComments.view')}
+                    </button>
+                  </div>
+                  <pre className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded p-2 overflow-x-auto">
+                    {c.anchor.snippet}
+                  </pre>
+                </div>
+              )}
               <div className="flex items-center justify-between gap-2 mb-1">
                 <div className="flex items-center gap-2 min-w-0">
                   <Avatar name={authorName(c.author_id)} avatarUrl={authorAvatarUrl(c.author_id)} size="xs" />
@@ -375,6 +406,7 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
           </Button>
         </div>
       </Modal>
+
 
       <Modal open={!!deletingId} onClose={() => setDeletingId(null)} title={t('comments.deleteConfirm')}>
         <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">

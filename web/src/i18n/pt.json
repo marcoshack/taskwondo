@@ -1484,5 +1484,18 @@
   "workitems.visibilities.portal": "portal",
   "workitems.visibilities.portal.description": "Clientes veem informações limitadas, membros veem tudo",
   "workitems.visibilities.public": "público",
-  "workitems.visibilities.public.description": "Qualquer pessoa com o link vê informações limitadas, membros veem tudo"
+  "workitems.visibilities.public.description": "Qualquer pessoa com o link vê informações limitadas, membros veem tudo",
+  "inlineComments.commentButton": "Comentar",
+  "inlineComments.composerHeader": "Comentar o texto selecionado",
+  "inlineComments.placeholder": "Escreva um comentário... (Cmd/Ctrl+Enter para enviar, Esc para cancelar)",
+  "inlineComments.submit": "Comentar",
+  "inlineComments.submitting": "Adicionando...",
+  "inlineComments.outdated": "Desatualizado",
+  "inlineComments.view": "Ver",
+  "inlineComments.anchorLabel": "Comentário em linha na descrição",
+  "inlineComments.threadHeader": "Comentário em linha",
+  "inlineComments.reply": "Responder",
+  "inlineComments.replyPlaceholder": "Escreva uma resposta... (Cmd/Ctrl+Enter para enviar)",
+  "inlineComments.gutterTooltip_one": "{{count}} comentário em linha",
+  "inlineComments.gutterTooltip_other": "{{count}} comentários em linha"
 }

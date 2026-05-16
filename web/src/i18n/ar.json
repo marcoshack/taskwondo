@@ -1484,5 +1484,18 @@
   "workitems.visibilities.portal": "بوابة",
   "workitems.visibilities.portal.description": "العملاء يرون معلومات محدودة، الأعضاء يرون كل شيء",
   "workitems.visibilities.public": "عام",
-  "workitems.visibilities.public.description": "أي شخص لديه الرابط يرى معلومات محدودة، الأعضاء يرون كل شيء"
+  "workitems.visibilities.public.description": "أي شخص لديه الرابط يرى معلومات محدودة، الأعضاء يرون كل شيء",
+  "inlineComments.commentButton": "تعليق",
+  "inlineComments.composerHeader": "علّق على النص المحدد",
+  "inlineComments.placeholder": "اكتب تعليقًا... (Cmd/Ctrl+Enter للإرسال، Esc للإلغاء)",
+  "inlineComments.submit": "تعليق",
+  "inlineComments.submitting": "جاري الإضافة...",
+  "inlineComments.outdated": "قديم",
+  "inlineComments.view": "عرض",
+  "inlineComments.anchorLabel": "تعليق مضمّن على الوصف",
+  "inlineComments.threadHeader": "تعليق مضمّن",
+  "inlineComments.reply": "رد",
+  "inlineComments.replyPlaceholder": "اكتب ردًا... (Cmd/Ctrl+Enter للإرسال)",
+  "inlineComments.gutterTooltip_one": "{{count}} تعليق مضمّن",
+  "inlineComments.gutterTooltip_other": "{{count}} تعليقات مضمّنة"
 }

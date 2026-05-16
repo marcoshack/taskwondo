@@ -628,8 +628,12 @@ func (h *WorkItemHandler) Delete(w http.ResponseWriter, r *http.Request) {
 // --- Comment DTOs ---
 
 type createCommentRequest struct {
-	Body       string `json:"body"`
-	Visibility string `json:"visibility,omitempty"`
+	Body       string                `json:"body"`
+	Visibility string                `json:"visibility,omitempty"`
+	Anchor     *commentAnchorRequest `json:"anchor,omitempty"`
+	// ParentCommentID, when set, makes this a threaded reply to an existing
+	// inline comment; the reply inherits the thread root's anchor.
+	ParentCommentID *uuid.UUID `json:"parent_comment_id,omitempty"`
 }
 
 type updateCommentRequest struct {
@@ -637,25 +641,83 @@ type updateCommentRequest struct {
 	Visibility string `json:"visibility,omitempty"`
 }
 
+// commentAnchorRequest is the optional anchor sent by clients when creating
+// an inline comment. Line numbers are 1-based and inclusive; column numbers
+// are 1-based character offsets within their line (end_col exclusive).
+type commentAnchorRequest struct {
+	StartLine int    `json:"start_line"`
+	StartCol  int    `json:"start_col"`
+	EndLine   int    `json:"end_line"`
+	EndCol    int    `json:"end_col"`
+	Snippet   string `json:"snippet"`
+}
+
+type commentAnchorResponse struct {
+	RevisionID     uuid.UUID `json:"revision_id"`
+	RevisionNumber int       `json:"revision_number"`
+	StartLine      int       `json:"start_line"`
+	StartCol       int       `json:"start_col"`
+	EndLine        int       `json:"end_line"`
+	EndCol         int       `json:"end_col"`
+	Snippet        string    `json:"snippet"`
+	Status         string    `json:"status"`
+}
+
 type commentResponse struct {
-	ID         uuid.UUID  `json:"id"`
-	AuthorID   *uuid.UUID `json:"author_id,omitempty"`
-	Body       string     `json:"body"`
-	Visibility string     `json:"visibility"`
-	EditCount  int        `json:"edit_count"`
-	CreatedAt  time.Time  `json:"created_at"`
-	UpdatedAt  time.Time  `json:"updated_at"`
+	ID              uuid.UUID              `json:"id"`
+	AuthorID        *uuid.UUID             `json:"author_id,omitempty"`
+	Body            string                 `json:"body"`
+	Visibility      string                 `json:"visibility"`
+	EditCount       int                    `json:"edit_count"`
+	Anchor          *commentAnchorResponse `json:"anchor,omitempty"`
+	ParentCommentID *uuid.UUID             `json:"parent_comment_id,omitempty"`
+	CreatedAt       time.Time              `json:"created_at"`
+	UpdatedAt       time.Time              `json:"updated_at"`
 }
 
 func toCommentResponse(c *model.Comment) commentResponse {
-	return commentResponse{
-		ID:         c.ID,
-		AuthorID:   c.AuthorID,
-		Body:       c.Body,
-		Visibility: c.Visibility,
-		EditCount:  c.EditCount,
-		CreatedAt:  c.CreatedAt,
-		UpdatedAt:  c.UpdatedAt,
+	resp := commentResponse{
+		ID:              c.ID,
+		AuthorID:        c.AuthorID,
+		Body:            c.Body,
+		Visibility:      c.Visibility,
+		EditCount:       c.EditCount,
+		ParentCommentID: c.ParentCommentID,
+		CreatedAt:       c.CreatedAt,
+		UpdatedAt:       c.UpdatedAt,
+	}
+	if c.Anchor != nil {
+		resp.Anchor = &commentAnchorResponse{
+			RevisionID:     c.Anchor.RevisionID,
+			RevisionNumber: c.Anchor.RevisionNumber,
+			StartLine:      c.Anchor.StartLine,
+			StartCol:       c.Anchor.StartCol,
+			EndLine:        c.Anchor.EndLine,
+			EndCol:         c.Anchor.EndCol,
+			Snippet:        c.Anchor.Snippet,
+			Status:         c.Anchor.Status,
+		}
+	}
+	return resp
+}
+
+type descriptionRevisionResponse struct {
+	ID             uuid.UUID  `json:"id"`
+	RevisionNumber int        `json:"revision_number"`
+	Content        string     `json:"content"`
+	ContentHash    string     `json:"content_hash"`
+	AuthorID       *uuid.UUID `json:"author_id,omitempty"`
+	CreatedAt      time.Time  `json:"created_at"`
+}
+
+func toDescriptionRevisionResponse(r *model.DescriptionRevision) descriptionRevisionResponse {
+	return descriptionRevisionResponse{
+		ID:             r.ID,
+		RevisionNumber: r.RevisionNumber,
+		Content:        r.Content,
+		ContentHash:    r.ContentHash,
+		AuthorID:       r.AuthorID,
+		CreatedAt:      r.CreatedAt,
 	}
 }
 
@@ -769,16 +831,83 @@ func (h *WorkItemHandler) CreateComment(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	comment, err := h.items.CreateComment(r.Context(), info, projectKey, itemNumber, service.CreateCommentInput{
-		Body:       req.Body,
-		Visibility: req.Visibility,
-	})
+	var comment *model.Comment
+	if req.Anchor != nil || req.ParentCommentID != nil {
+		var anchorInput service.InlineAnchorInput
+		if req.Anchor != nil {
+			anchorInput = service.InlineAnchorInput{
+				StartLine: req.Anchor.StartLine,
+				StartCol:  req.Anchor.StartCol,
+				EndLine:   req.Anchor.EndLine,
+				EndCol:    req.Anchor.EndCol,
+				Snippet:   req.Anchor.Snippet,
+			}
+		}
+		comment, err = h.items.CreateInlineComment(r.Context(), info, projectKey, itemNumber,
+			req.Body, req.Visibility, anchorInput, req.ParentCommentID)
+	} else {
+		comment, err = h.items.CreateComment(r.Context(), info, projectKey, itemNumber, service.CreateCommentInput{
+			Body:       req.Body,
+			Visibility: req.Visibility,
+		})
+	}
 	if err != nil {
 		handleWorkItemError(w, r, err, "failed to create comment")
 		return
 	}
 
 	writeData(w, http.StatusCreated, toCommentResponse(comment))
+}
+
+// ListDescriptionRevisions handles GET /api/v1/projects/{projectKey}/items/{itemNumber}/description-revisions
+func (h *WorkItemHandler) ListDescriptionRevisions(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
+		return
+	}
+	projectKey := chi.URLParam(r, "projectKey")
+	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid item number")
+		return
+	}
+
+	revs, err := h.items.ListDescriptionRevisions(r.Context(), info, projectKey, itemNumber)
+	if err != nil {
+		handleWorkItemError(w, r, err, "failed to list description revisions")
+		return
+	}
+	resp := make([]descriptionRevisionResponse, len(revs))
+	for i := range revs {
+		resp[i] = toDescriptionRevisionResponse(&revs[i])
+	}
+	writeData(w, http.StatusOK, resp)
+}
+
+// GetDescriptionRevision handles GET /api/v1/projects/{projectKey}/items/{itemNumber}/description-revisions/{revId}
+func (h *WorkItemHandler) GetDescriptionRevision(w http.ResponseWriter, r *http.Request) {
+	info := model.AuthInfoFromContext(r.Context())
+	if info == nil {
+		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "not authenticated")
+		return
+	}
+	projectKey := chi.URLParam(r, "projectKey")
+	itemNumber, err := strconv.Atoi(chi.URLParam(r, "itemNumber"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, CodeValidationError, "invalid item number")
+		return
+	}
+	revID, ok := parseUUIDParam(w, r, "revId", "invalid revision ID")
+	if !ok {
+		return
+	}
+	rev, err := h.items.GetDescriptionRevision(r.Context(), info, projectKey, itemNumber, revID)
+	if err != nil {
+		handleWorkItemError(w, r, err, "failed to get description revision")
+		return
+	}
+	writeData(w, http.StatusOK, toDescriptionRevisionResponse(rev))
 }
 
 // ListComments handles GET /api/v1/projects/{projectKey}/items/{itemNumber}/comments

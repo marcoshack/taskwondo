@@ -1484,5 +1484,18 @@
   "workitems.visibilities.portal": "ポータル",
   "workitems.visibilities.portal.description": "顧客は限定情報を閲覧、メンバーはすべて閲覧可能",
   "workitems.visibilities.public": "公開",
-  "workitems.visibilities.public.description": "リンクを持つ人は限定情報を閲覧、メンバーはすべて閲覧可能"
+  "workitems.visibilities.public.description": "リンクを持つ人は限定情報を閲覧、メンバーはすべて閲覧可能",
+  "inlineComments.commentButton": "コメント",
+  "inlineComments.composerHeader": "選択したテキストにコメント",
+  "inlineComments.placeholder": "コメントを入力... (Cmd/Ctrl+Enterで送信、Escでキャンセル)",
+  "inlineComments.submit": "コメント",
+  "inlineComments.submitting": "追加中...",
+  "inlineComments.outdated": "古い",
+  "inlineComments.view": "表示",
+  "inlineComments.anchorLabel": "説明へのインラインコメント",
+  "inlineComments.threadHeader": "インラインコメント",
+  "inlineComments.reply": "返信",
+  "inlineComments.replyPlaceholder": "返信を入力... (Cmd/Ctrl+Enterで送信)",
+  "inlineComments.gutterTooltip_one": "{{count}}件のインラインコメント",
+  "inlineComments.gutterTooltip_other": "{{count}}件のインラインコメント"
 }

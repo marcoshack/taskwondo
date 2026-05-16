@@ -7,8 +7,12 @@ import {
   deleteWorkItem,
   listComments,
   createComment,
+  createInlineComment,
   updateComment,
   deleteComment,
+  listDescriptionRevisions,
+  getDescriptionRevision,
+  type CreateInlineCommentInput,
   listRelations,
   createRelation,
   deleteRelation,
@@ -156,6 +160,34 @@ export function useDeleteComment(projectKey: string, itemNumber: number) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['projects', projectKey, 'items', itemNumber, 'comments'] })
     },
+  })
+}
+
+export function useCreateInlineComment(projectKey: string, itemNumber: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: CreateInlineCommentInput) =>
+      createInlineComment(projectKey, itemNumber, input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['projects', projectKey, 'items', itemNumber, 'comments'] })
+      qc.invalidateQueries({ queryKey: ['projects', projectKey, 'items', itemNumber, 'description-revisions'] })
+    },
+  })
+}
+
+export function useDescriptionRevisions(projectKey: string, itemNumber: number, enabled = true) {
+  return useQuery({
+    queryKey: ['projects', projectKey, 'items', itemNumber, 'description-revisions'],
+    queryFn: () => listDescriptionRevisions(projectKey, itemNumber),
+    enabled: enabled && !!projectKey && itemNumber > 0,
+  })
+}
+
+export function useDescriptionRevision(projectKey: string, itemNumber: number, revId: string | null) {
+  return useQuery({
+    queryKey: ['projects', projectKey, 'items', itemNumber, 'description-revisions', revId],
+    queryFn: () => getDescriptionRevision(projectKey, itemNumber, revId!),
+    enabled: !!projectKey && itemNumber > 0 && !!revId,
   })
 }
 

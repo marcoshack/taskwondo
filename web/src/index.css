@@ -48,3 +48,9 @@ html:where(.dark) {
 html { --inbox-highlight-color: rgb(199 210 254 / 0.5); }
 html:where(.dark) { --inbox-highlight-color: rgb(67 56 202 / 0.2); }
 
+
+/* TF-350: highlight the description text an open inline-comment thread refers to */
+::highlight(inline-comment-anchor) {
+  background-color: rgb(99 102 241 / 0.28);
+  color: inherit;
+}

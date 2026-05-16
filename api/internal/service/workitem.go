@@ -38,8 +38,18 @@ type CommentRepository interface {
 	Create(ctx context.Context, comment *model.Comment) error
 	GetByID(ctx context.Context, id uuid.UUID) (*model.Comment, error)
 	ListByWorkItem(ctx context.Context, workItemID uuid.UUID, visibility string) ([]model.Comment, error)
+	ListInlineByWorkItem(ctx context.Context, workItemID uuid.UUID) ([]model.Comment, error)
 	Update(ctx context.Context, comment *model.Comment) error
+	UpdateAnchor(ctx context.Context, commentID uuid.UUID, anchor *model.CommentAnchor) error
 	Delete(ctx context.Context, id uuid.UUID) error
+}
+
+// DescriptionRevisionRepository persists work item description revisions.
+type DescriptionRevisionRepository interface {
+	Create(ctx context.Context, rev *model.DescriptionRevision) error
+	GetByID(ctx context.Context, id uuid.UUID) (*model.DescriptionRevision, error)
+	GetLatest(ctx context.Context, workItemID uuid.UUID) (*model.DescriptionRevision, error)
+	ListByWorkItem(ctx context.Context, workItemID uuid.UUID) ([]model.DescriptionRevision, error)
 }
 
 // WorkItemRelationRepository defines persistence operations for work item relations.
@@ -192,6 +202,7 @@ type WorkItemService struct {
 	items         WorkItemRepository
 	events        WorkItemEventRepository
 	comments      CommentRepository
+	revisions     DescriptionRevisionRepository
 	relations     WorkItemRelationRepository
 	attachments   AttachmentRepository
 	timeEntries   TimeEntryRepository
@@ -254,6 +265,13 @@ func WithProjectContext(
 		s.queues = queues
 		s.milestones = milestones
 	}
+}
+
+// WithDescriptionRevisions wires the revision repository used by inline
+// comments (TF-350). Optional — if not set, description saves do not write
+// revisions and inline-comment APIs return errors.
+func WithDescriptionRevisions(repo DescriptionRevisionRepository) WorkItemServiceOption {
+	return func(s *WorkItemService) { s.revisions = repo }
 }
 
 // WithSLA wires SLA storage, service, and (optionally) notification clearing.
@@ -596,6 +614,7 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 		item.Title = *input.Title
 	}
 
+	descriptionChanged := false
 	if input.Description != nil {
 		if err := validateWorkItemDescription(input.Description); err != nil {
 			return nil, err
@@ -608,6 +627,7 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 			s.recordFieldChange(ctx, item.ID, info, "description", oldDesc, *input.Description)
 			watcherChanges = append(watcherChanges, fieldChange{"description", oldDesc, *input.Description})
 			item.Description = input.Description
+			descriptionChanged = true
 		}
 	}
 
@@ -921,6 +941,20 @@ func (s *WorkItemService) Update(ctx context.Context, info *model.AuthInfo, proj
 
 	if err := s.items.Update(ctx, item); err != nil {
 		return nil, fmt.Errorf("updating work item: %w", err)
+	}
+
+	// TF-350: when the description changed, persist a new revision and try
+	// to re-anchor active inline comments against the new content. Best-effort —
+	// failures here must not break the update.
+	if descriptionChanged && s.revisions != nil {
+		newDesc := ""
+		if item.Description != nil {
+			newDesc = *item.Description
+		}
+		if err := s.recordDescriptionRevision(ctx, item.ID, info, newDesc); err != nil {
+			log.Ctx(ctx).Warn().Err(err).Str("work_item_id", item.ID.String()).
+				Msg("failed to record description revision")
+		}
 	}
 
 	// Publish watcher notifications for all field changes (best-effort, after DB update)

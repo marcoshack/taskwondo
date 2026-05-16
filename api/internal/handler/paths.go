@@ -23,4 +23,5 @@ const (
 	PathStats            = "stats"
 	PathTeams            = "teams"
 	PathOncall           = "oncall"
+	PathDescriptionRevisions = "description-revisions"
 )

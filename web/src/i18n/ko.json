@@ -1484,5 +1484,18 @@
   "workitems.visibilities.portal": "포털",
   "workitems.visibilities.portal.description": "고객은 제한된 정보를 볼 수 있고, 멤버는 모든 것을 볼 수 있습니다",
   "workitems.visibilities.public": "공개",
-  "workitems.visibilities.public.description": "링크가 있는 사람은 제한된 정보를 볼 수 있고, 멤버는 모든 것을 볼 수 있습니다"
+  "workitems.visibilities.public.description": "링크가 있는 사람은 제한된 정보를 볼 수 있고, 멤버는 모든 것을 볼 수 있습니다",
+  "inlineComments.commentButton": "댓글",
+  "inlineComments.composerHeader": "선택한 텍스트에 댓글 달기",
+  "inlineComments.placeholder": "댓글 입력... (Cmd/Ctrl+Enter로 제출, Esc로 취소)",
+  "inlineComments.submit": "댓글",
+  "inlineComments.submitting": "추가 중...",
+  "inlineComments.outdated": "오래됨",
+  "inlineComments.view": "보기",
+  "inlineComments.anchorLabel": "설명에 대한 인라인 댓글",
+  "inlineComments.threadHeader": "인라인 댓글",
+  "inlineComments.reply": "답글",
+  "inlineComments.replyPlaceholder": "답글 입력... (Cmd/Ctrl+Enter로 제출)",
+  "inlineComments.gutterTooltip_one": "인라인 댓글 {{count}}개",
+  "inlineComments.gutterTooltip_other": "인라인 댓글 {{count}}개"
 }

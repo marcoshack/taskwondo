@@ -431,6 +431,16 @@ func (m *mockCommentRepo) ListByWorkItem(_ context.Context, workItemID uuid.UUID
 	return result, nil
 }
 
+func (m *mockCommentRepo) ListInlineByWorkItem(_ context.Context, workItemID uuid.UUID) ([]model.Comment, error) {
+	var result []model.Comment
+	for _, c := range m.comments {
+		if c.WorkItemID == workItemID && c.Anchor != nil {
+			result = append(result, *c)
+		}
+	}
+	return result, nil
+}
+
 func (m *mockCommentRepo) Update(_ context.Context, comment *model.Comment) error {
 	existing, ok := m.comments[comment.ID]
 	if !ok {
@@ -439,6 +449,15 @@ func (m *mockCommentRepo) Update(_ context.Context, comment *model.Comment) erro
 	existing.Body = comment.Body
 	existing.EditCount++
 	existing.UpdatedAt = time.Now()
+	return nil
+}
+
+func (m *mockCommentRepo) UpdateAnchor(_ context.Context, commentID uuid.UUID, anchor *model.CommentAnchor) error {
+	existing, ok := m.comments[commentID]
+	if !ok {
+		return model.ErrNotFound
+	}
+	existing.Anchor = anchor
 	return nil
 }
 

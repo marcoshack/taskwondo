@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { DetailSidebar } from '@/components/workitems/DetailSidebar'
 import { CommentList } from '@/components/workitems/CommentList'
+import { DescriptionWithInlineComments } from '@/components/workitems/DescriptionWithInlineComments'
 import { ActivityTimeline } from '@/components/workitems/ActivityTimeline'
 import { RelationList } from '@/components/workitems/RelationList'
 import { AttachmentList } from '@/components/workitems/AttachmentList'
@@ -37,9 +38,6 @@ import { WatcherList } from '@/components/workitems/WatcherList'
 import { useInboxItems } from '@/hooks/useInbox'
 import { useWatchers } from '@/hooks/useWorkItems'
 import { formatRelativeTime } from '@/utils/duration'
-import Markdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import { getMarkdownComponents } from '@/components/ui/markdownComponents'
 import { useNavigationGuard } from '@/contexts/NavigationGuardContext'
 import { useNamespacePath } from '@/hooks/useNamespacePath'
 
@@ -130,6 +128,8 @@ export function WorkItemDetailPage() {
     initialTab === 'comments' ? initialHighlight : null
   )
   const [previewTarget, setPreviewTarget] = useState<PreviewTarget | null>(null)
+  // Root comment id whose inline conversation thread is open in the description.
+  const [openThreadRootId, setOpenThreadRootId] = useState<string | null>(null)
 
   // Update browser tab title with work item display ID
   useEffect(() => {
@@ -216,8 +216,6 @@ export function WorkItemDetailPage() {
       setPreviewTarget({ kind: 'attachment', attachment: match, projectKey: projectKey ?? '', itemNumber })
     }
   }, [allAttachments, projectKey, itemNumber])
-
-  const descMarkdownComponents = useMemo(() => getMarkdownComponents({ onImageClick: handleImageClick, onAttachmentLinkClick: handleAttachmentLinkClick }), [handleImageClick, handleAttachmentLinkClick])
 
   const handlePageDragEnter = useCallback((e: React.DragEvent) => {
     if (!e.dataTransfer.types.includes('Files')) return
@@ -568,9 +566,16 @@ export function WorkItemDetailPage() {
                   </span>
                 )}
                 {item.description ? (
-                  <div className="prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 break-words">
-                    <Markdown remarkPlugins={[remarkGfm]} components={descMarkdownComponents}>{item.description}</Markdown>
-                  </div>
+                  <DescriptionWithInlineComments
+                    projectKey={projectKey ?? ''}
+                    itemNumber={itemNumber}
+                    description={item.description}
+                    readOnly={readOnly}
+                    onImageClick={handleImageClick}
+                    onAttachmentLinkClick={handleAttachmentLinkClick}
+                    openThreadRootId={openThreadRootId}
+                    onOpenThread={setOpenThreadRootId}
+                  />
                 ) : (
                   <span className="text-sm text-gray-400 dark:text-gray-500 italic">{t('workitems.detail.noDescription')}</span>
                 )}
@@ -609,7 +614,7 @@ export function WorkItemDetailPage() {
               )}
             </div>
 
-            {activeTab === 'comments' && <CommentList projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} highlightedCommentId={highlightedCommentId} onHighlightClear={() => setHighlightedCommentId(null)} onImageClick={handleImageClick} onAttachmentLinkClick={handleAttachmentLinkClick} draft={commentDraft} onDraftChange={setCommentDraft} readOnly={readOnly} itemVisibility={item?.visibility} />}
+            {activeTab === 'comments' && <CommentList projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} highlightedCommentId={highlightedCommentId} onHighlightClear={() => setHighlightedCommentId(null)} onImageClick={handleImageClick} onAttachmentLinkClick={handleAttachmentLinkClick} draft={commentDraft} onDraftChange={setCommentDraft} readOnly={readOnly} itemVisibility={item?.visibility} onViewInline={setOpenThreadRootId} />}
             {activeTab === 'activity' && <ActivityTimeline projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} onAttachmentClick={(id) => { setActiveTab('attachments'); setHighlightedAttachmentId(id) }} onCommentClick={(id) => { setActiveTab('comments'); setHighlightedCommentId(id) }} />}
             {activeTab === 'relations' && <RelationList projectKey={projectKey ?? ''} itemNumber={itemNumber} readOnly={readOnly} />}
             {activeTab === 'attachments' && <AttachmentList projectKey={projectKey ?? ''} itemNumber={itemNumber} sortOrder={sortOrder} highlightedAttachmentId={highlightedAttachmentId} onHighlightClear={() => setHighlightedAttachmentId(null)} onPreview={(a) => setPreviewTarget({ kind: 'attachment', attachment: a, projectKey: projectKey ?? '', itemNumber })} readOnly={readOnly} />}

@@ -81,6 +81,7 @@ func main() {
 	workItemRepo := repository.NewWorkItemRepository(db)
 	workItemEventRepo := repository.NewWorkItemEventRepository(db)
 	commentRepo := repository.NewCommentRepository(db)
+	descriptionRevisionRepo := repository.NewDescriptionRevisionRepository(db)
 	relationRepo := repository.NewWorkItemRelationRepository(db)
 	workflowRepo := repository.NewWorkflowRepository(db)
 	queueRepo := repository.NewQueueRepository(db)
@@ -163,6 +164,7 @@ func main() {
 		service.WithProjectContext(projectRepo, projectMemberRepo, workflowRepo, typeWorkflowRepo, queueRepo, milestoneRepo),
 		service.WithSLA(slaRepo, slaService),
 		service.WithStorage(store, cfg.MaxUploadSize),
+		service.WithDescriptionRevisions(descriptionRevisionRepo),
 	)
 	inboxService := service.NewInboxService(inboxRepo, projectMemberRepo)
 	userSettingService := service.NewUserSettingService(userSettingRepo, projectRepo, projectMemberRepo)
@@ -603,6 +605,10 @@ func main() {
 									r.Post("/", items.CreateComment)
 									r.Patch("/{commentId}", items.UpdateComment)
 									r.Delete("/{commentId}", items.DeleteComment)
+								})
+								r.Route("/"+handler.PathDescriptionRevisions, func(r chi.Router) {
+									r.Get("/", items.ListDescriptionRevisions)
+									r.Get("/{revId}", items.GetDescriptionRevision)
 								})
 								r.Route("/"+handler.PathRelations, func(r chi.Router) {
 									r.Get("/", items.ListRelations)
