@@ -17,21 +17,31 @@ build: test build-worker build-mcp ## Build all Docker images, worker, MCP serve
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-setup: ## Set up local dev environment (verify tools, install air, configure git hooks)
+setup: ## Set up local dev environment (verify tools, install air, generate .env, configure git hooks)
 	@printf "$(CYAN)## Checking required tools...$(RESET)\n"
 	@missing=""; \
-	for cmd in go node npm docker; do \
+	for cmd in go node npm docker openssl; do \
 		if ! command -v $$cmd >/dev/null 2>&1; then missing="$$missing $$cmd"; fi; \
 	done; \
 	if [ -n "$$missing" ]; then \
 		printf "\033[31m## Error: missing required tools:%s\033[0m\n" "$$missing"; \
 		echo "Install the missing tools and ensure they are on your PATH, then re-run 'make setup'."; \
-		echo "  - Go 1.25+:  https://go.dev/dl/"; \
-		echo "  - Node 22+:  https://nodejs.org/"; \
-		echo "  - Docker:    https://docs.docker.com/get-docker/"; \
+		echo "  - Go 1.25+:   https://go.dev/dl/"; \
+		echo "  - Node 22+:   https://nodejs.org/  (recommended: 'brew install fnm && fnm install --lts')"; \
+		echo "  - npm 11.10+: bundled npm may be older; run 'npm install -g npm@latest' after installing Node"; \
+		echo "  - Docker:     https://docs.docker.com/get-docker/"; \
+		echo "  - openssl:    usually preinstalled; on macOS 'brew install openssl' if missing"; \
 		exit 1; \
 	fi
-	@printf "$(GREEN)## Required tools OK (go, node, npm, docker)$(RESET)\n"
+	@npm_ver=$$(npm --version); \
+	npm_major=$$(echo $$npm_ver | cut -d. -f1); \
+	npm_minor=$$(echo $$npm_ver | cut -d. -f2); \
+	if [ "$$npm_major" -lt 11 ] || { [ "$$npm_major" -eq 11 ] && [ "$$npm_minor" -lt 10 ]; }; then \
+		printf "\033[31m## Error: npm %s is too old. Need >= 11.10 for the supply-chain cooldown in web/.npmrc (minimum-release-age).\033[0m\n" "$$npm_ver"; \
+		echo "Upgrade: npm install -g npm@latest"; \
+		exit 1; \
+	fi
+	@printf "$(GREEN)## Required tools OK (go, node, npm $$(npm --version), docker, openssl)$(RESET)\n"
 	@printf "$(CYAN)## Installing air (Go hot-reload)...$(RESET)\n"
 	@go install github.com/air-verse/air@latest
 	@if ! command -v air >/dev/null 2>&1; then \
@@ -42,10 +52,30 @@ setup: ## Set up local dev environment (verify tools, install air, configure git
 		exit 1; \
 	fi
 	@printf "$(GREEN)## air installed: %s$(RESET)\n" "$$(command -v air)"
+	@if [ ! -f .env ]; then \
+		printf "$(CYAN)## Generating .env (running ./install.sh --manual-setup -y)...$(RESET)\n"; \
+		./install.sh --manual-setup -y; \
+		printf "$(GREEN)## .env generated$(RESET)\n"; \
+	else \
+		printf "$(GREEN)## .env already exists, leaving it as-is$(RESET)\n"; \
+	fi
+	@missing=""; \
+	set -a && . ./.env && set +a; \
+	for var in $(REQUIRED_VARS); do \
+		val=$$(eval echo "\$$$$var"); \
+		if [ -z "$$val" ]; then missing="$$missing $$var"; fi; \
+	done; \
+	if [ -n "$$missing" ]; then \
+		printf "\033[31m## Error: .env is missing required variables:%s\033[0m\n" "$$missing"; \
+		echo "Edit .env and set the missing values (see .env.template), or delete .env and re-run 'make setup' to regenerate."; \
+		exit 1; \
+	fi
+	@printf "$(GREEN)## .env has all required variables$(RESET)\n"
 	@git config core.hooksPath .githooks
 	@printf "$(GREEN)## Git hooks configured (.githooks/)$(RESET)\n"
+	@printf "$(GREEN)## Setup complete — run 'make dev' to start the local stack$(RESET)\n"
 
-check-tools: ## Verify required tools are installed (go, node, npm, docker)
+check-tools: ## Verify required tools are installed (go, node, npm >= 11.10, docker)
 	@missing=""; \
 	for cmd in go node npm docker; do \
 		if ! command -v $$cmd >/dev/null 2>&1; then missing="$$missing $$cmd"; fi; \
@@ -53,6 +83,14 @@ check-tools: ## Verify required tools are installed (go, node, npm, docker)
 	if [ -n "$$missing" ]; then \
 		printf "\033[31mError: missing required tools:%s\033[0m\n" "$$missing"; \
 		echo "Please install the missing tools and ensure they are on your PATH."; \
+		exit 1; \
+	fi
+	@npm_ver=$$(npm --version); \
+	npm_major=$$(echo $$npm_ver | cut -d. -f1); \
+	npm_minor=$$(echo $$npm_ver | cut -d. -f2); \
+	if [ "$$npm_major" -lt 11 ] || { [ "$$npm_major" -eq 11 ] && [ "$$npm_minor" -lt 10 ]; }; then \
+		printf "\033[31mError: npm %s is too old. Need >= 11.10 for the supply-chain cooldown in web/.npmrc (minimum-release-age).\033[0m\n" "$$npm_ver"; \
+		echo "Upgrade: npm install -g npm@latest"; \
 		exit 1; \
 	fi
 

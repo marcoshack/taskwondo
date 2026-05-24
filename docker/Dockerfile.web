@@ -2,6 +2,11 @@ FROM node:22-alpine AS builder
 
 WORKDIR /src
 
+# node:22-alpine ships with npm 10.x, but web/.npmrc uses `minimum-release-age`
+# (added in npm 11.5). Without this upgrade, npm warns and silently ignores the
+# supply-chain cooldown.
+RUN npm install -g npm@latest
+
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
 

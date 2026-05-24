@@ -3,9 +3,10 @@
 ## Prerequisites
 
 - Go 1.25+
-- Node.js 22+
+- Node.js 22+ (with npm 11.10+ — run `npm install -g npm@latest` if needed)
 - Docker (container runtime + CLI)
 - Docker Compose plugin
+- `openssl` (for generating secrets — preinstalled on macOS/most Linux)
 
 ## Docker Setup
 
@@ -49,10 +50,13 @@ On macOS, use [Colima](https://github.com/abiosoft/colima) as a lightweight Dock
 ## Getting Started
 
 ```bash
-./install.sh --manual-setup -y # generate .env with secrets and defaults
-make setup                     # configure git hooks
-make dev                       # starts Postgres + MinIO + API (hot-reload) + Vite dev server
+make setup   # verify tools, install air, generate .env (via install.sh), configure git hooks
+make dev     # starts Postgres + MinIO + NATS + Mailpit + Ollama + API (hot-reload) + Vite + Worker
 ```
+
+`make setup` runs `./install.sh --manual-setup -y` automatically when `.env` is
+missing. To regenerate `.env` from scratch, delete it and re-run `make setup`
+(or run `./install.sh --manual-setup -y` directly).
 
 ## Running Tests
 
