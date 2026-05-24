@@ -67,7 +67,7 @@ generate_hex_32() {
 }
 
 generate_password() {
-    openssl rand -base64 24
+    openssl rand -hex 16
 }
 
 # Prompt user for a value. Args: description, default_value
