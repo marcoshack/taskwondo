@@ -29,6 +29,12 @@ export function OAuthCallbackPage() {
     oauthCallback(provider, code, state)
       .then(({ token, user }) => {
         loginWithToken(token, user)
+        const next = sessionStorage.getItem('taskwondo_oauth_next')
+        sessionStorage.removeItem('taskwondo_oauth_next')
+        if (next && next.startsWith('/') && !next.startsWith('//')) {
+          navigate(next, { replace: true })
+          return
+        }
         const pendingInvite = localStorage.getItem('taskwondo_pending_invite')
         if (pendingInvite) {
           localStorage.removeItem('taskwondo_pending_invite')

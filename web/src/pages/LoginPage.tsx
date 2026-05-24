@@ -50,6 +50,7 @@ const OAUTH_PROVIDERS: Record<string, { icon: React.ReactNode }> = {
 }
 
 const PENDING_INVITE_KEY = 'taskwondo_pending_invite'
+const OAUTH_NEXT_KEY = 'taskwondo_oauth_next'
 
 export function LoginPage() {
   const { t } = useTranslation()
@@ -98,6 +99,12 @@ export function LoginPage() {
 
   const handleOAuthLogin = async (provider: string) => {
     try {
+      const next = searchParams.get('next')
+      if (next && next.startsWith('/') && !next.startsWith('//')) {
+        sessionStorage.setItem(OAUTH_NEXT_KEY, next)
+      } else {
+        sessionStorage.removeItem(OAUTH_NEXT_KEY)
+      }
       const { url } = await authApi.getOAuthURL(provider)
       window.location.href = url
     } catch {

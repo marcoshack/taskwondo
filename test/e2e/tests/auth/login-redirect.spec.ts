@@ -42,4 +42,48 @@ test.describe('Login redirect', () => {
     // Should land on /d/projects (default)
     await expect(page).toHaveURL(/\/d\/projects/, { timeout: 10000 });
   });
+
+  test('redirects to original URL after OAuth login', async ({ testUser, testProject, page, request }) => {
+    // Deep link target (the URL the user was originally trying to reach)
+    const item = await api.createWorkItem(request, testUser.token, testProject.key, {
+      title: 'OAuth Redirect Test Item',
+      type: 'task',
+    });
+    const targetPath = `/d/projects/${testProject.key}/items/${item.item_number}`;
+
+    // Simulate the OAuth round-trip: LoginPage stores `next` in sessionStorage
+    // before redirecting to the provider. We pre-populate it here so the
+    // OAuth callback page can consume it.
+    await page.addInitScript((path) => {
+      window.sessionStorage.setItem('taskwondo_oauth_next', path);
+    }, targetPath);
+
+    // Stub the provider callback to issue a real test-user session, so we
+    // don't need a real OAuth provider in the e2e environment.
+    await page.route('**/api/v1/auth/discord/callback', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: {
+            token: testUser.token,
+            user: {
+              id: testUser.id,
+              email: testUser.email,
+              display_name: testUser.displayName,
+              global_role: 'user',
+              has_password: true,
+            },
+          },
+        }),
+      });
+    });
+
+    // Land on the OAuth callback page as the provider would redirect us
+    await page.goto('/auth/discord/callback?code=test&state=test');
+
+    // Should land on the original deep link, not /d/projects
+    await expect(page).toHaveURL(new RegExp(targetPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), { timeout: 10000 });
+    await expect(page.getByText('OAuth Redirect Test Item')).toBeVisible({ timeout: 10000 });
+  });
 });
