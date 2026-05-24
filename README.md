@@ -139,6 +139,33 @@ Taskwondo includes an [MCP server](https://modelcontextprotocol.io/) with 50+ to
 
 The MCP server connects to a running Taskwondo instance via API key. Set the `TASKWONDO_URL` and `TASKWONDO_API_KEY` environment variables, then run the binary as a stdio transport.
 
+### Configuring Claude Code
+
+After downloading the MCP binary for your platform (e.g. `taskwondo-mcp-darwin-arm64` on Apple Silicon), make it executable and register it with Claude Code at user scope so it's available across all your projects:
+
+```bash
+# 1. Move the binary somewhere on your PATH and make it executable
+chmod +x ~/Downloads/taskwondo-mcp-darwin-arm64
+mv ~/Downloads/taskwondo-mcp-darwin-arm64 /usr/local/bin/taskwondo-mcp
+
+# 2. Generate an API key from Taskwondo: User Menu → Preferences → Authentication → API Keys
+
+# 3. Register the server with Claude Code at user scope
+claude mcp add taskwondo \
+  --scope user \
+  --env TASKWONDO_URL=https://your-instance.example.com \
+  --env TASKWONDO_API_KEY=twk_your_api_key_here \
+  -- taskwondo-mcp
+```
+
+Verify the server is registered and reachable:
+
+```bash
+claude mcp list
+```
+
+For Claude Desktop, download the `taskwondo.mcpb` bundle from the [Releases](https://github.com/marcoshack/taskwondo/releases) page and open it — Claude Desktop will prompt for the URL and API key during install.
+
 ## Development
 
 See [README_DEV.md](README_DEV.md) for development setup instructions (Docker, Colima on macOS, running tests, etc.).
