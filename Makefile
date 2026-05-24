@@ -1,4 +1,4 @@
-.PHONY: build push help setup dev dev-stop dev-db dev-api dev-web dev-worker up down logs logs-api migrate migrate-new test test-api test-web test-e2e test-e2e-dev test-e2e-report check-env check-tools check-air release build-mcp build-mcp-linux build-mcp-darwin build-mcp-windows build-mcpb build-worker lint-ci
+.PHONY: build push help setup dev dev-stop dev-db dev-api dev-web dev-worker up down logs logs-api migrate migrate-new test test-api test-web test-e2e test-e2e-dev test-e2e-report check-env check-tools check-tools-api check-tools-web check-air release build-mcp build-mcp-linux build-mcp-darwin build-mcp-windows build-mcpb build-worker lint-ci
 
 # Required environment variables (checked by sourcing .env)
 REQUIRED_VARS := POSTGRES_USER POSTGRES_PASSWORD MINIO_ROOT_USER MINIO_ROOT_PASSWORD JWT_SECRET DATABASE_URL STORAGE_ACCESS_KEY STORAGE_SECRET_KEY
@@ -75,14 +75,21 @@ setup: ## Set up local dev environment (verify tools, install air, generate .env
 	@printf "$(GREEN)## Git hooks configured (.githooks/)$(RESET)\n"
 	@printf "$(GREEN)## Setup complete — run 'make dev' to start the local stack$(RESET)\n"
 
-check-tools: ## Verify required tools are installed (go, node, npm >= 11.10, docker)
+check-tools-api: ## Verify tools required for Go API tests/builds (go)
+	@if ! command -v go >/dev/null 2>&1; then \
+		printf "\033[31mError: missing required tool: go\033[0m\n"; \
+		echo "Install Go 1.25+: https://go.dev/dl/"; \
+		exit 1; \
+	fi
+
+check-tools-web: ## Verify tools required for frontend tests/builds (node, npm >= 11.10)
 	@missing=""; \
-	for cmd in go node npm docker; do \
+	for cmd in node npm; do \
 		if ! command -v $$cmd >/dev/null 2>&1; then missing="$$missing $$cmd"; fi; \
 	done; \
 	if [ -n "$$missing" ]; then \
 		printf "\033[31mError: missing required tools:%s\033[0m\n" "$$missing"; \
-		echo "Please install the missing tools and ensure they are on your PATH."; \
+		echo "Install Node 22+ (which bundles npm): https://nodejs.org/"; \
 		exit 1; \
 	fi
 	@npm_ver=$$(npm --version); \
@@ -91,6 +98,13 @@ check-tools: ## Verify required tools are installed (go, node, npm >= 11.10, doc
 	if [ "$$npm_major" -lt 11 ] || { [ "$$npm_major" -eq 11 ] && [ "$$npm_minor" -lt 10 ]; }; then \
 		printf "\033[31mError: npm %s is too old. Need >= 11.10 for the supply-chain cooldown in web/.npmrc (minimum-release-age).\033[0m\n" "$$npm_ver"; \
 		echo "Upgrade: npm install -g npm@latest"; \
+		exit 1; \
+	fi
+
+check-tools: check-tools-api check-tools-web ## Verify all required tools are installed (go, node, npm >= 11.10, docker)
+	@if ! command -v docker >/dev/null 2>&1; then \
+		printf "\033[31mError: missing required tool: docker\033[0m\n"; \
+		echo "Install Docker: https://docs.docker.com/get-docker/"; \
 		exit 1; \
 	fi
 
@@ -334,7 +348,7 @@ LIGHT_BLUE := \033[94m
 
 test: test-api test-web lint-ci ## Run all tests (API + frontend + CI lint)
 
-test-api: check-tools ## Run Go API tests
+test-api: check-tools-api ## Run Go API tests
 	@echo ""
 	@printf "$(CYAN)## Running Go tests...$(RESET)\n"
 	cd api && go test ./... -v -race -cover 2>&1 | tee /tmp/taskwondo-test-output.txt
@@ -345,7 +359,7 @@ test-api: check-tools ## Run Go API tests
 	printf "$(LIGHT_BLUE)   %-40s %s%%$(RESET)\n" "TOTAL (avg)" "$$total"
 	@printf "$(GREEN)## Go tests passed$(RESET)\n"
 
-test-web: check-tools ## Run frontend tests and build (install, Vitest, tsc + vite build)
+test-web: check-tools-web ## Run frontend tests and build (install, Vitest, tsc + vite build)
 	@echo ""
 	@printf "$(CYAN)## Installing frontend dependencies...$(RESET)\n"
 	cd web && npm ci

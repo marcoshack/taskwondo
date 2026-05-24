@@ -38,6 +38,14 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
 
+      - name: Pin npm version
+        # Single source of truth: ARG NPM_VERSION in docker/Dockerfile.web.
+        # Keeps CI and image builds on the same pinned npm without duplication.
+        run: |
+          NPM_VERSION=$(grep -E '^ARG NPM_VERSION=' docker/Dockerfile.web | cut -d= -f2)
+          echo "Installing npm@${NPM_VERSION}"
+          npm install -g "npm@${NPM_VERSION}"
+
       - name: Run tests and build
         run: make test-web
 
