@@ -2323,7 +2323,8 @@ func validateWorkItemCustomFields(cf map[string]interface{}) error {
 func isValidWorkItemType(t string) bool {
 	switch t {
 	case model.WorkItemTypeTask, model.WorkItemTypeTicket, model.WorkItemTypeBug,
-		model.WorkItemTypeFeedback, model.WorkItemTypeEpic:
+		model.WorkItemTypeFeedback, model.WorkItemTypeEpic,
+		model.WorkItemTypeStory:
 		return true
 	}
 	return false

@@ -30,6 +30,7 @@ const typeBarColors: Record<string, string> = {
   ticket: 'bg-indigo-500',
   feedback: 'bg-yellow-500',
   epic: 'bg-green-500',
+  story: 'bg-purple-500',
 }
 
 const priorityBarColors: Record<string, string> = {

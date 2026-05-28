@@ -373,6 +373,7 @@
   "workitems.types.bug": "Bug",
   "workitems.types.feedback": "Feedback",
   "workitems.types.epic": "Epic",
+  "workitems.types.story": "Story",
   "workitems.priorities.low": "Low",
   "workitems.priorities.medium": "Medium",
   "workitems.priorities.high": "High",

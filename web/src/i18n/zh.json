@@ -1473,6 +1473,7 @@
   "workitems.titleShort": "条目",
   "workitems.types.bug": "缺陷",
   "workitems.types.epic": "史诗",
+  "workitems.types.story": "故事",
   "workitems.types.feedback": "反馈",
   "workitems.types.task": "任务",
   "workitems.types.ticket": "工单",

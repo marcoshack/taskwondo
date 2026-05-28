@@ -8,6 +8,7 @@ const typeColors = {
   ticket: 'indigo',
   feedback: 'yellow',
   epic: 'green',
+  story: 'purple',
 } as const
 
 export function TypeBadge({ type, className }: { type: string; className?: string }) {

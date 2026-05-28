@@ -153,7 +153,7 @@ export function SystemWorkflowsPage() {
       </div>
 
       <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
-        {['task', 'ticket', 'bug', 'feedback', 'epic'].map((itemType) => {
+        {['task', 'ticket', 'bug', 'feedback', 'epic', 'story'].map((itemType) => {
           const currentWfId = (defaultTypeWorkflows as Record<string, string> | undefined)?.[itemType] ?? ''
           return (
             <div key={itemType} className="flex items-center justify-between p-3">

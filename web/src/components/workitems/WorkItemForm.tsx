@@ -12,7 +12,7 @@ import type { WorkflowStatus } from '@/api/workflows'
 import type { ProjectMember, Project } from '@/api/projects'
 import type { Milestone } from '@/api/milestones'
 
-const TYPES = ['task', 'ticket', 'bug', 'feedback', 'epic']
+const TYPES = ['task', 'ticket', 'bug', 'feedback', 'epic', 'story']
 const PRIORITIES = ['low', 'medium', 'high', 'critical']
 const VISIBILITIES = ['internal', 'portal', 'public']
 

@@ -1473,6 +1473,7 @@
   "workitems.titleShort": "Ítems",
   "workitems.types.bug": "Bug",
   "workitems.types.epic": "Épica",
+  "workitems.types.story": "Historia",
   "workitems.types.feedback": "Feedback",
   "workitems.types.task": "Tarea",
   "workitems.types.ticket": "Ticket",

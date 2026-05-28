@@ -13,6 +13,7 @@ const (
 	WorkItemTypeBug      = "bug"
 	WorkItemTypeFeedback = "feedback"
 	WorkItemTypeEpic     = "epic"
+	WorkItemTypeStory    = "story"
 )
 
 // Work item priority constants.

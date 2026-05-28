@@ -281,7 +281,7 @@ export function ProjectWorkflowsPage() {
       {workflowError && <p className="text-sm text-red-600 dark:text-red-400">{workflowError}</p>}
 
       <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
-        {['task', 'ticket', 'bug', 'feedback', 'epic'].map((itemType) => {
+        {['task', 'ticket', 'bug', 'feedback', 'epic', 'story'].map((itemType) => {
           const mapping = typeWorkflows?.find((tw) => tw.work_item_type === itemType)
           return (
             <div key={itemType} className="flex items-center justify-between p-3">
@@ -432,7 +432,7 @@ export function ProjectWorkflowsPage() {
       {escalationMappingError && <p className="text-sm text-red-600 dark:text-red-400">{escalationMappingError}</p>}
 
       <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
-        {['task', 'ticket', 'bug', 'feedback', 'epic'].map((itemType) => {
+        {['task', 'ticket', 'bug', 'feedback', 'epic', 'story'].map((itemType) => {
           const escMapping = escalationMappings?.find((m) => m.work_item_type === itemType)
           const wfMapping = typeWorkflows?.find((tw) => tw.work_item_type === itemType)
           const hasEscalation = !!escMapping?.escalation_list_id

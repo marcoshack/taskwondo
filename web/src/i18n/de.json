@@ -1473,6 +1473,7 @@
   "workitems.titleShort": "Elemente",
   "workitems.types.bug": "Fehler",
   "workitems.types.epic": "Epic",
+  "workitems.types.story": "Story",
   "workitems.types.feedback": "Feedback",
   "workitems.types.task": "Aufgabe",
   "workitems.types.ticket": "Ticket",

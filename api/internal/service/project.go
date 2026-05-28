@@ -783,6 +783,7 @@ func (s *ProjectService) SeedDefaultTypeWorkflows(ctx context.Context) error {
 		model.WorkItemTypeEpic:     taskWfID.String(),
 		model.WorkItemTypeTicket:   ticketWfID.String(),
 		model.WorkItemTypeFeedback: ticketWfID.String(),
+		model.WorkItemTypeStory:    taskWfID.String(),
 	}
 
 	value, err := json.Marshal(typeMapping)
@@ -887,6 +888,7 @@ func (s *ProjectService) seedTypeWorkflows(ctx context.Context, projectID uuid.U
 			model.WorkItemTypeEpic:     taskWfID,
 			model.WorkItemTypeTicket:   ticketWfID,
 			model.WorkItemTypeFeedback: ticketWfID,
+			model.WorkItemTypeStory:    taskWfID,
 		}
 	}
 

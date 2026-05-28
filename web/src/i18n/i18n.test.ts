@@ -128,6 +128,7 @@ const SAME_VALUE_ALLOWED = new Set([
   'workitems.types.bug',
   'workitems.types.epic',
   'workitems.types.feedback',
+  'workitems.types.story',
   'workitems.types.ticket',
   'workitems.view.board',
   'workitems.visibilities.portal',

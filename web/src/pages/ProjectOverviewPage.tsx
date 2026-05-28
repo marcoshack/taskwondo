@@ -70,7 +70,7 @@ export function ProjectOverviewPage() {
     return { byKey, otherTypes }
   }, [itemsData])
 
-  const allTypes = ['task', 'ticket', 'bug', 'feedback', 'epic']
+  const allTypes = ['task', 'ticket', 'bug', 'feedback', 'epic', 'story']
   const otherTypes = allTypes.filter((tp) => !primaryTypes.has(tp))
 
   function navigateToItems(panelKey: string) {

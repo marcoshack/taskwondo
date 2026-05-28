@@ -32,7 +32,7 @@ interface DetailSidebarProps {
 }
 
 const PRIORITIES = ['low', 'medium', 'high', 'critical']
-const TYPES = ['task', 'ticket', 'bug', 'feedback', 'epic']
+const TYPES = ['task', 'ticket', 'bug', 'feedback', 'epic', 'story']
 const VISIBILITIES = ['internal', 'portal', 'public'] as const
 
 const MAX_COMPLEXITY = 1000000

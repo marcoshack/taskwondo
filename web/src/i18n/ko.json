@@ -1473,6 +1473,7 @@
   "workitems.titleShort": "항목",
   "workitems.types.bug": "버그",
   "workitems.types.epic": "에픽",
+  "workitems.types.story": "스토리",
   "workitems.types.feedback": "피드백",
   "workitems.types.task": "작업",
   "workitems.types.ticket": "티켓",

@@ -55,6 +55,7 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
     { value: 'bug', label: t('workitems.types.bug') },
     { value: 'feedback', label: t('workitems.types.feedback') },
     { value: 'epic', label: t('workitems.types.epic') },
+    { value: 'story', label: t('workitems.types.story') },
   ]
 
   const priorityOptions: MultiSelectOption[] = [
