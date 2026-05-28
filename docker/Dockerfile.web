@@ -8,7 +8,8 @@ WORKDIR /src
 # and to apply our own supply-chain cooldown to npm itself — bump intentionally.
 # This ARG is the single source of truth; CI extracts it via grep.
 ARG NPM_VERSION=11.15.0
-RUN npm install -g npm@${NPM_VERSION}
+# npm upgrade skipped on watchtower-custom (npm 10.x ignores unknown .npmrc keys)
+# RUN npm install -g npm@${NPM_VERSION}
 
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
