@@ -94,9 +94,15 @@ const OAUTH_PROVIDERS: OAuthProviderDef[] = [
     descriptionKey: 'admin.authentication.microsoft.description',
     enabledSettingKey: 'auth_microsoft_enabled',
   },
+  {
+    provider: 'oidc',
+    titleKey: 'admin.authentication.oidc.title',
+    descriptionKey: 'admin.authentication.oidc.description',
+    enabledSettingKey: 'auth_oidc_enabled',
+  },
 ]
 
-const DEFAULT_PROVIDER_ORDER = ['discord', 'google', 'github', 'microsoft']
+const DEFAULT_PROVIDER_ORDER = ['discord', 'google', 'github', 'microsoft', 'oidc']
 
 function sortProviders(providers: OAuthProviderDef[], order: string[]): OAuthProviderDef[] {
   const orderMap = new Map(order.map((p, i) => [p, i]))
@@ -151,10 +157,10 @@ function OAuthProviderCard({
   const isDirty = localConfig !== null || secretTouched
 
   const isFormComplete = () => {
-    return (
-      cfg.client_id.trim() !== '' &&
-      (cfg.client_secret !== '' || (hasExistingConfig && savedConfig?.client_secret === PASSWORD_MASK && !secretTouched))
-    )
+    const hasClientId = cfg.client_id.trim() !== ''
+    const hasSecret = cfg.client_secret !== '' || (hasExistingConfig && savedConfig?.client_secret === PASSWORD_MASK && !secretTouched)
+    const hasIssuerUrl = provider !== 'oidc' || (cfg.issuer_url ?? '').trim() !== ''
+    return hasClientId && hasSecret && hasIssuerUrl
   }
 
   const canSave = isDirty && isFormComplete()
@@ -254,6 +260,14 @@ function OAuthProviderCard({
           }
         }}
       />
+      {provider === 'oidc' && (
+        <Input
+          label={t('admin.authentication.oidc.issuerUrl')}
+          value={cfg.issuer_url ?? ''}
+          onChange={(e) => updateField('issuer_url', e.target.value)}
+          placeholder="https://auth.example.com/realms/myrealm"
+        />
+      )}
       <RedirectUriField provider={provider} />
     </ExpandableConfigCard>
   )
@@ -301,6 +315,7 @@ export function SystemAuthenticationPage() {
     auth_google_enabled: settings.auth_google_enabled === true,
     auth_github_enabled: settings.auth_github_enabled === true,
     auth_microsoft_enabled: settings.auth_microsoft_enabled === true,
+    auth_oidc_enabled: settings.auth_oidc_enabled === true,
   }
 
   const handleReorder = (index: number, direction: 'up' | 'down') => {

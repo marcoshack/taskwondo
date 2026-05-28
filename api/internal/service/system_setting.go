@@ -147,6 +147,7 @@ func (s *SystemSettingService) GetPublic(ctx context.Context) (map[string]json.R
 		model.SettingAuthGoogleEnabled,
 		model.SettingAuthGitHubEnabled,
 		model.SettingAuthMicrosoftEnabled,
+		model.SettingAuthOIDCEnabled,
 		model.SettingOAuthProviderOrder,
 		model.SettingFeatureStatsTimeline,
 		model.SettingFeatureSemanticSearch,

@@ -20,6 +20,7 @@ const (
 	SettingAuthGoogleEnabled            = "auth_google_enabled"
 	SettingAuthGitHubEnabled            = "auth_github_enabled"
 	SettingAuthMicrosoftEnabled         = "auth_microsoft_enabled"
+	SettingAuthOIDCEnabled               = "auth_oidc_enabled"
 
 	// OAuth provider ordering (JSON array of provider names, e.g. ["discord","google","github"])
 	SettingOAuthProviderOrder = "oauth_provider_order"
@@ -29,6 +30,7 @@ const (
 	SettingOAuthGoogleConfig  = "oauth_google_config"
 	SettingOAuthGitHubConfig     = "oauth_github_config"
 	SettingOAuthMicrosoftConfig  = "oauth_microsoft_config"
+	SettingOAuthOIDCConfig       = "oauth_oidc_config"
 
 	// Deny lists (JSON arrays of strings)
 	SettingReservedNamespaceSlugs = "reserved_namespace_slugs"
@@ -97,6 +99,7 @@ func (c *SMTPConfig) Validate() error {
 type OAuthProviderConfig struct {
 	ClientID     string `json:"client_id"`
 	ClientSecret string `json:"client_secret"`
+	IssuerURL    string `json:"issuer_url,omitempty"`
 }
 
 // Validate checks that all required fields are present.
@@ -121,6 +124,8 @@ func OAuthConfigSettingKey(provider string) string {
 		return SettingOAuthGitHubConfig
 	case OAuthProviderMicrosoft:
 		return SettingOAuthMicrosoftConfig
+	case OAuthProviderOIDC:
+		return SettingOAuthOIDCConfig
 	default:
 		return ""
 	}
@@ -138,6 +143,8 @@ func OAuthEnabledToConfigKey(enabledKey string) string {
 		return SettingOAuthGitHubConfig
 	case SettingAuthMicrosoftEnabled:
 		return SettingOAuthMicrosoftConfig
+	case SettingAuthOIDCEnabled:
+		return SettingOAuthOIDCConfig
 	default:
 		return ""
 	}

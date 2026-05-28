@@ -262,6 +262,7 @@ var validOAuthProviders = map[string]bool{
 	model.OAuthProviderGoogle:    true,
 	model.OAuthProviderGitHub:    true,
 	model.OAuthProviderMicrosoft: true,
+	model.OAuthProviderOIDC:      true,
 }
 
 // GetOAuthConfig handles GET /api/v1/admin/settings/oauth_config/{provider}

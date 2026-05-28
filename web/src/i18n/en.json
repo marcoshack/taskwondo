@@ -47,7 +47,6 @@
   "common.autoRefresh30s": "30s",
   "common.autoRefresh1m": "1m",
   "common.autoRefresh5m": "5m",
-
   "errors.namespace_slug_invalid": "Namespace slug must be 2-30 lowercase alphanumeric characters or hyphens, starting with a letter.",
   "errors.namespace_slug_reserved": "Namespace slug \"{{slug}}\" is reserved.",
   "errors.namespace_slug_in_use": "Namespace slug \"{{slug}}\" is already in use.",
@@ -58,15 +57,12 @@
   "errors.project_key_in_use": "Project key \"{{key}}\" is already in use.",
   "errors.project_limit_reached": "Project ownership limit reached. Contact an administrator to increase your limit.",
   "errors.email_already_exists": "A user with this email already exists.",
-
   "brand.name": "Taskwondo",
-
   "nav.preferences": "Preferences",
   "nav.help": "Help",
   "nav.signOut": "Sign out",
   "nav.search": "Search",
   "nav.home": "Home",
-
   "login.title": "Sign in to {{brandName}}",
   "login.email": "Email",
   "login.password": "Password",
@@ -100,7 +96,6 @@
   "login.oauth.backToLogin": "Back to sign in",
   "login.noAccount": "Don't have an account?",
   "login.createAccount": "Create an account",
-
   "register.title": "Create your account",
   "register.displayName": "Display Name",
   "register.email": "Email",
@@ -112,7 +107,6 @@
   "register.backToLogin": "Back to sign in",
   "register.haveAccount": "Already have an account?",
   "register.signIn": "Sign in",
-
   "verifyEmail.title": "Set your password",
   "verifyEmail.description": "Choose a password to complete your account setup.",
   "verifyEmail.password": "Password",
@@ -122,9 +116,7 @@
   "verifyEmail.error": "Verification failed. The link may have expired.",
   "verifyEmail.mismatch": "Passwords do not match.",
   "verifyEmail.tooShort": "Password must be at least 8 characters.",
-
   "login.forgotPassword": "Forgot your password?",
-
   "forgotPassword.title": "Reset your password",
   "forgotPassword.description": "Enter your email address and we'll send you a link to reset your password.",
   "forgotPassword.email": "Email",
@@ -134,7 +126,6 @@
   "forgotPassword.checkEmail": "Check your email",
   "forgotPassword.checkEmailDescription": "If an account exists with that email, we've sent a password reset link. The link expires in 1 hour.",
   "forgotPassword.backToLogin": "Back to sign in",
-
   "resetPassword.title": "Set a new password",
   "resetPassword.description": "Choose a new password for your account.",
   "resetPassword.password": "New Password",
@@ -145,7 +136,6 @@
   "resetPassword.mismatch": "Passwords do not match.",
   "resetPassword.tooShort": "Password must be at least 8 characters.",
   "resetPassword.backToLogin": "Back to sign in",
-
   "projects.title": "Projects",
   "projects.new": "New Project",
   "projects.empty": "No projects yet. Create one to get started.",
@@ -163,7 +153,6 @@
   "projects.table.inProgress": "In Progress",
   "projects.table.total": "Total",
   "projects.table.members": "Members",
-
   "projects.create.title": "New Project",
   "projects.create.name": "Name",
   "projects.create.namePlaceholder": "My Project",
@@ -172,7 +161,6 @@
   "projects.create.keyHint": "1-5 uppercase letters/digits, must start with a letter",
   "projects.create.description": "Description",
   "projects.create.descriptionPlaceholder": "Optional description",
-
   "projects.settings.title": "Settings",
   "projects.settings.subtitle": "Manage your project settings.",
   "projects.settings.tab.general": "General",
@@ -194,7 +182,6 @@
   "projects.settings.workflowUpdated": "Workflow mapping updated.",
   "projects.settings.workflowUpdateError": "Failed to update workflow mapping.",
   "projects.settings.selectWorkflow": "Select a workflow...",
-
   "projects.settings.complexity": "Complexity",
   "projects.settings.complexityDescription": "Define allowed complexity values for work items. Leave empty for free-form numeric input.",
   "projects.settings.complexityValues": "Allowed values",
@@ -203,7 +190,6 @@
   "projects.settings.complexitySaved": "Complexity values updated.",
   "projects.settings.complexityCleared": "Complexity values cleared. Free-form input enabled.",
   "projects.settings.complexityInvalid": "All values must be positive integers.",
-
   "projects.settings.dangerZone": "Danger Zone",
   "projects.settings.deleteProject": "Delete",
   "projects.settings.deleteWarning": "All work items, comments, and relations in this project will be permanently deleted.",
@@ -212,7 +198,6 @@
   "projects.settings.deleteConfirmType": "Please type <bold>{{projectKey}}</bold> to confirm.",
   "projects.settings.deleteConfirmButton": "I understand, delete this project",
   "projects.settings.deleteThisProject": "Delete this project",
-
   "projects.settings.members": "Members",
   "projects.settings.membersDescription": "Manage who has access to this project and their roles.",
   "projects.settings.addMember": "Add Member",
@@ -249,7 +234,6 @@
   "projects.settings.roles.viewer.description": "Read-only access to the project and its work items.",
   "projects.settings.roles.customer.description": "External user with access to the support portal only.",
   "projects.settings.addUser": "Add user",
-
   "projects.overview.openWorkItems": "Open Work Items",
   "projects.overview.tasks": "Tasks",
   "projects.overview.tickets": "Tickets",
@@ -273,14 +257,11 @@
   "projects.overview.seriesCancelled": "Cancelled",
   "projects.settings.hiddenMembers_one": "+ {{count}} other member",
   "projects.settings.hiddenMembers_other": "+ {{count}} other members",
-
   "projects.switcher.title": "Switch Project",
   "projects.switcher.search": "Search projects...",
   "projects.switcher.showAllNamespaces": "All namespaces",
-
   "projects.placeholder.comingSoon": "{{title}} view coming soon.",
   "projects.queuesComingSoon": "Queues coming soon",
-
   "sidebar.overview": "Overview",
   "sidebar.items": "Items",
   "sidebar.queues": "Queues",
@@ -292,7 +273,6 @@
   "sidebar.expand": "Expand sidebar",
   "sidebar.menu": "Menu",
   "sidebar.projects": "Projects",
-
   "workitems.title": "Work Items",
   "workitems.titleShort": "Items",
   "workitems.new": "New Item",
@@ -307,26 +287,22 @@
   "workitems.dropToAttach": "Drop files to attach",
   "workitems.selected": "{{count}} selected",
   "workitems.attached": "Attached \"{{filename}}\"",
-
   "workitems.view.list": "List",
   "workitems.view.board": "Board",
   "workitems.view.moveTo": "Move to...",
   "workitems.board.scrollLeft": "Scroll to previous status column",
   "workitems.board.scrollRight": "Scroll to next status column",
-
   "workitems.table.id": "ID",
   "workitems.table.type": "Type",
   "workitems.table.title": "Title",
   "workitems.table.status": "Status",
   "workitems.table.priority": "Priority",
   "workitems.table.updated": "Updated",
-
   "workitems.bulk.changeStatus": "Change status...",
   "workitems.bulk.assign": "Assign...",
   "workitems.bulk.unassign": "Unassign",
   "workitems.bulk.milestone": "Set milestone...",
   "workitems.bulk.transitionError": "Invalid status transition for: {{items}}",
-
   "workitems.form.project": "Project",
   "workitems.form.projectPlaceholder": "Select project",
   "workitems.form.projectSearchPlaceholder": "Search projects...",
@@ -351,9 +327,7 @@
   "workitems.form.complexityNotAllowed": "Value not in the allowed list: {{values}}.",
   "workitems.form.submitError": "Failed to save: {{message}}",
   "workitems.detail.updateError": "Failed to update. Please try again.",
-
   "workitems.detail.complexity": "Complexity",
-
   "workitems.detail.description": "Description",
   "workitems.detail.descriptionEditHint": "Double-click to edit",
   "workitems.detail.noDescription": "No description. Double-click to add.",
@@ -364,7 +338,6 @@
   "workitems.deleteSelectedTitle": "Delete Work Items",
   "workitems.deleteSelectedBody_one": "Are you sure you want to delete {{count}} work item? This action cannot be undone.",
   "workitems.deleteSelectedBody_other": "Are you sure you want to delete {{count}} work items? This action cannot be undone.",
-
   "workitems.detail.reporter": "Reporter",
   "workitems.detail.reporterNotMember": "This user is deactivated or no longer a member of this project",
   "workitems.detail.created": "Created",
@@ -372,7 +345,6 @@
   "workitems.detail.resolved": "Resolved",
   "workitems.detail.statusIncompatible": "Status must be updated for the new type's workflow.",
   "workitems.detail.selectStatus": "Select a status...",
-
   "workitems.filters.title": "Filters",
   "workitems.filters.search": "Search items... ( / )",
   "workitems.filters.allTypes": "Type",
@@ -384,9 +356,7 @@
   "workitems.filters.members": "Members",
   "workitems.filters.statusGroupOpen": "Open",
   "workitems.filters.statusGroupClosed": "Closed",
-
   "workitems.card.updatedAt": "Updated at {{date}}",
-
   "workitems.sort.title": "Sort by",
   "workitems.sort.created": "Date created",
   "workitems.sort.updated": "Date updated",
@@ -398,18 +368,15 @@
   "workitems.sort.sla": "SLA Deadline",
   "workitems.sort.asc": "Ascending",
   "workitems.sort.desc": "Descending",
-
   "workitems.types.task": "Task",
   "workitems.types.ticket": "Ticket",
   "workitems.types.bug": "Bug",
   "workitems.types.feedback": "Feedback",
   "workitems.types.epic": "Epic",
-
   "workitems.priorities.low": "Low",
   "workitems.priorities.medium": "Medium",
   "workitems.priorities.high": "High",
   "workitems.priorities.critical": "Critical",
-
   "workitems.statuses.backlog": "Backlog",
   "workitems.statuses.open": "Open",
   "workitems.statuses.in_progress": "In Progress",
@@ -422,25 +389,21 @@
   "workitems.statuses.waiting_on_customer": "Waiting on Customer",
   "workitems.statuses.resolved": "Resolved",
   "workitems.statuses.closed": "Closed",
-
   "workitems.visibilities.internal": "internal",
   "workitems.visibilities.internal.description": "Only project members can see this item",
   "workitems.visibilities.portal": "portal",
   "workitems.visibilities.portal.description": "Customers see limited info, members see everything",
   "workitems.visibilities.public": "public",
   "workitems.visibilities.public.description": "Anyone with the link sees limited info, members see everything",
-
   "workitems.settings.title": "Settings",
   "workitems.settings.showDates": "Show dates",
   "workitems.mobile.created": "Created",
   "workitems.mobile.updated": "Updated",
-
   "tabs.comments": "Comments",
   "tabs.activity": "Activity",
   "tabs.relations": "Relations",
   "tabs.attachments": "Attachments",
   "tabs.time": "Time",
-
   "comments.add": "Add Comment",
   "comments.adding": "Adding...",
   "comments.visibleToCustomer": "Visible to customer",
@@ -455,7 +418,6 @@
   "comments.unsavedBody": "You have an unsaved comment. If you leave, your comment will be lost.",
   "comments.discard": "Discard",
   "comments.keepEditing": "Keep editing",
-
   "inlineComments.commentButton": "Comment",
   "inlineComments.composerHeader": "Comment on the selected text",
   "inlineComments.placeholder": "Write a comment... (Cmd/Ctrl+Enter to submit, Esc to cancel)",
@@ -471,7 +433,6 @@
   "inlineComments.gutterTooltip_other": "{{count}} inline comments",
   "inlineComments.prevComment": "Previous comment",
   "inlineComments.nextComment": "Next comment",
-
   "activity.noActivity": "No activity yet.",
   "activity.createdItem": "created this item",
   "activity.addedComment": "added",
@@ -494,12 +455,10 @@
   "activity.fields.queue_id": "Queue",
   "activity.fields.complexity": "Complexity",
   "activity.fields.estimated_seconds": "Estimate",
-
   "activity.diff.title": "{{field}} change",
   "activity.diff.commentTitle": "Comment edit diff",
   "activity.diff.removed": "Removed",
   "activity.diff.added": "Added",
-
   "relations.types.blocks": "blocks",
   "relations.types.blocked_by": "blocked by",
   "relations.types.relates_to": "relates to",
@@ -512,14 +471,12 @@
   "relations.children": "Children",
   "relations.childrenProgress": "{{completed}}/{{total}} completed",
   "relations.otherRelations": "Other Relations",
-
   "attachments.noAttachments": "No attachments yet.",
   "attachments.uploadFailed": "Upload failed. Please try again.",
   "attachments.commentPlaceholder": "Optional comment/description...",
   "attachments.deleteTitle": "Delete Attachment",
   "attachments.deleteConfirm": "Are you sure you want to delete this attachment?",
   "attachments.editDescription": "Edit description",
-
   "timeTracking.logTime": "Log Time",
   "timeTracking.logging": "Logging...",
   "timeTracking.hours": "Hours",
@@ -534,25 +491,19 @@
   "timeTracking.estimatePlaceholder": "e.g. 2h 30m",
   "timeTracking.estimateInvalid": "Use formats like 2h, 30m, or 2h 30m.",
   "timeTracking.logged": "Logged",
-
   "preview.download": "Download",
   "preview.close": "Close",
   "preview.loadError": "Failed to load file preview.",
-
   "multiSelect.selected": "{{count}} selected",
-
   "userPicker.unassigned": "Unassigned",
   "userPicker.unknownUser": "Unknown user",
   "userPicker.searchMembers": "Search members...",
   "userPicker.noMembersFound": "No members found",
-
   "workItemPicker.searchPlaceholder": "Search by title or ID...",
   "workItemPicker.noItems": "No items found",
-
   "mention.title": "Insert link",
   "mention.searchPlaceholder": "Search to insert link...",
   "mention.noResults": "No results found",
-
   "preferences.title": "Preferences",
   "preferences.navTitle": "User Preferences",
   "preferences.sidebar.profile": "Profile",
@@ -602,11 +553,9 @@
   "preferences.layouts.centeredDesc": "Content constrained to a fixed width",
   "preferences.layouts.expanded": "Expanded",
   "preferences.layouts.expandedDesc": "Content uses the full viewport width",
-
   "preferences.completedItems": "Completed Items",
   "preferences.strikethroughCompleted": "Strikethrough completed and cancelled items",
   "preferences.strikethroughCompletedDesc": "Show a line through the title of done and cancelled work items in lists, boards, and cards.",
-
   "preferences.apiKeys": "API Keys",
   "preferences.apiKeys.manage": "Manage API Keys",
   "preferences.apiKeys.description": "API keys allow programmatic access to the API on your behalf.",
@@ -645,7 +594,6 @@
   "preferences.apiKeys.renameKey": "Rename API Key",
   "preferences.apiKeys.deleteConfirmTitle": "Delete API Key",
   "preferences.apiKeys.deleteConfirmBody": "Are you sure you want to delete the API key <bold>{{name}}</bold>? Any applications using this key will lose access.",
-
   "preferences.authentication.title": "Authentication",
   "preferences.authentication.description": "Manage your password, connected accounts, and API keys.",
   "preferences.authentication.tabs.password": "Password",
@@ -662,7 +610,6 @@
   "preferences.authentication.connectedAccounts.unlink": "Unlink",
   "preferences.authentication.connectedAccounts.unlinkConfirmTitle": "Unlink Account",
   "preferences.authentication.connectedAccounts.unlinkConfirmBody": "Are you sure you want to unlink your <bold>{{provider}}</bold> account? You will no longer be able to sign in with this provider.",
-
   "preferences.sidebar.notifications": "Notifications",
   "preferences.notifications.title": "Notifications",
   "preferences.notifications.description": "Configure email notifications. Global notifications apply across all projects. Per-project notifications can be customized for each project.",
@@ -690,7 +637,6 @@
   "preferences.notifications.addedToProject": "Added to project",
   "preferences.notifications.addedToProjectDesc": "When you are added to a project",
   "preferences.notifications.comingSoon": "Coming soon",
-
   "shortcuts.title": "Keyboard Shortcuts",
   "shortcuts.then": "then",
   "shortcuts.navigation": "Navigation",
@@ -723,9 +669,7 @@
   "shortcuts.general": "General",
   "shortcuts.general.showShortcuts": "Show keyboard shortcuts",
   "shortcuts.general.closeModal": "Close modal",
-
   "nav.systemSettings": "System Settings",
-
   "admin.title": "System Settings",
   "admin.titleShort": "System",
   "admin.sidebar.general": "General",
@@ -735,7 +679,6 @@
   "admin.sidebar.authentication": "Authentication",
   "admin.sidebar.features": "Features",
   "admin.sidebar.apiKeys": "API Keys",
-
   "admin.apiKeys.title": "System API Keys",
   "admin.apiKeys.description": "Manage system-wide API keys with granular resource-based permissions. These keys are not tied to any user account.",
   "admin.apiKeys.createNew": "Create System API Key",
@@ -770,24 +713,20 @@
   "admin.apiKeys.accessRead": "Read",
   "admin.apiKeys.accessWrite": "Write",
   "admin.apiKeys.accessReadWrite": "Read & Write",
-
   "admin.general.title": "General",
   "admin.general.description": "Configure general system settings.",
   "admin.general.brand.title": "Brand",
   "admin.general.brand.name": "Brand name",
   "admin.general.brand.nameHelp": "The name displayed in the navigation bar and login page. Leave empty to use the default.",
   "admin.general.brand.saved": "Brand name saved.",
-
   "admin.general.projectLimit.title": "Project Limits",
   "admin.general.projectLimit.label": "Max projects per user",
   "admin.general.projectLimit.help": "Default limit for non-admin users. Set to 0 for unlimited. Admins are always exempt. Override per user in the list below.",
   "admin.general.projectLimit.saved": "Project limit saved.",
-
   "admin.general.namespaceLimit.title": "Namespace Limits",
   "admin.general.namespaceLimit.label": "Max namespaces per user",
   "admin.general.namespaceLimit.help": "Default limit for non-admin users. Set to 0 for unlimited. Admins are always exempt. Override per user in the list below.",
   "admin.general.namespaceLimit.saved": "Namespace limit saved.",
-
   "admin.users.title": "Users",
   "admin.users.description": "Manage user accounts, roles, and project access.",
   "admin.users.name": "Name",
@@ -804,10 +743,8 @@
   "admin.users.filterAll": "All users",
   "admin.users.noUsers": "No users found.",
   "admin.users.noProjects": "Not a member of any projects.",
-
   "admin.users.roles.admin": "Admin",
   "admin.users.roles.user": "User",
-
   "admin.users.addToProject": "Add to project",
   "admin.users.selectProject": "Select a project...",
   "admin.users.projectRole": "Role",
@@ -823,15 +760,12 @@
   "admin.users.maxNamespacesDefault": "default",
   "admin.users.maxNamespacesHelp": "Per-user namespace limit. Empty = default, 0 = unlimited.",
   "admin.users.alreadyMember": "User is already a member of this project.",
-
   "admin.users.disableConfirmTitle": "Disable User",
   "admin.users.disableConfirmBody": "Are you sure you want to disable <bold>{{name}}</bold>? They will not be able to log in.",
   "admin.users.disableConfirmButton": "Disable",
-
   "admin.users.removeFromProjectTitle": "Remove from Project",
   "admin.users.removeFromProjectBody": "Are you sure you want to remove <bold>{{name}}</bold> from <bold>{{project}}</bold>?",
   "admin.users.removeFromProjectButton": "Remove",
-
   "admin.users.createUser": "New User",
   "admin.users.createUserTitle": "Create New User",
   "admin.users.createUserDescription": "The user will be created with a temporary password that must be changed on first login.",
@@ -840,16 +774,13 @@
   "admin.users.createUserButton": "Create User",
   "admin.users.createUserError": "Failed to create user.",
   "admin.users.emailExists": "A user with this email already exists.",
-
   "admin.users.temporaryPasswordTitle": "Temporary Password",
   "admin.users.temporaryPasswordDescription": "Temporary password for {{name}}:",
   "admin.users.temporaryPasswordWarning": "This password will only be shown once. Make sure to copy it now.",
-
   "admin.users.resetPasswordTitle": "Reset Password",
   "admin.users.resetPasswordBody": "Generate a new temporary password for <bold>{{name}}</bold>? They will need to change it on next login.",
   "admin.users.resetPasswordButton": "Reset Password",
   "admin.users.resetPasswordError": "Failed to reset password.",
-
   "admin.workflows.title": "Workflows",
   "admin.workflows.description": "Manage system-wide workflows available to all projects.",
   "admin.workflows.noWorkflows": "No system workflows yet.",
@@ -858,7 +789,6 @@
   "admin.workflows.selectWorkflow": "Select workflow",
   "admin.workflows.cannotDeleteDefault": "Default workflows cannot be deleted.",
   "admin.workflows.updateError": "Failed to update default workflow.",
-
   "admin.authentication.title": "Authentication",
   "admin.authentication.description": "Control which authentication methods are available.",
   "admin.authentication.section.emailPassword": "Email & Password",
@@ -885,7 +815,6 @@
   "admin.authentication.oauth.saveError": "Failed to save configuration.",
   "admin.authentication.oauth.notConfigured": "Not configured. Add credentials to enable this provider.",
   "admin.authentication.oauth.changeOrder": "Change order",
-
   "admin.features.title": "Features",
   "admin.features.description": "Enable or disable features globally across the platform.",
   "admin.features.statsTimeline.title": "Activity Graph",
@@ -895,7 +824,6 @@
   "admin.features.semanticSearch.ollamaAvailable": "Ollama is connected and ready.",
   "admin.features.semanticSearch.ollamaUnavailable": "Ollama is not available. Add Ollama to your deployment to enable this feature.",
   "common.experimental": "Experimental",
-
   "admin.integrations.title": "Integrations",
   "admin.integrations.description": "Configure external service integrations.",
   "admin.integrations.smtp.title": "Email (SMTP)",
@@ -926,7 +854,6 @@
   "admin.integrations.smtp.testEmailError": "Failed to send test e-mail: {{error}}",
   "admin.integrations.smtp.imapSection": "Inbound (IMAP)",
   "admin.integrations.smtp.imapHelp": "IMAP settings for future inbound e-mail support.",
-
   "changePassword.title": "Change Password",
   "changePassword.description": "You must change your password before continuing.",
   "changePassword.oldPassword": "Current Password",
@@ -937,9 +864,7 @@
   "changePassword.mismatch": "Passwords do not match.",
   "changePassword.tooShort": "Password must be at least 8 characters.",
   "changePassword.error": "Failed to change password.",
-
   "footer.poweredBy": "Powered by <brand>Taskwondo</brand>",
-
   "milestones.title": "Milestones",
   "milestones.description": "Track progress toward goals with milestones.",
   "milestones.create": "New Milestone",
@@ -988,11 +913,9 @@
   "milestone.dashboard.noItems": "No work items in this milestone yet.",
   "milestone.dashboard.unassigned": "Unassigned",
   "milestone.dashboard.backToMilestones": "Milestones",
-
   "workitems.form.milestone": "Milestone",
   "workitems.filters.allMilestones": "Milestone",
   "workitems.filters.noMilestone": "No milestone",
-
   "workflows.title": "Workflows",
   "workflows.description": "Manage workflows, escalation rules, and SLA settings for this project.",
   "workflows.tab.workflow": "Workflow",
@@ -1034,7 +957,6 @@
   "workflows.deleteError": "Failed to delete workflow.",
   "workflows.deleteConfirmTitle": "Delete Workflow",
   "workflows.deleteConfirmBody": "Are you sure you want to delete the workflow \"{{name}}\"? This action cannot be undone.",
-
   "sla.title": "SLA Targets",
   "sla.columnHeader": "SLA",
   "sla.titleForType": "SLA Targets for {{type}}",
@@ -1066,7 +988,6 @@
   "sla.setPerPriority": "Set SLA per priority",
   "sla.perPriorityHint": "Configure different SLA targets for each priority level. Expand a priority section to customize its durations.",
   "sla.overwriteWarning": "Per-priority values were different. Showing Critical priority values. Saving will apply these values to all priorities.",
-
   "escalation.title": "Escalation Lists",
   "escalation.description": "Define named escalation lists with threshold levels and user recipients for SLA notifications.",
   "escalation.create": "New Escalation List",
@@ -1107,7 +1028,6 @@
   "escalation.noSlaWarning": "No SLA targets configured — breach detection won't trigger.",
   "escalation.saveError": "Failed to save escalation list.",
   "escalation.deleteError": "Failed to delete escalation list.",
-
   "businessHours.title": "Business Hours",
   "businessHours.description": "Define business hours for SLA calculations using business_hours calendar mode.",
   "businessHours.days": "Business Days",
@@ -1126,7 +1046,6 @@
   "businessHours.saveSuccess": "Business hours saved.",
   "businessHours.clear": "Clear business hours",
   "businessHours.notConfigured": "Not configured. SLA targets using business_hours mode will fall back to 24/7.",
-
   "welcome.title": "Welcome",
   "welcome.next": "Next",
   "welcome.previous": "Previous",
@@ -1150,7 +1069,6 @@
   "welcome.feed.description": "The feed shows recent activity across all your namespaces and projects — status changes, new comments, and updates from your team. Stay informed about what's happening without checking each project individually.",
   "welcome.watchlist.title": "Watchlist",
   "welcome.watchlist.description": "Add work items from any namespace or project to your watchlist to track their progress without being directly assigned. Get notified of changes to items you care about, even across different projects.",
-
   "projects.settings.invites": "Invite Links",
   "projects.settings.invitesDescription": "Create shareable links to invite people to this project.",
   "projects.settings.createInvite": "Create Invite Link",
@@ -1176,7 +1094,6 @@
   "projects.settings.inviteAdminWarning": "Admin invites grant full project management access. If the link leaks, your project data could be exposed. Use with caution.",
   "projects.settings.inviteCreateError": "Failed to create invite link.",
   "projects.settings.inviteDeleteError": "Failed to revoke invite link.",
-
   "invite.title": "You've been invited",
   "invite.joinAs": "Join <bold>{{projectName}}</bold> as {{role}}",
   "invite.joinNamespaceAs": "Join <bold>{{namespaceName}}</bold> as {{role}}",
@@ -1191,7 +1108,6 @@
   "invite.error": "Failed to join. Please try again.",
   "invite.accepted": "Invite to {{projectName}} accepted",
   "invite.roleNotApplied": "You already have {{existingRole}} access — the {{inviteRole}} invite was not applied.",
-
   "cliAuth.title": "Authorize CLI Access",
   "cliAuth.description": "'{{clientName}}' wants to access your account.",
   "cliAuth.loggedInAs": "Logged in as {{displayName}} ({{email}})",
@@ -1203,7 +1119,6 @@
   "cliAuth.denied": "Authorization denied. You can close this tab.",
   "cliAuth.error": "Authorization failed. Please try again.",
   "cliAuth.missingParams": "Missing required parameters. Please start the login flow from your CLI tool.",
-
   "inbox.title": "Inbox",
   "inbox.empty": "Your inbox is empty",
   "inbox.emptyHint": "Use the inbox icon or press 'i' on a work item to add it here",
@@ -1228,7 +1143,6 @@
   "user.sidebar.watchlist": "Watchlist",
   "user.feedComingSoon": "Feeds coming soon",
   "user.watchlistComingSoon": "Watchlist coming soon",
-
   "savedSearches.title": "Saved Searches",
   "savedSearches.titleShort": "Saved",
   "savedSearches.mySearches": "My Searches",
@@ -1252,7 +1166,6 @@
   "savedSearches.orderMode": "Order",
   "workitems.filters.save": "Save current filters",
   "workitems.filters.clearAll": "Clear all filters",
-
   "watchers.watch": "Watch",
   "watchers.unwatch": "Unwatch",
   "watchers.watchersTab": "Watchers",
@@ -1265,14 +1178,12 @@
   "watchers.totalWatchers_one": "{{count}} watcher",
   "watchers.watchersField": "Watchers",
   "watchers.pickWatchers": "Add watchers...",
-
   "watchlist.title": "Watchlist",
   "watchlist.titleShort": "Watchlist",
   "watchlist.allProjects": "All Projects",
   "watchlist.filterByProject": "Filter by Project",
   "watchlist.empty": "You're not watching any items yet",
   "watchlist.emptyHint": "Use the bell icon on work items to add them to your watchlist",
-
   "search.placeholder": "Search across all projects...",
   "search.hint": "Type at least 2 characters to search",
   "search.noResults": "No results found",
@@ -1292,9 +1203,7 @@
   "search.entityType.queue": "Queues",
   "search.entityType.comment": "Comments",
   "search.entityType.attachment": "Attachments",
-
   "shortcuts.actions.globalSearch": "Global search",
-
   "namespaces.title": "Namespaces",
   "namespaces.namespace": "Namespace",
   "namespaces.default": "public",
@@ -1355,7 +1264,6 @@
   "namespaces.inviteDeleteError": "Failed to revoke invite.",
   "namespaces.revokeInviteConfirmTitle": "Revoke invite",
   "namespaces.revokeInviteConfirmBody": "Are you sure you want to revoke the invite for <bold>{{email}}</bold>?",
-
   "projects.settings.transferNamespace": "Transfer to another namespace",
   "projects.settings.transferNamespaceDescription": "Move this project to a different namespace.",
   "projects.settings.transfer": "Transfer",
@@ -1366,7 +1274,6 @@
   "projects.settings.selectNamespace": "Select a namespace...",
   "projects.settings.transferConfirmButton": "Transfer project",
   "projects.settings.transferError": "Failed to transfer project.",
-
   "admin.directory.title": "Directory",
   "admin.directory.description": "Manage users, projects, and namespaces across the server.",
   "admin.directory.tab.users": "Users",
@@ -1413,13 +1320,10 @@
   "admin.directory.settings.reservedKeys.empty": "No reserved project keys.",
   "admin.directory.settings.add": "Add",
   "admin.directory.settings.duplicate": "Already in the list.",
-
   "admin.features.namespaces.title": "Namespaces",
   "admin.features.namespaces.description": "Enable namespace support for multi-tenancy. Allows creating isolated project groups with separate project key scopes.",
   "admin.features.namespaces.cannotDisable": "Cannot disable while {{count}} custom namespaces exist. Delete them first.",
-
   "sidebar.teams": "Teams",
-
   "teams.title": "Teams",
   "teams.description": "Manage teams and their members within this project.",
   "teams.create": "Create team",
@@ -1449,7 +1353,6 @@
   "teams.createError": "Failed to create team.",
   "teams.updateError": "Failed to update team.",
   "teams.deleteError": "Failed to delete team.",
-
   "teams.oncall.title": "On-Call",
   "teams.oncall.noRotation": "No on-call rotation configured for this team.",
   "teams.oncall.setUp": "Set Up On-Call",
@@ -1512,7 +1415,6 @@
   "teams.oncall.override.covering": "Covering: {{name}}",
   "teams.oncall.override.invalidTimeRange": "End time must be after start time.",
   "teams.oncall.override.selectMember": "Select a member",
-
   "queues.title": "Queues",
   "queues.description": "Manage inbound work channels for this project.",
   "queues.settings": "Queue Settings",
@@ -1541,7 +1443,6 @@
   "queues.dangerZone": "Danger Zone",
   "queues.dangerZoneDescription": "Deleting a queue will remove all items and settings. This action cannot be undone.",
   "queues.deleteQueue": "Delete queue",
-
   "queues.categories": "Categories",
   "queues.categories.create": "Add category",
   "queues.categories.createCategory": "Create Category",
@@ -1557,7 +1458,6 @@
   "queues.categories.createError": "Failed to create category.",
   "queues.categories.updateError": "Failed to update category.",
   "queues.categories.deleteError": "Failed to delete category.",
-
   "queues.teams": "Assigned Teams",
   "queues.teams.assign": "Assign team",
   "queues.teams.selectTeam": "Select a team...",
@@ -1567,12 +1467,10 @@
   "queues.teams.unassignConfirmBody": "Are you sure you want to unassign <bold>{{name}}</bold> from this queue?",
   "queues.teams.assignError": "Failed to assign team.",
   "queues.teams.unassignError": "Failed to unassign team.",
-
   "queues.workItems": "Queue Items",
   "queues.viewItems": "View items",
   "queues.backToQueues": "Back to queues",
   "queues.noItems": "No items in this queue.",
-
   "portal.noDescription": "No description. Click to add one.",
   "portal.myTickets": "My Tickets",
   "portal.createTicket": "Create Ticket",
@@ -1601,5 +1499,13 @@
   "portal.changedField": "changed {{field}}",
   "portal.errorTitleRequired": "Title is required.",
   "portal.errorQueueRequired": "Please select a queue.",
-  "portal.errorCreateFailed": "Failed to create ticket."
+  "portal.errorCreateFailed": "Failed to create ticket.",
+  "login.oidc.button": "Sign in with SSO",
+  "login.oidc.error": "Failed to start SSO login. Please try again.",
+  "login.oidc.authenticating": "Authenticating with SSO...",
+  "login.oidc.callbackError": "SSO authentication failed. Please try again.",
+  "login.oidc.backToLogin": "Back to sign in",
+  "admin.authentication.oidc.title": "OpenID Connect (SSO)",
+  "admin.authentication.oidc.description": "Allow users to sign in with an OIDC provider (Keycloak, Auth0, Okta, etc.).",
+  "admin.authentication.oidc.issuerUrl": "Issuer URL"
 }

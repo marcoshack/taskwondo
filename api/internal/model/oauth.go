@@ -12,6 +12,7 @@ const (
 	OAuthProviderGoogle    = "google"
 	OAuthProviderGitHub    = "github"
 	OAuthProviderMicrosoft = "microsoft"
+	OAuthProviderOIDC      = "oidc"
 )
 
 // OAuthAccount represents a linked external identity.

@@ -1499,5 +1499,13 @@
   "inlineComments.gutterTooltip_one": "{{count}}件のインラインコメント",
   "inlineComments.gutterTooltip_other": "{{count}}件のインラインコメント",
   "inlineComments.prevComment": "前のコメント",
-  "inlineComments.nextComment": "次のコメント"
+  "inlineComments.nextComment": "次のコメント",
+  "login.oidc.button": "Sign in with SSO",
+  "login.oidc.error": "Failed to start SSO login. Please try again.",
+  "login.oidc.authenticating": "Authenticating with SSO...",
+  "login.oidc.callbackError": "SSO authentication failed. Please try again.",
+  "login.oidc.backToLogin": "Back to sign in",
+  "admin.authentication.oidc.title": "OpenID Connect (SSO)",
+  "admin.authentication.oidc.description": "Allow users to sign in with an OIDC provider (Keycloak, Auth0, Okta, etc.).",
+  "admin.authentication.oidc.issuerUrl": "Issuer URL"
 }
