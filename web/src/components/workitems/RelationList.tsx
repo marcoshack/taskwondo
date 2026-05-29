@@ -120,7 +120,7 @@ export function RelationList({ projectKey, itemNumber, readOnly = false }: Relat
         </div>
         {!readOnly && (
           <button
-            className="group/del relative inline-flex items-center justify-center w-7 h-7 rounded-md text-red-400 hover:text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/30 transition-colors sm:opacity-0 sm:group-hover/relation:opacity-100 shrink-0 ml-2"
+            className="group/del relative inline-flex items-center justify-center w-7 h-7 rounded-md text-red-400 hover:text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/30 transition-colors [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/relation:opacity-100 shrink-0 ml-2"
             onClick={() => deleteMutation.mutate(r.id)}
             aria-label={t('common.remove')}
           >
