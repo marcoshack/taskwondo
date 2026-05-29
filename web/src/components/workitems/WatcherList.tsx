@@ -115,7 +115,7 @@ export function WatcherList({ projectKey, itemNumber, members, currentUserRole }
                 </div>
                 {canRemove && (
                   <button
-                    className="inline-flex items-center justify-center w-7 h-7 rounded-md text-red-400 hover:text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/30 transition-colors sm:opacity-0 sm:group-hover/watcher:opacity-100 shrink-0 ml-2"
+                    className="inline-flex items-center justify-center w-7 h-7 rounded-md text-red-400 hover:text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/30 transition-colors [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/watcher:opacity-100 shrink-0 ml-2"
                     onClick={() => removeMutation.mutate(w.user_id)}
                     aria-label={t('common.remove')}
                   >
