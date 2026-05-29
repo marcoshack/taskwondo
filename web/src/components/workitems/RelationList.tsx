@@ -8,6 +8,7 @@ import { WorkItemPicker } from '@/components/ui/WorkItemPicker'
 import { Select } from '@/components/ui/Select'
 import { Spinner } from '@/components/ui/Spinner'
 import type { Relation } from '@/api/workitems'
+import { BulkCreateRelatedModal } from '@/components/workitems/BulkCreateRelatedModal'
 
 const RELATION_TYPES = ['blocks', 'blocked_by', 'relates_to', 'duplicates', 'caused_by', 'parent_of', 'child_of']
 
@@ -47,6 +48,7 @@ export function RelationList({ projectKey, itemNumber, readOnly = false }: Relat
 
   const [targetId, setTargetId] = useState('')
   const [relationType, setRelationType] = useState('relates_to')
+  const [bulkCreateOpen, setBulkCreateOpen] = useState(false)
 
   const currentDisplayId = `${projectKey}-${itemNumber}`
 
@@ -170,6 +172,18 @@ export function RelationList({ projectKey, itemNumber, readOnly = false }: Relat
         </div>
       )}
 
+      {!readOnly && (
+        <div className="flex justify-end px-1">
+          <button
+            type="button"
+            className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 font-medium"
+            onClick={() => setBulkCreateOpen(true)}
+          >
+            {t('workitems.bulkCreateRelated.title')}...
+          </button>
+        </div>
+      )}
+
       {/* Children section */}
       {children.length > 0 && (
         <div>
@@ -208,6 +222,13 @@ export function RelationList({ projectKey, itemNumber, readOnly = false }: Relat
           </div>
         </div>
       )}
+
+      <BulkCreateRelatedModal
+        open={bulkCreateOpen}
+        onClose={() => setBulkCreateOpen(false)}
+        projectKey={projectKey}
+        itemNumber={itemNumber}
+      />
     </div>
   )
 }

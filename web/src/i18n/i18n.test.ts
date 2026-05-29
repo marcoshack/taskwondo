@@ -133,6 +133,16 @@ const SAME_VALUE_ALLOWED = new Set([
   'workitems.view.board',
   'workitems.visibilities.portal',
   'workitems.visibilities.public',
+  'workitems.bulkCreateRelated.title',
+  'workitems.bulkCreateRelated.titles',
+  'workitems.bulkCreateRelated.titlesPlaceholder',
+  'workitems.bulkCreateRelated.relationType',
+  'workitems.bulkCreateRelated.create',
+  'workitems.bulkCreateRelated.creating',
+  'workitems.bulkCreateRelated.success',
+  'workitems.bulkCreateRelated.error',
+  'workitems.bulkCreateRelated.project',
+  'workitems.bulkCreateRelated.type',
 
   // "Color" is identical in English and Spanish
   'namespaces.color',
