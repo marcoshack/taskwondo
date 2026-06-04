@@ -120,8 +120,8 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.web
-    ports:
-      - "3001:80"
+    # No host port: the E2E stack is fully internal. Playwright reaches the
+    # frontend over the Compose network at http://web:80 (see playwright BASE_URL).
     depends_on:
       api:
         condition: service_healthy
