@@ -126,3 +126,81 @@ Key infrastructure:
 - **API helpers** (`test/e2e/lib/api.ts`): 60+ typed functions for setting up test data via API (work items, comments, relations, milestones, etc.)
 - **Multi-project setup**: auth.setup.ts → admin tests → chromium.setup.ts → main suite → cleanup.teardown.ts
 - **Fully containerized**: `make test-e2e` runs the entire stack in Docker (Postgres, MinIO, Mailpit, API, Web, Playwright)
+
+## MCP agent operations
+
+Guidance for Cursor (and other) agents using the Taskwondo MCP tools (`mcp_taskwondo_*`).
+
+### Where notes live (how documentation is organized)
+
+| Layer | Location | What goes here | Version control |
+|-------|----------|----------------|-----------------|
+| **Repo agent guide** | `taskwondo/AGENTS.md` (this file) | Cross-cutting rules: MCP workflow transitions, codebase conventions, ports | Git — source of truth for agents editing Taskwondo |
+| **Other repo guides** | e.g. `~/work/watchtower/AGENTS.md` | Deploy/workflow for that repo | Git |
+| **Cursor rules** | `~/.cursor/rules/*.mdc` | Machine-wide layout (`DIRECTORY.md`), always-on constraints | Git or local dotfiles |
+| **Project description** | Taskwondo → Project settings → Description | One-paragraph scope + pointers to deeper docs (e.g. WEAVE → this section) | Taskwondo DB |
+| **Epic / task body** | Work item description in Taskwondo | Specs, acceptance criteria, architecture decisions for that work | Taskwondo DB |
+| **Comments** | Work item comments | Session notes, spike results, “decision recorded here” | Taskwondo DB |
+| **Meta platform work** | TASK project tickets | Changes to Taskwondo itself (MCP, workflows, agent runtime) | Taskwondo DB + usually a git change |
+
+**Rule of thumb:** Durable agent behaviour → **git** (`AGENTS.md`). Task-specific intent → **work item description**. Pointers from a project → **project description** (keep short).
+
+Tracked in **TASK-58**.
+
+### Workflow status changes via MCP
+
+`update_work_item` with `status` enforces the project’s **workflow graph**. Invalid jumps return **HTTP 409**:
+
+```text
+transition from "backlog" to "done" is not allowed in this workflow: invalid transition
+```
+
+That is expected — not an MCP bug or missing permission. Other fields (description, labels, milestone) still save even when status fails.
+
+**Before changing status:**
+
+1. Call `list_statuses` for the project to see valid status names (case-sensitive: `in_progress`, not `In Progress`).
+2. If closing an item, plan a **path** through allowed transitions — do not assume `done` / `resolved` / `closed` are reachable from the current status in one step.
+
+### Default “Task Workflow” (WEAVE, TASK, most dev projects)
+
+Used for types: task, bug, epic, story, feedback. Seeded in `api/internal/service/workflow.go`; extra transitions in migrations `000038`, `000064`.
+
+**Statuses (in order):** `backlog` → `open` → `in_progress` → `in_review` → `done` | `cancelled`
+
+**Transitions that reach `done`:**
+
+| From | To | Transition name |
+|------|-----|-----------------|
+| `open` | `done` | Complete |
+| `in_progress` | `done` | Complete |
+| `in_review` | `done` | Approve |
+
+**There is no direct `backlog` → `done`.** From `backlog`, use one of:
+
+```text
+backlog → in_progress → done          # fastest (2 steps)
+backlog → open → done                 # Prioritize, then Complete
+backlog → open → in_progress → in_review → done   # full review path
+```
+
+**Example — close a research task from `backlog` (MCP):**
+
+```text
+update_work_item(display_id, status: "in_progress")   # or "open" first
+update_work_item(display_id, status: "done")            # if currently open or in_progress
+# OR formal review path:
+update_work_item(..., status: "in_review")
+update_work_item(..., status: "done")
+```
+
+**Statuses that are not interchangeable:** `done`, `resolved`, and `closed` are different names; only use values returned by `list_statuses`. On Task Workflow, terminal completion is usually **`done`**.
+
+**Ticket Workflow** (support/ticket types) may differ — always `list_statuses` for that project.
+
+### MCP tool reminders
+
+- `list_statuses` — valid status names for filters and transitions.
+- `update_work_item` — only provided fields change; invalid `status` rejects the whole update (409).
+- Work item descriptions support markdown; use for decisions when git docs are overkill.
+- Display IDs: `WEAVE-1`, `TASK-58` — use `display_id` param, not UUID.
