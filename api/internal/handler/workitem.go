@@ -734,10 +734,12 @@ type relationResponse struct {
 	SourceTitle          string    `json:"source_title"`
 	SourceStatus         string    `json:"source_status"`
 	SourceStatusCategory string    `json:"source_status_category"`
+	SourcePriority       string    `json:"source_priority"`
 	TargetDisplayID      string    `json:"target_display_id"`
 	TargetTitle          string    `json:"target_title"`
 	TargetStatus         string    `json:"target_status"`
 	TargetStatusCategory string    `json:"target_status_category"`
+	TargetPriority       string    `json:"target_priority"`
 	RelationType         string    `json:"relation_type"`
 	CreatedBy            uuid.UUID `json:"created_by"`
 	CreatedAt            time.Time `json:"created_at"`
@@ -750,10 +752,12 @@ func toRelationResponse(r *service.RelationWithDisplay) relationResponse {
 		SourceTitle:          r.SourceTitle,
 		SourceStatus:         r.SourceStatus,
 		SourceStatusCategory: r.SourceStatusCategory,
+		SourcePriority:       r.SourcePriority,
 		TargetDisplayID:      r.TargetDisplayID,
 		TargetTitle:          r.TargetTitle,
 		TargetStatus:         r.TargetStatus,
 		TargetStatusCategory: r.TargetStatusCategory,
+		TargetPriority:       r.TargetPriority,
 		RelationType:         r.RelationType,
 		CreatedBy:            r.CreatedBy,
 		CreatedAt:            r.CreatedAt,

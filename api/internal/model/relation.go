@@ -24,11 +24,13 @@ type WorkItemRelationWithDetails struct {
 	SourceTitle           string
 	SourceStatus          string
 	SourceStatusCategory  string
+	SourcePriority        string
 	TargetProjectKey      string
 	TargetItemNumber      int
 	TargetTitle           string
 	TargetStatus          string
 	TargetStatusCategory  string
+	TargetPriority        string
 }
 
 // Relation type constants.

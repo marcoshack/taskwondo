@@ -80,8 +80,8 @@ func (r *WorkItemRelationRepository) ListByWorkItem(ctx context.Context, workIte
 func (r *WorkItemRelationRepository) ListByWorkItemWithDetails(ctx context.Context, workItemID uuid.UUID) ([]model.WorkItemRelationWithDetails, error) {
 	rows, err := r.db.QueryContext(ctx,
 		`SELECT r.id, r.source_id, r.target_id, r.relation_type, r.created_by, r.created_at,
-		        sp.key, sw.item_number, sw.title, sw.status, COALESCE(sws.category, ''),
-		        tp.key, tw.item_number, tw.title, tw.status, COALESCE(tws.category, '')
+		        sp.key, sw.item_number, sw.title, sw.status, COALESCE(sws.category, ''), sw.priority,
+		        tp.key, tw.item_number, tw.title, tw.status, COALESCE(tws.category, ''), tw.priority
 		 FROM work_item_relations r
 		 JOIN work_items sw ON sw.id = r.source_id
 		 JOIN projects sp ON sp.id = sw.project_id
@@ -105,9 +105,9 @@ func (r *WorkItemRelationRepository) ListByWorkItemWithDetails(ctx context.Conte
 			&rel.ID, &rel.SourceID, &rel.TargetID, &rel.RelationType,
 			&rel.CreatedBy, &rel.CreatedAt,
 			&rel.SourceProjectKey, &rel.SourceItemNumber, &rel.SourceTitle,
-			&rel.SourceStatus, &rel.SourceStatusCategory,
+			&rel.SourceStatus, &rel.SourceStatusCategory, &rel.SourcePriority,
 			&rel.TargetProjectKey, &rel.TargetItemNumber, &rel.TargetTitle,
-			&rel.TargetStatus, &rel.TargetStatusCategory,
+			&rel.TargetStatus, &rel.TargetStatusCategory, &rel.TargetPriority,
 		); err != nil {
 			return nil, fmt.Errorf("scanning relation with details: %w", err)
 		}

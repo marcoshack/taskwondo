@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { WorkItemPicker } from '@/components/ui/WorkItemPicker'
 import { Select } from '@/components/ui/Select'
 import { Spinner } from '@/components/ui/Spinner'
+import { PriorityBadge } from '@/components/workitems/PriorityBadge'
 import type { Relation } from '@/api/workitems'
 
 const RELATION_TYPES = ['blocks', 'blocked_by', 'relates_to', 'duplicates', 'caused_by', 'parent_of', 'child_of']
@@ -56,6 +57,7 @@ export function RelationList({ projectKey, itemNumber, readOnly = false }: Relat
       displayId: isSource ? r.target_display_id : r.source_display_id,
       title: isSource ? r.target_title : r.source_title,
       statusCategory: isSource ? r.target_status_category : r.source_status_category,
+      priority: isSource ? r.target_priority : r.source_priority,
       label: isSource
         ? t(`relations.types.${r.relation_type}`)
         : t(`relations.types.${INVERSE_TYPE_KEY[r.relation_type] ?? r.relation_type}`),
@@ -105,6 +107,9 @@ export function RelationList({ projectKey, itemNumber, readOnly = false }: Relat
           >
             {linked.displayId}
           </Link>
+          <span className="shrink-0">
+            <PriorityBadge priority={linked.priority} variant="list" />
+          </span>
           <Link
             to={displayIdToPath(linked.displayId)}
             className={`truncate transition-colors ${

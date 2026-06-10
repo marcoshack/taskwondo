@@ -1697,6 +1697,12 @@ func TestCreateRelation_Handler_Success(t *testing.T) {
 	if data["target_display_id"] != "TEST-2" {
 		t.Fatalf("expected target_display_id 'TEST-2', got %v", data["target_display_id"])
 	}
+	if data["source_priority"] != "medium" {
+		t.Fatalf("expected source_priority 'medium', got %v", data["source_priority"])
+	}
+	if data["target_priority"] != "medium" {
+		t.Fatalf("expected target_priority 'medium', got %v", data["target_priority"])
+	}
 }
 
 func TestCreateRelation_Handler_MissingFields(t *testing.T) {
@@ -1773,6 +1779,14 @@ func TestListRelations_Handler_Success(t *testing.T) {
 	}
 	if _, ok := rel["target_status_category"]; !ok {
 		t.Error("expected target_status_category field in relation response")
+	}
+
+	// Verify priority fields are present in the response
+	if _, ok := rel["source_priority"]; !ok {
+		t.Error("expected source_priority field in relation response")
+	}
+	if _, ok := rel["target_priority"]; !ok {
+		t.Error("expected target_priority field in relation response")
 	}
 }
 

@@ -191,10 +191,12 @@ type RelationWithDisplay struct {
 	SourceTitle          string
 	SourceStatus         string
 	SourceStatusCategory string
+	SourcePriority       string
 	TargetDisplayID      string
 	TargetTitle          string
 	TargetStatus         string
 	TargetStatusCategory string
+	TargetPriority       string
 }
 
 // WorkItemService handles work item business logic and authorization.
@@ -1483,10 +1485,12 @@ func (s *WorkItemService) CreateRelation(ctx context.Context, info *model.AuthIn
 		SourceTitle:          sourceItem.Title,
 		SourceStatus:         sourceItem.Status,
 		SourceStatusCategory: sourceCategory,
+		SourcePriority:       sourceItem.Priority,
 		TargetDisplayID:      targetDisplayID,
 		TargetTitle:          targetItem.Title,
 		TargetStatus:         targetItem.Status,
 		TargetStatusCategory: targetCategory,
+		TargetPriority:       targetItem.Priority,
 	}, nil
 }
 
@@ -1519,10 +1523,12 @@ func (s *WorkItemService) ListRelations(ctx context.Context, info *model.AuthInf
 			SourceTitle:          rel.SourceTitle,
 			SourceStatus:         rel.SourceStatus,
 			SourceStatusCategory: rel.SourceStatusCategory,
+			SourcePriority:       rel.SourcePriority,
 			TargetDisplayID:      fmt.Sprintf("%s-%d", rel.TargetProjectKey, rel.TargetItemNumber),
 			TargetTitle:          rel.TargetTitle,
 			TargetStatus:         rel.TargetStatus,
 			TargetStatusCategory: rel.TargetStatusCategory,
+			TargetPriority:       rel.TargetPriority,
 		}
 	}
 

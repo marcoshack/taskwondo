@@ -108,6 +108,82 @@ test.describe('Work item relations', () => {
     await expect(page.getByText('Target item')).toBeVisible();
   });
 
+  test('relation rows show equal-width priority badges', async ({ request, testUser, testProject, page }) => {
+    const item1 = await api.createWorkItem(request, testUser.token, testProject.key, {
+      title: 'Priority badge source',
+      type: 'task',
+    });
+    const criticalItem = await api.createWorkItem(request, testUser.token, testProject.key, {
+      title: 'Critical related item',
+      type: 'task',
+      priority: 'critical',
+    });
+    const lowItem = await api.createWorkItem(request, testUser.token, testProject.key, {
+      title: 'Low related item',
+      type: 'task',
+      priority: 'low',
+    });
+
+    await api.createRelation(request, testUser.token, testProject.key, item1.item_number, {
+      target_display_id: criticalItem.display_id,
+      relation_type: 'relates_to',
+    });
+    await api.createRelation(request, testUser.token, testProject.key, item1.item_number, {
+      target_display_id: lowItem.display_id,
+      relation_type: 'relates_to',
+    });
+
+    await page.goto(`/d/projects/${testProject.key}/items/${item1.item_number}`);
+    await dismissWelcomeModal(page);
+
+    // Switch to Relations tab
+    await page.getByRole('button', { name: 'Relations', exact: true }).click();
+
+    // Each related item shows a priority badge with the full label
+    const criticalBadge = page.getByTestId('priority-badge').and(page.locator('[data-priority="critical"]'));
+    const lowBadge = page.getByTestId('priority-badge').and(page.locator('[data-priority="low"]'));
+    await expect(criticalBadge).toBeVisible({ timeout: 10000 });
+    await expect(lowBadge).toBeVisible();
+    await expect(criticalBadge).toHaveText('Critical', { useInnerText: true });
+    await expect(lowBadge).toHaveText('Low', { useInnerText: true });
+
+    // All badges have the same width so titles align
+    const criticalBox = await criticalBadge.boundingBox();
+    const lowBox = await lowBadge.boundingBox();
+    expect(criticalBox).not.toBeNull();
+    expect(lowBox).not.toBeNull();
+    expect(Math.abs(criticalBox!.width - lowBox!.width)).toBeLessThanOrEqual(1);
+  });
+
+  test('priority badges collapse to first letter on mobile viewport', async ({ request, testUser, testProject, page }) => {
+    const item1 = await api.createWorkItem(request, testUser.token, testProject.key, {
+      title: 'Mobile priority source',
+      type: 'task',
+    });
+    const highItem = await api.createWorkItem(request, testUser.token, testProject.key, {
+      title: 'High related item',
+      type: 'task',
+      priority: 'high',
+    });
+
+    await api.createRelation(request, testUser.token, testProject.key, item1.item_number, {
+      target_display_id: highItem.display_id,
+      relation_type: 'relates_to',
+    });
+
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto(`/d/projects/${testProject.key}/items/${item1.item_number}`);
+    await dismissWelcomeModal(page);
+
+    // Switch to Relations tab
+    await page.getByRole('button', { name: 'Relations', exact: true }).click();
+
+    // On mobile the badge shows only the first letter of the priority
+    const highBadge = page.getByTestId('priority-badge').and(page.locator('[data-priority="high"]'));
+    await expect(highBadge).toBeVisible({ timeout: 10000 });
+    await expect(highBadge).toHaveText('H', { useInnerText: true });
+  });
+
   test('remove relation via UI', async ({ request, testUser, testProject, page }) => {
     const item1 = await api.createWorkItem(request, testUser.token, testProject.key, {
       title: 'Item with relation',
