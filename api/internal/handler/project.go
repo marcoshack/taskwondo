@@ -624,6 +624,16 @@ func (h *ProjectHandler) CreateInvite(w http.ResponseWriter, r *http.Request) {
 			handleProjectError(w, r, err, "failed to create email invite")
 			return
 		}
+		if result.AddedDirectly {
+			writeData(w, http.StatusCreated, map[string]interface{}{
+				"added_directly": true,
+				"user_id":        result.Member.UserID,
+				"project_id":     result.Member.ProjectID,
+				"role":           result.Member.Role,
+				"created_at":     result.Member.CreatedAt,
+			})
+			return
+		}
 		writeData(w, http.StatusCreated, h.toInviteResponse(result.Invite))
 		return
 	}

@@ -23,6 +23,7 @@ import { MentionSearchModal } from '@/components/ui/MentionSearchModal'
 import { useMentionAutocomplete } from '@/hooks/useMentionAutocomplete'
 import { getLocalizedError } from '@/utils/apiError'
 import { TeamsPage } from './TeamsPage'
+import { isDirectAddInviteResult } from '@/api/projects'
 import type { UserSearchResult } from '@/api/users'
 
 function TruncatedName({ name, className }: { name: string; className?: string }) {
@@ -411,9 +412,9 @@ export function ProjectSettingsPage() {
     createInviteMutation.mutate(
       { role: newMemberRole, email: emailInput.trim() },
       {
-        onSuccess: () => {
+        onSuccess: (result) => {
           setEmailInput('')
-          showSaved('emailInvite')
+          showSaved(isDirectAddInviteResult(result) ? 'addMember' : 'emailInvite')
         },
         onError: (err) => {
           setMemberError(getLocalizedError(err, t, 'projects.settings.emailInviteError'))

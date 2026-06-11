@@ -277,9 +277,9 @@ func (s *AuthService) GetUser(ctx context.Context, id uuid.UUID) (*model.User, e
 	return user, nil
 }
 
-// SearchUsers finds active co-project members matching an optional query string.
-// Each result is augmented with the slugs of namespaces the user belongs to,
-// so callers can route between "add directly" and "invite by email" flows.
+// SearchUsers finds active users matching an optional query string.
+// Results include co-project members and, when the query looks like an email,
+// any active Taskwondo account with that address (for direct project adds).
 func (s *AuthService) SearchUsers(ctx context.Context, callerID uuid.UUID, query string) ([]model.UserWithNamespaces, error) {
 	if query != "" && len(query) < 2 {
 		return nil, nil

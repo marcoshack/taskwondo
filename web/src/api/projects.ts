@@ -182,13 +182,27 @@ export interface CreateInviteInput {
   max_uses?: number
 }
 
+export interface CreateInviteDirectAddResult {
+  added_directly: true
+  user_id: string
+  project_id: string
+  role: string
+  created_at: string
+}
+
+export type CreateInviteResult = ProjectInvite | CreateInviteDirectAddResult
+
+export function isDirectAddInviteResult(result: CreateInviteResult): result is CreateInviteDirectAddResult {
+  return 'added_directly' in result && result.added_directly === true
+}
+
 export async function listInvites(projectKey: string) {
   const res = await api.get<{ data: ProjectInvite[] }>(`${nsPrefix()}/projects/${projectKey}/invites`)
   return res.data.data
 }
 
 export async function createInvite(projectKey: string, input: CreateInviteInput) {
-  const res = await api.post<{ data: ProjectInvite }>(`${nsPrefix()}/projects/${projectKey}/invites`, input)
+  const res = await api.post<{ data: CreateInviteResult }>(`${nsPrefix()}/projects/${projectKey}/invites`, input)
   return res.data.data
 }
 

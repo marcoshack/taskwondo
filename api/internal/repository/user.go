@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/lib/pq"
@@ -153,7 +154,76 @@ func (r *UserRepository) Search(ctx context.Context, callerID uuid.UUID, query s
 		u.NamespaceSlugs = []string(namespaceSlugs)
 		users = append(users, u)
 	}
+
+	if strings.Contains(query, "@") {
+		emailUser, err := r.findActiveUserByEmailWithNamespaces(ctx, callerID, strings.TrimSpace(query))
+		if err != nil {
+			return nil, err
+		}
+		if emailUser != nil {
+			found := false
+			for _, u := range users {
+				if u.ID == emailUser.ID {
+					found = true
+					break
+				}
+			}
+			if !found {
+				users = append(users, *emailUser)
+			}
+		}
+	}
+
 	return users, nil
+}
+
+func (r *UserRepository) findActiveUserByEmailWithNamespaces(ctx context.Context, callerID uuid.UUID, email string) (*model.UserWithNamespaces, error) {
+	row := r.db.QueryRowContext(ctx,
+		`SELECT u.id, u.email, u.display_name, u.password_hash, u.global_role, u.avatar_url,
+		        u.is_active, u.force_password_change, u.max_projects, u.max_namespaces,
+		        u.last_login_at, u.created_at, u.updated_at,
+		        COALESCE(array_agg(DISTINCT ns.slug) FILTER (WHERE ns.slug IS NOT NULL), '{}') AS namespace_slugs
+		 FROM users u
+		 LEFT JOIN namespace_members nm ON nm.user_id = u.id
+		 LEFT JOIN namespaces ns ON ns.id = nm.namespace_id
+		 WHERE u.is_active = true
+		   AND u.id != $1
+		   AND lower(u.email) = lower($2)
+		 GROUP BY u.id`, callerID, email)
+
+	var u model.UserWithNamespaces
+	var passwordHash sql.NullString
+	var avatarURL sql.NullString
+	var maxProjects sql.NullInt32
+	var maxNamespaces sql.NullInt32
+	var lastLoginAt sql.NullTime
+	var namespaceSlugs pq.StringArray
+	if err := row.Scan(
+		&u.ID, &u.Email, &u.DisplayName, &passwordHash, &u.GlobalRole,
+		&avatarURL, &u.IsActive, &u.ForcePasswordChange, &maxProjects, &maxNamespaces, &lastLoginAt, &u.CreatedAt, &u.UpdatedAt,
+		&namespaceSlugs,
+	); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("finding user by email: %w", err)
+	}
+	if avatarURL.Valid {
+		u.AvatarURL = &avatarURL.String
+	}
+	if maxProjects.Valid {
+		v := int(maxProjects.Int32)
+		u.MaxProjects = &v
+	}
+	if maxNamespaces.Valid {
+		v := int(maxNamespaces.Int32)
+		u.MaxNamespaces = &v
+	}
+	if lastLoginAt.Valid {
+		u.LastLoginAt = &lastLoginAt.Time
+	}
+	u.NamespaceSlugs = []string(namespaceSlugs)
+	return &u, nil
 }
 
 // ListAll returns all users (active and inactive), ordered by display_name.

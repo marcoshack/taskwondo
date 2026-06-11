@@ -2485,7 +2485,7 @@ func TestGetInviteInfo_ExpiredAndFull(t *testing.T) {
 
 // --- Email Invite Tests ---
 
-func TestCreateEmailInvite_ExistingUser_CreatesInvite(t *testing.T) {
+func TestCreateEmailInvite_ExistingUser_AddsDirectly(t *testing.T) {
 	s := newTestProjectSetup()
 	owner := userAuthInfo()
 	ctx := context.Background()
@@ -2495,7 +2495,6 @@ func TestCreateEmailInvite_ExistingUser_CreatesInvite(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Create a user that "exists"
 	existingUser := &model.User{
 		ID:          uuid.New(),
 		Email:       "existing@test.com",
@@ -2507,14 +2506,32 @@ func TestCreateEmailInvite_ExistingUser_CreatesInvite(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if result.Invite == nil {
-		t.Fatal("expected Invite to be set")
+	if !result.AddedDirectly {
+		t.Fatal("expected AddedDirectly to be true")
 	}
-	if result.Invite.InviteeEmail == nil || *result.Invite.InviteeEmail != "existing@test.com" {
-		t.Fatalf("expected invitee_email 'existing@test.com', got %v", result.Invite.InviteeEmail)
+	if result.Member == nil {
+		t.Fatal("expected Member to be set")
 	}
-	if result.Invite.MaxUses != 1 {
-		t.Fatalf("expected max_uses 1, got %d", result.Invite.MaxUses)
+	if result.Member.UserID != existingUser.ID {
+		t.Fatalf("expected member user_id %s, got %s", existingUser.ID, result.Member.UserID)
+	}
+	if result.Member.Role != model.ProjectRoleMember {
+		t.Fatalf("expected role member, got %s", result.Member.Role)
+	}
+	if result.Invite != nil {
+		t.Fatal("expected no invite when user was added directly")
+	}
+
+	project, err := s.projectRepo.GetByKey(ctx, "TT")
+	if err != nil {
+		t.Fatal(err)
+	}
+	member, err := s.memberRepo.GetByProjectAndUser(ctx, project.ID, existingUser.ID)
+	if err != nil {
+		t.Fatalf("expected user to be project member, got %v", err)
+	}
+	if member.Role != model.ProjectRoleMember {
+		t.Fatalf("expected stored role member, got %s", member.Role)
 	}
 }
 

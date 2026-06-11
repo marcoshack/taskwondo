@@ -986,12 +986,13 @@ func (s *ProjectService) CreateInvite(ctx context.Context, info *model.AuthInfo,
 
 // CreateEmailInviteResult contains the result of an email-based invite attempt.
 type CreateEmailInviteResult struct {
-	Invite *model.Invite
+	Invite         *model.Invite
+	Member         *model.ProjectMember
+	AddedDirectly  bool
 }
 
-// CreateEmailInvite creates a personal invite for the given email and sends an
-// email notification. The invitee must accept the invite to join the project,
-// regardless of whether they already have an account.
+// CreateEmailInvite adds an existing Taskwondo user directly to the project, or
+// creates a personal invite and sends an email notification when no account exists.
 func (s *ProjectService) CreateEmailInvite(ctx context.Context, info *model.AuthInfo, projectKey, email, role string, expiresAt *time.Time) (*CreateEmailInviteResult, error) {
 	project, err := s.projects.GetByKey(ctx, projectKey)
 	if err != nil {
@@ -1027,6 +1028,12 @@ func (s *ProjectService) CreateEmailInvite(ctx context.Context, info *model.Auth
 		if err != nil && err != model.ErrNotFound {
 			return nil, fmt.Errorf("checking membership: %w", err)
 		}
+
+		member, err := s.AddMember(ctx, info, projectKey, existingUser.ID, role)
+		if err != nil {
+			return nil, err
+		}
+		return &CreateEmailInviteResult{Member: member, AddedDirectly: true}, nil
 	}
 
 	// Create a personal invite and send email
