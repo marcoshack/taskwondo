@@ -201,6 +201,52 @@ update_work_item(..., status: "done")
 ### MCP tool reminders
 
 - `list_statuses` — valid status names for filters and transitions.
-- `update_work_item` — only provided fields change; invalid `status` rejects the whole update (409).
+- `update_work_item` — only provided fields change; invalid `status` rejects the whole update (409). Supports `queue_id` (`'none'` to clear).
 - Work item descriptions support markdown; use for decisions when git docs are overkill.
 - Display IDs: `WEAVE-1`, `TASK-58` — use `display_id` param, not UUID.
+
+### Agent queues and labels (TASK-16 / TASK-14)
+
+**Routing model:** `assignee` is the source of truth for agent workers (`list_work_items(assignee="me")`). **Queues** and **`agent:*` labels** are triage/intake signals — they tell humans and the triage worker where work belongs before assignment.
+
+#### Queues (per project)
+
+Each project has three agent queues (see **TASK-16** for UUIDs):
+
+| Queue | `queue_type` | Default priority | Label |
+|---|---|---|---|
+| Code Review Agent | `general` | `medium` | `agent:code-review` |
+| Bug Triage Agent | `alerts` | `high` | `agent:triage` |
+| Customer Support Agent | `support` | `medium` | `agent:support` |
+
+Set `queue_id` on create (`create_work_item`) or update (`update_work_item` with `queue_id`).
+
+#### Label convention
+
+| Label | Meaning | Paired queue |
+|---|---|---|
+| `agent:code-review` | Route to Code Review Agent | Code Review Agent |
+| `agent:triage` | Route to Bug Triage Agent | Bug Triage Agent |
+| `agent:support` | Route to Customer Support Agent | Customer Support Agent |
+| `agent:research` | Research/summarization work (no dedicated queue yet) | — |
+| `agent:summarizer` | Summarization-only output | — |
+
+**Approval overrides** (TASK-19 / TASK-17): `agent:auto-done`, `agent:must-review`, `agent:draft-only`.
+
+#### Intake rules (backfill / new items)
+
+| Work item type | Queue | Label |
+|---|---|---|
+| `bug` | Bug Triage Agent | `agent:triage` |
+| `ticket`, `feedback` | Customer Support Agent | `agent:support` |
+| `task` / `epic` / `story` with code-review keywords in title | Code Review Agent | `agent:code-review` |
+
+When updating labels via MCP, `labels` **replaces** the full set — merge existing labels in your tool call.
+
+#### Triage worker filtering
+
+- **By queue:** API `GET .../items?queue_id=<uuid>` (queue-scoped board in UI).
+- **By label:** API `GET .../items?label=agent:triage` (MCP `list_work_items` does not expose `label` yet — use API or assignee after triage).
+- **By assignee:** `list_work_items(assignee="me")` — what running agent workers poll.
+
+Tracked in **TASK-16** (queues), **TASK-14** (labels).
