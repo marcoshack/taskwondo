@@ -233,6 +233,59 @@ Set `queue_id` on create (`create_work_item`) or update (`update_work_item` with
 
 **Approval overrides** (TASK-19 / TASK-17): `agent:auto-done`, `agent:must-review`, `agent:draft-only`.
 
+#### Status handoff protocol (TASK-17)
+
+Canonical lifecycle for agent-driven work items:
+
+| Status | Meaning |
+|---|---|
+| `backlog` / `open` / `new` / `triaged` | Waiting — workers poll `assignees=me` in these statuses |
+| `in_progress` | Agent claimed and is working |
+| `in_review` | Agent finished; human review required (default terminal) |
+| `done` | Completed and approved |
+| `cancelled` | Rejected or no longer applicable |
+
+**Claim:** worker sets `in_progress` after pickup. **Terminal:** worker sets status after execute per role + labels below.
+
+| Role | Default terminal | Notes |
+|---|---|---|
+| `triage` | `in_review` | Comment-only + `agent:auto-done` → `done` |
+| `implementer` / `codereview` | `in_review` | Always; human promotes to `done` |
+| `support` | `in_review` | `agent:auto-done` → `done` |
+
+**Label overrides** (apply before claim):
+
+| Label | Effect |
+|---|---|
+| `agent:auto-done` | Triage/support may set `done` when work is non-mutating (triage) or always (support) |
+| `agent:must-review` | Force `in_review` even with `agent:auto-done` |
+| `agent:draft-only` | Implementer produces branch/diff only; terminal `in_review` |
+
+**Internal comment on `in_review`:** summary, open questions, branch/PR link if applicable. See TASK-15 template.
+
+Human attention: items in **`in_review`** assigned to an agent or recently updated by one.
+
+#### Comment conventions (TASK-15)
+
+**Public agent output:**
+
+```markdown
+**🤖 Agent: [Agent Name]**
+**Result:** [Summary]
+**Confidence:** High / Medium / Low
+**Next Step:** [Suggested action]
+```
+
+**Internal / inter-agent (`internal: true`):**
+
+```markdown
+**🔁 Handoff from [Agent A] → [Agent B]**
+**Context:** [Details for receiving agent]
+**Input artifacts:** [Links, IDs, data]
+```
+
+Workers use `watchtower_agents/comments.py` helpers. Triage posts **internal** comments only.
+
 #### Intake rules (backfill / new items)
 
 | Work item type | Queue | Label |
