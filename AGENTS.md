@@ -286,6 +286,33 @@ Human attention: items in **`in_review`** assigned to an agent or recently updat
 
 Workers use `watchtower_agents/comments.py` helpers. Triage posts **internal** comments only.
 
+#### Agent runtime design (TASK-53)
+
+Hybrid architecture for TASK-19:
+
+| Layer | Responsibility |
+|---|---|
+| **Taskwondo** | Work items, assignee routing, comments, status, time entries |
+| **Per-agent worker** (`watchtower/agents/`) | Poll `assignees=me`, claim `in_progress`, execute backend, report back |
+| **Brain** (TASK-57, optional) | Control plane: wake signals + worker heartbeat/status — not the execution host |
+
+**Routing:** `assignee` is the source of truth for which worker picks up work. Labels and queues guide triage/humans; they are not parallel filters for running workers.
+
+**Host:** Reference workers run on the beast (same machine as brain/ws-terminal). One MCP subprocess = one `twk_` key = one Taskwondo user (TASK-13/18).
+
+**Worker env vars:**
+
+| Variable | Purpose |
+|---|---|
+| `TASKWONDO_URL` / `TASKWONDO_API_KEY` | REST + MCP auth |
+| `TASKWONDO_CONFIG_DIR` | Per-agent MCP OAuth cache |
+| `AGENT_SLUG` / `AGENT_ROLE` | Identity + backend selection (`triage`, `implementer`, …) |
+| `AGENT_PROJECTS` / `AGENT_POLL_STATUSES` | Poll scope |
+| `AGENT_LLM_API_KEY` | LiteLLM virtual key (MCP+LLM backends) |
+| `AGENT_POLL_INTERVAL_S` | Idle poll interval (seconds) |
+
+Runbook: `~/work/watchtower/watchtower/agents/README.md`. Compose units: `agent-triage`, `agent-implementer` (TASK-55/56).
+
 #### Intake rules (backfill / new items)
 
 | Work item type | Queue | Label |
