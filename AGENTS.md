@@ -250,3 +250,27 @@ When updating labels via MCP, `labels` **replaces** the full set — merge exist
 - **By assignee:** `list_work_items(assignee="me")` — what running agent workers poll.
 
 Tracked in **TASK-16** (queues), **TASK-14** (labels).
+
+#### Agent identities (TASK-13)
+
+Each queue-backed agent has a dedicated Taskwondo **user account** (one MCP process = one identity = one `twk_` key per TASK-18):
+
+| Agent | Email | User ID |
+|---|---|---|
+| Bug Triage Agent | `agent-triage@agents.watchtower.lan` | `3f2000fe-64de-4eff-870c-71e45018e534` |
+| Code Review Agent | `agent-codereview@agents.watchtower.lan` | `76a372e3-3c3b-495d-82e9-3e31f7fb021f` |
+| Customer Support Agent | `agent-support@agents.watchtower.lan` | `f055e2dd-0155-4299-a3b2-027eb29fc0e5` |
+
+All three are `member` on TASK, WATCH, WEAVE, DAUNT, SYMON, TEST. Assign work with `update_work_item(assignee=<user_id>)` after triage. Full table in **TASK-13**.
+
+#### API keys (TASK-18)
+
+Each agent user has a dedicated `twk_` key (permissions `read`+`write` at current API granularity). Keys live on the beast at `/data/watchtower/agents/` — per-agent env files + encrypted registry. **Never commit or log raw keys.**
+
+| Agent slug | Key prefix | Env file |
+|---|---|---|
+| `agent-triage` | `twk_fd3d` | `/data/watchtower/agents/env/agent-triage.env` |
+| `agent-codereview` | `twk_0dfc` | `/data/watchtower/agents/env/agent-codereview.env` |
+| `agent-support` | `twk_6ba6` | `/data/watchtower/agents/env/agent-support.env` |
+
+Provision/rotate: `~/work/watchtower/watchtower/agents/provision-api-keys.py` (see README there). Workers inject `TASKWONDO_API_KEY` via env only.
