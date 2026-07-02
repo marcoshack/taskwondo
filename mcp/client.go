@@ -305,6 +305,7 @@ type ListWorkItemsParams struct {
 	Statuses   []string
 	Priorities []string
 	Types      []string
+	Labels     []string
 	Assignee   string
 	Milestones []string
 	Search     string
@@ -324,6 +325,9 @@ func (c *Client) ListWorkItems(params ListWorkItemsParams) (*WorkItemList, error
 	}
 	if len(params.Types) > 0 {
 		q.Set("type", strings.Join(params.Types, ","))
+	}
+	if len(params.Labels) > 0 {
+		q.Set("label", strings.Join(params.Labels, ","))
 	}
 	if params.Assignee != "" {
 		q.Set("assignees", params.Assignee)
