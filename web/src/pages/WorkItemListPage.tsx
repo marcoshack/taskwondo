@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
-import { useWorkItems, useBulkUpdateWorkItems, useDeleteWorkItem, type BulkUpdateResult } from '@/hooks/useWorkItems'
+import { useWorkItems, useBulkUpdateWorkItems, useDeleteWorkItem, useUpdateWorkItem, type BulkUpdateResult } from '@/hooks/useWorkItems'
 import { useMembers } from '@/hooks/useProjects'
 import { useProjectWorkflow, useAvailableStatuses } from '@/hooks/useWorkflows'
 import { useMilestones } from '@/hooks/useMilestones'
@@ -24,6 +24,8 @@ import { BoardView } from '@/components/workitems/BoardView'
 import { SLAIndicator } from '@/components/SLAIndicator'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { WorkItemMobileCard } from '@/components/workitems/WorkItemMobileCard'
+import { WorkItemCompactRow } from '@/components/workitems/WorkItemCompactRow'
+import { WorkItemDetailPane } from '@/components/workitems/WorkItemDetailPane'
 import { X, LayoutList, LayoutGrid } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { useColumnWidths } from '@/hooks/useColumnWidths'
@@ -337,8 +339,12 @@ export function WorkItemListPage() {
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [bulkError, setBulkError] = useState<string | null>(null)
   const [activeRow, setActiveRow] = useState(-1)
+  /** Client-only split-pane selection (TASK-77 Option C) — does not refetch the list. */
+  const [selectedItemNumber, setSelectedItemNumber] = useState<number | null>(null)
   const activeRowStorageKey = `taskwondo_activeRow_${projectKey}`
   const filterStorageKey = `taskwondo_listParams_${projectKey}`
+  const updateItemMutation = useUpdateWorkItem(projectKey ?? '')
+  const splitPaneOpen = selectedItemNumber != null
   /** Build current params from state (avoids stale searchParams from useSearchParams). */
   const currentParamsString = useCallback(
     () => buildUrlParams(filter, search, viewMode, sort, order).toString(),
@@ -555,6 +561,7 @@ export function WorkItemListPage() {
     setLoadedPages([])
     setSelected(new Set())
     setActiveRow(-1)
+    setSelectedItemNumber(null)
   }
 
   // Restore active row from sessionStorage after navigating back
@@ -570,16 +577,34 @@ export function WorkItemListPage() {
     restoredRef.current = true
   }, [allItems, activeRowStorageKey])
 
-  // List navigation: arrows + j/k (vim), o/Enter to open, x to select, # to delete, Escape to deselect
+  const openItemInPane = useCallback((itemNumber: number, rowIndex?: number) => {
+    setSelectedItemNumber(itemNumber)
+    if (rowIndex != null) setActiveRow(rowIndex)
+    else {
+      const idx = allItems.findIndex((i) => i.item_number === itemNumber)
+      if (idx >= 0) setActiveRow(idx)
+    }
+  }, [allItems])
+
+  const closeDetailPane = useCallback(() => {
+    setSelectedItemNumber(null)
+  }, [])
+
+  // List navigation: arrows + j/k (vim), Enter opens split pane, o opens full page, x to select, # to delete
   useKeyboardShortcut([{ key: 'ArrowDown' }, { key: 'j' }], () => setActiveRow((prev) => Math.min(prev + 1, allItems.length - 1)), viewMode === 'list')
   useKeyboardShortcut([{ key: 'ArrowUp' }, { key: 'k' }], () => setActiveRow((prev) => Math.max(prev - 1, 0)), viewMode === 'list')
-  useKeyboardShortcut([{ key: 'Enter' }, { key: 'o' }], () => {
+  useKeyboardShortcut({ key: 'Enter' }, () => {
+    if (activeRow >= 0 && activeRow < allItems.length) {
+      openItemInPane(allItems[activeRow].item_number, activeRow)
+    }
+  }, viewMode === 'list' && activeRow >= 0)
+  useKeyboardShortcut({ key: 'o' }, () => {
     if (activeRow >= 0 && activeRow < allItems.length) {
       sessionStorage.setItem(activeRowStorageKey, String(allItems[activeRow].item_number))
       sessionStorage.setItem(filterStorageKey, currentParamsString())
       navigate(p(`/projects/${projectKey}/items/${allItems[activeRow].item_number}`))
     }
-  }, activeRow >= 0)
+  }, viewMode === 'list' && activeRow >= 0)
   useKeyboardShortcut({ key: 'x' }, () => {
     if (activeRow >= 0 && activeRow < allItems.length) {
       toggleSelect(allItems[activeRow].item_number)
@@ -601,7 +626,27 @@ export function WorkItemListPage() {
   const { data: watchedIds } = useWatchedItemIDs(projectKey ?? '')
   const watchedItemIdSet = useMemo(() => new Set(watchedIds ?? []), [watchedIds])
 
-  useKeyboardShortcut({ key: 'Escape' }, () => setActiveRow(-1), activeRow >= 0)
+  // Escape closes the detail panel first, then clears keyboard focus
+  useKeyboardShortcut({ key: 'Escape' }, () => {
+    if (selectedItemNumber != null) {
+      closeDetailPane()
+      return
+    }
+    setActiveRow(-1)
+  }, selectedItemNumber != null || activeRow >= 0)
+
+  const selectedListItem = useMemo(
+    () => (selectedItemNumber == null ? null : allItems.find((i) => i.item_number === selectedItemNumber) ?? null),
+    [allItems, selectedItemNumber],
+  )
+
+  // If the open pane item leaves the loaded list (filters / refresh), close the pane
+  useEffect(() => {
+    if (selectedItemNumber == null) return
+    if (!allItems.some((i) => i.item_number === selectedItemNumber)) {
+      setSelectedItemNumber(null)
+    }
+  }, [selectedItemNumber, allItems])
 
   // Items targeted for deletion: selected checkboxes take priority, otherwise highlighted row
   const deleteTargets = useMemo(() => {
@@ -877,69 +922,154 @@ export function WorkItemListPage() {
         </div>
       ) : viewMode === 'list' ? (
         <>
-          {/* Desktop: table view */}
-          <div className="hidden lg:block border dark:border-gray-700 rounded-lg overflow-hidden">
-            {!readOnly && (
-              <div className="bg-gray-50 dark:bg-gray-800 px-6 py-2 border-b dark:border-gray-700">
-                <label className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                  <input
-                    type="checkbox"
-                    checked={items.length > 0 && selected.size === items.length}
-                    onChange={toggleSelectAll}
-                  />
-                  {t('common.selectAll')}
-                </label>
+          <div
+            className={
+              splitPaneOpen
+                ? 'flex flex-col lg:flex-row gap-0 border dark:border-gray-700 rounded-lg overflow-hidden min-h-[28rem] lg:min-h-[32rem]'
+                : undefined
+            }
+            data-testid={splitPaneOpen ? 'work-item-split-pane' : undefined}
+          >
+            {/* List column — compact rows when a detail pane is open */}
+            <div
+              className={
+                splitPaneOpen
+                  ? 'w-full lg:w-[300px] lg:min-w-[280px] lg:max-w-[320px] shrink-0 flex flex-col min-h-0 border-b lg:border-b-0 lg:border-r dark:border-gray-700'
+                  : undefined
+              }
+              role={splitPaneOpen ? 'listbox' : undefined}
+              aria-label={splitPaneOpen ? t('workitems.title') : undefined}
+            >
+              {splitPaneOpen ? (
+                <div className="flex-1 min-h-0 overflow-y-auto">
+                  {allItems.length === 0 ? (
+                    <p className="text-center text-sm text-gray-500 dark:text-gray-400 py-12">{t('workitems.empty')}</p>
+                  ) : (
+                    allItems.map((item, index) => {
+                      const member = item.assignee_id
+                        ? members?.find((m) => m.user_id === item.assignee_id)
+                        : undefined
+                      return (
+                        <WorkItemCompactRow
+                          key={item.id}
+                          item={item}
+                          statuses={allStatuses ?? statuses}
+                          active={index === activeRow}
+                          selected={item.item_number === selectedItemNumber}
+                          assignee={
+                            member
+                              ? { name: member.display_name, avatarUrl: member.avatar_url }
+                              : null
+                          }
+                          isCompleted={strikethroughEnabled && isItemCompleted(item.status, allStatuses ?? statuses)}
+                          readOnly={readOnly}
+                          statusOptions={allStatuses ?? statuses}
+                          onSelect={() => openItemInPane(item.item_number, index)}
+                          onStatusChange={
+                            readOnly
+                              ? undefined
+                              : (status) =>
+                                  updateItemMutation.mutate({
+                                    itemNumber: item.item_number,
+                                    input: { status },
+                                  })
+                          }
+                        />
+                      )
+                    })
+                  )}
+                </div>
+              ) : (
+                <>
+                  {/* Desktop: table view */}
+                  <div className="hidden lg:block border dark:border-gray-700 rounded-lg overflow-hidden">
+                    {!readOnly && (
+                      <div className="bg-gray-50 dark:bg-gray-800 px-6 py-2 border-b dark:border-gray-700">
+                        <label className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                          <input
+                            type="checkbox"
+                            checked={items.length > 0 && selected.size === items.length}
+                            onChange={toggleSelectAll}
+                          />
+                          {t('common.selectAll')}
+                        </label>
+                      </div>
+                    )}
+                    <DataTable
+                      columns={columns}
+                      data={allItems}
+                      onRowClick={(row) => {
+                        const idx = allItems.findIndex((i) => i.id === row.id)
+                        openItemInPane(row.item_number, idx >= 0 ? idx : undefined)
+                      }}
+                      emptyMessage={t('workitems.empty')}
+                      sortBy={sort}
+                      sortOrder={order}
+                      onSort={handleSort}
+                      activeRowIndex={activeRow}
+                      resizable
+                      columnWidths={columnWidths}
+                      onColumnResize={onColumnResize}
+                      onColumnResetWidth={resetColumnWidth}
+                    />
+                  </div>
+
+                  {/* Mobile: card view (opens split pane / slide-over) */}
+                  <div className="lg:hidden space-y-2">
+                    {allItems.length === 0 ? (
+                      <p className="text-center text-sm text-gray-500 dark:text-gray-400 py-12">{t('workitems.empty')}</p>
+                    ) : (
+                      allItems.map((item, index) => {
+                        const assigneeName = item.assignee_id
+                          ? members?.find(m => m.user_id === item.assignee_id)?.display_name ?? t('userPicker.unassigned')
+                          : t('userPicker.unassigned')
+                        return (
+                          <WorkItemMobileCard
+                            key={item.id}
+                            item={item}
+                            statuses={allStatuses ?? statuses}
+                            showDates={showDates}
+                            assigneeName={assigneeName}
+                            inboxItemId={inboxByWorkItemId.get(item.id)}
+                            isWatching={watchedItemIdSet.has(item.id)}
+                            isCompleted={strikethroughEnabled && isItemCompleted(item.status, allStatuses ?? statuses)}
+                            onClick={() => openItemInPane(item.item_number, index)}
+                          />
+                        )
+                      })
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Detail pane — desktop side panel; mobile full-screen overlay */}
+            {splitPaneOpen && selectedListItem && (
+              <div className="flex-1 min-w-0 min-h-[16rem] lg:min-h-0 hidden lg:flex">
+                <WorkItemDetailPane
+                  item={selectedListItem}
+                  statuses={allStatuses ?? statuses}
+                  fullPageHref={p(`/projects/${projectKey}/items/${selectedListItem.item_number}`)}
+                  onClose={closeDetailPane}
+                />
               </div>
             )}
-            <DataTable
-              columns={columns}
-              data={allItems}
-              onRowClick={(row) => {
-                sessionStorage.setItem(activeRowStorageKey, String(row.item_number))
-                sessionStorage.setItem(filterStorageKey, currentParamsString())
-                navigate(p(`/projects/${projectKey}/items/${row.item_number}`))
-              }}
-              emptyMessage={t('workitems.empty')}
-              sortBy={sort}
-              sortOrder={order}
-              onSort={handleSort}
-              activeRowIndex={activeRow}
-              resizable
-              columnWidths={columnWidths}
-              onColumnResize={onColumnResize}
-              onColumnResetWidth={resetColumnWidth}
-            />
           </div>
 
-          {/* Mobile: card view */}
-          <div className="lg:hidden space-y-2">
-            {allItems.length === 0 ? (
-              <p className="text-center text-sm text-gray-500 dark:text-gray-400 py-12">{t('workitems.empty')}</p>
-            ) : (
-              allItems.map((item) => {
-                const assigneeName = item.assignee_id
-                  ? members?.find(m => m.user_id === item.assignee_id)?.display_name ?? t('userPicker.unassigned')
-                  : t('userPicker.unassigned')
-                return (
-                  <WorkItemMobileCard
-                    key={item.id}
-                    item={item}
-                    statuses={allStatuses ?? statuses}
-                    showDates={showDates}
-                    assigneeName={assigneeName}
-                    inboxItemId={inboxByWorkItemId.get(item.id)}
-                    isWatching={watchedItemIdSet.has(item.id)}
-                    isCompleted={strikethroughEnabled && isItemCompleted(item.status, allStatuses ?? statuses)}
-                    onClick={() => {
-                      sessionStorage.setItem(activeRowStorageKey, String(item.item_number))
-                      sessionStorage.setItem(filterStorageKey, currentParamsString())
-                      navigate(p(`/projects/${projectKey}/items/${item.item_number}`))
-                    }}
-                  />
-                )
-              })
-            )}
-          </div>
+          {/* Mobile slide-over when a row is selected */}
+          {splitPaneOpen && selectedListItem && (
+            <div
+              className="lg:hidden fixed inset-0 z-40 flex flex-col bg-white dark:bg-gray-900"
+              data-testid="work-item-detail-sheet"
+            >
+              <WorkItemDetailPane
+                item={selectedListItem}
+                statuses={allStatuses ?? statuses}
+                fullPageHref={p(`/projects/${projectKey}/items/${selectedListItem.item_number}`)}
+                onClose={closeDetailPane}
+              />
+            </div>
+          )}
 
           {result?.meta.has_more && (
             <div className="flex justify-center pt-2">
