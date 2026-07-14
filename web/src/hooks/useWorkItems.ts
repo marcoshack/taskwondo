@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   listWorkItems,
@@ -38,6 +39,10 @@ import {
   listWatchedItems,
   type WorkItemFilter as WIF,
 } from '@/api/workitems'
+import {
+  touchWorkItemDetailCache,
+  WORK_ITEM_DETAIL_CACHE_LIMIT,
+} from '@/hooks/workItemDetailCache'
 
 export function useWorkItems(projectKey: string, filter: WorkItemFilter = {}, refetchInterval?: number) {
   return useQuery({
@@ -48,12 +53,34 @@ export function useWorkItems(projectKey: string, filter: WorkItemFilter = {}, re
   })
 }
 
-export function useWorkItem(projectKey: string, itemNumber: number) {
-  return useQuery({
+export interface UseWorkItemOptions {
+  /** Keep the last N full detail responses in cache for instant pane reopen (TASK-79). */
+  retainInCache?: boolean
+  /** Override retained entry count (default {@link WORK_ITEM_DETAIL_CACHE_LIMIT}). */
+  cacheLimit?: number
+  staleTime?: number
+}
+
+export function useWorkItem(projectKey: string, itemNumber: number, options?: UseWorkItemOptions) {
+  const queryClient = useQueryClient()
+  const retainInCache = options?.retainInCache ?? false
+  const cacheLimit = options?.cacheLimit ?? WORK_ITEM_DETAIL_CACHE_LIMIT
+
+  const query = useQuery({
     queryKey: ['projects', projectKey, 'items', itemNumber],
     queryFn: () => getWorkItem(projectKey, itemNumber),
     enabled: !!projectKey && itemNumber > 0,
+    staleTime: options?.staleTime,
+    // Retain briefly so navigating back to a recently viewed item is instant.
+    gcTime: retainInCache ? 15 * 60 * 1000 : undefined,
   })
+
+  useEffect(() => {
+    if (!retainInCache || !query.isSuccess || !projectKey || itemNumber <= 0) return
+    touchWorkItemDetailCache(queryClient, projectKey, itemNumber, cacheLimit)
+  }, [retainInCache, query.isSuccess, query.dataUpdatedAt, projectKey, itemNumber, queryClient, cacheLimit])
+
+  return query
 }
 
 export function useCreateWorkItem(projectKey: string, namespaceSlug?: string) {

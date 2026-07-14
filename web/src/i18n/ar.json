@@ -1514,5 +1514,8 @@
   "inlineComments.gutterTooltip_one": "{{count}} تعليق مضمّن",
   "inlineComments.gutterTooltip_other": "{{count}} تعليقات مضمّنة",
   "inlineComments.prevComment": "التعليق السابق",
-  "inlineComments.nextComment": "التعليق التالي"
+  "inlineComments.nextComment": "التعليق التالي",
+  "workitems.splitPane.panelLabel": "تفاصيل عنصر العمل",
+  "workitems.splitPane.refreshing": "جارٍ التحديث…",
+  "workitems.splitPane.loading": "جارٍ تحميل العنصر…"
 }

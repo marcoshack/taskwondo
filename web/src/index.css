@@ -39,6 +39,25 @@ html:where(.dark) {
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* TASK-79: split-pane detail panel enter */
+@keyframes detail-pane-in {
+  from { opacity: 0; transform: translateX(1.25rem); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.animate-detail-pane-in {
+  animation: detail-pane-in 200ms ease-out;
+}
+
+@keyframes detail-sheet-in {
+  from { opacity: 0; transform: translateY(100%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-detail-sheet-in {
+  animation: detail-sheet-in 220ms ease-out;
+}
+
 @keyframes inbox-highlight {
   0% { background-color: transparent; }
   20% { background-color: var(--inbox-highlight-color); }

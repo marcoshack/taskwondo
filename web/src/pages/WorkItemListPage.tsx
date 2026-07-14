@@ -1043,33 +1043,27 @@ export function WorkItemListPage() {
               )}
             </div>
 
-            {/* Detail pane — desktop side panel; mobile full-screen overlay */}
-            {splitPaneOpen && selectedListItem && (
-              <div className="flex-1 min-w-0 min-h-[16rem] lg:min-h-0 hidden lg:flex">
+            {/*
+              Single detail pane: mobile fullscreen slide-over, desktop ~46% column.
+              One mount avoids double-fetching GET /items/:id.
+            */}
+            {splitPaneOpen && selectedItemNumber != null && (
+              <div
+                className="fixed inset-0 z-40 flex flex-col bg-white dark:bg-gray-900 animate-detail-sheet-in lg:animate-none lg:static lg:inset-auto lg:z-auto lg:w-[46%] lg:min-w-[22rem] lg:max-w-[50%] lg:shrink-0 lg:min-h-[16rem] lg:min-h-0 lg:bg-transparent"
+                data-testid="work-item-detail-sheet"
+              >
                 <WorkItemDetailPane
-                  item={selectedListItem}
+                  projectKey={projectKey ?? ''}
+                  itemNumber={selectedItemNumber}
+                  listItem={selectedListItem}
                   statuses={allStatuses ?? statuses}
-                  fullPageHref={p(`/projects/${projectKey}/items/${selectedListItem.item_number}`)}
+                  fullPageHref={p(`/projects/${projectKey}/items/${selectedItemNumber}`)}
                   onClose={closeDetailPane}
+                  readOnly={readOnly}
                 />
               </div>
             )}
           </div>
-
-          {/* Mobile slide-over when a row is selected */}
-          {splitPaneOpen && selectedListItem && (
-            <div
-              className="lg:hidden fixed inset-0 z-40 flex flex-col bg-white dark:bg-gray-900"
-              data-testid="work-item-detail-sheet"
-            >
-              <WorkItemDetailPane
-                item={selectedListItem}
-                statuses={allStatuses ?? statuses}
-                fullPageHref={p(`/projects/${projectKey}/items/${selectedListItem.item_number}`)}
-                onClose={closeDetailPane}
-              />
-            </div>
-          )}
 
           {result?.meta.has_more && (
             <div className="flex justify-center pt-2">

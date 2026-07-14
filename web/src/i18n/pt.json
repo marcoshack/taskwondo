@@ -1514,5 +1514,8 @@
   "inlineComments.gutterTooltip_one": "{{count}} comentário em linha",
   "inlineComments.gutterTooltip_other": "{{count}} comentários em linha",
   "inlineComments.prevComment": "Comentário anterior",
-  "inlineComments.nextComment": "Próximo comentário"
+  "inlineComments.nextComment": "Próximo comentário",
+  "workitems.splitPane.panelLabel": "Detalhe do item",
+  "workitems.splitPane.refreshing": "Atualizando…",
+  "workitems.splitPane.loading": "Carregando item…"
 }

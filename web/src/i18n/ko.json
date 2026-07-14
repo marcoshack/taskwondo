@@ -1514,5 +1514,8 @@
   "inlineComments.gutterTooltip_one": "인라인 댓글 {{count}}개",
   "inlineComments.gutterTooltip_other": "인라인 댓글 {{count}}개",
   "inlineComments.prevComment": "이전 댓글",
-  "inlineComments.nextComment": "다음 댓글"
+  "inlineComments.nextComment": "다음 댓글",
+  "workitems.splitPane.panelLabel": "작업 항목 상세",
+  "workitems.splitPane.refreshing": "업데이트 중…",
+  "workitems.splitPane.loading": "항목 로드 중…"
 }
