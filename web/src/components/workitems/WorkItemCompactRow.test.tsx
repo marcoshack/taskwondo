@@ -58,7 +58,7 @@ function makeItem(overrides: Partial<WorkItem> = {}): WorkItem {
 }
 
 describe('WorkItemCompactRow', () => {
-  it('renders a tight two-line compact row with title, chips, and label dots', () => {
+  it('renders nav-rail anatomy: id, title, status bar, dual selection bar', () => {
     const html = renderToStaticMarkup(
       <WorkItemCompactRow
         item={makeItem()}
@@ -66,6 +66,7 @@ describe('WorkItemCompactRow', () => {
         selected
         assignee={{ name: 'Ada Lovelace' }}
         onSelect={() => {}}
+        onStatusChange={() => {}}
       />,
     )
 
@@ -73,13 +74,55 @@ describe('WorkItemCompactRow', () => {
     expect(html).toContain('TASK-78')
     expect(html).toContain('Compact list row redesign for split-pane mode')
     expect(html).toContain('data-selected="true"')
-    expect(html).toContain('data-testid="label-dot"')
-    expect(html).toContain('Ada Lovelace')
-    // Priority collapses to a single character chip
-    expect(html).toMatch(/>M</)
+    expect(html).toContain('data-status-category="todo"')
+    expect(html).toContain('data-testid="status-category-bar"')
+    expect(html).toContain('data-testid="selection-bar"')
+    expect(html).toContain('aria-label="TASK-78, Open: Compact list row redesign for split-pane mode"')
+    // Rail omits chips / dots / avatar / due / hover status select
+    expect(html).not.toContain('data-testid="label-dot"')
+    expect(html).not.toContain('data-testid="avatar"')
+    expect(html).not.toContain('Ada Lovelace')
+    expect(html).not.toContain('Jul')
+    expect(html).not.toContain('<select')
+    expect(html).not.toContain('workitems.compactRow.changeStatus')
+    // Medium priority has no flag
+    expect(html).not.toContain('data-testid="priority-flag"')
   })
 
-  it('does not render the assignee name as text beside the avatar', () => {
+  it('shows lucide priority flag only for high and critical', () => {
+    const high = renderToStaticMarkup(
+      <WorkItemCompactRow
+        item={makeItem({ priority: 'high', status: 'in_progress' })}
+        statuses={statuses}
+        onSelect={() => {}}
+      />,
+    )
+    expect(high).toContain('data-testid="priority-flag"')
+    expect(high).toContain('data-priority="high"')
+    expect(high).toContain(
+      'aria-label="TASK-78, In Progress, high priority: Compact list row redesign for split-pane mode"',
+    )
+
+    const critical = renderToStaticMarkup(
+      <WorkItemCompactRow
+        item={makeItem({ priority: 'critical' })}
+        statuses={statuses}
+        onSelect={() => {}}
+      />,
+    )
+    expect(critical).toContain('data-priority="critical"')
+
+    const low = renderToStaticMarkup(
+      <WorkItemCompactRow
+        item={makeItem({ priority: 'low' })}
+        statuses={statuses}
+        onSelect={() => {}}
+      />,
+    )
+    expect(low).not.toContain('data-testid="priority-flag"')
+  })
+
+  it('does not render assignee chrome in rail mode', () => {
     const html = renderToStaticMarkup(
       <WorkItemCompactRow
         item={makeItem()}
@@ -88,9 +131,9 @@ describe('WorkItemCompactRow', () => {
         onSelect={() => {}}
       />,
     )
-    // Avatar mock shows name for a11y/tooltip; row body must not include a verbose name label span
     expect(html).not.toContain('userPicker.unassigned')
-    expect(html.match(/Grace Hopper/g)?.length).toBe(1)
+    expect(html).not.toContain('Grace Hopper')
+    expect(html).not.toContain('data-testid="avatar"')
   })
 
   it('shows parent epic badge on non-epic rows when enriched', () => {
@@ -122,5 +165,18 @@ describe('WorkItemCompactRow', () => {
       />,
     )
     expect(html).not.toContain('data-testid="parent-epic-badge"')
+  })
+
+  it('applies completed strikethrough on the title', () => {
+    const html = renderToStaticMarkup(
+      <WorkItemCompactRow
+        item={makeItem({ status: 'done' })}
+        statuses={statuses}
+        isCompleted
+        onSelect={() => {}}
+      />,
+    )
+    expect(html).toContain('line-through')
+    expect(html).toContain('data-status-category="done"')
   })
 })
