@@ -24,6 +24,8 @@ type WorkItemRepository interface {
 	Update(ctx context.Context, item *model.WorkItem) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	TouchUpdatedAt(ctx context.Context, id uuid.UUID) error
+	// MapParentEpics resolves the parent epic (if any) for each non-epic item ID.
+	MapParentEpics(ctx context.Context, itemIDs []uuid.UUID) (map[uuid.UUID]model.ParentEpicRef, error)
 }
 
 // WorkItemEventRepository defines persistence operations for work item events.
@@ -575,6 +577,22 @@ func (s *WorkItemService) List(ctx context.Context, info *model.AuthInfo, projec
 	}
 
 	return s.items.List(ctx, project.ID, filter)
+}
+
+// MapParentEpics resolves parent epics for the given work items (batch).
+// Used by handlers to decorate list/get summary responses.
+func (s *WorkItemService) MapParentEpics(ctx context.Context, items []model.WorkItem) (map[uuid.UUID]model.ParentEpicRef, error) {
+	ids := make([]uuid.UUID, 0, len(items))
+	for i := range items {
+		if items[i].Type == model.WorkItemTypeEpic {
+			continue
+		}
+		ids = append(ids, items[i].ID)
+	}
+	if len(ids) == 0 {
+		return map[uuid.UUID]model.ParentEpicRef{}, nil
+	}
+	return s.items.MapParentEpics(ctx, ids)
 }
 
 // Update modifies a work item, recording events for each field change.

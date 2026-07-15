@@ -76,11 +76,13 @@ type workItemResponse struct {
 	CustomFields map[string]interface{} `json:"custom_fields"`
 	DueDate      *string                `json:"due_date,omitempty"`
 	EstimatedSeconds *int                 `json:"estimated_seconds,omitempty"`
-	SLA          *model.SLAInfo         `json:"sla,omitempty"`
-	SLATargetAt  *time.Time             `json:"sla_target_at,omitempty"`
-	ResolvedAt   *time.Time             `json:"resolved_at,omitempty"`
-	CreatedAt    time.Time              `json:"created_at"`
-	UpdatedAt    time.Time              `json:"updated_at"`
+	SLA                 *model.SLAInfo         `json:"sla,omitempty"`
+	SLATargetAt         *time.Time             `json:"sla_target_at,omitempty"`
+	ResolvedAt          *time.Time             `json:"resolved_at,omitempty"`
+	ParentEpicDisplayID *string                `json:"parent_epic_display_id,omitempty"`
+	ParentEpicTitle     *string                `json:"parent_epic_title,omitempty"`
+	CreatedAt           time.Time              `json:"created_at"`
+	UpdatedAt           time.Time              `json:"updated_at"`
 }
 
 func toWorkItemResponse(item *model.WorkItem, projectKey string) workItemResponse {
@@ -120,6 +122,43 @@ func toWorkItemResponse(item *model.WorkItem, projectKey string) workItemRespons
 		resp.CustomFields = map[string]interface{}{}
 	}
 	return resp
+}
+
+// attachParentEpics fills parent_epic_* fields on responses for non-epic items.
+// Matches by work-item ID so caller slice order/length need not stay in lockstep.
+func (h *WorkItemHandler) attachParentEpics(r *http.Request, items []workItemResponse, source []model.WorkItem) {
+	if len(items) == 0 || len(source) == 0 {
+		return
+	}
+	if len(items) != len(source) {
+		log.Warn().
+			Int("response_len", len(items)).
+			Int("source_len", len(source)).
+			Msg("attachParentEpics length mismatch; matching by id")
+	}
+	epicMap, err := h.items.MapParentEpics(r.Context(), source)
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to resolve parent epics for work items")
+		return
+	}
+	byID := make(map[uuid.UUID]int, len(items))
+	for i := range items {
+		byID[items[i].ID] = i
+	}
+	for _, src := range source {
+		ref, ok := epicMap[src.ID]
+		if !ok {
+			continue
+		}
+		idx, ok := byID[src.ID]
+		if !ok {
+			continue
+		}
+		displayID := ref.DisplayID
+		title := ref.Title
+		items[idx].ParentEpicDisplayID = &displayID
+		items[idx].ParentEpicTitle = &title
+	}
 }
 
 // --- Handlers ---
@@ -220,7 +259,9 @@ func (h *WorkItemHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if slaMap := h.sla.ComputeSLAForItems(r.Context(), projectKey, []model.WorkItem{*item}); slaMap != nil {
 		resp.SLA = slaMap[item.ID]
 	}
-	writeData(w, http.StatusCreated, resp)
+	tmp := []workItemResponse{resp}
+	h.attachParentEpics(r, tmp, []model.WorkItem{*item})
+	writeData(w, http.StatusCreated, tmp[0])
 }
 
 // List handles GET /api/v1/projects/{projectKey}/items
@@ -373,6 +414,7 @@ func (h *WorkItemHandler) List(w http.ResponseWriter, r *http.Request) {
 			items[i].SLA = slaMap[result.Items[i].ID]
 		}
 	}
+	h.attachParentEpics(r, items, result.Items)
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"data": items,
@@ -409,7 +451,9 @@ func (h *WorkItemHandler) Get(w http.ResponseWriter, r *http.Request) {
 	if slaMap := h.sla.ComputeSLAForItems(r.Context(), projectKey, []model.WorkItem{*item}); slaMap != nil {
 		resp.SLA = slaMap[item.ID]
 	}
-	writeData(w, http.StatusOK, resp)
+	tmp := []workItemResponse{resp}
+	h.attachParentEpics(r, tmp, []model.WorkItem{*item})
+	writeData(w, http.StatusOK, tmp[0])
 }
 
 // Update handles PATCH /api/v1/projects/{projectKey}/items/{itemNumber}
@@ -599,7 +643,9 @@ func (h *WorkItemHandler) Update(w http.ResponseWriter, r *http.Request) {
 	if slaMap := h.sla.ComputeSLAForItems(r.Context(), projectKey, []model.WorkItem{*item}); slaMap != nil {
 		resp.SLA = slaMap[item.ID]
 	}
-	writeData(w, http.StatusOK, resp)
+	tmp := []workItemResponse{resp}
+	h.attachParentEpics(r, tmp, []model.WorkItem{*item})
+	writeData(w, http.StatusOK, tmp[0])
 }
 
 // Delete handles DELETE /api/v1/projects/{projectKey}/items/{itemNumber}
@@ -1966,6 +2012,7 @@ func (h *WorkItemHandler) ListWatchedItemIDs(w http.ResponseWriter, r *http.Requ
 				}
 			}
 		}
+		h.attachParentEpics(r, items, result.Items)
 
 		writeJSON(w, http.StatusOK, map[string]interface{}{
 			"data": items,

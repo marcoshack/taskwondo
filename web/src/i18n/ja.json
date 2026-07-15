@@ -1491,6 +1491,7 @@
   "workitems.view.list": "リスト",
   "workitems.view.moveTo": "移動先...",
   "workitems.compactRow.changeStatus": "ステータスを変更",
+  "workitems.parentEpic": "親エピック",
   "workitems.splitPane.closePanel": "詳細パネルを閉じる",
   "workitems.splitPane.openFull": "フルページを開く",
   "workitems.splitPane.emptyDescription": "説明なし",

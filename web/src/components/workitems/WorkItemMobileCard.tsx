@@ -6,6 +6,7 @@ import { StatusBadge } from '@/components/workitems/StatusBadge'
 import { InboxButton } from '@/components/workitems/InboxButton'
 import { WatchButton } from '@/components/workitems/WatchButton'
 import { SLAIndicator } from '@/components/SLAIndicator'
+import { ParentEpicBadge, shouldShowParentEpic } from '@/components/workitems/ParentEpicBadge'
 import { formatRelativeTime } from '@/utils/duration'
 import type { WorkItem } from '@/api/workitems'
 import type { WorkflowStatus } from '@/api/workflows'
@@ -47,6 +48,13 @@ export function WorkItemMobileCard({ item, statuses, showDates, assigneeName, in
       </span>
       <ScrollableRow className="mr-5">
         <span className={`shrink-0 font-mono text-sm font-semibold ${isCompleted ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'}`}>{item.display_id}</span>
+        {shouldShowParentEpic(item) && (
+          <ParentEpicBadge
+            displayId={item.parent_epic_display_id}
+            title={item.parent_epic_title}
+            size="xs"
+          />
+        )}
         <span className={`shrink-0 inline-flex ${isCompleted ? 'opacity-40' : ''}`}><TypeBadge type={item.type} /></span>
         <span className="shrink-0 inline-flex"><StatusBadge status={item.status} statuses={statuses} /></span>
         <span className={`shrink-0 inline-flex ${isCompleted ? 'opacity-40' : ''}`}><PriorityBadge priority={item.priority} /></span>

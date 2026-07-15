@@ -229,10 +229,12 @@ func (m *mockWorkflowRepo) IsInUse(_ context.Context, _ uuid.UUID) (bool, error)
 // --- Mock work item repository ---
 
 type mockWorkItemRepo struct {
-	items        map[uuid.UUID]*model.WorkItem
-	byProjectNum map[string]*model.WorkItem // key: "projectID:itemNumber"
-	counters     map[uuid.UUID]int          // project item counters
-	projectKeys  map[uuid.UUID]string       // projectID -> project key
+	items             map[uuid.UUID]*model.WorkItem
+	byProjectNum      map[string]*model.WorkItem // key: "projectID:itemNumber"
+	counters          map[uuid.UUID]int          // project item counters
+	projectKeys       map[uuid.UUID]string       // projectID -> project key
+	parentEpics         map[uuid.UUID]model.ParentEpicRef
+	lastParentEpicIDs   []uuid.UUID
 }
 
 func newMockWorkItemRepo() *mockWorkItemRepo {
@@ -241,6 +243,7 @@ func newMockWorkItemRepo() *mockWorkItemRepo {
 		byProjectNum: make(map[string]*model.WorkItem),
 		counters:     make(map[uuid.UUID]int),
 		projectKeys:  make(map[uuid.UUID]string),
+		parentEpics:  make(map[uuid.UUID]model.ParentEpicRef),
 	}
 }
 
@@ -355,6 +358,17 @@ func (m *mockWorkItemRepo) TouchUpdatedAt(_ context.Context, id uuid.UUID) error
 	}
 	item.UpdatedAt = time.Now()
 	return nil
+}
+
+func (m *mockWorkItemRepo) MapParentEpics(_ context.Context, itemIDs []uuid.UUID) (map[uuid.UUID]model.ParentEpicRef, error) {
+	m.lastParentEpicIDs = append([]uuid.UUID(nil), itemIDs...)
+	out := make(map[uuid.UUID]model.ParentEpicRef)
+	for _, id := range itemIDs {
+		if ref, ok := m.parentEpics[id]; ok {
+			out[id] = ref
+		}
+	}
+	return out, nil
 }
 
 func contains(slice []string, s string) bool {

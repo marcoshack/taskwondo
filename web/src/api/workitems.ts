@@ -37,6 +37,9 @@ export interface WorkItem {
   sla: SLAInfo | null
   sla_target_at: string | null
   resolved_at: string | null
+  /** Parent epic display id when this item is a non-epic child (list/get enrichment). */
+  parent_epic_display_id?: string | null
+  parent_epic_title?: string | null
   created_at: string
   updated_at: string
 }
@@ -155,10 +158,12 @@ export interface Relation {
   source_title: string
   source_status: string
   source_status_category: string
+  source_priority: string
   target_display_id: string
   target_title: string
   target_status: string
   target_status_category: string
+  target_priority: string
   relation_type: string
   created_by: string
   created_at: string

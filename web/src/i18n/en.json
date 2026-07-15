@@ -291,6 +291,7 @@
   "workitems.view.board": "Board",
   "workitems.view.moveTo": "Move to...",
   "workitems.compactRow.changeStatus": "Change status",
+  "workitems.parentEpic": "Parent epic",
   "workitems.splitPane.closePanel": "Close detail panel",
   "workitems.splitPane.openFull": "Open full page",
   "workitems.splitPane.emptyDescription": "No description",

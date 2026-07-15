@@ -637,3 +637,63 @@ func (r *WorkItemRepository) UpdateSLATargetAt(ctx context.Context, id uuid.UUID
 		slaTargetAt, id)
 	return err
 }
+
+// MapParentEpics resolves a parent epic for each given work item ID.
+// Sources (in priority order per item): child_of / parent_of relations to an
+// epic, then work_items.parent_id when the parent is an epic. Epics themselves
+// are skipped. When multiple epics are linked, the earliest relation wins.
+//
+// Authz: returns epic display id + title for any linked epic without an extra
+// project-access check. Relations are expected to stay same-project; if
+// cross-project parent links are introduced, filter by accessible projects here.
+func (r *WorkItemRepository) MapParentEpics(ctx context.Context, itemIDs []uuid.UUID) (map[uuid.UUID]model.ParentEpicRef, error) {
+	out := make(map[uuid.UUID]model.ParentEpicRef)
+	if len(itemIDs) == 0 {
+		return out, nil
+	}
+
+	rows, err := r.db.QueryContext(ctx, `
+		WITH candidates AS (
+			SELECT r.source_id AS item_id, r.target_id AS epic_id, r.created_at AS ranked_at, 1 AS precedence
+			FROM work_item_relations r
+			WHERE r.relation_type = 'child_of' AND r.source_id = ANY($1)
+			UNION ALL
+			SELECT r.target_id AS item_id, r.source_id AS epic_id, r.created_at AS ranked_at, 1 AS precedence
+			FROM work_item_relations r
+			WHERE r.relation_type = 'parent_of' AND r.target_id = ANY($1)
+			UNION ALL
+			SELECT wi.id AS item_id, wi.parent_id AS epic_id, wi.created_at AS ranked_at, 2 AS precedence
+			FROM work_items wi
+			WHERE wi.id = ANY($1) AND wi.parent_id IS NOT NULL AND wi.deleted_at IS NULL
+		)
+		SELECT DISTINCT ON (c.item_id)
+			c.item_id, p.key, e.item_number, e.title
+		FROM candidates c
+		JOIN work_items child ON child.id = c.item_id AND child.deleted_at IS NULL AND child.type <> 'epic'
+		JOIN work_items e ON e.id = c.epic_id AND e.type = 'epic' AND e.deleted_at IS NULL
+		JOIN projects p ON p.id = e.project_id
+		ORDER BY c.item_id, c.precedence ASC, c.ranked_at ASC`,
+		pq.Array(itemIDs),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("mapping parent epics: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var itemID uuid.UUID
+		var projectKey, title string
+		var itemNumber int
+		if err := rows.Scan(&itemID, &projectKey, &itemNumber, &title); err != nil {
+			return nil, fmt.Errorf("scanning parent epic: %w", err)
+		}
+		out[itemID] = model.ParentEpicRef{
+			DisplayID: fmt.Sprintf("%s-%d", projectKey, itemNumber),
+			Title:     title,
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating parent epics: %w", err)
+	}
+	return out, nil
+}

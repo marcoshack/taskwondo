@@ -26,6 +26,7 @@ import { Tooltip } from '@/components/ui/Tooltip'
 import { WorkItemMobileCard } from '@/components/workitems/WorkItemMobileCard'
 import { WorkItemCompactRow } from '@/components/workitems/WorkItemCompactRow'
 import { WorkItemDetailPane } from '@/components/workitems/WorkItemDetailPane'
+import { ParentEpicBadge, shouldShowParentEpic } from '@/components/workitems/ParentEpicBadge'
 import { X, LayoutList, LayoutGrid } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { useColumnWidths } from '@/hooks/useColumnWidths'
@@ -673,11 +674,22 @@ export function WorkItemListPage() {
     {
       key: 'display_id',
       header: t('workitems.table.id'),
-      className: 'w-[102px]',
+      className: 'w-[11.5rem]',
       sortKey: 'item_number',
       render: (row) => {
         const done = strikethroughEnabled && isItemCompleted(row.status, allStatuses ?? statuses)
-        return <span className={`font-mono ${done ? 'text-gray-400 dark:text-gray-500' : 'text-gray-500 dark:text-gray-400'}`}>{row.display_id}</span>
+        return (
+          <span className="inline-flex items-center gap-1.5 min-w-0">
+            <span className={`font-mono shrink-0 ${done ? 'text-gray-400 dark:text-gray-500' : 'text-gray-500 dark:text-gray-400'}`}>{row.display_id}</span>
+            {shouldShowParentEpic(row) && (
+              <ParentEpicBadge
+                displayId={row.parent_epic_display_id}
+                title={row.parent_epic_title}
+                size="xs"
+              />
+            )}
+          </span>
+        )
       },
     },
     {

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Calendar, Check } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import { Tooltip } from '@/components/ui/Tooltip'
+import { ParentEpicBadge, shouldShowParentEpic } from '@/components/workitems/ParentEpicBadge'
 import type { WorkItem } from '@/api/workitems'
 import type { WorkflowStatus } from '@/api/workflows'
 
@@ -156,6 +157,13 @@ export function WorkItemCompactRow({
               >
                 {item.display_id}
               </span>
+              {shouldShowParentEpic(item) && (
+                <ParentEpicBadge
+                  displayId={item.parent_epic_display_id}
+                  title={item.parent_epic_title}
+                  size="xs"
+                />
+              )}
               <span
                 className={`truncate text-sm leading-snug ${
                   isCompleted

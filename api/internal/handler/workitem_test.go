@@ -348,6 +348,10 @@ func (m *mockWorkItemRepo) TouchUpdatedAt(_ context.Context, id uuid.UUID) error
 	return nil
 }
 
+func (m *mockWorkItemRepo) MapParentEpics(_ context.Context, itemIDs []uuid.UUID) (map[uuid.UUID]model.ParentEpicRef, error) {
+	return map[uuid.UUID]model.ParentEpicRef{}, nil
+}
+
 func strContains(slice []string, s string) bool {
 	for _, v := range slice {
 		if v == s {

@@ -92,4 +92,35 @@ describe('WorkItemCompactRow', () => {
     expect(html).not.toContain('userPicker.unassigned')
     expect(html.match(/Grace Hopper/g)?.length).toBe(1)
   })
+
+  it('shows parent epic badge on non-epic rows when enriched', () => {
+    const html = renderToStaticMarkup(
+      <WorkItemCompactRow
+        item={makeItem({
+          parent_epic_display_id: 'TASK-76',
+          parent_epic_title: 'Split-pane list view',
+        })}
+        statuses={statuses}
+        onSelect={() => {}}
+      />,
+    )
+    expect(html).toContain('data-testid="parent-epic-badge"')
+    expect(html).toContain('data-epic-id="TASK-76"')
+    expect(html).toContain('TASK-76')
+  })
+
+  it('hides parent epic badge for epic items even if field is set', () => {
+    const html = renderToStaticMarkup(
+      <WorkItemCompactRow
+        item={makeItem({
+          type: 'epic',
+          parent_epic_display_id: 'TASK-1',
+          parent_epic_title: 'Should not show',
+        })}
+        statuses={statuses}
+        onSelect={() => {}}
+      />,
+    )
+    expect(html).not.toContain('data-testid="parent-epic-badge"')
+  })
 })

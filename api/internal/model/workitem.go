@@ -129,6 +129,12 @@ type WorkItemList struct {
 	Total   int        `json:"total"`
 }
 
+// ParentEpicRef is a minimal epic reference for list enrichment.
+type ParentEpicRef struct {
+	DisplayID string `json:"display_id"`
+	Title     string `json:"title"`
+}
+
 // WorkItemEventWithActor is a WorkItemEvent enriched with actor display info.
 type WorkItemEventWithActor struct {
 	WorkItemEvent
