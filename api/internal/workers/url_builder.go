@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/marcoshack/taskwondo/internal/model"
+	"github.com/marcoshack/taskwondo/internal/weburl"
 )
 
 // namespaceResolver looks up the namespace slug for a given project ID.
@@ -32,12 +33,12 @@ func NewURLBuilder(baseURL string, resolver namespaceResolver) *URLBuilder {
 
 // WorkItem returns the absolute URL to a work item detail page.
 func (b *URLBuilder) WorkItem(ctx context.Context, projectID uuid.UUID, projectKey string, itemNumber int) string {
-	return fmt.Sprintf("%s/%s/projects/%s/items/%d", b.baseURL, b.segmentFor(ctx, projectID), projectKey, itemNumber)
+	return weburl.WorkItem(b.baseURL, b.slugFor(ctx, projectID), projectKey, itemNumber)
 }
 
 // Project returns the absolute URL to a project's main page.
 func (b *URLBuilder) Project(ctx context.Context, projectID uuid.UUID, projectKey string) string {
-	return fmt.Sprintf("%s/%s/projects/%s", b.baseURL, b.segmentFor(ctx, projectID), projectKey)
+	return weburl.Project(b.baseURL, b.slugFor(ctx, projectID), projectKey)
 }
 
 // OncallTab returns the absolute URL to a team's on-call tab.
@@ -51,29 +52,26 @@ func (b *URLBuilder) Invite(inviteCode string) string {
 }
 
 // segmentFor resolves the namespace URL segment for a project, defaulting to
-// "d" on lookup failure so notifications still work if the namespace cannot be
-// resolved.
+// the default namespace segment on lookup failure so notifications still work
+// if the namespace cannot be resolved.
 func (b *URLBuilder) segmentFor(ctx context.Context, projectID uuid.UUID) string {
+	return weburl.Segment(b.slugFor(ctx, projectID))
+}
+
+// slugFor resolves the namespace slug for a project, defaulting to the default
+// namespace slug on lookup failure so notifications still work if the namespace
+// cannot be resolved.
+func (b *URLBuilder) slugFor(ctx context.Context, projectID uuid.UUID) string {
 	if b.resolver == nil || projectID == uuid.Nil {
-		return toURLSegment(model.DefaultNamespaceSlug)
+		return model.DefaultNamespaceSlug
 	}
 	info, err := b.resolver.ResolveNamespacesByIDs(ctx, []uuid.UUID{projectID})
 	if err != nil {
-		return toURLSegment(model.DefaultNamespaceSlug)
+		return model.DefaultNamespaceSlug
 	}
 	entry, ok := info[projectID]
 	if !ok {
-		return toURLSegment(model.DefaultNamespaceSlug)
+		return model.DefaultNamespaceSlug
 	}
-	return toURLSegment(entry.NamespaceSlug)
-}
-
-// toURLSegment maps a namespace slug to its URL segment. This mirrors the
-// frontend helper in web/src/hooks/useNamespacePath.ts: the default namespace
-// is rendered as "d", all other slugs are used verbatim.
-func toURLSegment(slug string) string {
-	if slug == model.DefaultNamespaceSlug {
-		return "d"
-	}
-	return slug
+	return entry.NamespaceSlug
 }

@@ -1063,7 +1063,7 @@ func workItemTestSetup(t *testing.T) (*WorkItemHandler, *model.AuthInfo, string)
 		service.WithSLA(slaRepo, slaSvc),
 		service.WithStorage(store, 50*1024*1024),
 	)
-	h := NewWorkItemHandler(svc, slaSvc, 50*1024*1024)
+	h := NewWorkItemHandler(svc, slaSvc, 50*1024*1024, "https://taskwondo.test")
 
 	info := &model.AuthInfo{
 		UserID:     uuid.New(),
@@ -1119,7 +1119,7 @@ func workItemTestSetupWithSLA(t *testing.T) *workItemSLASetup {
 		service.WithSLA(slaRepo, slaSvc),
 		service.WithStorage(store, 50*1024*1024),
 	)
-	h := NewWorkItemHandler(svc, slaSvc, 50*1024*1024)
+	h := NewWorkItemHandler(svc, slaSvc, 50*1024*1024, "https://taskwondo.test")
 
 	info := &model.AuthInfo{
 		UserID:     uuid.New(),
@@ -1375,6 +1375,53 @@ func TestGetWorkItem_Handler_Success(t *testing.T) {
 	data := resp["data"].(map[string]interface{})
 	if data["display_id"] != "TEST-1" {
 		t.Fatalf("expected display_id 'TEST-1', got %v", data["display_id"])
+	}
+}
+
+func TestGetWorkItem_Handler_ReturnsURL(t *testing.T) {
+	tests := []struct {
+		name      string
+		namespace string // value of the {namespace} route param
+		wantURL   string
+	}{
+		{
+			name:      "default namespace maps to d segment",
+			namespace: "default",
+			wantURL:   "https://taskwondo.test/d/projects/TEST/items/1",
+		},
+		{
+			name:      "custom namespace uses slug verbatim",
+			namespace: "acme",
+			wantURL:   "https://taskwondo.test/acme/projects/TEST/items/1",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h, info, projectKey := workItemTestSetup(t)
+			createTestWorkItem(t, h, info, projectKey)
+
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/"+tt.namespace+"/projects/TEST/items/1", nil)
+			rctx := chi.NewRouteContext()
+			rctx.URLParams.Add("namespace", tt.namespace)
+			rctx.URLParams.Add("projectKey", projectKey)
+			rctx.URLParams.Add("itemNumber", "1")
+			ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+			ctx = model.ContextWithAuthInfo(ctx, info)
+			req = req.WithContext(ctx)
+			w := httptest.NewRecorder()
+
+			h.Get(w, req)
+
+			if w.Code != http.StatusOK {
+				t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+			}
+			var resp map[string]interface{}
+			json.Unmarshal(w.Body.Bytes(), &resp)
+			data := resp["data"].(map[string]interface{})
+			if data["url"] != tt.wantURL {
+				t.Fatalf("expected url %q, got %v", tt.wantURL, data["url"])
+			}
+		})
 	}
 }
 

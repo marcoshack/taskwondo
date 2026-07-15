@@ -393,6 +393,9 @@ func handleListWorkItems(_ context.Context, request mcp.CallToolRequest) (*mcp.C
 		}
 		fmt.Fprintf(&sb, "- **%s** [%s] %s (status: %s, priority: %s%s)\n",
 			item.DisplayID, item.Type, item.Title, item.Status, item.Priority, labelStr)
+		if item.URL != "" {
+			fmt.Fprintf(&sb, "  %s\n", item.URL)
+		}
 	}
 	if result.HasMore {
 		sb.WriteString("\n(more results available — increase limit or refine filters)")
@@ -2157,6 +2160,9 @@ func resolveMilestoneName(client *Client, projectKey, milestoneID string) string
 func formatWorkItemWithClient(item *WorkItem, client *Client) string {
 	var sb strings.Builder
 	fmt.Fprintf(&sb, "## %s: %s\n\n", item.DisplayID, item.Title)
+	if item.URL != "" {
+		fmt.Fprintf(&sb, "- **Link**: %s\n", item.URL)
+	}
 	fmt.Fprintf(&sb, "- **Type**: %s\n", item.Type)
 	fmt.Fprintf(&sb, "- **Status**: %s\n", item.Status)
 	fmt.Fprintf(&sb, "- **Priority**: %s\n", item.Priority)

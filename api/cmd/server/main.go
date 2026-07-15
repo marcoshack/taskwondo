@@ -310,7 +310,7 @@ func main() {
 	oncall := handler.NewOncallHandler(oncallService)
 	savedSearches := handler.NewSavedSearchHandler(savedSearchService)
 	milestones := handler.NewMilestoneHandler(milestoneService)
-	items := handler.NewWorkItemHandler(workItemService, slaService, cfg.MaxUploadSize)
+	items := handler.NewWorkItemHandler(workItemService, slaService, cfg.MaxUploadSize, cfg.BaseURL)
 	userSettings := handler.NewUserSettingHandler(userSettingService)
 	systemSettings := handler.NewSystemSettingHandler(systemSettingService, encryptor, emailSender)
 	admin := handler.NewAdminHandler(adminService)

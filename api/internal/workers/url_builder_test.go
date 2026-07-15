@@ -128,20 +128,3 @@ func TestURLBuilder_UnknownProjectFallsBackToDefault(t *testing.T) {
 		t.Errorf("WorkItem for unknown project = %q, want %q", got, want)
 	}
 }
-
-func TestToURLSegment(t *testing.T) {
-	tests := []struct {
-		slug string
-		want string
-	}{
-		{"default", "d"},
-		{"mhack", "mhack"},
-		{"acme", "acme"},
-		{"", ""},
-	}
-	for _, tt := range tests {
-		if got := toURLSegment(tt.slug); got != tt.want {
-			t.Errorf("toURLSegment(%q) = %q, want %q", tt.slug, got, tt.want)
-		}
-	}
-}

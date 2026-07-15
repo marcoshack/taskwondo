@@ -18,6 +18,7 @@ import (
 
 	"github.com/marcoshack/taskwondo/internal/model"
 	"github.com/marcoshack/taskwondo/internal/service"
+	"github.com/marcoshack/taskwondo/internal/weburl"
 )
 
 // WorkItemHandler handles work item endpoints.
@@ -25,11 +26,13 @@ type WorkItemHandler struct {
 	items         *service.WorkItemService
 	sla           *service.SLAService
 	maxUploadSize int64
+	baseURL       string
 }
 
-// NewWorkItemHandler creates a new WorkItemHandler.
-func NewWorkItemHandler(items *service.WorkItemService, sla *service.SLAService, maxUploadSize int64) *WorkItemHandler {
-	return &WorkItemHandler{items: items, sla: sla, maxUploadSize: maxUploadSize}
+// NewWorkItemHandler creates a new WorkItemHandler. baseURL is the public web
+// base (e.g. https://taskwondo.org), used to build absolute work item links.
+func NewWorkItemHandler(items *service.WorkItemService, sla *service.SLAService, maxUploadSize int64, baseURL string) *WorkItemHandler {
+	return &WorkItemHandler{items: items, sla: sla, maxUploadSize: maxUploadSize, baseURL: baseURL}
 }
 
 // --- Request DTOs ---
@@ -54,60 +57,66 @@ type createWorkItemRequest struct {
 // --- Response DTOs ---
 
 type workItemResponse struct {
-	ID             uuid.UUID              `json:"id"`
-	ProjectKey     string                 `json:"project_key"`
-	NamespaceSlug  string                 `json:"namespace_slug,omitempty"`
-	NamespaceName  string                 `json:"namespace_name,omitempty"`
-	ItemNumber   int                    `json:"item_number"`
-	DisplayID    string                 `json:"display_id"`
-	Type         string                 `json:"type"`
-	Title        string                 `json:"title"`
-	Description  *string                `json:"description,omitempty"`
-	Status       string                 `json:"status"`
-	Priority     string                 `json:"priority"`
-	AssigneeID   *uuid.UUID             `json:"assignee_id,omitempty"`
-	ReporterID   uuid.UUID              `json:"reporter_id"`
-	ReporterName string                 `json:"reporter_name"`
-	QueueID      *uuid.UUID             `json:"queue_id,omitempty"`
-	MilestoneID  *uuid.UUID             `json:"milestone_id,omitempty"`
-	Visibility   string                 `json:"visibility"`
-	Labels       []string               `json:"labels"`
-	Complexity   *int                   `json:"complexity,omitempty"`
-	CustomFields map[string]interface{} `json:"custom_fields"`
-	DueDate      *string                `json:"due_date,omitempty"`
-	EstimatedSeconds *int                 `json:"estimated_seconds,omitempty"`
-	SLA          *model.SLAInfo         `json:"sla,omitempty"`
-	SLATargetAt  *time.Time             `json:"sla_target_at,omitempty"`
-	ResolvedAt   *time.Time             `json:"resolved_at,omitempty"`
-	CreatedAt    time.Time              `json:"created_at"`
-	UpdatedAt    time.Time              `json:"updated_at"`
+	ID               uuid.UUID              `json:"id"`
+	ProjectKey       string                 `json:"project_key"`
+	NamespaceSlug    string                 `json:"namespace_slug,omitempty"`
+	NamespaceName    string                 `json:"namespace_name,omitempty"`
+	ItemNumber       int                    `json:"item_number"`
+	DisplayID        string                 `json:"display_id"`
+	URL              string                 `json:"url,omitempty"`
+	Type             string                 `json:"type"`
+	Title            string                 `json:"title"`
+	Description      *string                `json:"description,omitempty"`
+	Status           string                 `json:"status"`
+	Priority         string                 `json:"priority"`
+	AssigneeID       *uuid.UUID             `json:"assignee_id,omitempty"`
+	ReporterID       uuid.UUID              `json:"reporter_id"`
+	ReporterName     string                 `json:"reporter_name"`
+	QueueID          *uuid.UUID             `json:"queue_id,omitempty"`
+	MilestoneID      *uuid.UUID             `json:"milestone_id,omitempty"`
+	Visibility       string                 `json:"visibility"`
+	Labels           []string               `json:"labels"`
+	Complexity       *int                   `json:"complexity,omitempty"`
+	CustomFields     map[string]interface{} `json:"custom_fields"`
+	DueDate          *string                `json:"due_date,omitempty"`
+	EstimatedSeconds *int                   `json:"estimated_seconds,omitempty"`
+	SLA              *model.SLAInfo         `json:"sla,omitempty"`
+	SLATargetAt      *time.Time             `json:"sla_target_at,omitempty"`
+	ResolvedAt       *time.Time             `json:"resolved_at,omitempty"`
+	CreatedAt        time.Time              `json:"created_at"`
+	UpdatedAt        time.Time              `json:"updated_at"`
 }
 
-func toWorkItemResponse(item *model.WorkItem, projectKey string) workItemResponse {
+// toWorkItemResponse builds the response DTO for a work item. baseURL and
+// namespaceSlug are used to construct the absolute web URL to the item; pass an
+// empty namespaceSlug when it must be resolved separately (e.g. cross-project
+// listings) and set resp.URL afterwards.
+func toWorkItemResponse(item *model.WorkItem, projectKey, baseURL, namespaceSlug string) workItemResponse {
 	resp := workItemResponse{
-		ID:           item.ID,
-		ProjectKey:   projectKey,
-		ItemNumber:   item.ItemNumber,
-		DisplayID:    item.DisplayID,
-		Type:         item.Type,
-		Title:        item.Title,
-		Description:  item.Description,
-		Status:       item.Status,
-		Priority:     item.Priority,
-		AssigneeID:   item.AssigneeID,
-		ReporterID:   item.ReporterID,
-		ReporterName: item.ReporterName,
-		QueueID:      item.QueueID,
-		MilestoneID:  item.MilestoneID,
-		Visibility:   item.Visibility,
-		Labels:       item.Labels,
-		Complexity:   item.Complexity,
+		ID:               item.ID,
+		ProjectKey:       projectKey,
+		ItemNumber:       item.ItemNumber,
+		DisplayID:        item.DisplayID,
+		URL:              weburl.WorkItem(baseURL, namespaceSlug, projectKey, item.ItemNumber),
+		Type:             item.Type,
+		Title:            item.Title,
+		Description:      item.Description,
+		Status:           item.Status,
+		Priority:         item.Priority,
+		AssigneeID:       item.AssigneeID,
+		ReporterID:       item.ReporterID,
+		ReporterName:     item.ReporterName,
+		QueueID:          item.QueueID,
+		MilestoneID:      item.MilestoneID,
+		Visibility:       item.Visibility,
+		Labels:           item.Labels,
+		Complexity:       item.Complexity,
 		CustomFields:     item.CustomFields,
 		EstimatedSeconds: item.EstimatedSeconds,
 		SLATargetAt:      item.SLATargetAt,
-		ResolvedAt:   item.ResolvedAt,
-		CreatedAt:    item.CreatedAt,
-		UpdatedAt:    item.UpdatedAt,
+		ResolvedAt:       item.ResolvedAt,
+		CreatedAt:        item.CreatedAt,
+		UpdatedAt:        item.UpdatedAt,
 	}
 	if item.DueDate != nil {
 		s := item.DueDate.Format("2006-01-02")
@@ -216,7 +225,7 @@ func (h *WorkItemHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := toWorkItemResponse(item, projectKey)
+	resp := toWorkItemResponse(item, projectKey, h.baseURL, chi.URLParam(r, "namespace"))
 	if slaMap := h.sla.ComputeSLAForItems(r.Context(), projectKey, []model.WorkItem{*item}); slaMap != nil {
 		resp.SLA = slaMap[item.ID]
 	}
@@ -368,7 +377,7 @@ func (h *WorkItemHandler) List(w http.ResponseWriter, r *http.Request) {
 	slaMap := h.sla.ComputeSLAForItems(r.Context(), projectKey, result.Items)
 	items := make([]workItemResponse, len(result.Items))
 	for i := range result.Items {
-		items[i] = toWorkItemResponse(&result.Items[i], projectKey)
+		items[i] = toWorkItemResponse(&result.Items[i], projectKey, h.baseURL, chi.URLParam(r, "namespace"))
 		if slaMap != nil {
 			items[i].SLA = slaMap[result.Items[i].ID]
 		}
@@ -405,7 +414,7 @@ func (h *WorkItemHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := toWorkItemResponse(item, projectKey)
+	resp := toWorkItemResponse(item, projectKey, h.baseURL, chi.URLParam(r, "namespace"))
 	if slaMap := h.sla.ComputeSLAForItems(r.Context(), projectKey, []model.WorkItem{*item}); slaMap != nil {
 		resp.SLA = slaMap[item.ID]
 	}
@@ -595,7 +604,7 @@ func (h *WorkItemHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := toWorkItemResponse(item, projectKey)
+	resp := toWorkItemResponse(item, projectKey, h.baseURL, chi.URLParam(r, "namespace"))
 	if slaMap := h.sla.ComputeSLAForItems(r.Context(), projectKey, []model.WorkItem{*item}); slaMap != nil {
 		resp.SLA = slaMap[item.ID]
 	}
@@ -1444,9 +1453,9 @@ func safeDownloadContentType(ct string) string {
 // --- Time entry DTOs ---
 
 type createTimeEntryRequest struct {
-	StartedAt       string  `json:"started_at"`
-	DurationSeconds int     `json:"duration_seconds"`
-	Description     string  `json:"description,omitempty"`
+	StartedAt       string `json:"started_at"`
+	DurationSeconds int    `json:"duration_seconds"`
+	Description     string `json:"description,omitempty"`
 }
 
 type updateTimeEntryRequest struct {
@@ -1479,7 +1488,7 @@ func toTimeEntryResponse(e *model.TimeEntry) timeEntryResponse {
 
 type timeEntrySummaryResponse struct {
 	Entries            []timeEntryResponse `json:"entries"`
-	TotalLoggedSeconds int                `json:"total_logged_seconds"`
+	TotalLoggedSeconds int                 `json:"total_logged_seconds"`
 }
 
 // --- Time entry handlers ---
@@ -1952,7 +1961,9 @@ func (h *WorkItemHandler) ListWatchedItemIDs(w http.ResponseWriter, r *http.Requ
 				}
 			}
 			pkSet[pk] = struct{}{}
-			items[i] = toWorkItemResponse(&result.Items[i], pk)
+			// Namespace is resolved below (items may span namespaces), so the URL
+			// is filled in once the slug is known.
+			items[i] = toWorkItemResponse(&result.Items[i], pk, h.baseURL, "")
 			if slaMap := h.sla.ComputeSLAForItems(r.Context(), pk, []model.WorkItem{result.Items[i]}); slaMap != nil {
 				items[i].SLA = slaMap[result.Items[i].ID]
 			}
@@ -1967,6 +1978,7 @@ func (h *WorkItemHandler) ListWatchedItemIDs(w http.ResponseWriter, r *http.Requ
 				if info, ok := nsMap[items[i].ProjectKey]; ok {
 					items[i].NamespaceSlug = info.NamespaceSlug
 					items[i].NamespaceName = info.NamespaceName
+					items[i].URL = weburl.WorkItem(h.baseURL, info.NamespaceSlug, items[i].ProjectKey, items[i].ItemNumber)
 				}
 			}
 		}

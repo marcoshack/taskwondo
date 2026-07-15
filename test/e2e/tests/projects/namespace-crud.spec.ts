@@ -309,6 +309,9 @@ test.describe('Namespace Project Isolation', () => {
     expect(defGet.ok()).toBe(true);
     const defGetBody = await defGet.json();
     expect(defGetBody.data.title).toBe('Default item 1');
+    // The API returns the absolute web URL; the default namespace maps to the
+    // "d" URL segment. Clients must not have to infer this.
+    expect(defGetBody.data.url).toBe(`${BASE_URL}/d/projects/${projKey}/items/1`);
 
     const customGet = await request.get(`${BASE_URL}/api/v1/${slug}/projects/${projKey}/items/1`, {
       headers: { Authorization: `Bearer ${adminToken}` },
@@ -316,6 +319,8 @@ test.describe('Namespace Project Isolation', () => {
     expect(customGet.ok()).toBe(true);
     const customGetBody = await customGet.json();
     expect(customGetBody.data.title).toBe('Custom item 1');
+    // A non-default namespace uses its slug verbatim as the URL segment.
+    expect(customGetBody.data.url).toBe(`${BASE_URL}/${slug}/projects/${projKey}/items/1`);
   });
 
   test('migrate project between namespaces', async ({ request }) => {

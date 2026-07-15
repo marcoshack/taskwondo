@@ -90,6 +90,7 @@ type WorkItem struct {
 	ProjectKey  string   `json:"project_key"`
 	ItemNumber  int      `json:"item_number"`
 	DisplayID   string   `json:"display_id"`
+	URL         string   `json:"url,omitempty"`
 	Type        string   `json:"type"`
 	Title       string   `json:"title"`
 	Description *string  `json:"description,omitempty"`
