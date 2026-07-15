@@ -1056,12 +1056,13 @@ export function WorkItemListPage() {
             </div>
 
             {/*
-              Single detail pane: mobile fullscreen slide-over, desktop ~46% column.
+              Single detail pane: mobile fullscreen slide-over, desktop fluid column.
+              Fills remaining horizontal space (TASK-117) — no max-w-[50%] dead zone.
               One mount avoids double-fetching GET /items/:id.
             */}
             {splitPaneOpen && selectedItemNumber != null && (
               <div
-                className="fixed inset-0 z-40 flex flex-col bg-white dark:bg-gray-900 animate-detail-sheet-in lg:animate-none lg:static lg:inset-auto lg:z-auto lg:w-[46%] lg:min-w-[22rem] lg:max-w-[50%] lg:shrink-0 lg:min-h-[16rem] lg:min-h-0 lg:bg-transparent"
+                className="fixed inset-0 z-40 flex flex-col bg-white dark:bg-gray-900 animate-detail-sheet-in lg:animate-none lg:static lg:inset-auto lg:z-auto lg:flex-1 lg:min-w-[22rem] lg:shrink lg:min-h-[16rem] lg:min-h-0 lg:bg-transparent"
                 data-testid="work-item-detail-sheet"
               >
                 <WorkItemDetailPane

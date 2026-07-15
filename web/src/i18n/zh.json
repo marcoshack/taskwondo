@@ -1492,6 +1492,7 @@
   "workitems.view.moveTo": "移至...",
   "workitems.compactRow.changeStatus": "更改状态",
   "workitems.parentEpic": "父史诗",
+  "workitems.detail.extrasColumn": "关联与附加信息",
   "workitems.splitPane.closePanel": "关闭详情面板",
   "workitems.splitPane.openFull": "打开完整页面",
   "workitems.splitPane.emptyDescription": "无描述",

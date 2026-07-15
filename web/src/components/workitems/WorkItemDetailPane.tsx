@@ -9,6 +9,7 @@ import { DetailSidebar } from '@/components/workitems/DetailSidebar'
 import { CommentList } from '@/components/workitems/CommentList'
 import { DescriptionWithInlineComments } from '@/components/workitems/DescriptionWithInlineComments'
 import { RelationList } from '@/components/workitems/RelationList'
+import { DetailExtrasColumn } from '@/components/workitems/DetailExtrasColumn'
 import { AttachmentList } from '@/components/workitems/AttachmentList'
 import { TimeEntryList } from '@/components/workitems/TimeEntryList'
 import { FilePreviewModal } from '@/components/workitems/FilePreviewModal'
@@ -23,11 +24,12 @@ import { useWorkItem, useUpdateWorkItem, useAttachments, useRelations } from '@/
 import { useProject, useMembers, useTypeWorkflows } from '@/hooks/useProjects'
 import { useProjectWorkflow, useProjectWorkflows } from '@/hooks/useWorkflows'
 import { useMilestones } from '@/hooks/useMilestones'
+import { useDetailExtrasBreakpoint } from '@/hooks/useDetailExtrasBreakpoint'
 import { useAuth } from '@/contexts/AuthContext'
 import { useConfirmFeedback } from '@/hooks/useConfirmFeedback'
 import { usePasteUpload } from '@/hooks/usePasteUpload'
 import { useMentionAutocomplete } from '@/hooks/useMentionAutocomplete'
-import type { WorkItem } from '@/api/workitems'
+import type { WorkItem, UpdateWorkItemInput } from '@/api/workitems'
 import type { WorkflowStatus } from '@/api/workflows'
 
 type PaneTab = 'comments' | 'relations' | 'attachments' | 'time'
@@ -128,6 +130,7 @@ export function WorkItemDetailPane({
   const [showProperties, setShowProperties] = useState(false)
   const [openThreadRootId, setOpenThreadRootId] = useState<string | null>(null)
   const [previewTarget, setPreviewTarget] = useState<PreviewTarget | null>(null)
+  const showExtrasColumn = useDetailExtrasBreakpoint()
   const { confirmed: titleConfirmed, showConfirm: showTitleConfirm } = useConfirmFeedback()
   const { confirmed: descConfirmed, showConfirm: showDescConfirm } = useConfirmFeedback()
 
@@ -143,6 +146,13 @@ export function WorkItemDetailPane({
     setOpenThreadRootId(null)
     setPreviewTarget(null)
   }, [itemNumber])
+
+  // When the wide extras column takes over relations, leave the relations tab.
+  useEffect(() => {
+    if (showExtrasColumn && activeTab === 'relations') {
+      setActiveTab('comments')
+    }
+  }, [showExtrasColumn, activeTab])
 
   const { data: allAttachments } = useAttachments(projectKey, itemNumber)
   const handleImageClick = useCallback(
@@ -183,17 +193,38 @@ export function WorkItemDetailPane({
   const showSkeleton = !item && (isLoading || isFetching)
   const showStaleHint = Boolean(item && isFetching && !fetchedItem)
 
-  const tabs: { key: PaneTab; label: string }[] = [
-    { key: 'comments', label: t('tabs.comments') },
-    { key: 'time', label: t('tabs.time') },
-    { key: 'relations', label: t('tabs.relations') },
-    { key: 'attachments', label: t('tabs.attachments') },
-  ]
+  const tabs: { key: PaneTab; label: string }[] = (
+    [
+      { key: 'comments', label: t('tabs.comments') },
+      { key: 'time', label: t('tabs.time') },
+      { key: 'relations', label: t('tabs.relations') },
+      { key: 'attachments', label: t('tabs.attachments') },
+    ] as { key: PaneTab; label: string }[]
+  ).filter((tab) => !(showExtrasColumn && tab.key === 'relations'))
+
+  const sidebarProps = item
+    ? {
+        item,
+        projectKey,
+        itemNumber,
+        statuses: statusesForBadges,
+        allowedTransitions: allowed,
+        members: members ?? [],
+        milestones,
+        allowedComplexityValues: project?.allowed_complexity_values,
+        typeWorkflows,
+        allWorkflows,
+        onUpdate: (input: UpdateWorkItemInput) => updateMutation.mutate({ itemNumber, input }),
+        readOnly,
+        updateError: updateMutation.isError,
+      }
+    : null
 
   return (
     <aside
       data-testid="work-item-detail-pane"
       data-item-number={itemNumber}
+      data-extras-column={showExtrasColumn ? 'true' : 'false'}
       className="flex h-full min-h-0 w-full flex-col border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 max-lg:border-l-0 lg:animate-detail-pane-in"
       aria-label={item?.title ?? t('workitems.splitPane.panelLabel')}
       aria-busy={showSkeleton || undefined}
@@ -247,266 +278,285 @@ export function WorkItemDetailPane({
         </div>
       </header>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-        {showSkeleton ? (
-          <DetailSkeleton />
-        ) : (
-          <div key={itemNumber} className="space-y-5">
-            {/* Title (inline edit) */}
-            {!readOnly && editingTitle ? (
-              <div className="flex gap-2 items-center">
-                <input
-                  className="text-lg font-semibold text-gray-900 dark:text-gray-100 border-b border-indigo-500 outline-none flex-1 bg-transparent"
-                  value={titleDraft}
-                  onChange={(e) => setTitleDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
+      <div
+        className={
+          showExtrasColumn
+            ? 'min-h-0 flex-1 flex flex-col min-[1600px]:flex-row'
+            : 'min-h-0 flex-1 overflow-y-auto'
+        }
+      >
+        <div
+          className={
+            showExtrasColumn
+              ? 'min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm text-gray-700 dark:text-gray-300'
+              : 'px-4 py-3 text-sm text-gray-700 dark:text-gray-300'
+          }
+        >
+          {showSkeleton ? (
+            <DetailSkeleton />
+          ) : (
+            <div key={itemNumber} className="space-y-5">
+              {/* Title (inline edit) */}
+              {!readOnly && editingTitle ? (
+                <div className="flex gap-2 items-center">
+                  <input
+                    className="text-lg font-semibold text-gray-900 dark:text-gray-100 border-b border-indigo-500 outline-none flex-1 bg-transparent"
+                    value={titleDraft}
+                    onChange={(e) => setTitleDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        updateMutation.mutate({ itemNumber, input: { title: titleDraft } })
+                        setEditingTitle(false)
+                        showTitleConfirm()
+                      }
+                      if (e.key === 'Escape') setEditingTitle(false)
+                    }}
+                    autoFocus
+                  />
+                  <Button
+                    size="sm"
+                    onClick={() => {
                       updateMutation.mutate({ itemNumber, input: { title: titleDraft } })
                       setEditingTitle(false)
                       showTitleConfirm()
-                    }
-                    if (e.key === 'Escape') setEditingTitle(false)
-                  }}
-                  autoFocus
-                />
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    updateMutation.mutate({ itemNumber, input: { title: titleDraft } })
-                    setEditingTitle(false)
-                    showTitleConfirm()
-                  }}
-                >
-                  {t('common.save')}
-                </Button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 -mt-1">
-                <button
-                  type="button"
-                  className={`text-left text-lg font-semibold text-gray-900 dark:text-gray-100 rounded px-1 -mx-1 ${
-                    readOnly
-                      ? ''
-                      : 'cursor-pointer border border-transparent hover:border-gray-300 dark:hover:border-gray-600'
-                  }`}
-                  onClick={
-                    readOnly
-                      ? undefined
-                      : () => {
-                          setTitleDraft(item!.title)
-                          setEditingTitle(true)
-                        }
-                  }
-                >
-                  {item!.title}
-                </button>
-                <ConfirmCheck visible={titleConfirmed} />
-              </div>
-            )}
-
-            {/* Description */}
-            <div className="group/desc">
-              <div className="flex items-center gap-1 mb-1">
-                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                  {t('workitems.detail.description')}
-                </h3>
-                <ConfirmCheck visible={descConfirmed} />
-                {!readOnly && !editingDesc && (
-                  <button
-                    type="button"
-                    className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline ml-auto"
-                    onClick={() => {
-                      setDescDraft(item!.description ?? '')
-                      setEditingDesc(true)
                     }}
                   >
-                    {t('common.edit')}
-                  </button>
-                )}
-                {!editingDesc && item!.description && (
-                  <CopyButton text={item!.description} className="opacity-0 group-hover/desc:opacity-100" />
-                )}
-              </div>
-              {!readOnly && editingDesc ? (
-                <div className="space-y-2">
-                  <textarea
-                    ref={descTextareaRef}
-                    className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm"
-                    rows={6}
-                    value={descDraft}
-                    onChange={(e) => setDescDraft(e.target.value)}
-                    onKeyDown={(e) => {
-                      descMention.onMentionKeyDown(e)
-                      if (e.defaultPrevented) return
-                      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                        e.preventDefault()
-                        updateMutation.mutate({ itemNumber, input: { description: descDraft || null } })
-                        setEditingDesc(false)
-                        showDescConfirm()
-                      }
-                      if (e.key === 'Escape') setEditingDesc(false)
-                    }}
-                    onPaste={handleDescPaste}
-                    onDrop={handleDescDrop}
-                    onDragOver={handleDescDragOver}
-                    autoFocus
-                  />
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        updateMutation.mutate({ itemNumber, input: { description: descDraft || null } })
-                        setEditingDesc(false)
-                        showDescConfirm()
-                      }}
-                    >
-                      {t('common.save')}
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setEditingDesc(false)}>
-                      {t('common.cancel')}
-                    </Button>
-                  </div>
+                    {t('common.save')}
+                  </Button>
                 </div>
               ) : (
-                <div
-                  className="relative border border-transparent hover:border-gray-300 dark:hover:border-gray-600 rounded p-2 min-h-[2rem] cursor-pointer"
-                  onClick={
-                    readOnly
-                      ? undefined
-                      : () => {
-                          setDescDraft(item!.description ?? '')
-                          setEditingDesc(true)
-                        }
-                  }
-                >
-                  {item!.description ? (
-                    <div onClick={(e) => e.stopPropagation()}>
-                      <DescriptionWithInlineComments
-                        projectKey={projectKey}
-                        itemNumber={itemNumber}
-                        description={item!.description}
-                        readOnly={readOnly}
-                        onImageClick={handleImageClick}
-                        onAttachmentLinkClick={handleAttachmentLinkClick}
-                        openThreadRootId={openThreadRootId}
-                        onOpenThread={setOpenThreadRootId}
-                      />
-                    </div>
-                  ) : (
-                    <span className="text-sm text-gray-400 dark:text-gray-500 italic">
-                      {t('workitems.detail.noDescription')}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Properties — desktop inline; mobile via sheet button */}
-            <div className="hidden lg:block border border-gray-100 dark:border-gray-800 rounded-lg p-3">
-              <DetailSidebar
-                item={item!}
-                projectKey={projectKey}
-                itemNumber={itemNumber}
-                statuses={statusesForBadges}
-                allowedTransitions={allowed}
-                members={members ?? []}
-                milestones={milestones}
-                allowedComplexityValues={project?.allowed_complexity_values}
-                typeWorkflows={typeWorkflows}
-                allWorkflows={allWorkflows}
-                onUpdate={(input) => updateMutation.mutate({ itemNumber, input })}
-                readOnly={readOnly}
-                updateError={updateMutation.isError}
-              />
-            </div>
-
-            {childrenRelations.length > 0 && (
-              <p className="text-xs text-gray-400 dark:text-gray-500">
-                {t('relations.childrenProgress', {
-                  completed: childrenRelations.filter((r) => {
-                    const isSource = r.source_display_id === currentDisplayId
-                    const category = isSource ? r.target_status_category : r.source_status_category
-                    return category === 'done' || category === 'cancelled'
-                  }).length,
-                  total: childrenRelations.length,
-                })}
-              </p>
-            )}
-
-            {/* Comments / relations / time / attachments */}
-            <div>
-              <div className="border-b border-gray-200 dark:border-gray-700 mb-3 flex items-center justify-between">
-                <nav className="flex gap-4 overflow-x-auto scrollbar-none pr-2">
-                  {tabs.map((tab) => (
-                    <button
-                      key={tab.key}
-                      type="button"
-                      className={`pb-2 text-sm font-medium border-b-2 whitespace-nowrap ${
-                        activeTab === tab.key
-                          ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                      }`}
-                      onClick={() => setActiveTab(tab.key)}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </nav>
-                {(activeTab === 'comments' || activeTab === 'attachments' || activeTab === 'time') && (
-                  <Tooltip
-                    content={
-                      sortOrder === 'desc' ? t('common.showingNewestFirst') : t('common.showingOldestFirst')
+                <div className="flex items-center gap-2 -mt-1">
+                  <button
+                    type="button"
+                    className={`text-left text-lg font-semibold text-gray-900 dark:text-gray-100 rounded px-1 -mx-1 ${
+                      readOnly
+                        ? ''
+                        : 'cursor-pointer border border-transparent hover:border-gray-300 dark:hover:border-gray-600'
+                    }`}
+                    onClick={
+                      readOnly
+                        ? undefined
+                        : () => {
+                            setTitleDraft(item!.title)
+                            setEditingTitle(true)
+                          }
                     }
                   >
+                    {item!.title}
+                  </button>
+                  <ConfirmCheck visible={titleConfirmed} />
+                </div>
+              )}
+
+              {/* Description */}
+              <div className="group/desc">
+                <div className="flex items-center gap-1 mb-1">
+                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                    {t('workitems.detail.description')}
+                  </h3>
+                  <ConfirmCheck visible={descConfirmed} />
+                  {!readOnly && !editingDesc && (
                     <button
                       type="button"
-                      className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 pb-2"
-                      onClick={() => setSortOrder((s) => (s === 'desc' ? 'asc' : 'desc'))}
+                      className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline ml-auto"
+                      onClick={() => {
+                        setDescDraft(item!.description ?? '')
+                        setEditingDesc(true)
+                      }}
                     >
-                      {sortOrder === 'desc' ? '↓' : '↑'}
+                      {t('common.edit')}
                     </button>
-                  </Tooltip>
+                  )}
+                  {!editingDesc && item!.description && (
+                    <CopyButton text={item!.description} className="opacity-0 group-hover/desc:opacity-100" />
+                  )}
+                </div>
+                {!readOnly && editingDesc ? (
+                  <div className="space-y-2">
+                    <textarea
+                      ref={descTextareaRef}
+                      className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm"
+                      rows={6}
+                      value={descDraft}
+                      onChange={(e) => setDescDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        descMention.onMentionKeyDown(e)
+                        if (e.defaultPrevented) return
+                        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                          e.preventDefault()
+                          updateMutation.mutate({ itemNumber, input: { description: descDraft || null } })
+                          setEditingDesc(false)
+                          showDescConfirm()
+                        }
+                        if (e.key === 'Escape') setEditingDesc(false)
+                      }}
+                      onPaste={handleDescPaste}
+                      onDrop={handleDescDrop}
+                      onDragOver={handleDescDragOver}
+                      autoFocus
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          updateMutation.mutate({ itemNumber, input: { description: descDraft || null } })
+                          setEditingDesc(false)
+                          showDescConfirm()
+                        }}
+                      >
+                        {t('common.save')}
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setEditingDesc(false)}>
+                        {t('common.cancel')}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    className="relative border border-transparent hover:border-gray-300 dark:hover:border-gray-600 rounded p-2 min-h-[2rem] cursor-pointer"
+                    onClick={
+                      readOnly
+                        ? undefined
+                        : () => {
+                            setDescDraft(item!.description ?? '')
+                            setEditingDesc(true)
+                          }
+                    }
+                  >
+                    {item!.description ? (
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <DescriptionWithInlineComments
+                          projectKey={projectKey}
+                          itemNumber={itemNumber}
+                          description={item!.description}
+                          readOnly={readOnly}
+                          onImageClick={handleImageClick}
+                          onAttachmentLinkClick={handleAttachmentLinkClick}
+                          openThreadRootId={openThreadRootId}
+                          onOpenThread={setOpenThreadRootId}
+                        />
+                      </div>
+                    ) : (
+                      <span className="text-sm text-gray-400 dark:text-gray-500 italic">
+                        {t('workitems.detail.noDescription')}
+                      </span>
+                    )}
+                  </div>
                 )}
               </div>
 
-              {activeTab === 'comments' && (
-                <CommentList
-                  projectKey={projectKey}
-                  itemNumber={itemNumber}
-                  sortOrder={sortOrder}
-                  draft={commentDraft}
-                  onDraftChange={setCommentDraft}
-                  readOnly={readOnly}
-                  itemVisibility={item?.visibility}
-                  onImageClick={handleImageClick}
-                  onAttachmentLinkClick={handleAttachmentLinkClick}
-                  onViewInline={setOpenThreadRootId}
-                />
+              {/* Properties — stacked below main at lg; moves to side column at ≥1600 */}
+              {!showExtrasColumn && (
+                <div className="hidden lg:block border border-gray-100 dark:border-gray-800 rounded-lg p-3">
+                  {sidebarProps && <DetailSidebar {...sidebarProps} />}
+                </div>
               )}
-              {activeTab === 'relations' && (
-                <RelationList projectKey={projectKey} itemNumber={itemNumber} readOnly={readOnly} />
+
+              {childrenRelations.length > 0 && (
+                <p className="text-xs text-gray-400 dark:text-gray-500">
+                  {t('relations.childrenProgress', {
+                    completed: childrenRelations.filter((r) => {
+                      const isSource = r.source_display_id === currentDisplayId
+                      const category = isSource ? r.target_status_category : r.source_status_category
+                      return category === 'done' || category === 'cancelled'
+                    }).length,
+                    total: childrenRelations.length,
+                  })}
+                </p>
               )}
-              {activeTab === 'attachments' && (
-                <AttachmentList
-                  projectKey={projectKey}
-                  itemNumber={itemNumber}
-                  sortOrder={sortOrder}
-                  onPreview={(a) =>
-                    setPreviewTarget({ kind: 'attachment', attachment: a, projectKey, itemNumber })
-                  }
-                  readOnly={readOnly}
-                />
-              )}
-              {activeTab === 'time' && (
-                <TimeEntryList
-                  projectKey={projectKey}
-                  itemNumber={itemNumber}
-                  sortOrder={sortOrder}
-                  readOnly={readOnly}
-                />
-              )}
+
+              {/* Comments / relations / time / attachments */}
+              <div>
+                <div className="border-b border-gray-200 dark:border-gray-700 mb-3 flex items-center justify-between">
+                  <nav className="flex gap-4 overflow-x-auto scrollbar-none pr-2">
+                    {tabs.map((tab) => (
+                      <button
+                        key={tab.key}
+                        type="button"
+                        className={`pb-2 text-sm font-medium border-b-2 whitespace-nowrap ${
+                          activeTab === tab.key
+                            ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                        }`}
+                        onClick={() => setActiveTab(tab.key)}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </nav>
+                  {(activeTab === 'comments' || activeTab === 'attachments' || activeTab === 'time') && (
+                    <Tooltip
+                      content={
+                        sortOrder === 'desc' ? t('common.showingNewestFirst') : t('common.showingOldestFirst')
+                      }
+                    >
+                      <button
+                        type="button"
+                        className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 pb-2"
+                        onClick={() => setSortOrder((s) => (s === 'desc' ? 'asc' : 'desc'))}
+                      >
+                        {sortOrder === 'desc' ? '↓' : '↑'}
+                      </button>
+                    </Tooltip>
+                  )}
+                </div>
+
+                {activeTab === 'comments' && (
+                  <CommentList
+                    projectKey={projectKey}
+                    itemNumber={itemNumber}
+                    sortOrder={sortOrder}
+                    draft={commentDraft}
+                    onDraftChange={setCommentDraft}
+                    readOnly={readOnly}
+                    itemVisibility={item?.visibility}
+                    onImageClick={handleImageClick}
+                    onAttachmentLinkClick={handleAttachmentLinkClick}
+                    onViewInline={setOpenThreadRootId}
+                  />
+                )}
+                {activeTab === 'relations' && !showExtrasColumn && (
+                  <RelationList projectKey={projectKey} itemNumber={itemNumber} readOnly={readOnly} />
+                )}
+                {activeTab === 'attachments' && (
+                  <AttachmentList
+                    projectKey={projectKey}
+                    itemNumber={itemNumber}
+                    sortOrder={sortOrder}
+                    onPreview={(a) =>
+                      setPreviewTarget({ kind: 'attachment', attachment: a, projectKey, itemNumber })
+                    }
+                    readOnly={readOnly}
+                  />
+                )}
+                {activeTab === 'time' && (
+                  <TimeEntryList
+                    projectKey={projectKey}
+                    itemNumber={itemNumber}
+                    sortOrder={sortOrder}
+                    readOnly={readOnly}
+                  />
+                )}
+              </div>
             </div>
-          </div>
+          )}
+        </div>
+
+        {showExtrasColumn && item && (
+          <>
+            <div className="hidden min-[1600px]:block w-52 shrink-0 overflow-y-auto border-l border-gray-200 dark:border-gray-700 p-3">
+              {sidebarProps && <DetailSidebar {...sidebarProps} />}
+            </div>
+            <div className="hidden min-[1600px]:block w-72 shrink-0 overflow-y-auto border-l border-gray-200 dark:border-gray-700 p-3">
+              <DetailExtrasColumn
+                projectKey={projectKey}
+                itemNumber={itemNumber}
+                item={item}
+                milestones={milestones}
+                readOnly={readOnly}
+              />
+            </div>
+          </>
         )}
       </div>
 
@@ -518,23 +568,7 @@ export function WorkItemDetailPane({
       />
 
       <Modal open={showProperties} onClose={() => setShowProperties(false)} title={t('workitems.detail.properties')}>
-        {item && (
-          <DetailSidebar
-            item={item}
-            projectKey={projectKey}
-            itemNumber={itemNumber}
-            statuses={statusesForBadges}
-            allowedTransitions={allowed}
-            members={members ?? []}
-            milestones={milestones}
-            allowedComplexityValues={project?.allowed_complexity_values}
-            typeWorkflows={typeWorkflows}
-            allWorkflows={allWorkflows}
-            onUpdate={(input) => updateMutation.mutate({ itemNumber, input })}
-            readOnly={readOnly}
-            updateError={updateMutation.isError}
-          />
-        )}
+        {sidebarProps && <DetailSidebar {...sidebarProps} />}
       </Modal>
 
       <FilePreviewModal target={previewTarget} onClose={() => setPreviewTarget(null)} />

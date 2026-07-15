@@ -1492,6 +1492,7 @@
   "workitems.view.moveTo": "Mover a...",
   "workitems.compactRow.changeStatus": "Cambiar estado",
   "workitems.parentEpic": "Épica padre",
+  "workitems.detail.extrasColumn": "Relaciones y extras",
   "workitems.splitPane.closePanel": "Cerrar panel de detalle",
   "workitems.splitPane.openFull": "Abrir página completa",
   "workitems.splitPane.emptyDescription": "Sin descripción",

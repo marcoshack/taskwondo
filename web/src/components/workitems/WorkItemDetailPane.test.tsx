@@ -69,6 +69,10 @@ vi.mock('@/hooks/useMilestones', () => ({
   useMilestones: () => ({ data: [] }),
 }))
 
+vi.mock('@/hooks/useDetailExtrasBreakpoint', () => ({
+  useDetailExtrasBreakpoint: vi.fn(() => false),
+}))
+
 vi.mock('@/hooks/useConfirmFeedback', () => ({
   useConfirmFeedback: () => ({ confirmed: false, showConfirm: vi.fn() }),
 }))
@@ -107,6 +111,10 @@ vi.mock('@/components/workitems/DescriptionWithInlineComments', () => ({
 
 vi.mock('@/components/workitems/RelationList', () => ({
   RelationList: () => <div data-testid="relation-list" />,
+}))
+
+vi.mock('@/components/workitems/DetailExtrasColumn', () => ({
+  DetailExtrasColumn: () => <div data-testid="detail-extras-column">extras</div>,
 }))
 
 vi.mock('@/components/workitems/AttachmentList', () => ({
@@ -159,6 +167,7 @@ vi.mock('@/components/workitems/StatusBadge', () => ({
 }))
 
 import { useWorkItem } from '@/hooks/useWorkItems'
+import { useDetailExtrasBreakpoint } from '@/hooks/useDetailExtrasBreakpoint'
 
 function renderPane(itemNumber = 79) {
   return renderToStaticMarkup(
@@ -178,6 +187,7 @@ function renderPane(itemNumber = 79) {
 describe('WorkItemDetailPane', () => {
   beforeEach(() => {
     vi.mocked(useWorkItem).mockReset()
+    vi.mocked(useDetailExtrasBreakpoint).mockReturnValue(false)
   })
 
   it('shows a skeleton while the full item is loading and list data is unavailable', () => {
@@ -223,6 +233,24 @@ describe('WorkItemDetailPane', () => {
     expect(html).toContain('data-testid="description"')
     expect(html).toContain('workitems.splitPane.openFull')
     expect(html).toContain('data-item-number="79"')
+    expect(html).toContain('data-extras-column="false"')
+    expect(html).not.toContain('data-testid="detail-extras-column"')
+  })
+
+  it('shows the extras column and side metadata at wide breakpoint', () => {
+    vi.mocked(useDetailExtrasBreakpoint).mockReturnValue(true)
+    vi.mocked(useWorkItem).mockReturnValue({
+      data: listItem,
+      isLoading: false,
+      isFetching: false,
+      isSuccess: true,
+      dataUpdatedAt: Date.now(),
+    } as ReturnType<typeof useWorkItem>)
+
+    const html = renderPane()
+    expect(html).toContain('data-extras-column="true"')
+    expect(html).toContain('data-testid="detail-extras-column"')
+    expect(html).toContain('data-testid="detail-sidebar"')
   })
 
   it('requests the work item with retainInCache enabled', () => {

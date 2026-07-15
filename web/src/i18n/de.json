@@ -1492,6 +1492,7 @@
   "workitems.view.moveTo": "Verschieben...",
   "workitems.compactRow.changeStatus": "Status ändern",
   "workitems.parentEpic": "Übergeordnetes Epic",
+  "workitems.detail.extrasColumn": "Beziehungen & Extras",
   "workitems.splitPane.closePanel": "Detailpanel schließen",
   "workitems.splitPane.openFull": "Vollseite öffnen",
   "workitems.splitPane.emptyDescription": "Keine Beschreibung",

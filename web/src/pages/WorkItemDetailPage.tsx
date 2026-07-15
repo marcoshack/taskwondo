@@ -16,8 +16,10 @@ import { CommentList } from '@/components/workitems/CommentList'
 import { DescriptionWithInlineComments } from '@/components/workitems/DescriptionWithInlineComments'
 import { ActivityTimeline } from '@/components/workitems/ActivityTimeline'
 import { RelationList } from '@/components/workitems/RelationList'
+import { DetailExtrasColumn } from '@/components/workitems/DetailExtrasColumn'
 import { AttachmentList } from '@/components/workitems/AttachmentList'
 import { TimeEntryList } from '@/components/workitems/TimeEntryList'
+import { useDetailExtrasBreakpoint } from '@/hooks/useDetailExtrasBreakpoint'
 import { FilePreviewModal } from '@/components/workitems/FilePreviewModal'
 import type { PreviewTarget } from '@/components/workitems/FilePreviewModal'
 import { usePasteUpload } from '@/hooks/usePasteUpload'
@@ -130,6 +132,14 @@ export function WorkItemDetailPage() {
   const [previewTarget, setPreviewTarget] = useState<PreviewTarget | null>(null)
   // Root comment id whose inline conversation thread is open in the description.
   const [openThreadRootId, setOpenThreadRootId] = useState<string | null>(null)
+  const showExtrasColumn = useDetailExtrasBreakpoint()
+
+  // When the wide extras column takes over relations, leave the relations tab.
+  useEffect(() => {
+    if (showExtrasColumn && activeTab === 'relations') {
+      setActiveTab('comments')
+    }
+  }, [showExtrasColumn, activeTab])
 
   // Update browser tab title with work item display ID
   useEffect(() => {
@@ -282,14 +292,16 @@ export function WorkItemDetailPage() {
 
   const allowed = transitionsMap?.[item.status]?.map((tr) => tr.to_status) ?? []
 
-  const tabs: { key: Tab; label: string }[] = [
-    { key: 'comments', label: t('tabs.comments') },
-    { key: 'activity', label: t('tabs.activity') },
-    { key: 'time', label: t('tabs.time') },
-    { key: 'relations', label: t('tabs.relations') },
-    { key: 'attachments', label: t('tabs.attachments') },
-    { key: 'watchers', label: t('watchers.watchersTab') },
-  ]
+  const tabs: { key: Tab; label: string }[] = (
+    [
+      { key: 'comments', label: t('tabs.comments') },
+      { key: 'activity', label: t('tabs.activity') },
+      { key: 'time', label: t('tabs.time') },
+      { key: 'relations', label: t('tabs.relations') },
+      { key: 'attachments', label: t('tabs.attachments') },
+      { key: 'watchers', label: t('watchers.watchersTab') },
+    ] as { key: Tab; label: string }[]
+  ).filter((tab) => !(showExtrasColumn && tab.key === 'relations'))
 
   return (
     <div
@@ -623,7 +635,7 @@ export function WorkItemDetailPage() {
           </div>
         </div>
 
-        {/* Right sidebar (desktop only) */}
+        {/* Metadata sidebar (desktop ≥lg); laptop stays 2-col */}
         <div className="hidden lg:block w-52 shrink-0">
           <DetailSidebar
             item={item}
@@ -642,6 +654,19 @@ export function WorkItemDetailPage() {
             updateError={updateMutation.isError}
           />
         </div>
+
+        {/* Relations & extras (viewport ≥1600px) */}
+        {showExtrasColumn && (
+          <div className="hidden min-[1600px]:block w-72 shrink-0 border-l border-gray-200 dark:border-gray-700 pl-4">
+            <DetailExtrasColumn
+              projectKey={projectKey ?? ''}
+              itemNumber={itemNumber}
+              item={item}
+              milestones={milestones}
+              readOnly={readOnly}
+            />
+          </div>
+        )}
       </div>
 
       <MentionSearchModal

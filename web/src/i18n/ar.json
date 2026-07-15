@@ -1492,6 +1492,7 @@
   "workitems.view.moveTo": "نقل إلى...",
   "workitems.compactRow.changeStatus": "تغيير الحالة",
   "workitems.parentEpic": "الملحمة الأصلية",
+  "workitems.detail.extrasColumn": "العلاقات والإضافات",
   "workitems.splitPane.closePanel": "إغلاق لوحة التفاصيل",
   "workitems.splitPane.openFull": "فتح الصفحة الكاملة",
   "workitems.splitPane.emptyDescription": "لا يوجد وصف",
