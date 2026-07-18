@@ -12,6 +12,8 @@ root = "."
 
 [log]
   time = false
+  main_only = true
 
 [misc]
   clean_on_exit = true
+  startup_banner = ""

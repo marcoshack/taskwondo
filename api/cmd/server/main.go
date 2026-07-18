@@ -12,7 +12,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/nats-io/nats.go"
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/time/rate"
 
@@ -21,6 +20,7 @@ import (
 	"github.com/marcoshack/taskwondo/internal/database"
 	"github.com/marcoshack/taskwondo/internal/email"
 	"github.com/marcoshack/taskwondo/internal/handler"
+	applog "github.com/marcoshack/taskwondo/internal/log"
 	"github.com/marcoshack/taskwondo/internal/metrics"
 	"github.com/marcoshack/taskwondo/internal/middleware"
 	"github.com/marcoshack/taskwondo/internal/model"
@@ -44,7 +44,7 @@ func main() {
 	}
 
 	// Configure logger
-	setupLogger(cfg.LogLevel, cfg.LogFormat)
+	applog.Setup(cfg.LogLevel, cfg.LogFormat, "api")
 
 	ctx := log.Logger.WithContext(context.Background())
 
@@ -882,23 +882,5 @@ func seedOAuthConfig(ctx context.Context, settings service.SystemSettingReposito
 		}
 
 		log.Info().Str("provider", p.name).Msg("seeded oauth config from environment variables")
-	}
-}
-
-func setupLogger(level, format string) {
-	// Parse level
-	lvl, err := zerolog.ParseLevel(level)
-	if err != nil {
-		lvl = zerolog.InfoLevel
-	}
-	zerolog.SetGlobalLevel(lvl)
-
-	// Configure output format
-	if format == "text" {
-		log.Logger = zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr}).
-			With().Timestamp().Caller().Logger()
-	} else {
-		log.Logger = zerolog.New(os.Stderr).
-			With().Timestamp().Logger()
 	}
 }

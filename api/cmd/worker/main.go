@@ -8,13 +8,13 @@ import (
 	"time"
 
 	"github.com/nats-io/nats.go"
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
 	"github.com/marcoshack/taskwondo/internal/config"
 	"github.com/marcoshack/taskwondo/internal/crypto"
 	"github.com/marcoshack/taskwondo/internal/database"
 	"github.com/marcoshack/taskwondo/internal/email"
+	applog "github.com/marcoshack/taskwondo/internal/log"
 	"github.com/marcoshack/taskwondo/internal/repository"
 	"github.com/marcoshack/taskwondo/internal/service"
 	"github.com/marcoshack/taskwondo/internal/workers"
@@ -30,7 +30,7 @@ func main() {
 		log.Fatal().Msg("NATS_URL environment variable is required")
 	}
 
-	setupLogger(cfg.LogLevel, cfg.LogFormat)
+	applog.Setup(cfg.LogLevel, cfg.LogFormat, "worker")
 	ctx := log.Logger.WithContext(context.Background())
 	log.Info().Msg("starting taskwondo worker")
 
@@ -289,20 +289,4 @@ func main() {
 	scheduler.Shutdown()
 
 	log.Info().Msg("worker stopped")
-}
-
-func setupLogger(level, format string) {
-	lvl, err := zerolog.ParseLevel(level)
-	if err != nil {
-		lvl = zerolog.InfoLevel
-	}
-	zerolog.SetGlobalLevel(lvl)
-
-	if format == "text" {
-		log.Logger = zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr}).
-			With().Timestamp().Caller().Logger()
-	} else {
-		log.Logger = zerolog.New(os.Stderr).
-			With().Timestamp().Logger()
-	}
 }

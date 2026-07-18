@@ -138,7 +138,7 @@ check-env: check-tools ## Verify .env exists and has all required variables
 # --- Development ---
 
 dev: check-env check-air dev-services ## Start all services for development (API + Web + Worker)
-	trap 'kill 0' EXIT; \
+	@trap 'kill 0' EXIT; \
 	(set -a && . ./.env && set +a && export DISCORD_REDIRECT_URI=http://localhost:5173/auth/discord/callback && cd api && air) & \
 	(cd web && npm run dev -- --host) & \
 	(set -a && . ./.env && set +a && cd api && air -c .air-worker.toml) & \
