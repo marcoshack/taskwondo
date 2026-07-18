@@ -7,7 +7,12 @@ root = "."
   exclude_dir = ["tmp", "vendor"]
   exclude_regex = ["_test\\.go$"]
   include_ext = ["go", "sql"]
-  kill_delay = "0s"
+  # Forward SIGINT (instead of an immediate SIGKILL) so the binary runs its
+  # graceful shutdown (dispatcher drain, scheduler stop, DB/NATS cleanup). air
+  # returns as soon as the process exits, so kill_delay only bounds a hung
+  # shutdown; keep it >= the service's 10s shutdown timeout.
+  send_interrupt = true
+  kill_delay = "11s"
   stop_on_error = true
 
 [log]

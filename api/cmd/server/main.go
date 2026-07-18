@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"flag"
 	"net/http"
-	"os"
 	"os/signal"
 	"syscall"
 	"time"
@@ -46,7 +45,11 @@ func main() {
 	// Configure logger
 	applog.Setup(cfg.LogLevel, cfg.LogFormat, "api")
 
-	ctx := log.Logger.WithContext(context.Background())
+	baseCtx := log.Logger.WithContext(context.Background())
+	// Cancel ctx on SIGINT (Ctrl+C) / SIGTERM so startup and the request loop
+	// alike observe shutdown; baseCtx stays live for the graceful-shutdown path.
+	ctx, stop := signal.NotifyContext(baseCtx, syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
 	log.Info().Msg("starting taskwondo")
 
@@ -738,19 +741,16 @@ func main() {
 		errCh <- srv.ListenAndServe()
 	}()
 
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-
 	select {
-	case sig := <-quit:
-		log.Info().Str("signal", sig.String()).Msg("shutting down")
+	case <-ctx.Done():
+		log.Info().Msg("shutting down")
 	case err := <-errCh:
 		if err != nil && err != http.ErrServerClosed {
 			log.Fatal().Err(err).Msg("http server error")
 		}
 	}
 
-	shutdownCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(baseCtx, 10*time.Second)
 	defer cancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {

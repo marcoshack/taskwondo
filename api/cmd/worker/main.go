@@ -31,7 +31,11 @@ func main() {
 	}
 
 	applog.Setup(cfg.LogLevel, cfg.LogFormat, "worker")
-	ctx := log.Logger.WithContext(context.Background())
+	baseCtx := log.Logger.WithContext(context.Background())
+	// Cancel ctx on SIGINT (Ctrl+C) / SIGTERM; baseCtx stays live for the
+	// graceful-shutdown drain below.
+	ctx, stop := signal.NotifyContext(baseCtx, syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 	log.Info().Msg("starting taskwondo worker")
 
 	// Connect to database with worker-specific pool size
@@ -204,8 +208,10 @@ func main() {
 	embedBackfill := workers.NewEmbedBackfillTask(indexerService, systemSettingRepo, log.Logger)
 	dispatcher.Register(embedBackfill)
 
-	// Start dispatcher
-	if err := dispatcher.Start(ctx); err != nil {
+	// Start dispatcher. Task execution uses baseCtx, not the signal-cancellable
+	// ctx, so in-flight work runs to completion during the Shutdown drain below
+	// rather than being aborted the instant a signal arrives.
+	if err := dispatcher.Start(baseCtx); err != nil {
 		log.Fatal().Err(err).Msg("failed to start dispatcher")
 	}
 
@@ -274,15 +280,13 @@ func main() {
 		log.Info().Int64("snapshots_inserted", inserted).Msg("stats backfill completed")
 	}
 
-	scheduler.Start(ctx)
+	scheduler.Start(baseCtx)
 
-	// Graceful shutdown
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	sig := <-quit
-	log.Info().Str("signal", sig.String()).Msg("shutting down worker")
+	// Graceful shutdown: block until a signal cancels ctx.
+	<-ctx.Done()
+	log.Info().Msg("shutting down worker")
 
-	shutdownCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(baseCtx, 10*time.Second)
 	defer cancel()
 
 	dispatcher.Shutdown(shutdownCtx)
