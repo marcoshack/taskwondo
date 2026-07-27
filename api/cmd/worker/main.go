@@ -224,8 +224,10 @@ func main() {
 	// Initialize SLA service for the monitor
 	slaService := service.NewSLAService(slaRepo, projectRepo, memberRepo, workflowRepo)
 
-	// Initialize email verification repo for token cleanup
+	// Initialize token repos for cleanup. Both tables hold email addresses —
+	// including of people who never completed signup — so expired rows are purged.
 	emailVerifRepo := repository.NewEmailVerificationRepository(db)
+	passwordResetRepo := repository.NewPasswordResetRepository(db)
 
 	// Set up periodic scheduler
 	scheduler := workers.NewScheduler(log.Logger)
@@ -262,8 +264,11 @@ func main() {
 		Fn:       oncallTask.Run,
 	})
 
-	// Token cleanup: purge expired email verification tokens
-	tokenCleanup := workers.NewTokenCleanupTask(emailVerifRepo, log.Logger)
+	// Token cleanup: purge expired email verification and password reset tokens
+	tokenCleanup := workers.NewTokenCleanupTask(log.Logger,
+		workers.TokenStore{Name: "email_verification", Repo: emailVerifRepo},
+		workers.TokenStore{Name: "password_reset", Repo: passwordResetRepo},
+	)
 	scheduler.Add(workers.PeriodicTask{
 		Name:     "token.cleanup",
 		Interval: cfg.TokenCleanupInterval,
