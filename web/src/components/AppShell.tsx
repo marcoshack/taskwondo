@@ -27,6 +27,7 @@ import { useInboxCount } from '@/hooks/useInbox'
 import { PoweredByFooter } from '@/components/PoweredByFooter'
 import { AppSidebar } from '@/components/AppSidebar'
 import { CreateNamespaceModal } from '@/components/CreateNamespaceModal'
+import { projectSwitchSuffix } from '@/utils/projectSection'
 
 export function AppShell() {
   const { t } = useTranslation()
@@ -73,6 +74,8 @@ export function AppShell() {
   const adminMatch = useMatch('/admin/*')
   const preferencesMatch = useMatch('/preferences/*')
   const routeProjectKey = projectMatch?.params.projectKey
+  // Section to reopen in the target project when switching projects (TF-412).
+  const projectSection = projectSwitchSuffix(projectMatch?.params['*'])
   const lastProjectKey = useLastProjectKey() ?? undefined
   const activeProjectKey = routeProjectKey ?? lastProjectKey
 
@@ -380,7 +383,7 @@ export function AppShell() {
         onSelect={(key, nsSlug) => {
           setSwitcherOpen(false)
           const segment = toUrlSegment(nsSlug || activeNamespace?.slug || 'default')
-          guardedNavigate(`/${segment}/projects/${key}`)
+          guardedNavigate(`/${segment}/projects/${key}${projectSection}`)
         }}
       />
       <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
