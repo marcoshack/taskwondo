@@ -531,6 +531,27 @@ func (s *AuthService) ListConnectedAccounts(ctx context.Context, userID uuid.UUI
 
 // UnlinkConnectedAccount removes an OAuth account for a user.
 func (s *AuthService) UnlinkConnectedAccount(ctx context.Context, id, userID uuid.UUID) error {
+	user, err := s.users.GetByID(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("looking up user: %w", err)
+	}
+
+	// A user with no password signs in only through OAuth. Removing their last
+	// provider would lock them out for good: login is impossible and
+	// RequestPasswordReset refuses accounts without a password hash.
+	if user.PasswordHash == "" {
+		accounts, err := s.oauthAccounts.ListByUserID(ctx, userID)
+		if err != nil {
+			return fmt.Errorf("listing connected accounts: %w", err)
+		}
+		// Only block when the account being removed really is their sole one;
+		// anything else falls through so an unknown ID still reports not-found.
+		if len(accounts) == 1 && accounts[0].ID == id {
+			return model.NewKeyedError(model.ErrValidation, "last_login_method",
+				"cannot unlink the only sign-in method; set a password first", nil)
+		}
+	}
+
 	return s.oauthAccounts.Delete(ctx, id, userID)
 }
 

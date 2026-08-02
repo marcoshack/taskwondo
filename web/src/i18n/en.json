@@ -58,6 +58,7 @@
   "errors.project_key_in_use": "Project key \"{{key}}\" is already in use.",
   "errors.project_limit_reached": "Project ownership limit reached. Contact an administrator to increase your limit.",
   "errors.email_already_exists": "A user with this email already exists.",
+  "errors.last_login_method": "You cannot unlink your only sign-in method. Set a password first.",
 
   "brand.name": "Taskwondo",
 
@@ -662,6 +663,7 @@
   "preferences.authentication.connectedAccounts.unlink": "Unlink",
   "preferences.authentication.connectedAccounts.unlinkConfirmTitle": "Unlink Account",
   "preferences.authentication.connectedAccounts.unlinkConfirmBody": "Are you sure you want to unlink your <bold>{{provider}}</bold> account? You will no longer be able to sign in with this provider.",
+  "preferences.authentication.connectedAccounts.unlinkFailed": "Failed to unlink account.",
 
   "preferences.sidebar.notifications": "Notifications",
   "preferences.notifications.title": "Notifications",

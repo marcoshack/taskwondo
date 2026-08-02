@@ -154,6 +154,16 @@ test.describe('Authentication Page — API', () => {
     expect(body.data.has_password).toBe(true);
   });
 
+  test('unlinking an unknown connected account returns 404', async ({ request, testUser }) => {
+    // The last-sign-in-method guard runs before the delete; it must not turn an
+    // unknown account ID into a validation error for users who have a password.
+    const res = await request.delete(
+      `${BASE_URL}/api/v1/user/connected-accounts/00000000-0000-0000-0000-000000000000`,
+      { headers: { Authorization: `Bearer ${testUser.token}` } },
+    );
+    expect(res.status()).toBe(404);
+  });
+
   test('change-password rejects request without new_password', async ({ request, testUser }) => {
     const res = await request.post(`${BASE_URL}/api/v1/auth/change-password`, {
       headers: { Authorization: `Bearer ${testUser.token}` },

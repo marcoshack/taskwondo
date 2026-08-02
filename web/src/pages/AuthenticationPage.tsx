@@ -164,15 +164,24 @@ function ConnectedAccountsTab() {
   const { data: accounts, isLoading } = useConnectedAccounts()
   const unlinkMutation = useUnlinkConnectedAccount()
   const [unlinkTarget, setUnlinkTarget] = useState<ConnectedAccount | null>(null)
+  const [unlinkError, setUnlinkError] = useState('')
 
   async function handleUnlink() {
     if (!unlinkTarget) return
+    setUnlinkError('')
     try {
       await unlinkMutation.mutateAsync(unlinkTarget.id)
       setUnlinkTarget(null)
-    } catch {
-      // error handled by mutation
+    } catch (err) {
+      // The server refuses to unlink the only sign-in method of a user with no
+      // password, since that would leave the account unreachable.
+      setUnlinkError(getLocalizedError(err, t, 'preferences.authentication.connectedAccounts.unlinkFailed'))
     }
+  }
+
+  function closeUnlinkModal() {
+    setUnlinkTarget(null)
+    setUnlinkError('')
   }
 
   function providerLabel(provider: string): string {
@@ -243,7 +252,7 @@ function ConnectedAccountsTab() {
 
       <Modal
         open={!!unlinkTarget}
-        onClose={() => setUnlinkTarget(null)}
+        onClose={closeUnlinkModal}
         title={t('preferences.authentication.connectedAccounts.unlinkConfirmTitle')}
       >
         <div className="p-4">
@@ -254,8 +263,11 @@ function ConnectedAccountsTab() {
               components={{ bold: <strong className="font-semibold text-gray-900 dark:text-gray-100" /> }}
             />
           </p>
+          {unlinkError && (
+            <p className="text-sm text-red-600 dark:text-red-400 mb-4">{unlinkError}</p>
+          )}
           <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setUnlinkTarget(null)}>{t('common.cancel')}</Button>
+            <Button variant="secondary" onClick={closeUnlinkModal}>{t('common.cancel')}</Button>
             <Button variant="danger" onClick={handleUnlink} disabled={unlinkMutation.isPending}>
               {unlinkMutation.isPending ? <Spinner className="h-4 w-4" /> : t('preferences.authentication.connectedAccounts.unlink')}
             </Button>

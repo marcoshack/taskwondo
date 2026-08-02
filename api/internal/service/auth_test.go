@@ -1061,6 +1061,114 @@ func TestFindOrCreateOAuthUser_DisabledEmailMatch(t *testing.T) {
 	}
 }
 
+// --- UnlinkConnectedAccount tests ---
+
+// linkTestOAuthAccount attaches an OAuth account to a user and returns its ID.
+func linkTestOAuthAccount(t *testing.T, repo *mockOAuthAccountRepo, userID uuid.UUID, provider, providerUserID string) uuid.UUID {
+	t.Helper()
+	account := &model.OAuthAccount{
+		ID:             uuid.New(),
+		UserID:         userID,
+		Provider:       provider,
+		ProviderUserID: providerUserID,
+	}
+	if err := repo.Create(context.Background(), account); err != nil {
+		t.Fatal(err)
+	}
+	return account.ID
+}
+
+// createPasswordlessTestUser creates an OAuth-only user — no password hash, so
+// unlinking their last provider would leave no way to sign in.
+func createPasswordlessTestUser(t *testing.T, repo *mockUserRepo, email string) *model.User {
+	t.Helper()
+	user := &model.User{
+		ID:          uuid.New(),
+		Email:       email,
+		DisplayName: "OAuth User",
+		GlobalRole:  model.RoleUser,
+		IsActive:    true,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	}
+	if err := repo.Create(context.Background(), user); err != nil {
+		t.Fatal(err)
+	}
+	return user
+}
+
+func TestUnlinkConnectedAccount_RefusesLastMethodWithoutPassword(t *testing.T) {
+	svc, userRepo, oauthRepo := newTestAuthServiceWithOAuth()
+	user := createPasswordlessTestUser(t, userRepo, "oauthonly@example.com")
+	accountID := linkTestOAuthAccount(t, oauthRepo, user.ID, model.OAuthProviderDiscord, "111")
+
+	err := svc.UnlinkConnectedAccount(context.Background(), accountID, user.ID)
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation, got %v", err)
+	}
+	if key, _ := model.ErrorKey(err); key != "last_login_method" {
+		t.Fatalf("expected error key last_login_method, got %q", key)
+	}
+
+	accounts, err := oauthRepo.ListByUserID(context.Background(), user.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(accounts) != 1 {
+		t.Fatalf("expected the account to survive, got %d accounts", len(accounts))
+	}
+}
+
+func TestUnlinkConnectedAccount_AllowsLastMethodWithPassword(t *testing.T) {
+	svc, userRepo, oauthRepo := newTestAuthServiceWithOAuth()
+	user := createTestUser(t, userRepo, "haspassword@example.com", "password123", model.RoleUser)
+	accountID := linkTestOAuthAccount(t, oauthRepo, user.ID, model.OAuthProviderDiscord, "222")
+
+	if err := svc.UnlinkConnectedAccount(context.Background(), accountID, user.ID); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	accounts, err := oauthRepo.ListByUserID(context.Background(), user.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(accounts) != 0 {
+		t.Fatalf("expected the account to be removed, got %d accounts", len(accounts))
+	}
+}
+
+func TestUnlinkConnectedAccount_AllowsWhenAnotherProviderRemains(t *testing.T) {
+	svc, userRepo, oauthRepo := newTestAuthServiceWithOAuth()
+	user := createPasswordlessTestUser(t, userRepo, "twoproviders@example.com")
+	first := linkTestOAuthAccount(t, oauthRepo, user.ID, model.OAuthProviderDiscord, "333")
+	linkTestOAuthAccount(t, oauthRepo, user.ID, model.OAuthProviderGitHub, "444")
+
+	if err := svc.UnlinkConnectedAccount(context.Background(), first, user.ID); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	accounts, err := oauthRepo.ListByUserID(context.Background(), user.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(accounts) != 1 {
+		t.Fatalf("expected 1 remaining account, got %d", len(accounts))
+	}
+}
+
+// The guard must not swallow unknown IDs: a passwordless user with one linked
+// account passing some other account's ID should still get not-found.
+func TestUnlinkConnectedAccount_UnknownIDStillNotFound(t *testing.T) {
+	svc, userRepo, oauthRepo := newTestAuthServiceWithOAuth()
+	user := createPasswordlessTestUser(t, userRepo, "unknownid@example.com")
+	linkTestOAuthAccount(t, oauthRepo, user.ID, model.OAuthProviderDiscord, "555")
+
+	err := svc.UnlinkConnectedAccount(context.Background(), uuid.New(), user.ID)
+	if !errors.Is(err, model.ErrNotFound) {
+		t.Fatalf("expected ErrNotFound, got %v", err)
+	}
+}
+
 // --- ChangePassword tests ---
 
 func TestChangePassword_Success(t *testing.T) {

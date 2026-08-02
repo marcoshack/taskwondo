@@ -352,6 +352,70 @@ func TestMeHandler(t *testing.T) {
 	}
 }
 
+// TestSearchUsersHandler_OmitsHasPassword guards the user-search response shape.
+// has_password is the caller's own detail; returning it for other users would let
+// anyone probe whether a co-project member signs in with a password or only OAuth.
+func TestSearchUsersHandler_OmitsHasPassword(t *testing.T) {
+	userRepo := newMockUserRepo()
+	authSvc := service.NewAuthService(userRepo, newMockAPIKeyRepo(), newMockOAuthAccountRepo(),
+		"test-secret-that-is-at-least-32!", 1*time.Hour, nil)
+
+	if err := authSvc.SeedAdminUser(context.Background(), "admin@test.com", "adminpass"); err != nil {
+		t.Fatal(err)
+	}
+
+	// An OAuth-only user — no password hash, which is what must not leak.
+	if err := userRepo.Create(context.Background(), &model.User{
+		ID:          uuid.New(),
+		Email:       "alice@test.com",
+		DisplayName: "Alice",
+		GlobalRole:  model.RoleUser,
+		IsActive:    true,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	token, _, err := authSvc.Login(context.Background(), "admin@test.com", "adminpass")
+	if err != nil {
+		t.Fatal(err)
+	}
+	info, err := authSvc.ValidateJWT(token)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	h := NewAuthHandler(authSvc, nil, nil, nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/users?q=alice", nil)
+	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), info))
+	w := httptest.NewRecorder()
+
+	h.SearchUsers(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp struct {
+		Data []map[string]interface{} `json:"data"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decoding response: %v", err)
+	}
+	if len(resp.Data) != 1 {
+		t.Fatalf("expected 1 result, got %d: %s", len(resp.Data), w.Body.String())
+	}
+
+	user := resp.Data[0]
+	if _, ok := user["has_password"]; ok {
+		t.Error("user search response exposes has_password for other users")
+	}
+	for _, field := range []string{"id", "email", "display_name", "global_role", "namespace_slugs"} {
+		if _, ok := user[field]; !ok {
+			t.Errorf("user search response is missing %q", field)
+		}
+	}
+}
+
 // mockProjectMemberResolver implements PortalProjectResolver for tests.
 type mockProjectMemberResolver struct {
 	memberships []model.ProjectMemberWithProject

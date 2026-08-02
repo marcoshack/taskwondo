@@ -49,6 +49,15 @@ test.describe('Scoped user search', () => {
     expect(results.some((u) => u.id === userBId)).toBe(true);
   });
 
+  test('does not expose has_password for other users', async ({ request }) => {
+    const results = await api.searchUsers(request, userAToken, `userb-${searchUid}`);
+    const userB = results.find((u) => u.id === userBId);
+    expect(userB).toBeDefined();
+    // has_password is the caller's own detail — leaking it here would reveal
+    // whether a co-project member signs in with a password or only OAuth.
+    expect(userB).not.toHaveProperty('has_password');
+  });
+
   test('does not return users with no shared projects', async ({ request }) => {
     const results = await api.searchUsers(request, userAToken, `userc-${searchUid}`);
     expect(results.some((u) => u.id === userCId)).toBe(false);

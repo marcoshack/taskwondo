@@ -55,6 +55,9 @@ type portalProjectInfo struct {
 	Namespace   string `json:"namespace"`
 }
 
+// userResponse is the authenticated user's own record. HasPassword tells the
+// client whether to offer "change password" or "set password"; it is deliberately
+// absent from otherUserResponse so one user cannot probe another's sign-in method.
 type userResponse struct {
 	ID                   uuid.UUID           `json:"id"`
 	Email                string              `json:"email"`
@@ -77,6 +80,25 @@ func toUserResponse(u *model.User) userResponse {
 	}
 	resp.AvatarURL = avatarURL(u.AvatarURL, u.ID, u.UpdatedAt.Unix())
 	return resp
+}
+
+// otherUserResponse is the shape returned for users other than the caller.
+type otherUserResponse struct {
+	ID          uuid.UUID `json:"id"`
+	Email       string    `json:"email"`
+	DisplayName string    `json:"display_name"`
+	GlobalRole  string    `json:"global_role"`
+	AvatarURL   *string   `json:"avatar_url,omitempty"`
+}
+
+func toOtherUserResponse(u *model.User) otherUserResponse {
+	return otherUserResponse{
+		ID:          u.ID,
+		Email:       u.Email,
+		DisplayName: u.DisplayName,
+		GlobalRole:  u.GlobalRole,
+		AvatarURL:   avatarURL(u.AvatarURL, u.ID, u.UpdatedAt.Unix()),
+	}
 }
 
 // Login authenticates a user with email and password.
@@ -381,8 +403,8 @@ func (h *AuthHandler) SearchUsers(w http.ResponseWriter, r *http.Request) {
 	resp := make([]userSearchResponse, len(users))
 	for i := range users {
 		resp[i] = userSearchResponse{
-			userResponse:   toUserResponse(&users[i].User),
-			NamespaceSlugs: users[i].NamespaceSlugs,
+			otherUserResponse: toOtherUserResponse(&users[i].User),
+			NamespaceSlugs:    users[i].NamespaceSlugs,
 		}
 		if resp[i].NamespaceSlugs == nil {
 			resp[i].NamespaceSlugs = []string{}
@@ -395,7 +417,7 @@ func (h *AuthHandler) SearchUsers(w http.ResponseWriter, r *http.Request) {
 // user belongs to, so callers can decide whether to add the user directly or
 // route through an email invite.
 type userSearchResponse struct {
-	userResponse
+	otherUserResponse
 	NamespaceSlugs []string `json:"namespace_slugs"`
 }
 
@@ -574,6 +596,10 @@ func (h *AuthHandler) UnlinkConnectedAccount(w http.ResponseWriter, r *http.Requ
 	if err := h.auth.UnlinkConnectedAccount(r.Context(), accountID, info.UserID); err != nil {
 		if errors.Is(err, model.ErrNotFound) {
 			writeError(w, http.StatusNotFound, CodeNotFound, "connected account not found")
+			return
+		}
+		if errors.Is(err, model.ErrValidation) {
+			writeErrorFromService(w, http.StatusBadRequest, CodeValidationError, err)
 			return
 		}
 		log.Ctx(r.Context()).Error().Err(err).Msg("failed to unlink connected account")
