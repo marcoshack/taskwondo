@@ -532,6 +532,13 @@ func handleUpdateWorkItem(_ context.Context, request mcp.CallToolRequest) (*mcp.
 	return mcp.NewToolResultText(fmt.Sprintf("Updated %s\n\n%s", item.DisplayID, formatWorkItemWithClient(item, client))), nil
 }
 
+func commentVisibility(internal bool) string {
+	if internal {
+		return "internal"
+	}
+	return "public"
+}
+
 func handleAddComment(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	displayID, err := request.RequireString("display_id")
 	if err != nil {
@@ -551,10 +558,8 @@ func handleAddComment(_ context.Context, request mcp.CallToolRequest) (*mcp.Call
 	}
 
 	params := CreateCommentParams{
-		Body: body,
-	}
-	if request.GetBool("internal", false) {
-		params.Visibility = "internal"
+		Body:       body,
+		Visibility: commentVisibility(request.GetBool("internal", false)),
 	}
 
 	comment, err := client.CreateComment(projectKey, itemNumber, params)
