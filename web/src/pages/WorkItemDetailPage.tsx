@@ -87,6 +87,9 @@ export function WorkItemDetailPage() {
   const readOnly = !canEdit
 
   const currentDisplayId = projectKey && itemNumber ? `${projectKey}-${itemNumber}` : ''
+  // Prefer the API-provided absolute URL (built from the instance's configured
+  // base URL); fall back to the current origin when the API omits it.
+  const itemUrl = item?.url || `${window.location.origin}${p(`/projects/${projectKey}/items/${itemNumber}`)}`
   const childrenRelations = useMemo(() => {
     if (!relations) return []
     return relations.filter((r) => {
@@ -401,6 +404,7 @@ export function WorkItemDetailPage() {
                   `type: ${item.type}`,
                   `status: ${item.status}`,
                   `assignee: ${item.assignee_id ? (members?.find(m => m.user_id === item.assignee_id)?.display_name ?? '') : ''}`,
+                  `link: ${itemUrl}`,
                   '---',
                   '',
                   `# ${item.display_id} - ${item.title}`,

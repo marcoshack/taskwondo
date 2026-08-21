@@ -18,6 +18,8 @@ export interface WorkItem {
   namespace_name?: string
   item_number: number
   display_id: string
+  /** Absolute URL to the work item detail page, built by the API from its configured base URL. */
+  url?: string
   type: string
   title: string
   description: string | null
