@@ -18,8 +18,10 @@ api/worker
 web/node_modules/
 web/dist/
 
-# Personal mise overrides on top of the committed mise.toml
+# Personal mise overrides on top of the committed mise.toml. mise.lock itself
+# is committed; only the lockfile for these local overrides is not.
 mise.local.toml
+mise.local.lock
 
 # IDE
 .idea/

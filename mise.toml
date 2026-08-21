@@ -7,6 +7,14 @@
 # workflow). Change a version here and in the component that declares it in the
 # same commit, or the build stops before it compiles anything.
 
+[settings]
+# Record a checksum, size and download URL for every tool in mise.lock, so a
+# `mise install` that gets served something other than what was pinned fails
+# instead of building with it. Same posture web/.npmrc takes for npm deps.
+# mise.lock is committed; run `mise lock` after changing a version below, and
+# `mise lock --platform <p>` to add a platform this repository has not locked.
+lockfile = true
+
 [tools]
 # npm comes before node deliberately: mise assembles PATH in declaration order,
 # and node's own bundled npm (10.x on Node 22) shadows this pin when it comes

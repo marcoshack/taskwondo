@@ -20,6 +20,8 @@
 #   docker/Dockerfile.*       `FROM golang:` / `FROM node:` tags must be a
 #                             prefix of the pin (golang:1.25 for a 1.25.x pin);
 #                             `ARG NPM_VERSION` must equal the npm pin
+#   mise.lock                 every locked version must equal its pin — run
+#                             `mise lock` after changing one
 #
 # Usage: scripts/check-toolchain.sh
 
@@ -43,6 +45,7 @@ problem() {
 mise_go="$(awk -F'"' '/^go[[:space:]]*=/ { print $2; exit }' mise.toml)"
 mise_node="$(awk -F'"' '/^node[[:space:]]*=/ { print $2; exit }' mise.toml)"
 mise_npm="$(awk -F'"' '/^"npm:npm"[[:space:]]*=/ { print $4; exit }' mise.toml)"
+mise_air="$(awk -F'"' '/^"go:github.com\/air-verse\/air"[[:space:]]*=/ { print $4; exit }' mise.toml)"
 
 if [ -z "$mise_go" ] || [ -z "$mise_node" ] || [ -z "$mise_npm" ]; then
   printf "${RED}## mise.toml does not pin go, node and npm${RESET}\n" >&2
@@ -121,6 +124,43 @@ for f in docker/Dockerfile.*; do
       problem "$f sets ARG NPM_VERSION=$v, mise.toml pins npm $mise_npm"
   done < <(grep -oE '^ARG NPM_VERSION=[0-9][0-9.]*' "$f" | cut -d= -f2 | sort -u)
 done
+
+# --- What the lockfile records ---
+#
+# mise.toml sets `lockfile = true`, so mise.lock carries a checksum and URL per
+# platform for go and node (npm and air install through the npm registry and
+# `go install`, which verify their own downloads, so mise records only their
+# version). Editing a pin above without re-running `mise lock` leaves the lock
+# on the old version for every platform but the one that next runs an install.
+
+lock="mise.lock"
+if [ -f "$lock" ]; then
+  # The version under a `[[tools.<key>]]` header, where <key> is quoted here
+  # exactly as the lockfile writes it.
+  lock_version() {
+    awk -v header="[[tools.$1]]" '
+      $0 == header { found = 1; next }
+      found && /^version[[:space:]]*=/ { gsub(/["[:space:]]/, "", $3); print $3; exit }
+      found && /^\[\[/ { exit }
+    ' "$lock"
+  }
+
+  while read -r key pin label; do
+    locked="$(lock_version "$key")"
+    if [ -z "$locked" ]; then
+      problem "$lock has no entry for $label — run 'mise lock'"
+    elif [ "$locked" != "$pin" ]; then
+      problem "$lock locks $label $locked, mise.toml pins $pin — run 'mise lock'"
+    fi
+  done <<EOF
+go $mise_go go
+node $mise_node node
+"npm:npm" $mise_npm npm
+"go:github.com/air-verse/air" $mise_air air
+EOF
+else
+  problem "$lock is missing — run 'mise lock' (mise.toml sets lockfile = true)"
+fi
 
 # --- What is actually on PATH ---
 #

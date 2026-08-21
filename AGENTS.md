@@ -12,8 +12,10 @@ The toolchain comes from `mise.toml` at the root — Go, Node, npm and `air`, al
 [mise](https://mise.jdx.dev) is the only thing `make setup` asks you to install (Docker
 and `openssl` aside, which it warns about), the Makefile puts the pinned tools on `PATH`
 for every target, and `make check-toolchain` — a prerequisite of every build and test
-target — fails when a `go.mod`, a Dockerfile or the CI workflow declares a version the
-pin disagrees with. See [README_DEV.md](README_DEV.md#toolchain-pins).
+target — fails when a `go.mod`, a Dockerfile, the CI workflow or `mise.lock` declares a
+version the pin disagrees with. `mise.lock` is committed and holds a checksum per tool
+per platform; run `mise lock` after changing any pin. See
+[README_DEV.md](README_DEV.md#toolchain-pins).
 
 Run `make help` for the full list of Make targets (setup, dev, test, build, migrate, release, etc.).
 Requires `.env` — copy from `.env.template`.

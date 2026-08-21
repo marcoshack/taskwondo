@@ -123,6 +123,24 @@ exits 0, so `make setup` never blocks on it.
 | `--check` | report whether the shell activates mise; exit 1 when it does not |
 | `--print` | print the block and exit, changing nothing |
 
+### The lockfile
+
+`mise.toml` sets `lockfile = true`, so `mise.lock` — committed — records the download
+URL, size and SHA256 of every tool for all seven platforms mise supports. An install
+that gets served something other than what was pinned fails on the checksum instead of
+building with it. This is the same posture `web/.npmrc` already takes for npm packages.
+
+Go and Node are the two that carry checksums, since mise downloads their tarballs
+itself. `npm` and `air` install through the npm registry and `go install`, which verify
+their own downloads (registry integrity hashes, and Go's checksum database), so the lock
+records only their version.
+
+**Run `mise lock` after changing any version in `mise.toml`** — `make check-toolchain`
+fails if you don't. `mise install` refreshes the entry for your own platform only, which
+is why the explicit command exists; `mise lock --platform linux-x64` targets one, and
+`mise lock --bump` re-resolves fuzzy selectors (this repository pins exactly, so it is
+a no-op here).
+
 ### The consistency check
 
 A Go, Node or npm version is declared in more places than `mise.toml`, and nothing used
@@ -136,6 +154,7 @@ sub-second failure at the top of the run rather than a broken build somewhere do
 | `.github/workflows/ci.yml` | every `go-version:` and `node-version:` is a prefix of the matching pin |
 | `docker/Dockerfile.*` | each `FROM golang:` / `FROM node:` tag is a prefix of the matching pin — `golang:1.25` for a `1.25.x` pin |
 | `docker/Dockerfile.web` | `ARG NPM_VERSION` equals the `npm` pin (CI greps that line to install npm) |
+| `mise.lock` | every tool's locked version equals its pin, and the file exists at all |
 | the running `go`, `node` and `npm` | equal to the pins, checked only where mise is installed, since that is where the pins are meant to be in force |
 
 **Change a version in `mise.toml` and change everything it lists in the same commit.**
