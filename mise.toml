@@ -1,0 +1,20 @@
+# Every runtime and CLI tool this repository builds with, so that `make setup`
+# has exactly one prerequisite: mise (https://mise.jdx.dev).
+#
+# Versions are pinned exactly, and `make check-toolchain` — a prerequisite of
+# every build and test target — fails when a pin here disagrees with the version
+# a component declares for itself (each go.mod, the Dockerfiles, the CI
+# workflow). Change a version here and in the component that declares it in the
+# same commit, or the build stops before it compiles anything.
+
+[tools]
+# npm comes before node deliberately: mise assembles PATH in declaration order,
+# and node's own bundled npm (10.x on Node 22) shadows this pin when it comes
+# first. The pin matters because web/.npmrc sets `min-release-age`, the
+# supply-chain cooldown npm silently ignores before 11.10.
+"npm:npm" = "11.15.0" # must equal ARG NPM_VERSION in docker/Dockerfile.web
+node = "22.23.2"      # major must match `node-version` in .github/workflows/ci.yml and the node: tag in docker/Dockerfile.web
+go = "1.25.14"        # must cover `go-version` in the CI workflow, the golang: tags in docker/Dockerfile.*, and the `go` directive in every go.mod
+
+# Go CLI tools the Makefile invokes by name.
+"go:github.com/air-verse/air" = "1.67.4" # hot reload behind `make dev`

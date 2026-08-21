@@ -1,7 +1,21 @@
-.PHONY: build push help setup dev dev-stop dev-db dev-api dev-web dev-worker up down logs logs-api migrate migrate-new test test-api test-web test-e2e test-e2e-dev test-e2e-report check-env check-tools check-tools-api check-tools-web check-air release build-mcp build-mcp-linux build-mcp-darwin build-mcp-windows build-mcpb build-worker lint-ci
+.PHONY: build push help setup setup-shell dev dev-stop dev-db dev-api dev-web dev-worker up down logs logs-api migrate migrate-new test test-api test-web test-e2e test-e2e-dev test-e2e-report check-env check-tools check-tools-api check-tools-web check-toolchain check-air release build-mcp build-mcp-linux build-mcp-darwin build-mcp-windows build-mcpb build-worker lint-ci
 
 # Required environment variables (checked by sourcing .env)
 REQUIRED_VARS := POSTGRES_USER POSTGRES_PASSWORD MINIO_ROOT_USER MINIO_ROOT_PASSWORD JWT_SECRET DATABASE_URL STORAGE_ACCESS_KEY STORAGE_SECRET_KEY
+
+# mise.toml pins every runtime and CLI tool the repository builds with, and
+# `make setup` installs them from it. Its bin directories go first on PATH here
+# so `go`, `node`, `npm` and `air` resolve to the pinned versions in a shell
+# where `mise activate` has never run — which is most of them, and every shell
+# that opened before setup did. Sub-makes inherit the exported PATH, so mcp/ and
+# mcpb/ build with the same toolchain.
+#
+# Absent mise (CI installs its runtimes with setup-go and setup-node) this is a
+# no-op, and scripts/check-toolchain.sh is what holds those to the same pins.
+MISE := $(shell command -v mise 2>/dev/null)
+ifneq ($(MISE),)
+export PATH := $(shell mise bin-paths 2>/dev/null | tr '\n' ':')$(PATH)
+endif
 
 # Colors
 CYAN := \033[36m
@@ -17,41 +31,37 @@ build: test build-worker build-mcp ## Build all Docker images, worker, MCP serve
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-setup: ## Set up local dev environment (verify tools, install air, generate .env, configure git hooks)
-	@printf "$(CYAN)## Checking required tools...$(RESET)\n"
+# mise is the only thing this asks you to have installed. Go, Node, npm and air
+# all come from mise.toml, at the versions pinned there, so a fresh checkout
+# builds with the same toolchain everywhere instead of with whatever each
+# machine happens to carry.
+setup: ## Set up local dev environment (install the toolchain with mise, generate .env, configure git hooks)
+	@printf "$(CYAN)## Checking for mise...$(RESET)\n"
+	@if ! command -v mise >/dev/null 2>&1; then \
+		printf "\033[31m## Error: mise is not installed.\033[0m\n"; \
+		echo "mise installs every runtime and tool this repository needs (see mise.toml)."; \
+		echo "  curl https://mise.run | sh"; \
+		echo "  https://mise.jdx.dev/getting-started.html for other install methods"; \
+		echo "Then re-run 'make setup'."; \
+		exit 1; \
+	fi
+	@printf "$(GREEN)## mise %s$(RESET)\n" "$$(mise version)"
+	@printf "$(CYAN)## Installing the toolchain from mise.toml...$(RESET)\n"
+	@mise trust --quiet
+	@mise install
+	@mise ls --current
+	@printf "$(CYAN)## Checking toolchain consistency...$(RESET)\n"
+	@mise exec -- ./scripts/check-toolchain.sh
+	@printf "$(GREEN)## Toolchain OK$(RESET)\n"
 	@missing=""; \
-	for cmd in go node npm docker openssl; do \
+	for cmd in docker openssl; do \
 		if ! command -v $$cmd >/dev/null 2>&1; then missing="$$missing $$cmd"; fi; \
 	done; \
 	if [ -n "$$missing" ]; then \
-		printf "\033[31m## Error: missing required tools:%s\033[0m\n" "$$missing"; \
-		echo "Install the missing tools and ensure they are on your PATH, then re-run 'make setup'."; \
-		echo "  - Go 1.25+:   https://go.dev/dl/"; \
-		echo "  - Node 22+:   https://nodejs.org/  (recommended: 'brew install fnm && fnm install --lts')"; \
-		echo "  - npm 11.10+: bundled npm may be older; run 'npm install -g npm@latest' after installing Node"; \
-		echo "  - Docker:     https://docs.docker.com/get-docker/"; \
-		echo "  - openssl:    usually preinstalled; on macOS 'brew install openssl' if missing"; \
-		exit 1; \
+		printf "\033[33m## mise cannot provide these, and they are not installed:%s\033[0m\n" "$$missing"; \
+		printf "\033[33m##   docker  — 'make dev', 'make up' and 'make test-e2e' need it: https://docs.docker.com/get-docker/\033[0m\n"; \
+		printf "\033[33m##   openssl — ./install.sh generates .env secrets with it (usually preinstalled)\033[0m\n"; \
 	fi
-	@npm_ver=$$(npm --version); \
-	npm_major=$$(echo $$npm_ver | cut -d. -f1); \
-	npm_minor=$$(echo $$npm_ver | cut -d. -f2); \
-	if [ "$$npm_major" -lt 11 ] || { [ "$$npm_major" -eq 11 ] && [ "$$npm_minor" -lt 10 ]; }; then \
-		printf "\033[31m## Error: npm %s is too old. Need >= 11.10 for the supply-chain cooldown in web/.npmrc (minimum-release-age).\033[0m\n" "$$npm_ver"; \
-		echo "Upgrade: npm install -g npm@latest"; \
-		exit 1; \
-	fi
-	@printf "$(GREEN)## Required tools OK (go, node, npm $$(npm --version), docker, openssl)$(RESET)\n"
-	@printf "$(CYAN)## Installing air (Go hot-reload)...$(RESET)\n"
-	@go install github.com/air-verse/air@latest
-	@if ! command -v air >/dev/null 2>&1; then \
-		gobin="$$(go env GOBIN)"; \
-		[ -z "$$gobin" ] && gobin="$$(go env GOPATH)/bin"; \
-		printf "\033[33m## air installed to %s but not on PATH.\033[0m\n" "$$gobin"; \
-		printf "\033[33m## Add it to your shell profile, e.g.: export PATH=\"\$$PATH:%s\"\033[0m\n" "$$gobin"; \
-		exit 1; \
-	fi
-	@printf "$(GREEN)## air installed: %s$(RESET)\n" "$$(command -v air)"
 	@if [ ! -f .env ]; then \
 		printf "$(CYAN)## Generating .env (running ./install.sh --manual-setup -y)...$(RESET)\n"; \
 		./install.sh --manual-setup -y; \
@@ -74,30 +84,41 @@ setup: ## Set up local dev environment (verify tools, install air, generate .env
 	@git config core.hooksPath .githooks
 	@printf "$(GREEN)## Git hooks configured (.githooks/)$(RESET)\n"
 	@printf "$(GREEN)## Setup complete — run 'make dev' to start the local stack$(RESET)\n"
+	@echo ""
+	@$(MAKE) --no-print-directory setup-shell
 
-check-tools-api: ## Verify tools required for Go API tests/builds (go)
+setup-shell: ## Offer to activate mise in your shell, so the pins apply outside make too
+	@./scripts/setup-shell.sh
+
+# Runs with or without mise: the pins are compared against what the go.mod
+# files, the CI workflow and the Dockerfiles declare either way, and the running
+# Go, Node and npm are checked too wherever mise is what installed them.
+check-toolchain: ## Verify mise.toml and every version the components declare agree
+	@./scripts/check-toolchain.sh
+
+check-tools-api: check-toolchain ## Verify tools required for Go API tests/builds (go)
 	@if ! command -v go >/dev/null 2>&1; then \
 		printf "\033[31mError: missing required tool: go\033[0m\n"; \
-		echo "Install Go 1.25+: https://go.dev/dl/"; \
+		echo "Run: make setup  (go comes from mise.toml)"; \
 		exit 1; \
 	fi
 
-check-tools-web: ## Verify tools required for frontend tests/builds (node, npm >= 11.10)
+check-tools-web: check-toolchain ## Verify tools required for frontend tests/builds (node, npm >= 11.10)
 	@missing=""; \
 	for cmd in node npm; do \
 		if ! command -v $$cmd >/dev/null 2>&1; then missing="$$missing $$cmd"; fi; \
 	done; \
 	if [ -n "$$missing" ]; then \
 		printf "\033[31mError: missing required tools:%s\033[0m\n" "$$missing"; \
-		echo "Install Node 22+ (which bundles npm): https://nodejs.org/"; \
+		echo "Run: make setup  (node and npm come from mise.toml)"; \
 		exit 1; \
 	fi
 	@npm_ver=$$(npm --version); \
 	npm_major=$$(echo $$npm_ver | cut -d. -f1); \
 	npm_minor=$$(echo $$npm_ver | cut -d. -f2); \
 	if [ "$$npm_major" -lt 11 ] || { [ "$$npm_major" -eq 11 ] && [ "$$npm_minor" -lt 10 ]; }; then \
-		printf "\033[31mError: npm %s is too old. Need >= 11.10 for the supply-chain cooldown in web/.npmrc (minimum-release-age).\033[0m\n" "$$npm_ver"; \
-		echo "Upgrade: npm install -g npm@latest"; \
+		printf "\033[31mError: npm %s is too old. Need >= 11.10 for the supply-chain cooldown in web/.npmrc (min-release-age).\033[0m\n" "$$npm_ver"; \
+		echo "Run: make setup  (mise.toml pins the npm version)"; \
 		exit 1; \
 	fi
 
@@ -108,12 +129,10 @@ check-tools: check-tools-api check-tools-web ## Verify all required tools are in
 		exit 1; \
 	fi
 
-check-air: ## Verify air is installed (required for Go hot-reload in dev)
+check-air: check-toolchain ## Verify air is installed (required for Go hot-reload in dev)
 	@if ! command -v air >/dev/null 2>&1; then \
 		printf "\033[31mError: air is not installed (required for hot-reload).\033[0m\n"; \
-		echo "Run: make setup"; \
-		echo "Or install manually: go install github.com/air-verse/air@latest"; \
-		echo "(ensure \$$(go env GOPATH)/bin is on your PATH)"; \
+		echo "Run: make setup  (it comes from mise.toml)"; \
 		exit 1; \
 	fi
 
@@ -161,7 +180,7 @@ dev-db: dev-services ## Alias for dev-services (legacy)
 dev-api: check-env check-air dev-services ## Start API server with hot reload (air is installed by 'make setup')
 	set -a && . ./.env && set +a && export DISCORD_REDIRECT_URI=http://localhost:5173/auth/discord/callback && cd api && air
 
-dev-web: ## Start frontend dev server (Vite on :5173, proxies /api to :8080)
+dev-web: check-tools-web ## Start frontend dev server (Vite on :5173, proxies /api to :8080)
 	cd web && npm run dev
 
 dev-worker: check-env check-air dev-services ## Start worker with hot reload (air is installed by 'make setup')
@@ -190,7 +209,7 @@ logs-api: ## Tail API logs
 GHCR_REPO := ghcr.io/marcoshack/taskwondo
 PUSH_IMAGES := api web worker
 
-push: ## Push images to GHCR (usage: RELEASE_VERSION=0.2.0 make push)
+push: check-toolchain ## Push images to GHCR (usage: RELEASE_VERSION=0.2.0 make push)
 	@echo ""
 	@if [ -z "$(RELEASE_VERSION)" ]; then \
 		printf "$(CYAN)## Pushing images as latest...$(RESET)\n"; \
@@ -226,7 +245,7 @@ migrate-new: ## Create a new migration (usage: make migrate-new name=create_user
 
 RELEASE_VERSION ?=
 
-release: ## Build release tarballs (usage: make release or RELEASE_VERSION=1.0.0 make release)
+release: check-toolchain ## Build release tarballs (usage: make release or RELEASE_VERSION=1.0.0 make release)
 	@if [ -z "$(RELEASE_VERSION)" ]; then \
 		printf "Release version (e.g. 1.0.0): "; \
 		read ver; \
@@ -271,7 +290,7 @@ _release:
 
 # --- Worker ---
 
-build-worker: ## Build the worker binary
+build-worker: check-tools-api ## Build the worker binary
 	@echo ""
 	@printf "$(CYAN)## Building worker...$(RESET)\n"
 	cd api && go build -o ../build/taskwondo-worker ./cmd/worker
@@ -281,19 +300,19 @@ build-worker: ## Build the worker binary
 
 build-mcp: build-mcp-linux build-mcp-darwin build-mcp-windows build-mcpb ## Build all MCP artifacts (Linux + macOS + Windows + MCPB bundle)
 
-build-mcp-linux: ## Build the MCP server binary for Linux/amd64
+build-mcp-linux: check-tools-api ## Build the MCP server binary for Linux/amd64
 	@echo ""
 	@printf "$(CYAN)## Building MCP server for Linux/amd64...$(RESET)\n"
 	$(MAKE) -C mcp build-linux
 	@printf "$(GREEN)## MCP server (Linux/amd64) built successfully$(RESET)\n"
 
-build-mcp-darwin: ## Build the MCP server binary for macOS/arm64
+build-mcp-darwin: check-tools-api ## Build the MCP server binary for macOS/arm64
 	@echo ""
 	@printf "$(CYAN)## Building MCP server for macOS/arm64...$(RESET)\n"
 	$(MAKE) -C mcp build-darwin
 	@printf "$(GREEN)## MCP server (macOS/arm64) built successfully$(RESET)\n"
 
-build-mcp-windows: ## Build the MCP server binary for Windows/amd64
+build-mcp-windows: check-tools-api ## Build the MCP server binary for Windows/amd64
 	@echo ""
 	@printf "$(CYAN)## Building MCP server for Windows/amd64...$(RESET)\n"
 	$(MAKE) -C mcp build-windows
@@ -369,13 +388,13 @@ test-web: check-tools-web ## Run frontend tests and build (install, Vitest, tsc 
 	cd web && npm run build
 	@printf "$(GREEN)## Frontend tests and build passed$(RESET)\n"
 
-test-e2e: ## Run E2E tests in isolated Docker stack (no host deps)
+test-e2e: check-toolchain ## Run E2E tests in isolated Docker stack (no host deps)
 	@echo ""
 	@printf "$(CYAN)## Running E2E tests (Docker)...$(RESET)\n"
 	bash scripts/e2e-docker.sh
 	@printf "$(GREEN)## E2E tests passed$(RESET)\n"
 
-test-e2e-dev: ## Run E2E tests against local dev server (localhost:5173)
+test-e2e-dev: check-tools-web ## Run E2E tests against local dev server (localhost:5173)
 	@echo ""
 	@printf "$(CYAN)## Running E2E tests (dev)...$(RESET)\n"
 	cd test/e2e && npx playwright test
