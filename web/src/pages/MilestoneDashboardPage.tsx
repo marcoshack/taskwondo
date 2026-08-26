@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-import { ChevronRight, Pencil, Clock } from 'lucide-react'
-import { useMilestone, useMilestoneStats, useUpdateMilestone } from '@/hooks/useMilestones'
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
+import { Trans, useTranslation } from 'react-i18next'
+import { ChevronRight, ChevronDown, ChevronUp, Pencil, Clock } from 'lucide-react'
+import { useMilestone, useMilestoneStats, useUpdateMilestone, useDeleteMilestone } from '@/hooks/useMilestones'
 import { useWorkItems } from '@/hooks/useWorkItems'
 import { useMembers } from '@/hooks/useProjects'
 import { useProjectWorkflow } from '@/hooks/useWorkflows'
@@ -11,6 +11,8 @@ import { useNamespacePath } from '@/hooks/useNamespacePath'
 import { Spinner } from '@/components/ui/Spinner'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
+import { Tabs } from '@/components/ui/Tabs'
+import { Tooltip } from '@/components/ui/Tooltip'
 import { Avatar } from '@/components/ui/Avatar'
 import { TypeBadge } from '@/components/workitems/TypeBadge'
 import { PriorityBadge } from '@/components/workitems/PriorityBadge'
@@ -21,7 +23,11 @@ import type { Milestone, UpdateMilestoneInput } from '@/api/milestones'
 import type { WorkItem } from '@/api/workitems'
 import type { ProjectMember } from '@/api/projects'
 import { getLocalizedError } from '@/utils/apiError'
-import { usePreference } from '@/hooks/usePreferences'
+import { usePreference, useSetPreference } from '@/hooks/usePreferences'
+
+// Header collapse is a single global preference, not per-milestone: every
+// milestone opens the way the user last left one.
+const HEADER_COLLAPSED_PREF = 'milestone_header_collapsed'
 
 // Color maps matching badge components
 const typeBarColors: Record<string, string> = {
@@ -56,6 +62,8 @@ const priorityOrder: Record<string, number> = {
 export function MilestoneDashboardPage() {
   const { t } = useTranslation()
   const { p } = useNamespacePath()
+  const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { projectKey, milestoneId } = useParams<{ projectKey: string; milestoneId: string }>()
   const { user } = useAuth()
   const { data: milestone, isLoading: milestoneLoading } = useMilestone(projectKey ?? '', milestoneId ?? '')
@@ -67,9 +75,29 @@ export function MilestoneDashboardPage() {
   const { data: members } = useMembers(projectKey ?? '')
   const { workflow } = useProjectWorkflow(projectKey ?? '')
   const updateMutation = useUpdateMilestone(projectKey ?? '')
+  const deleteMutation = useDeleteMilestone(projectKey ?? '')
+
+  const { data: headerCollapsedPref, isSuccess: headerPrefLoaded } = usePreference<boolean>(HEADER_COLLAPSED_PREF)
+  const { mutate: savePref } = useSetPreference()
+  const [headerCollapsedLocal, setHeaderCollapsedLocal] = useState<boolean | null>(null)
+  const headerCollapsed = headerCollapsedLocal ?? (headerPrefLoaded && headerCollapsedPref === true)
 
   const [editOpen, setEditOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
   const [error, setError] = useState('')
+  const [deleteError, setDeleteError] = useState('')
+
+  // Tab state from URL search params
+  const activeTab = searchParams.get('tab') || 'summary'
+  function setActiveTab(tab: string) {
+    const params = new URLSearchParams(searchParams)
+    if (tab === 'summary') {
+      params.delete('tab')
+    } else {
+      params.set('tab', tab)
+    }
+    setSearchParams(params, { replace: true })
+  }
 
   const currentUserMember = members?.find((m) => m.user_id === user?.id)
   const currentUserRole = currentUserMember?.role ?? (user?.global_role === 'admin' ? 'owner' : null)
@@ -120,6 +148,35 @@ export function MilestoneDashboardPage() {
     )
   }
 
+  function toggleHeader() {
+    const next = !headerCollapsed
+    setHeaderCollapsedLocal(next)
+    savePref({ key: HEADER_COLLAPSED_PREF, value: next })
+  }
+
+  function handleDelete() {
+    setDeleteError('')
+    deleteMutation.mutate(milestone!.id, {
+      onSuccess: () => {
+        setDeleteOpen(false)
+        navigate(p(`/projects/${projectKey}/milestones`))
+      },
+      onError: (err) => {
+        setDeleteError(getLocalizedError(err, t, 'milestones.deleteError'))
+      },
+    })
+  }
+
+  const tabs = [
+    { key: 'summary', label: t('milestone.dashboard.summary') },
+    { key: 'workItems', label: t('milestone.dashboard.workItems') },
+    ...(canManage ? [{ key: 'settings', label: t('milestone.dashboard.tabSettings') }] : []),
+  ]
+
+  // Fall back to Summary when the requested tab is not available (e.g. the
+  // permission-gated Settings tab before members have loaded).
+  const effectiveTab = tabs.some((tb) => tb.key === activeTab) ? activeTab : 'summary'
+
   return (
     <div className="max-w-4xl space-y-6">
       {/* Breadcrumb */}
@@ -136,58 +193,86 @@ export function MilestoneDashboardPage() {
         milestone={milestone}
         percent={percent}
         canManage={canManage}
+        collapsed={headerCollapsed}
+        onToggleCollapsed={toggleHeader}
         onEdit={() => setEditOpen(true)}
       />
 
-      {/* Summary Counters */}
-      <SummaryCounters milestone={milestone} stats={stats} />
+      <Tabs tabs={tabs} activeTab={effectiveTab} onTabChange={setActiveTab} />
 
-      {/* Work Item Breakdown Charts */}
-      {stats && (Object.keys(stats.by_type).length > 0 || Object.keys(stats.by_priority).length > 0) && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {Object.keys(stats.by_type).length > 0 && (
-            <BreakdownChart
-              title={t('milestone.dashboard.byType')}
-              data={stats.by_type}
-              colorMap={typeBarColors}
-              projectKey={projectKey ?? ''}
-              milestoneId={milestoneId ?? ''}
-              filterKey="type"
-            />
+      {/* ───── Summary tab ───── */}
+      {effectiveTab === 'summary' && (
+        <div className="space-y-6">
+          <SummaryCounters milestone={milestone} stats={stats} />
+
+          {/* Work Item Breakdown Charts */}
+          {stats && (Object.keys(stats.by_type).length > 0 || Object.keys(stats.by_priority).length > 0) && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {Object.keys(stats.by_type).length > 0 && (
+                <BreakdownChart
+                  title={t('milestone.dashboard.byType')}
+                  data={stats.by_type}
+                  colorMap={typeBarColors}
+                  projectKey={projectKey ?? ''}
+                  milestoneId={milestoneId ?? ''}
+                  filterKey="type"
+                />
+              )}
+              {Object.keys(stats.by_priority).length > 0 && (
+                <BreakdownChart
+                  title={t('milestone.dashboard.byPriority')}
+                  data={stats.by_priority}
+                  colorMap={priorityBarColors}
+                  projectKey={projectKey ?? ''}
+                  milestoneId={milestoneId ?? ''}
+                  filterKey="priority"
+                />
+              )}
+            </div>
           )}
-          {Object.keys(stats.by_priority).length > 0 && (
-            <BreakdownChart
-              title={t('milestone.dashboard.byPriority')}
-              data={stats.by_priority}
-              colorMap={priorityBarColors}
-              projectKey={projectKey ?? ''}
-              milestoneId={milestoneId ?? ''}
-              filterKey="priority"
-            />
+
+          {/* Label Breakdown */}
+          {stats && Object.keys(stats.by_label).length > 0 && (
+            <LabelBreakdown labels={stats.by_label} />
+          )}
+
+          {/* Time Tracking */}
+          {(milestone.total_estimated_seconds > 0 || milestone.total_spent_seconds > 0) && (
+            <TimeTrackingSection milestone={milestone} />
           )}
         </div>
       )}
 
-      {/* Label Breakdown */}
-      {stats && Object.keys(stats.by_label).length > 0 && (
-        <LabelBreakdown labels={stats.by_label} />
+      {/* ───── Work Items tab ───── */}
+      {effectiveTab === 'workItems' && (
+        <WorkItemsTable
+          items={sortedItems}
+          memberMap={memberMap}
+          projectKey={projectKey ?? ''}
+          milestoneId={milestoneId ?? ''}
+          isLoading={itemsLoading}
+          hasMore={(workItemsData?.meta?.has_more) ?? false}
+          statuses={workflow?.statuses}
+        />
       )}
 
-      {/* Time Tracking */}
-      {(milestone.total_estimated_seconds > 0 || milestone.total_spent_seconds > 0) && (
-        <TimeTrackingSection milestone={milestone} />
+      {/* ───── Settings tab ───── */}
+      {effectiveTab === 'settings' && canManage && (
+        <div className="border border-red-300 dark:border-red-800 rounded-lg">
+          <div className="px-4 py-3 border-b border-red-300 dark:border-red-800">
+            <h3 className="text-base font-semibold text-red-600">{t('milestone.dashboard.dangerZone')}</h3>
+          </div>
+          <div className="p-4 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('milestone.dashboard.deleteThisMilestone')}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t('milestone.dashboard.deleteWarning')}</p>
+            </div>
+            <Button variant="danger" className="min-w-[7.5rem] h-10" onClick={() => { setDeleteError(''); setDeleteOpen(true) }}>
+              {t('milestones.deleteConfirmTitle')}
+            </Button>
+          </div>
+        </div>
       )}
-
-      {/* Work Items Table */}
-      <WorkItemsTable
-        items={sortedItems}
-        memberMap={memberMap}
-        projectKey={projectKey ?? ''}
-        milestoneId={milestoneId ?? ''}
-        isLoading={itemsLoading}
-        hasMore={(workItemsData?.meta?.has_more) ?? false}
-        statuses={workflow?.statuses}
-      />
 
       {/* Edit Modal */}
       <Modal open={editOpen} onClose={() => setEditOpen(false)} title={t('milestones.editMilestone')}>
@@ -199,6 +284,22 @@ export function MilestoneDashboardPage() {
           error={error}
         />
       </Modal>
+
+      {/* Delete confirmation */}
+      <Modal open={deleteOpen} onClose={() => setDeleteOpen(false)} title={t('milestones.deleteConfirmTitle')}>
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+          <Trans i18nKey="milestones.deleteConfirmBody" values={{ name: milestone.name }} components={{ bold: <strong /> }} />
+        </p>
+        {deleteError && <p className="text-sm text-red-600 dark:text-red-400 mb-4">{deleteError}</p>}
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={() => setDeleteOpen(false)}>
+            {t('common.cancel')}
+          </Button>
+          <Button variant="danger" disabled={deleteMutation.isPending} onClick={handleDelete}>
+            {deleteMutation.isPending ? t('common.deleting') : t('common.delete')}
+          </Button>
+        </div>
+      </Modal>
     </div>
   )
 }
@@ -209,51 +310,103 @@ function HeaderSection({
   milestone,
   percent,
   canManage,
+  collapsed,
+  onToggleCollapsed,
   onEdit,
 }: {
   milestone: Milestone
   percent: number
   canManage: boolean
+  collapsed: boolean
+  onToggleCollapsed: () => void
   onEdit: () => void
 }) {
   const { t } = useTranslation()
   const isClosed = milestone.status === 'closed'
+  const toggleLabel = collapsed ? t('milestone.dashboard.expandHeader') : t('milestone.dashboard.collapseHeader')
+
+  // Clicking the header row toggles too — except on the buttons it contains.
+  function handleRowClick(e: React.MouseEvent) {
+    if ((e.target as HTMLElement).closest('button')) return
+    onToggleCollapsed()
+  }
+
+  const statusBadge = (
+    <span
+      className={`inline-flex shrink-0 items-center px-2 py-0.5 text-xs font-medium rounded-full ${
+        isClosed
+          ? 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+          : 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+      }`}
+    >
+      {isClosed ? t('milestones.statusClosed') : t('milestones.statusOpen')}
+    </span>
+  )
+
+  const progressLabel =
+    milestone.total_count > 0
+      ? t('milestones.progress', { closed: milestone.closed_count, total: milestone.total_count })
+      : t('milestones.progressNone')
+
+  const actions = (
+    <div className="flex items-center shrink-0">
+      <Tooltip content={toggleLabel}>
+        <Button variant="ghost" size="sm" onClick={onToggleCollapsed} aria-label={toggleLabel}>
+          {collapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+        </Button>
+      </Tooltip>
+      {canManage && (
+        <Button variant="ghost" size="sm" onClick={onEdit}>
+          <Pencil className="h-4 w-4" />
+        </Button>
+      )}
+    </div>
+  )
+
+  if (collapsed) {
+    return (
+      <div
+        className="flex flex-wrap items-center gap-x-3 gap-y-2 cursor-pointer"
+        onClick={handleRowClick}
+      >
+        <h2 className="min-w-0 truncate text-xl font-semibold text-gray-900 dark:text-gray-100">{milestone.name}</h2>
+        {statusBadge}
+        {milestone.due_date && <DueDateLabel dueDate={milestone.due_date} isClosed={isClosed} />}
+
+        {/* Progress bar fills the space between the metadata and the actions */}
+        <div className="flex flex-1 items-center gap-2 min-w-[10rem] text-sm text-gray-500 dark:text-gray-400">
+          <span className="whitespace-nowrap">{progressLabel}</span>
+          <div className="flex-1 min-w-[3rem] bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+            <div
+              className="bg-green-500 dark:bg-green-400 h-3 rounded-full transition-all"
+              style={{ width: `${percent}%` }}
+            />
+          </div>
+          {milestone.total_count > 0 && <span className="whitespace-nowrap">{percent}%</span>}
+        </div>
+
+        {actions}
+      </div>
+    )
+  }
 
   return (
     <div>
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-3 flex-wrap">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{milestone.name}</h2>
-            <span
-              className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full ${
-                isClosed
-                  ? 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
-                  : 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
-              }`}
-            >
-              {isClosed ? t('milestones.statusClosed') : t('milestones.statusOpen')}
-            </span>
-            {milestone.due_date && <DueDateLabel dueDate={milestone.due_date} isClosed={isClosed} />}
-          </div>
-          {milestone.description && (
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{milestone.description}</p>
-          )}
+      <div className="flex items-center justify-between gap-2 cursor-pointer" onClick={handleRowClick}>
+        <div className="min-w-0 flex-1 flex items-center gap-3 flex-wrap">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{milestone.name}</h2>
+          {statusBadge}
+          {milestone.due_date && <DueDateLabel dueDate={milestone.due_date} isClosed={isClosed} />}
         </div>
-        {canManage && (
-          <Button variant="ghost" size="sm" onClick={onEdit}>
-            <Pencil className="h-4 w-4" />
-          </Button>
-        )}
+        {actions}
       </div>
+      {milestone.description && (
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{milestone.description}</p>
+      )}
       {/* Progress bar */}
       <div className="mt-4">
         <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 mb-1">
-          <span>
-            {milestone.total_count > 0
-              ? t('milestones.progress', { closed: milestone.closed_count, total: milestone.total_count })
-              : t('milestones.progressNone')}
-          </span>
+          <span>{progressLabel}</span>
           {milestone.total_count > 0 && <span>{percent}%</span>}
         </div>
         <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
@@ -296,16 +449,13 @@ function SummaryCounters({
   }
 
   return (
-    <div>
-      <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">{t('milestone.dashboard.summary')}</h3>
-      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-        {counters.map((c) => (
-          <div key={c.label} className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 text-center">
-            <div className={`text-2xl font-bold ${c.color}`}>{c.value}</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{c.label}</div>
-          </div>
-        ))}
-      </div>
+    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+      {counters.map((c) => (
+        <div key={c.label} className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 text-center">
+          <div className={`text-2xl font-bold ${c.color}`}>{c.value}</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{c.label}</div>
+        </div>
+      ))}
     </div>
   )
 }
@@ -499,8 +649,7 @@ function WorkItemsTable({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('milestone.dashboard.workItems')}</h3>
+      <div className="flex items-center justify-end mb-3">
         <Link
           to={p(`/projects/${projectKey}/items?milestone=${milestoneId}`)}
           className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline"
@@ -583,7 +732,8 @@ function WorkItemRow({
 }) {
   const { t } = useTranslation()
   const { p } = useNamespacePath()
-  const linkState = { state: { from: 'milestone', backUrl: p(`/projects/${projectKey}/milestones/${milestoneId}`) } }
+  // Return to the Work Items tab, so the restored active row is actually on screen
+  const linkState = { state: { from: 'milestone', backUrl: p(`/projects/${projectKey}/milestones/${milestoneId}?tab=workItems`) } }
   const rowRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {

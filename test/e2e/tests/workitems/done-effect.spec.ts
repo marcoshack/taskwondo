@@ -157,6 +157,9 @@ test.describe('Done effect on work item lists', () => {
 
     await page.goto(`/d/projects/${testProject.key}/milestones/${milestone.id}`);
     await expect(page.getByRole('heading', { name: 'Done Effect Test' })).toBeVisible({ timeout: 10000 });
+
+    // Work items live behind their own tab on the milestone dashboard
+    await page.getByRole('button', { name: 'Work Items', exact: true }).click();
     await expect(page.getByText('Milestone open item')).toBeVisible();
     await expect(page.getByText('Milestone done item')).toBeVisible();
 

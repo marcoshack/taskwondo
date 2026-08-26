@@ -990,6 +990,12 @@
   "milestone.dashboard.noItems": "No work items in this milestone yet.",
   "milestone.dashboard.unassigned": "Unassigned",
   "milestone.dashboard.backToMilestones": "Milestones",
+  "milestone.dashboard.collapseHeader": "Collapse header",
+  "milestone.dashboard.expandHeader": "Expand header",
+  "milestone.dashboard.tabSettings": "Settings",
+  "milestone.dashboard.dangerZone": "Danger Zone",
+  "milestone.dashboard.deleteThisMilestone": "Delete this milestone",
+  "milestone.dashboard.deleteWarning": "Work items will be unassigned but not deleted. This action cannot be undone.",
 
   "workitems.form.milestone": "Milestone",
   "workitems.filters.allMilestones": "Milestone",

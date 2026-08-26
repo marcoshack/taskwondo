@@ -61,18 +61,24 @@ test.describe('Milestone Dashboard', () => {
     await expect(page.getByText('1/3 items')).toBeVisible();
     await expect(page.getByText('33%')).toBeVisible();
 
-    // Verify summary counters
-    await expect(page.getByText('Summary')).toBeVisible();
-
-    // Verify breakdown charts
+    // Summary tab is the default and holds the counters and breakdown charts
+    await expect(page.getByRole('button', { name: 'Summary', exact: true })).toBeVisible();
     await expect(page.getByText('By Type')).toBeVisible();
     await expect(page.getByText('By Priority')).toBeVisible();
 
-    // Verify work items table
-    await expect(page.getByText('Work Items').first()).toBeVisible();
+    // Work items live behind their own tab
+    await expect(page.getByText('A task item')).not.toBeVisible();
+    await page.getByRole('button', { name: 'Work Items', exact: true }).click();
     await expect(page.getByText('A task item')).toBeVisible();
     await expect(page.getByText('A bug item')).toBeVisible();
     await expect(page.getByText('A ticket item')).toBeVisible();
+
+    // The header and its progress bar stay visible across tabs
+    await expect(page.getByRole('heading', { name: 'Dashboard Test' })).toBeVisible();
+    await expect(page.getByText('1/3 items')).toBeVisible();
+
+    // The breakdown charts are gone while the Work Items tab is active
+    await expect(page.getByText('By Type')).not.toBeVisible();
   });
 
   test('shows empty state for milestone with no items', async ({ request, testUser, testProject, page }) => {
@@ -83,8 +89,10 @@ test.describe('Milestone Dashboard', () => {
     await page.goto(`/d/projects/${testProject.key}/milestones/${milestone.id}`);
 
     await expect(page.getByRole('heading', { name: 'Empty Milestone' })).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText('No work items in this milestone yet.')).toBeVisible();
     await expect(page.getByText('No items')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Work Items', exact: true }).click();
+    await expect(page.getByText('No work items in this milestone yet.')).toBeVisible();
   });
 
   test('shows time tracking when items have estimates and time entries', async ({ request, testUser, testProject, page }) => {
@@ -159,6 +167,106 @@ test.describe('Milestone Dashboard', () => {
     await expect(page.getByRole('heading', { name: 'Updated Name' })).toBeVisible({ timeout: 10000 });
   });
 
+  test('active tab is kept in the URL and survives a reload', async ({ request, testUser, testProject, page }) => {
+    const milestone = await api.createMilestone(request, testUser.token, testProject.key, {
+      name: 'Tab State Test',
+    });
+
+    await page.goto(`/d/projects/${testProject.key}/milestones/${milestone.id}`);
+    await expect(page.getByRole('heading', { name: 'Tab State Test' })).toBeVisible({ timeout: 10000 });
+
+    await page.getByRole('button', { name: 'Work Items', exact: true }).click();
+    await page.waitForURL(/[?&]tab=workItems/);
+
+    await page.reload();
+    await expect(page.getByText('No work items in this milestone yet.')).toBeVisible({ timeout: 10000 });
+  });
+
+  test('header collapses to a single row and the choice applies to every milestone', async ({ request, testUser, testProject, page }) => {
+    const first = await api.createMilestone(request, testUser.token, testProject.key, {
+      name: 'Collapse First',
+      description: 'First milestone description',
+    });
+    const second = await api.createMilestone(request, testUser.token, testProject.key, {
+      name: 'Collapse Second',
+      description: 'Second milestone description',
+    });
+
+    await page.goto(`/d/projects/${testProject.key}/milestones/${first.id}`);
+
+    // Expanded by default: the description and the standalone progress row show
+    await expect(page.getByText('First milestone description')).toBeVisible({ timeout: 10000 });
+
+    await Promise.all([
+      page.waitForResponse(
+        (r) => r.url().includes('/user/preferences/milestone_header_collapsed') && r.request().method() === 'PUT',
+      ),
+      page.getByRole('button', { name: 'Collapse header' }).click(),
+    ]);
+    await expect(page.getByText('First milestone description')).not.toBeVisible();
+
+    // The preference is global, so a different milestone opens collapsed too
+    await page.goto(`/d/projects/${testProject.key}/milestones/${second.id}`);
+    await expect(page.getByRole('heading', { name: 'Collapse Second' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('button', { name: 'Expand header' })).toBeVisible();
+    await expect(page.getByText('Second milestone description')).not.toBeVisible();
+
+    // The items bar stays in the collapsed row, and the tabs still work
+    await expect(page.getByText('No items')).toBeVisible();
+    await page.getByRole('button', { name: 'Work Items', exact: true }).click();
+    await expect(page.getByText('No work items in this milestone yet.')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Expand header' }).click();
+    await expect(page.getByText('Second milestone description')).toBeVisible();
+  });
+
+  test('clicking the header row toggles the header', async ({ request, testUser, testProject, page }) => {
+    const milestone = await api.createMilestone(request, testUser.token, testProject.key, {
+      name: 'Header Click Test',
+      description: 'Click the row, not the button',
+    });
+
+    await page.goto(`/d/projects/${testProject.key}/milestones/${milestone.id}`);
+    await expect(page.getByText('Click the row, not the button')).toBeVisible({ timeout: 10000 });
+
+    // Click the milestone name — part of the header row, not a button
+    await page.getByRole('heading', { name: 'Header Click Test' }).click();
+    await expect(page.getByText('Click the row, not the button')).not.toBeVisible();
+
+    await page.getByRole('heading', { name: 'Header Click Test' }).click();
+    await expect(page.getByText('Click the row, not the button')).toBeVisible();
+
+    // The edit button inside the row still edits instead of toggling: the modal
+    // opens and the header stays expanded (its control still reads "Collapse header")
+    await page.getByRole('button').filter({ has: page.locator('svg.lucide-pencil') }).click();
+    await expect(page.getByText('Edit Milestone')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Collapse header' })).toBeVisible();
+  });
+
+  test('settings tab deletes the milestone and returns to the list', async ({ request, testUser, testProject, page }) => {
+    const milestone = await api.createMilestone(request, testUser.token, testProject.key, {
+      name: 'Delete From Settings',
+    });
+
+    await page.goto(`/d/projects/${testProject.key}/milestones/${milestone.id}`);
+    await expect(page.getByRole('heading', { name: 'Delete From Settings' })).toBeVisible({ timeout: 10000 });
+
+    // The Settings tab only appears once the caller's project role has loaded
+    const settingsTab = page.getByRole('button', { name: 'Settings', exact: true });
+    await expect(settingsTab).toBeVisible({ timeout: 10000 });
+    await settingsTab.click();
+    await expect(page.getByText('Danger Zone')).toBeVisible();
+
+    // Open the confirmation modal from the danger zone, then confirm
+    await page.getByRole('button', { name: 'Delete Milestone', exact: true }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('button', { name: 'Delete', exact: true }).click();
+
+    await page.waitForURL(/\/milestones$/);
+    await expect(page.getByText('Delete From Settings')).not.toBeVisible();
+  });
+
   test('work item links navigate to detail page', async ({ request, testUser, testProject, page }) => {
     const milestone = await api.createMilestone(request, testUser.token, testProject.key, {
       name: 'Link Test',
@@ -173,7 +281,10 @@ test.describe('Milestone Dashboard', () => {
     });
 
     await page.goto(`/d/projects/${testProject.key}/milestones/${milestone.id}`);
-    await expect(page.getByText('Linked item')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Link Test' })).toBeVisible({ timeout: 10000 });
+
+    await page.getByRole('button', { name: 'Work Items', exact: true }).click();
+    await expect(page.getByText('Linked item')).toBeVisible();
 
     // Click item title to navigate to detail
     await page.getByText('Linked item').click();

@@ -1,18 +1,17 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { Trans, useTranslation } from 'react-i18next'
-import { useMilestones, useCreateMilestone, useUpdateMilestone, useDeleteMilestone } from '@/hooks/useMilestones'
+import { useTranslation } from 'react-i18next'
+import { useMilestones, useCreateMilestone } from '@/hooks/useMilestones'
 import { useMembers } from '@/hooks/useProjects'
 import { useAuth } from '@/contexts/AuthContext'
 import { useNamespacePath } from '@/hooks/useNamespacePath'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { Select } from '@/components/ui/Select'
 import { Modal } from '@/components/ui/Modal'
 import { Spinner } from '@/components/ui/Spinner'
-import { Plus, Pencil, Trash2, ChevronDown, ChevronRight, Check, Clock } from 'lucide-react'
+import { Plus, ChevronDown, ChevronRight, Check, Clock } from 'lucide-react'
 import { formatDuration } from '@/utils/duration'
-import type { Milestone, CreateMilestoneInput, UpdateMilestoneInput } from '@/api/milestones'
+import type { Milestone, CreateMilestoneInput } from '@/api/milestones'
 import { getLocalizedError } from '@/utils/apiError'
 
 export function MilestonesPage() {
@@ -23,12 +22,8 @@ export function MilestonesPage() {
   const { data: milestones, isLoading } = useMilestones(projectKey ?? '')
 
   const createMutation = useCreateMilestone(projectKey ?? '')
-  const updateMutation = useUpdateMilestone(projectKey ?? '')
-  const deleteMutation = useDeleteMilestone(projectKey ?? '')
 
   const [editorOpen, setEditorOpen] = useState(false)
-  const [editingMilestone, setEditingMilestone] = useState<Milestone | null>(null)
-  const [deleteTarget, setDeleteTarget] = useState<Milestone | null>(null)
   const [error, setError] = useState('')
   const [savedId, setSavedId] = useState<string | null>(null)
   const [closedExpanded, setClosedExpanded] = useState(false)
@@ -48,56 +43,20 @@ export function MilestonesPage() {
   const openMilestones = milestones?.filter((m) => m.status === 'open') ?? []
   const closedMilestones = milestones?.filter((m) => m.status === 'closed') ?? []
 
-  function openEditor(milestone?: Milestone) {
-    setEditingMilestone(milestone ?? null)
-    setEditorOpen(true)
-  }
-
   function flashSaved(id: string) {
     setSavedId(id)
     setTimeout(() => setSavedId(null), 2000)
   }
 
-  function handleSave(input: CreateMilestoneInput | UpdateMilestoneInput) {
+  function handleCreate(input: CreateMilestoneInput) {
     setError('')
-    if (editingMilestone) {
-      const id = editingMilestone.id
-      updateMutation.mutate(
-        { milestoneId: id, input: input as UpdateMilestoneInput },
-        {
-          onSuccess: () => {
-            flashSaved(id)
-            setEditorOpen(false)
-            setEditingMilestone(null)
-          },
-          onError: (err) => {
-            setError(getLocalizedError(err, t, 'milestones.updateError'))
-          },
-        },
-      )
-    } else {
-      createMutation.mutate(input as CreateMilestoneInput, {
-        onSuccess: (data) => {
-          flashSaved(data.id)
-          setEditorOpen(false)
-        },
-        onError: (err) => {
-          setError(getLocalizedError(err, t, 'milestones.createError'))
-        },
-      })
-    }
-  }
-
-  function handleDelete() {
-    if (!deleteTarget) return
-    setError('')
-    deleteMutation.mutate(deleteTarget.id, {
-      onSuccess: () => {
-        setDeleteTarget(null)
+    createMutation.mutate(input, {
+      onSuccess: (data) => {
+        flashSaved(data.id)
+        setEditorOpen(false)
       },
       onError: (err) => {
-        setError(getLocalizedError(err, t, 'milestones.deleteError'))
-        setDeleteTarget(null)
+        setError(getLocalizedError(err, t, 'milestones.createError'))
       },
     })
   }
@@ -110,7 +69,7 @@ export function MilestonesPage() {
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('milestones.description')}</p>
         </div>
         {canManage && (
-          <Button onClick={() => openEditor()} className="border border-transparent">
+          <Button onClick={() => setEditorOpen(true)} className="border border-transparent">
             <span className="sm:hidden">{t('workitems.newShort')}</span>
             <span className="hidden sm:inline">{t('milestones.create')}</span>
           </Button>
@@ -124,7 +83,7 @@ export function MilestonesPage() {
         <div className="border border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center">
           <p className="text-sm text-gray-500 dark:text-gray-400">{t('milestones.noMilestones')}</p>
           {canManage && (
-            <Button size="sm" variant="secondary" className="mt-3" onClick={() => openEditor()}>
+            <Button size="sm" variant="secondary" className="mt-3" onClick={() => setEditorOpen(true)}>
               <Plus className="h-4 w-4 mr-1" />
               {t('milestones.createFirst')}
             </Button>
@@ -137,7 +96,7 @@ export function MilestonesPage() {
               <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">{t('milestones.statusOpen')} ({openMilestones.length})</h3>
               <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
                 {openMilestones.map((m) => (
-                  <MilestoneCard key={m.id} milestone={m} projectKey={projectKey ?? ''} canManage={canManage} saved={savedId === m.id} onEdit={() => openEditor(m)} onDelete={() => setDeleteTarget(m)} />
+                  <MilestoneCard key={m.id} milestone={m} projectKey={projectKey ?? ''} saved={savedId === m.id} />
                 ))}
               </div>
             </div>
@@ -155,7 +114,7 @@ export function MilestonesPage() {
               {closedExpanded && (
                 <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
                   {closedMilestones.map((m) => (
-                    <MilestoneCard key={m.id} milestone={m} projectKey={projectKey ?? ''} canManage={canManage} saved={savedId === m.id} onEdit={() => openEditor(m)} onDelete={() => setDeleteTarget(m)} />
+                    <MilestoneCard key={m.id} milestone={m} projectKey={projectKey ?? ''} saved={savedId === m.id} />
                   ))}
                 </div>
               )}
@@ -164,33 +123,17 @@ export function MilestonesPage() {
         </>
       )}
 
-      {/* Editor modal */}
+      {/* Create modal */}
       <Modal
         open={editorOpen}
-        onClose={() => { setEditorOpen(false); setEditingMilestone(null) }}
-        title={editingMilestone ? t('milestones.editMilestone') : t('milestones.createMilestone')}
+        onClose={() => setEditorOpen(false)}
+        title={t('milestones.createMilestone')}
       >
         <MilestoneForm
-          milestone={editingMilestone}
-          onSubmit={handleSave}
-          onCancel={() => { setEditorOpen(false); setEditingMilestone(null) }}
-          isPending={createMutation.isPending || updateMutation.isPending}
+          onSubmit={handleCreate}
+          onCancel={() => setEditorOpen(false)}
+          isPending={createMutation.isPending}
         />
-      </Modal>
-
-      {/* Delete confirmation */}
-      <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} title={t('milestones.deleteConfirmTitle')}>
-        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-          <Trans i18nKey="milestones.deleteConfirmBody" values={{ name: deleteTarget?.name }} components={{ bold: <strong /> }} />
-        </p>
-        <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={() => setDeleteTarget(null)}>
-            {t('common.cancel')}
-          </Button>
-          <Button variant="danger" disabled={deleteMutation.isPending} onClick={handleDelete}>
-            {deleteMutation.isPending ? t('common.deleting') : t('common.delete')}
-          </Button>
-        </div>
       </Modal>
     </div>
   )
@@ -201,47 +144,36 @@ export function MilestonesPage() {
 function MilestoneCard({
   milestone,
   projectKey,
-  canManage,
   saved,
-  onEdit,
-  onDelete,
 }: {
   milestone: Milestone
   projectKey: string
-  canManage: boolean
   saved: boolean
-  onEdit: () => void
-  onDelete: () => void
 }) {
   const { t } = useTranslation()
   const { p } = useNamespacePath()
   const percent = milestone.total_count > 0 ? Math.round((milestone.closed_count / milestone.total_count) * 100) : 0
 
   return (
-    <div className="p-4">
+    <Link
+      to={p(`/projects/${projectKey}/milestones/${milestone.id}`)}
+      className="block p-4 group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <Link to={p(`/projects/${projectKey}/milestones/${milestone.id}`)} className="text-lg font-semibold text-gray-900 dark:text-gray-100 hover:text-indigo-600 dark:hover:text-indigo-400">{milestone.name}</Link>
+            <span className="text-lg font-semibold text-gray-900 dark:text-gray-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">{milestone.name}</span>
             {milestone.due_date && <DueDateLabel dueDate={milestone.due_date} isClosed={milestone.status === 'closed'} />}
           </div>
           {milestone.description && (
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{milestone.description}</p>
           )}
         </div>
-        <div className="flex items-center gap-1 shrink-0">
-          {saved && <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />}
-          {canManage && (
-            <>
-              <Button variant="ghost" size="sm" onClick={onEdit}>
-                <Pencil className="h-3.5 w-3.5" />
-              </Button>
-              <Button variant="ghost" size="sm" onClick={onDelete}>
-                <Trash2 className="h-3.5 w-3.5 text-red-500" />
-              </Button>
-            </>
-          )}
-        </div>
+        {saved && (
+          <div className="shrink-0">
+            <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
+          </div>
+        )}
       </div>
 
       {/* Progress bar */}
@@ -281,7 +213,7 @@ function MilestoneCard({
           )}
         </div>
       )}
-    </div>
+    </Link>
   )
 }
 
@@ -340,21 +272,18 @@ function DueDateLabel({ dueDate, isClosed }: { dueDate: string; isClosed: boolea
 // --- Milestone Form ---
 
 function MilestoneForm({
-  milestone,
   onSubmit,
   onCancel,
   isPending,
 }: {
-  milestone: Milestone | null
-  onSubmit: (input: CreateMilestoneInput | UpdateMilestoneInput) => void
+  onSubmit: (input: CreateMilestoneInput) => void
   onCancel: () => void
   isPending: boolean
 }) {
   const { t } = useTranslation()
-  const [name, setName] = useState(milestone?.name ?? '')
-  const [description, setDescription] = useState(milestone?.description ?? '')
-  const [dueDate, setDueDate] = useState(milestone?.due_date ?? '')
-  const [status, setStatus] = useState(milestone?.status ?? 'open')
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [dueDate, setDueDate] = useState('')
   const [validationError, setValidationError] = useState('')
 
   function handleSubmit(e: React.FormEvent) {
@@ -366,20 +295,11 @@ function MilestoneForm({
       return
     }
 
-    if (milestone) {
-      const input: UpdateMilestoneInput = {}
-      if (name.trim() !== milestone.name) input.name = name.trim()
-      if (description !== (milestone.description ?? '')) input.description = description || null
-      if (dueDate !== (milestone.due_date ?? '')) input.due_date = dueDate || null
-      if (status !== milestone.status) input.status = status as 'open' | 'closed'
-      onSubmit(input)
-    } else {
-      onSubmit({
-        name: name.trim(),
-        description: description || undefined,
-        due_date: dueDate || undefined,
-      })
-    }
+    onSubmit({
+      name: name.trim(),
+      description: description || undefined,
+      due_date: dueDate || undefined,
+    })
   }
 
   return (
@@ -406,28 +326,18 @@ function MilestoneForm({
           onChange={(e) => setDescription(e.target.value)}
         />
       </div>
-      <div className="flex gap-4">
-        <div className="w-48">
-          <Input
-            label={t('milestones.dueDate')}
-            type="date"
-            value={dueDate}
-            onChange={(e) => setDueDate(e.target.value)}
-          />
-        </div>
-        {milestone && (
-          <div className="w-48">
-            <Select label={t('workitems.form.status')} value={status} onChange={(e) => setStatus(e.target.value as 'open' | 'closed')}>
-              <option value="open">{t('milestones.statusOpen')}</option>
-              <option value="closed">{t('milestones.statusClosed')}</option>
-            </Select>
-          </div>
-        )}
+      <div className="w-48">
+        <Input
+          label={t('milestones.dueDate')}
+          type="date"
+          value={dueDate}
+          onChange={(e) => setDueDate(e.target.value)}
+        />
       </div>
       <div className="flex justify-end gap-3 pt-2">
         <Button type="button" variant="secondary" onClick={onCancel}>{t('common.cancel')}</Button>
         <Button type="submit" disabled={isPending}>
-          {isPending ? t('common.saving') : milestone ? t('common.save') : t('common.create')}
+          {isPending ? t('common.creating') : t('common.create')}
         </Button>
       </div>
     </form>

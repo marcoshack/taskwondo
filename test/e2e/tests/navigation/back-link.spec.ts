@@ -91,6 +91,8 @@ test.describe('Back link navigation', () => {
     await page.goto(`/d/projects/${testProject.key}/milestones/${milestone.id}`);
     await waitForPageReady(page);
 
+    // Work items live behind their own tab on the milestone dashboard
+    await page.getByRole('button', { name: 'Work Items', exact: true }).click();
     await page.getByText('Back link milestone test').first().click();
     await expect(page).toHaveURL(new RegExp(`/d/projects/${testProject.key}/items/${item.item_number}`), { timeout: 10000 });
 
