@@ -2,7 +2,14 @@ import { describe, it, expect } from 'vitest'
 import { buildNavigationCatalog } from './navigationCatalog'
 import type { CatalogNamespace, NavigationCatalogInput, NavigationEntry } from './navigationCatalog'
 import { matchNavigationItems } from './navigationSearch'
-import type { NavUser } from './sidebarNav'
+import * as sidebarNav from './sidebarNav'
+import {
+  preferencesNavItems,
+  projectNavItems,
+  systemSettingsNavItems,
+  userNavItems,
+} from './sidebarNav'
+import type { NavUser, SidebarNavItem } from './sidebarNav'
 
 /** Stand-in for i18next's `t`: echoes the key so tests assert on keys, not copy. */
 function keyEcho(key: string, params?: Record<string, unknown>): string {
@@ -250,5 +257,47 @@ describe('buildNavigationCatalog — translation', () => {
   it('matches accented translated labels without the accents', () => {
     const french = build({ t: frenchT })
     expect(labels(matchNavigationItems(french, 'boite'))).toEqual(['Boîte de réception'])
+  })
+})
+
+/**
+ * The rule from AGENTS.md — every sidebar destination is reachable from the
+ * palette — holds by construction *within* a builder: `buildNavigationCatalog`
+ * maps the very array the sidebar renders, so a page added to `projectNavItems`
+ * cannot go missing. What is not automatic is the wiring: a brand-new sidebar
+ * section means a brand-new builder in `sidebarNav`, and nothing stops it from
+ * being rendered by a sidebar and never handed to the catalog. That is the gap
+ * these two tests close.
+ */
+describe('every shared sidebar builder is wired into the catalog', () => {
+  /**
+   * How to call each builder with the same arguments the catalog uses. A
+   * builder missing from here fails the first test — which is the point: you
+   * cannot add a sidebar section without deciding whether the palette lists it.
+   */
+  const builderCalls: Record<string, () => SidebarNavItem[]> = {
+    projectNavItems: () => projectNavItems(keyEcho, '/d/projects/TF', false),
+    userNavItems: () => userNavItems(keyEcho),
+    preferencesNavItems: () => preferencesNavItems(keyEcho),
+    systemSettingsNavItems: () => systemSettingsNavItems(keyEcho),
+  }
+
+  it('covers every *NavItems builder sidebarNav exports', () => {
+    const exported = Object.entries(sidebarNav)
+      .filter(([name, value]) => name.endsWith('NavItems') && typeof value === 'function')
+      .map(([name]) => name)
+    expect(exported.sort()).toEqual(Object.keys(builderCalls).sort())
+  })
+
+  it('lists every destination those builders produce', () => {
+    // An admin with an active project sees every group at once.
+    const routes = build({ user: ADMIN, activeProjectKey: 'TF' }).flatMap((e) =>
+      e.target.kind === 'route' ? [e.target.to] : [],
+    )
+    for (const [name, call] of Object.entries(builderCalls)) {
+      for (const item of call()) {
+        expect(routes, `${name} → ${item.to} is missing from the catalog`).toContain(item.to)
+      }
+    }
   })
 })

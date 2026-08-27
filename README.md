@@ -46,7 +46,7 @@ See [more screenshots](docs/overview.md) for a full walkthrough of features.
 ### Views & Search
 
 - **Kanban board** with drag-and-drop status changes, or list view with sortable columns
-- **Global search** (Ctrl+K) with semantic search (pgvector + Ollama) and full-text fallback
+- **Command palette** (Cmd/Ctrl+K) — jump to any page, project or namespace, plus search with semantic search (pgvector + Ollama) and full-text fallback
 - **Personal Inbox** with reordering, project filter, and auto-refresh
 - **Watchlist** page for tracked items with list and board views
 - **Milestone dashboard** with status breakdown and progress visualization

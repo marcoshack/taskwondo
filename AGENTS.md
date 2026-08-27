@@ -97,6 +97,8 @@ Path alias: `@/` → `src/`. Vite proxies `/api` to `:8080` in dev.
 - **Destructive actions**: Always `<Modal>` with cancel/confirm. Never `window.confirm()`.
 - **Success feedback**: Inline green checkmark (`<Check>` from lucide-react), never layout-shifting toasts. Pattern: `savedId` state + `setTimeout(~2s)`.
 - **Settings pages**: Danger Zone is always the last section.
+- **Navigation catalog**: every navigable page and sidebar section must be reachable from the Cmd/Ctrl+K command palette (`web/src/components/CommandPalette.tsx`). `AppSidebar`, `PreferencesSidebar`, `SystemSettingsSidebar` and the palette's catalog (`web/src/utils/navigationCatalog.ts`) all render from the shared builders in `web/src/utils/sidebarNav.ts` — adding the page to the right builder there is the whole edit, and the palette picks it up for free. Only a page with no sidebar entry needs a hand-written entry in `buildNavigationCatalog`, and a whole new sidebar section needs its new builder wired into `buildNavigationCatalog` too (`navigationCatalog.test.ts` fails until it is).
+- **Gating navigation entries**: labels come from `t(...)`, so a new page needs its i18n key in `en.json` **and every other locale**. A gated page must carry in the catalog the same gate it has in the sidebar and the route guard — use the predicates `isSystemAdmin` / `isCustomerOnly` / `isCustomerProject` from `web/src/utils/sidebarNav.ts` (there is no `isSystemAdmin` field on the user; the gate is `global_role === 'admin'`). A palette row that 403s on click is a bug, not a cosmetic issue.
 - **Tooltips**: Never use the native HTML `title` attribute for tooltips. Use the stylized Tailwind pattern: wrap the trigger with `relative group/<name>` and render an absolutely-positioned `<span>` child with `pointer-events-none absolute ... px-2 py-1 text-xs text-white bg-gray-900 dark:bg-gray-700 rounded whitespace-nowrap opacity-0 group-hover/<name>:opacity-100 transition-opacity`. See `WorkItemDetailPage.tsx` (pencil edit button) and `AppSidebar.tsx` for canonical examples.
 
 ### API Compatibility
@@ -125,7 +127,9 @@ Health: `GET /healthz` (liveness), `GET /readyz` (readiness + DB ping)
 In-package mocks (mock structs implementing repository interfaces) and `httptest` for handler tests. Chi router is wired up in tests when URL params are needed. Tests live alongside source files.
 
 ### Frontend (`web/`)
-Vitest for unit tests. Tests use `*.test.ts` naming and live alongside source files. Currently covers i18n validation (missing keys, extra keys, placeholder consistency, untranslated values). No component or hook tests — functional coverage comes from E2E.
+Vitest for unit tests. Tests use `*.test.ts` naming and live alongside source files. Covers i18n validation (missing keys, extra keys, placeholder consistency, untranslated values) and the pure helpers under `web/src/utils/` (navigation catalog, palette matching, key sequences). No component tests — functional coverage comes from E2E.
+
+Vitest runs with **no DOM environment**, so a module a unit test imports must not reach `@/api/client` — it touches `localStorage` at import time and the import blows up. Extract the pure part into a client-free module instead: that is why `toUrlSegment` / `fromUrlSegment` live in `web/src/utils/namespaceUrl.ts` rather than in `useNamespacePath.ts`. `sidebarNav.ts` and `navigationCatalog.ts` must stay client-free for the same reason.
 
 ### E2E (`test/e2e/`)
 Playwright with `*.spec.ts` naming. Tests organized by domain under `test/e2e/tests/` (auth, admin, workitems, projects, milestones, navigation, preferences).

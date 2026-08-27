@@ -1,9 +1,11 @@
 # v0.4.1
 
-macOS development support, a hardened Go API with stricter validation and rate limiting, MCP server binaries cross-compiled for Linux, macOS, and Windows, and an MCPB bundle that now installs on Claude Desktop for macOS.
+A Cmd/Ctrl+K command palette that merges navigation with search, macOS development support, a hardened Go API with stricter validation and rate limiting, MCP server binaries cross-compiled for Linux, macOS, and Windows, and an MCPB bundle that now installs on Claude Desktop for macOS.
 
 ## New Features
 
+- **Command palette (Cmd/Ctrl+K)** — one palette for navigation and search: jump to any section of the active project, your personal pages, preferences, System Settings, another project or another namespace, with entity results (work items, milestones, queues, teams, comments, attachments) for the active project below; a second Cmd/Ctrl+K or Escape closes it
+- **Retired shortcuts** — `g k` is replaced by Cmd/Ctrl+K, and `g p` is gone: the project switcher itself is unchanged on the project badge in the nav, and the palette lists every project and namespace from anywhere. `g i`, `g o` and `/` are unchanged
 - **macOS development support** — `README_DEV.md` with Colima setup; `install.sh` and Makefile made portable for macOS's default Bash 3.2; `GOPROXY` plumbed through Docker builds
 - **Cross-platform MCP server binaries** — `taskwondo-mcp-linux-amd64`, `taskwondo-mcp-darwin-arm64`, and `taskwondo-mcp-windows-amd64.exe` built via Go cross-compile from any host
 - **MCPB bundle for Claude Desktop on macOS** — bundle now ships both Windows and macOS (Apple Silicon) binaries via `platform_overrides`; previously Windows-only
