@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
@@ -16,14 +17,17 @@ import (
 
 // SystemSettingHandler handles system setting endpoints.
 type SystemSettingHandler struct {
-	settings  *service.SystemSettingService
-	encryptor *crypto.Encryptor
-	email     *email.Sender
+	settings      *service.SystemSettingService
+	encryptor     *crypto.Encryptor
+	email         *email.Sender
+	maxUploadSize int64
 }
 
-// NewSystemSettingHandler creates a new SystemSettingHandler.
-func NewSystemSettingHandler(settings *service.SystemSettingService, encryptor *crypto.Encryptor, emailSender *email.Sender) *SystemSettingHandler {
-	return &SystemSettingHandler{settings: settings, encryptor: encryptor, email: emailSender}
+// NewSystemSettingHandler creates a new SystemSettingHandler. maxUploadSize is
+// the configured attachment size cap; it is published to unauthenticated
+// clients so upload forms can reject oversized files before submitting them.
+func NewSystemSettingHandler(settings *service.SystemSettingService, encryptor *crypto.Encryptor, emailSender *email.Sender, maxUploadSize int64) *SystemSettingHandler {
+	return &SystemSettingHandler{settings: settings, encryptor: encryptor, email: emailSender, maxUploadSize: maxUploadSize}
 }
 
 type systemSettingResponse struct {
@@ -135,6 +139,10 @@ func (h *SystemSettingHandler) GetPublic(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusInternalServerError, CodeInternalError, "internal server error")
 		return
 	}
+
+	// max_upload_size comes from env config rather than the settings table, so
+	// it is merged in here instead of being listed as a public setting key.
+	settings[model.SettingMaxUploadSize] = json.RawMessage(strconv.FormatInt(h.maxUploadSize, 10))
 
 	writeData(w, http.StatusOK, settings)
 }

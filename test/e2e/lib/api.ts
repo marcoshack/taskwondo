@@ -190,6 +190,34 @@ export async function updateWorkItem(
   if (!res.ok()) throw new Error(`Update work item failed (${res.status()}): ${await res.text()}`);
 }
 
+export async function getWorkItem(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  itemNumber: number,
+): Promise<{ id: string; display_id: string; item_number: number; title: string; status: string; description: string | null }> {
+  const res = await request.get(`${BASE_URL}/api/v1/default/projects/${projectKey}/items/${itemNumber}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`Get work item failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
+export async function listAttachments(
+  request: APIRequestContext,
+  token: string,
+  projectKey: string,
+  itemNumber: number,
+): Promise<Array<{ id: string; filename: string; size_bytes: number }>> {
+  const res = await request.get(`${BASE_URL}/api/v1/default/projects/${projectKey}/items/${itemNumber}/attachments`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) throw new Error(`List attachments failed (${res.status()}): ${await res.text()}`);
+  const body = await res.json();
+  return body.data;
+}
+
 export async function addComment(
   request: APIRequestContext,
   token: string,

@@ -42,6 +42,7 @@ type createWorkItemRequest struct {
 	Title        string                 `json:"title"`
 	Description  *string                `json:"description,omitempty"`
 	Priority     string                 `json:"priority,omitempty"`
+	Status       string                 `json:"status,omitempty"`
 	AssigneeID   *string                `json:"assignee_id,omitempty"`
 	Labels       []string               `json:"labels,omitempty"`
 	Complexity   *int                   `json:"complexity,omitempty"`
@@ -163,6 +164,7 @@ func (h *WorkItemHandler) Create(w http.ResponseWriter, r *http.Request) {
 		Title:        req.Title,
 		Description:  req.Description,
 		Priority:     req.Priority,
+		Status:       req.Status,
 		Labels:       req.Labels,
 		Complexity:   req.Complexity,
 		Visibility:   req.Visibility,

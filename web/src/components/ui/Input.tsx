@@ -4,16 +4,21 @@ import type { InputHTMLAttributes } from 'react'
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string
   error?: string
+  /**
+   * Shows a red asterisk after the label. Opt-in rather than driven by
+   * `required`, so existing forms keep their exact label text.
+   */
+  requiredMarker?: boolean
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, id, className = '', ...props }, ref) => {
+  ({ label, error, requiredMarker, id, className = '', ...props }, ref) => {
     const inputId = id ?? label?.toLowerCase().replace(/\s+/g, '-')
     return (
       <div className="overflow-hidden">
         {label && (
           <label htmlFor={inputId} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            {label}
+            {label}{requiredMarker && <span className="text-red-500" aria-hidden="true"> *</span>}
           </label>
         )}
         <input

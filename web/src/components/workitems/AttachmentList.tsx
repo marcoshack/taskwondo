@@ -12,6 +12,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { ScrollableRow } from '@/components/ui/ScrollableRow'
 import { isPreviewable } from './FilePreviewModal'
+import { formatFileSize } from '@/utils/fileSize'
 
 interface AttachmentListProps {
   projectKey: string
@@ -21,12 +22,6 @@ interface AttachmentListProps {
   onHighlightClear?: () => void
   onPreview?: (attachment: Attachment) => void
   readOnly?: boolean
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
 export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc', highlightedAttachmentId, onHighlightClear, onPreview, readOnly = false }: AttachmentListProps) {

@@ -15,14 +15,9 @@ import { ArrowLeft, CalendarPlus, Check, History, Pencil } from 'lucide-react'
 import { getToken } from '@/api/client'
 import type { PortalComment, PortalAttachment } from '@/api/portal'
 import type { Attachment } from '@/api/workitems'
+import { formatFileSize } from '@/utils/fileSize'
 
 type Tab = 'comments' | 'attachments'
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
 
 export function PortalTicketDetailPage() {
   const { t } = useTranslation()

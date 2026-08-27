@@ -61,8 +61,8 @@ export async function listAllProjects(): Promise<Project[]> {
   return res.data.data
 }
 
-export async function getProject(projectKey: string) {
-  const res = await api.get<ProjectResponse>(`${nsPrefix()}/projects/${projectKey}`)
+export async function getProject(projectKey: string, namespaceSlug?: string) {
+  const res = await api.get<ProjectResponse>(`${nsPrefix(namespaceSlug)}/projects/${projectKey}`)
   return res.data.data
 }
 
@@ -137,8 +137,8 @@ export interface ProjectTypeWorkflow {
   workflow_id: string
 }
 
-export async function getTypeWorkflows(projectKey: string) {
-  const res = await api.get<{ data: ProjectTypeWorkflow[] }>(`${nsPrefix()}/projects/${projectKey}/type-workflows`)
+export async function getTypeWorkflows(projectKey: string, namespaceSlug?: string) {
+  const res = await api.get<{ data: ProjectTypeWorkflow[] }>(`${nsPrefix(namespaceSlug)}/projects/${projectKey}/type-workflows`)
   return res.data.data
 }
 

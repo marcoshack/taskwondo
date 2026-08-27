@@ -1039,6 +1039,14 @@ func (m *mockStorage) Delete(_ context.Context, key string) error {
 
 func workItemTestSetup(t *testing.T) (*WorkItemHandler, *model.AuthInfo, string) {
 	t.Helper()
+	h, info, projectKey, _, _ := workItemTestSetupParts(t)
+	return h, info, projectKey
+}
+
+// workItemTestSetupParts is workItemTestSetup, also handing back the workflow
+// and project repos so callers can wire a workflow onto the test project.
+func workItemTestSetupParts(t *testing.T) (*WorkItemHandler, *model.AuthInfo, string, *mockWorkflowRepo, *mockProjectRepo) {
+	t.Helper()
 
 	projectRepo := newMockProjectRepo()
 	memberRepo := newMockProjectMemberRepo()
@@ -1082,7 +1090,36 @@ func workItemTestSetup(t *testing.T) (*WorkItemHandler, *model.AuthInfo, string)
 		Role:      model.ProjectRoleOwner,
 	})
 
-	return h, info, "TEST"
+	return h, info, "TEST", workflowRepo, projectRepo
+}
+
+// workItemTestSetupWithWorkflow is workItemTestSetup plus a project default
+// workflow, needed by tests that exercise statuses at creation time.
+func workItemTestSetupWithWorkflow(t *testing.T) (*WorkItemHandler, *model.AuthInfo, string) {
+	t.Helper()
+
+	h, info, projectKey, workflowRepo, projectRepo := workItemTestSetupParts(t)
+
+	wf := &model.Workflow{
+		ID:        uuid.New(),
+		Name:      "Status Workflow",
+		IsDefault: true,
+		Statuses: []model.WorkflowStatus{
+			{Name: "open", DisplayName: "Open", Category: model.CategoryTodo, Position: 0},
+			{Name: "in_progress", DisplayName: "In Progress", Category: model.CategoryInProgress, Position: 1},
+			{Name: "done", DisplayName: "Done", Category: model.CategoryDone, Position: 2},
+		},
+	}
+	workflowRepo.Create(context.Background(), wf)
+
+	project, err := projectRepo.GetByKey(context.Background(), projectKey)
+	if err != nil {
+		t.Fatalf("setup: getting project: %v", err)
+	}
+	project.DefaultWorkflowID = &wf.ID
+	projectRepo.Update(context.Background(), project)
+
+	return h, info, projectKey
 }
 
 type workItemSLASetup struct {
@@ -1168,6 +1205,51 @@ func createTestWorkItem(t *testing.T, h *WorkItemHandler, info *model.AuthInfo, 
 }
 
 // --- Tests ---
+
+func TestCreateWorkItem_Handler_WithStatus(t *testing.T) {
+	h, info, projectKey := workItemTestSetupWithWorkflow(t)
+
+	body := `{"type":"task","title":"Already underway","status":"in_progress"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/TEST/items", bytes.NewBufferString(body))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", projectKey)
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	h.Create(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data := resp["data"].(map[string]interface{})
+	if data["status"] != "in_progress" {
+		t.Fatalf("expected status 'in_progress', got %v", data["status"])
+	}
+}
+
+func TestCreateWorkItem_Handler_RejectsClosedStatus(t *testing.T) {
+	h, info, projectKey := workItemTestSetupWithWorkflow(t)
+
+	body := `{"type":"task","title":"Born done","status":"done"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/default/projects/TEST/items", bytes.NewBufferString(body))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("projectKey", projectKey)
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = model.ContextWithAuthInfo(ctx, info)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	h.Create(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for a done status, got %d: %s", w.Code, w.Body.String())
+	}
+}
 
 func TestCreateWorkItem_Handler_Success(t *testing.T) {
 	h, info, projectKey := workItemTestSetup(t)

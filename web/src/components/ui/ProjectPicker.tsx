@@ -10,9 +10,11 @@ interface ProjectPickerProps {
   value: string
   onChange: (projectKey: string) => void
   disabled?: boolean
+  /** Validation message; also turns the control's border red. */
+  error?: string
 }
 
-export function ProjectPicker({ projects, value, onChange, disabled }: ProjectPickerProps) {
+export function ProjectPicker({ projects, value, onChange, disabled, error }: ProjectPickerProps) {
   const { t } = useTranslation()
   const { showSwitcher: showNamespaces } = useNamespaceContext()
   const [open, setOpen] = useState(false)
@@ -48,7 +50,9 @@ export function ProjectPicker({ projects, value, onChange, disabled }: ProjectPi
       </label>
       <button
         type="button"
-        className={`block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-left shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+        className={`block w-full rounded-md border px-3 py-2 text-sm text-left shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 ${
+          error ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'
+        } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
         onClick={() => { if (disabled) return; setOpen(!open); setTimeout(() => inputRef.current?.focus(), 0) }}
         disabled={disabled}
       >
@@ -106,6 +110,8 @@ export function ProjectPicker({ projects, value, onChange, disabled }: ProjectPi
           </ul>
         </div>
       )}
+
+      {error && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{error}</p>}
     </div>
   )
 }

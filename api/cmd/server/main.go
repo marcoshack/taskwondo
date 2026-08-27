@@ -315,7 +315,7 @@ func main() {
 	milestones := handler.NewMilestoneHandler(milestoneService)
 	items := handler.NewWorkItemHandler(workItemService, slaService, cfg.MaxUploadSize, cfg.BaseURL)
 	userSettings := handler.NewUserSettingHandler(userSettingService)
-	systemSettings := handler.NewSystemSettingHandler(systemSettingService, encryptor, emailSender)
+	systemSettings := handler.NewSystemSettingHandler(systemSettingService, encryptor, emailSender, cfg.MaxUploadSize)
 	admin := handler.NewAdminHandler(adminService)
 	sla := handler.NewSLAHandler(slaService)
 	escalations := handler.NewEscalationHandler(escalationService)

@@ -109,6 +109,7 @@ type CreateWorkItemInput struct {
 	Title        string
 	Description  *string
 	Priority     string
+	Status       string // optional initial status; must be an open status of the item's workflow
 	AssigneeID   *uuid.UUID
 	Labels       []string
 	Complexity   *int
@@ -443,17 +444,35 @@ func (s *WorkItemService) Create(ctx context.Context, info *model.AuthInfo, proj
 		customFields = map[string]interface{}{}
 	}
 
-	// Determine initial status from the type-specific workflow
+	// Determine initial status from the type-specific workflow. A caller-supplied
+	// status overrides it, as long as the workflow declares it and it is still
+	// open — creating an item straight into a done/cancelled status would skip
+	// the resolution bookkeeping (resolved_at, SLA stop) that transitions do.
 	initialStatus := "open"
 	var slaTargetAt *time.Time
-	if wfID, err := s.resolveWorkflowID(ctx, project.ID, input.Type, project.DefaultWorkflowID); err == nil {
+	wfID, wfErr := s.resolveWorkflowID(ctx, project.ID, input.Type, project.DefaultWorkflowID)
+	if wfErr == nil {
 		if status, err := s.workflows.GetInitialStatus(ctx, wfID); err == nil {
 			initialStatus = status.Name
+		}
+		if input.Status != "" {
+			statuses, err := s.workflows.ListStatuses(ctx, wfID)
+			if err != nil {
+				return nil, fmt.Errorf("listing workflow statuses: %w", err)
+			}
+			if err := validateInitialStatus(input.Status, statuses); err != nil {
+				return nil, err
+			}
+			initialStatus = input.Status
 		}
 		// Compute SLA deadline for the initial status (elapsed is 0 for new items)
 		if target, err := s.sla.GetTarget(ctx, project.ID, input.Type, wfID, initialStatus, input.Priority); err == nil {
 			slaTargetAt = ComputeSLATargetAtSimple(target.TargetSeconds, target.CalendarMode, project.BusinessHours)
 		}
+	} else if input.Status != "" {
+		// Without a resolvable workflow there is nothing to validate the status
+		// against, so refuse rather than silently dropping the caller's choice.
+		return nil, fmt.Errorf("cannot set status: no workflow resolved for type %q: %w", input.Type, model.ErrValidation)
 	}
 
 	item := &model.WorkItem{
@@ -2349,6 +2368,22 @@ func isValidVisibility(v string) bool {
 		return true
 	}
 	return false
+}
+
+// validateInitialStatus checks that a caller-supplied creation status names an
+// open status of the given workflow. Done and cancelled statuses are rejected:
+// items reach those through transitions, which is what records resolved_at.
+func validateInitialStatus(status string, statuses []model.WorkflowStatus) error {
+	for _, st := range statuses {
+		if st.Name != status {
+			continue
+		}
+		if st.Category == model.CategoryDone || st.Category == model.CategoryCancelled {
+			return fmt.Errorf("status %q is not an open status: %w", status, model.ErrValidation)
+		}
+		return nil
+	}
+	return fmt.Errorf("status %q is not part of this work item's workflow: %w", status, model.ErrValidation)
 }
 
 func isValidSortField(s string) bool {

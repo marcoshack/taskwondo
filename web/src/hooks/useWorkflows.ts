@@ -48,10 +48,10 @@ export function useTransitionsMap(workflowId: string) {
  * Uses project-level endpoints accessible to all project members.
  * Priority: type-specific mapping > project default > first available default.
  */
-export function useProjectWorkflow(projectKey: string, workItemType?: string) {
-  const { data: project } = useProject(projectKey)
-  const { data: projectWorkflows } = useProjectWorkflows(projectKey)
-  const { data: typeWorkflows } = useTypeWorkflows(projectKey)
+export function useProjectWorkflow(projectKey: string, workItemType?: string, namespaceSlug?: string) {
+  const { data: project } = useProject(projectKey, namespaceSlug)
+  const { data: projectWorkflows } = useProjectWorkflows(projectKey, namespaceSlug)
+  const { data: typeWorkflows } = useTypeWorkflows(projectKey, namespaceSlug)
 
   // Resolve workflow ID: type-specific > project default > first available default
   let workflowId = ''
@@ -66,7 +66,7 @@ export function useProjectWorkflow(projectKey: string, workItemType?: string) {
   }
 
   // Fetch workflow detail via project-level endpoint (includes statuses + transitions)
-  const workflowQuery = useProjectWorkflowDetail(projectKey, workflowId)
+  const workflowQuery = useProjectWorkflowDetail(projectKey, workflowId, namespaceSlug)
 
   // Build transitions map from workflow detail
   const transitionsMap = useMemo(() => {
@@ -129,18 +129,22 @@ export function useDeleteSystemWorkflow() {
 
 // --- Project workflow hooks ---
 
-export function useProjectWorkflows(projectKey: string) {
+export function useProjectWorkflows(projectKey: string, namespaceSlug?: string) {
   return useQuery({
-    queryKey: ['projects', projectKey, 'workflows'],
-    queryFn: () => listProjectWorkflows(projectKey),
+    queryKey: namespaceSlug
+      ? ['projects', namespaceSlug, projectKey, 'workflows']
+      : ['projects', projectKey, 'workflows'],
+    queryFn: () => listProjectWorkflows(projectKey, namespaceSlug),
     enabled: !!projectKey,
   })
 }
 
-export function useProjectWorkflowDetail(projectKey: string, workflowId: string) {
+export function useProjectWorkflowDetail(projectKey: string, workflowId: string, namespaceSlug?: string) {
   return useQuery({
-    queryKey: ['projects', projectKey, 'workflows', workflowId],
-    queryFn: () => getProjectWorkflow(projectKey, workflowId),
+    queryKey: namespaceSlug
+      ? ['projects', namespaceSlug, projectKey, 'workflows', workflowId]
+      : ['projects', projectKey, 'workflows', workflowId],
+    queryFn: () => getProjectWorkflow(projectKey, workflowId, namespaceSlug),
     enabled: !!projectKey && !!workflowId,
   })
 }

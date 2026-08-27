@@ -75,13 +75,16 @@ func testEncryptor(t *testing.T) *crypto.Encryptor {
 	return enc
 }
 
+// testMaxUploadSize is the attachment cap the handler under test publishes.
+const testMaxUploadSize = int64(25 * 1024 * 1024)
+
 func systemSettingTestSetup(t *testing.T) (*SystemSettingHandler, *mockSystemSettingRepo) {
 	t.Helper()
 	repo := newMockSystemSettingRepo()
 	svc := service.NewSystemSettingService(repo)
 	enc := testEncryptor(t)
 	sender := email.NewSender(enc, repo)
-	h := NewSystemSettingHandler(svc, enc, sender)
+	h := NewSystemSettingHandler(svc, enc, sender, testMaxUploadSize)
 	return h, repo
 }
 
@@ -291,6 +294,30 @@ func TestSystemSettingGetPublicHandler(t *testing.T) {
 	data := resp["data"].(map[string]interface{})
 	if data["brand_name"] != "MyBrand" {
 		t.Fatalf("expected brand_name MyBrand, got %v", data["brand_name"])
+	}
+}
+
+func TestSystemSettingGetPublicHandler_IncludesMaxUploadSize(t *testing.T) {
+	h, _ := systemSettingTestSetup(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/settings/public", nil)
+	w := httptest.NewRecorder()
+
+	h.GetPublic(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data := resp["data"].(map[string]interface{})
+	got, ok := data[model.SettingMaxUploadSize].(float64)
+	if !ok {
+		t.Fatalf("expected %s to be a number, got %T", model.SettingMaxUploadSize, data[model.SettingMaxUploadSize])
+	}
+	if int64(got) != testMaxUploadSize {
+		t.Fatalf("expected max_upload_size %d, got %d", testMaxUploadSize, int64(got))
 	}
 }
 

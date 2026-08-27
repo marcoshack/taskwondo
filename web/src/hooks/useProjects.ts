@@ -55,10 +55,12 @@ export function useMaxProjects() {
   })
 }
 
-export function useProject(projectKey: string) {
+export function useProject(projectKey: string, namespaceSlug?: string) {
   return useQuery({
-    queryKey: ['projects', projectKey],
-    queryFn: () => getProject(projectKey),
+    // Same cache-scoping rule as useMembers: only widen the key when the caller
+    // targets a namespace other than the active one.
+    queryKey: namespaceSlug ? ['projects', namespaceSlug, projectKey] : ['projects', projectKey],
+    queryFn: () => getProject(projectKey, namespaceSlug),
     enabled: !!projectKey,
   })
 }
@@ -144,10 +146,12 @@ export function useDeleteProject(projectKey: string) {
   })
 }
 
-export function useTypeWorkflows(projectKey: string) {
+export function useTypeWorkflows(projectKey: string, namespaceSlug?: string) {
   return useQuery({
-    queryKey: ['projects', projectKey, 'type-workflows'],
-    queryFn: () => getTypeWorkflows(projectKey),
+    queryKey: namespaceSlug
+      ? ['projects', namespaceSlug, projectKey, 'type-workflows']
+      : ['projects', projectKey, 'type-workflows'],
+    queryFn: () => getTypeWorkflows(projectKey, namespaceSlug),
     enabled: !!projectKey,
   })
 }

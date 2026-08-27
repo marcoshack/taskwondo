@@ -69,6 +69,8 @@ export interface CreateWorkItemInput {
   title: string
   description?: string
   priority?: string
+  /** Optional initial status. Must be an open status of the item's workflow. */
+  status?: string
   assignee_id?: string
   labels?: string[]
   complexity?: number
@@ -244,8 +246,8 @@ export async function createWorkItem(projectKey: string, input: CreateWorkItemIn
   return res.data.data
 }
 
-export async function updateWorkItem(projectKey: string, itemNumber: number, input: UpdateWorkItemInput) {
-  const res = await api.patch<DataResponse<WorkItem>>(`${nsPrefix()}/projects/${projectKey}/items/${itemNumber}`, input)
+export async function updateWorkItem(projectKey: string, itemNumber: number, input: UpdateWorkItemInput, namespaceSlug?: string) {
+  const res = await api.patch<DataResponse<WorkItem>>(`${nsPrefix(namespaceSlug)}/projects/${projectKey}/items/${itemNumber}`, input)
   return res.data.data
 }
 
@@ -346,7 +348,10 @@ export async function uploadAttachment(
   projectKey: string,
   itemNumber: number,
   file: File,
-  comment?: string
+  comment?: string,
+  namespaceSlug?: string,
+  /** Called with the bytes sent so far, for upload progress reporting. */
+  onUploadProgress?: (loadedBytes: number) => void
 ) {
   const formData = new FormData()
   formData.append('file', file)
@@ -354,9 +359,12 @@ export async function uploadAttachment(
     formData.append('comment', comment)
   }
   const res = await api.post<DataResponse<Attachment>>(
-    `${nsPrefix()}/projects/${projectKey}/items/${itemNumber}/attachments`,
+    `${nsPrefix(namespaceSlug)}/projects/${projectKey}/items/${itemNumber}/attachments`,
     formData,
-    { headers: { 'Content-Type': undefined as unknown as string } }
+    {
+      headers: { 'Content-Type': undefined as unknown as string },
+      onUploadProgress: onUploadProgress ? (e) => onUploadProgress(e.loaded) : undefined,
+    }
   )
   return res.data.data
 }
@@ -387,9 +395,10 @@ export async function updateAttachmentComment(
 export function getAttachmentDownloadURL(
   projectKey: string,
   itemNumber: number,
-  attachmentId: string
+  attachmentId: string,
+  namespaceSlug?: string
 ): string {
-  return `/api/v1${nsPrefix()}/projects/${projectKey}/items/${itemNumber}/attachments/${attachmentId}`
+  return `/api/v1${nsPrefix(namespaceSlug)}/projects/${projectKey}/items/${itemNumber}/attachments/${attachmentId}`
 }
 
 // --- Time Entry Types ---

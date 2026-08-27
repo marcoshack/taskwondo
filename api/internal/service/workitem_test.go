@@ -3091,6 +3091,100 @@ func TestCreate_FallsBackToDefaultWorkflow(t *testing.T) {
 	}
 }
 
+// setupWorkflowForStatusOnCreate wires a project default workflow with one
+// open, one in-progress and one done status, for the creation-status tests.
+func setupWorkflowForStatusOnCreate(t *testing.T, s *testWorkItemSetup, project *model.Project) {
+	t.Helper()
+	wf := createTestWorkflow("Status Workflow", []model.WorkflowStatus{
+		{Name: "open", DisplayName: "Open", Category: model.CategoryTodo, Position: 0},
+		{Name: "in_progress", DisplayName: "In Progress", Category: model.CategoryInProgress, Position: 1},
+		{Name: "done", DisplayName: "Done", Category: model.CategoryDone, Position: 2},
+	}, nil)
+	s.workflowRepo.Create(context.Background(), wf)
+	project.DefaultWorkflowID = &wf.ID
+	s.projectRepo.Update(context.Background(), project)
+}
+
+func TestCreate_WithOpenStatus(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	project := setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleOwner)
+	setupWorkflowForStatusOnCreate(t, s, project)
+
+	item, err := s.svc.Create(context.Background(), info, "TEST", CreateWorkItemInput{
+		Type: model.WorkItemTypeTask, Title: "Already started", Status: "in_progress",
+	})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if item.Status != "in_progress" {
+		t.Errorf("expected status 'in_progress', got %q", item.Status)
+	}
+	if item.ResolvedAt != nil {
+		t.Errorf("expected resolved_at to stay nil for an open status, got %v", item.ResolvedAt)
+	}
+}
+
+func TestCreate_EmptyStatusUsesWorkflowInitial(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	project := setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleOwner)
+	setupWorkflowForStatusOnCreate(t, s, project)
+
+	item, err := s.svc.Create(context.Background(), info, "TEST", CreateWorkItemInput{
+		Type: model.WorkItemTypeTask, Title: "Default status",
+	})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if item.Status != "open" {
+		t.Errorf("expected initial status 'open', got %q", item.Status)
+	}
+}
+
+func TestCreate_RejectsDoneStatus(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	project := setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleOwner)
+	setupWorkflowForStatusOnCreate(t, s, project)
+
+	_, err := s.svc.Create(context.Background(), info, "TEST", CreateWorkItemInput{
+		Type: model.WorkItemTypeTask, Title: "Born done", Status: "done",
+	})
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation for a done status, got %v", err)
+	}
+}
+
+func TestCreate_RejectsStatusOutsideWorkflow(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	project := setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleOwner)
+	setupWorkflowForStatusOnCreate(t, s, project)
+
+	_, err := s.svc.Create(context.Background(), info, "TEST", CreateWorkItemInput{
+		Type: model.WorkItemTypeTask, Title: "Bogus", Status: "nope",
+	})
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation for an unknown status, got %v", err)
+	}
+}
+
+func TestCreate_RejectsStatusWhenNoWorkflowResolves(t *testing.T) {
+	s := newTestWorkItemSetup()
+	info := userAuthInfo()
+	setupProjectWithMember(t, s.projectRepo, s.memberRepo, info, model.ProjectRoleOwner)
+
+	// No workflow is registered, so there is nothing to validate the status
+	// against — the request must fail rather than silently ignore the choice.
+	_, err := s.svc.Create(context.Background(), info, "TEST", CreateWorkItemInput{
+		Type: model.WorkItemTypeTask, Title: "No workflow", Status: "in_progress",
+	})
+	if !errors.Is(err, model.ErrValidation) {
+		t.Fatalf("expected ErrValidation when no workflow resolves, got %v", err)
+	}
+}
+
 func TestUpdate_TypeChange_StatusCompatible(t *testing.T) {
 	s := newTestWorkItemSetup()
 	info := userAuthInfo()

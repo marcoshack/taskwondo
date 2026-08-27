@@ -5,16 +5,21 @@ import { ChevronDown } from 'lucide-react'
 interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   label?: string
   error?: string
+  /**
+   * Shows a red asterisk after the label. Opt-in rather than driven by
+   * `required`, so existing forms keep their exact label text.
+   */
+  requiredMarker?: boolean
 }
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ label, error, id, className = '', children, ...props }, ref) => {
+  ({ label, error, requiredMarker, id, className = '', children, ...props }, ref) => {
     const selectId = id ?? label?.toLowerCase().replace(/\s+/g, '-')
     return (
       <div>
         {label && (
           <label htmlFor={selectId} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            {label}
+            {label}{requiredMarker && <span className="text-red-500" aria-hidden="true"> *</span>}
           </label>
         )}
         <div className="relative">

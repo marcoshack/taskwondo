@@ -13,6 +13,10 @@ const (
 	SettingDefaultTypeWorkflows = "default_type_workflows"
 	SettingSMTPConfig           = "smtp_config"
 
+	// SettingMaxUploadSize is published with the public settings but is sourced
+	// from the MAX_UPLOAD_SIZE env config, not the settings table.
+	SettingMaxUploadSize = "max_upload_size"
+
 	// Authentication settings
 	SettingAuthEmailLoginEnabled        = "auth_email_login_enabled"
 	SettingAuthEmailRegistrationEnabled = "auth_email_registration_enabled"

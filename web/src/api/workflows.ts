@@ -91,13 +91,13 @@ export async function listSystemStatuses() {
 
 // --- Project Workflow API Functions ---
 
-export async function listProjectWorkflows(projectKey: string) {
-  const res = await api.get<DataResponse<Workflow[]>>(`${nsPrefix()}/projects/${projectKey}/workflows`)
+export async function listProjectWorkflows(projectKey: string, namespaceSlug?: string) {
+  const res = await api.get<DataResponse<Workflow[]>>(`${nsPrefix(namespaceSlug)}/projects/${projectKey}/workflows`)
   return res.data.data
 }
 
-export async function getProjectWorkflow(projectKey: string, workflowId: string) {
-  const res = await api.get<DataResponse<WorkflowDetail>>(`${nsPrefix()}/projects/${projectKey}/workflows/${workflowId}`)
+export async function getProjectWorkflow(projectKey: string, workflowId: string, namespaceSlug?: string) {
+  const res = await api.get<DataResponse<WorkflowDetail>>(`${nsPrefix(namespaceSlug)}/projects/${projectKey}/workflows/${workflowId}`)
   return res.data.data
 }
 
