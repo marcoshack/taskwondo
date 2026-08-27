@@ -712,7 +712,7 @@
   "shortcuts.title": "Keyboard Shortcuts",
   "shortcuts.then": "then",
   "shortcuts.navigation": "Navigation",
-  "shortcuts.navigation.switchProject": "Switch project",
+  "shortcuts.navigation.commandPalette": "Open command palette",
   "shortcuts.navigation.goToInbox": "Go to inbox",
   "shortcuts.navigation.goToItems": "Go to items",
   "shortcuts.navigation.preferences": "User preferences",
@@ -1297,7 +1297,6 @@
   "watchlist.empty": "You're not watching any items yet",
   "watchlist.emptyHint": "Use the bell icon on work items to add them to your watchlist",
 
-  "search.placeholder": "Search across all projects...",
   "search.hint": "Type at least 2 characters to search",
   "search.noResults": "No results found",
   "search.showMore": "Show more results",
@@ -1317,7 +1316,6 @@
   "search.entityType.comment": "Comments",
   "search.entityType.attachment": "Attachments",
 
-  "shortcuts.actions.globalSearch": "Global search",
 
   "namespaces.title": "Namespaces",
   "namespaces.namespace": "Namespace",

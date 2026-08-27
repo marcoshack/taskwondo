@@ -117,17 +117,12 @@ export function AppShell() {
     return () => document.removeEventListener('mousedown', handler)
   }, [menuOpen, nsDropdownOpen])
 
-  // Sequential combos: g-p (project switcher), g-i (inbox), g-o (project items)
+  // Sequential combos: g-i (inbox), g-o (project items)
   // useLayoutEffect ensures combos are registered before paint, so keyboard
   // shortcuts are available as soon as the UI is visible (prevents flaky E2E tests).
+  // The project switcher no longer has a combo — it opens from the nav badge or
+  // from the command palette.
   const { registerSequentialCombo } = useKeyboardShortcutContext()
-  useLayoutEffect(() => {
-    return registerSequentialCombo({
-      id: 'go-to-projects',
-      keys: ['g', 'p'],
-      callback: () => setSwitcherOpen(true),
-    })
-  }, [registerSequentialCombo])
   useLayoutEffect(() => {
     return registerSequentialCombo({
       id: 'go-to-inbox',
@@ -147,13 +142,10 @@ export function AppShell() {
     // previous namespace's segment and routes to the wrong URL (TF-345).
   }, [activeProjectKey, p, guardedNavigate, registerSequentialCombo])
 
-  useLayoutEffect(() => {
-    return registerSequentialCombo({
-      id: 'global-search',
-      keys: ['g', 'k'],
-      callback: () => setSearchOpen(true),
-    })
-  }, [registerSequentialCombo])
+  // Cmd+K on macOS, Ctrl+K elsewhere — `ctrlKey` in useKeyboardShortcut matches
+  // either. Closing on a second press is handled inside the palette's input,
+  // because the global layer is muted while a modal is open.
+  useKeyboardShortcut({ key: 'k', ctrlKey: true }, () => setSearchOpen(true))
 
   useKeyboardShortcut({ key: '?' }, () => setShortcutsOpen(true))
   useKeyboardShortcut({ key: ',', ctrlKey: true }, () => guardedNavigate('/preferences'))

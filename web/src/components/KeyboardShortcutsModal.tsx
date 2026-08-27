@@ -4,6 +4,8 @@ import { Modal } from '@/components/ui/Modal'
 interface ShortcutEntry {
   keys: string[]
   label: string
+  /** Chords are pressed together ("Ctrl + ,"); without this the keys are a sequence ("g then p"). */
+  chord?: boolean
 }
 
 interface ShortcutCategory {
@@ -19,14 +21,14 @@ function Kbd({ children }: { children: string }) {
   )
 }
 
-function ShortcutRow({ keys, label, thenLabel }: ShortcutEntry & { thenLabel: string }) {
+function ShortcutRow({ keys, label, chord, thenLabel }: ShortcutEntry & { thenLabel: string }) {
   return (
     <div className="flex items-center justify-between py-1.5">
       <span className="text-sm text-gray-600 dark:text-gray-300">{label}</span>
       <span className="flex items-center gap-1 shrink-0 ml-4">
         {keys.map((k, i) => (
           <span key={i} className="flex items-center gap-1">
-            {i > 0 && <span className="text-xs text-gray-400">{thenLabel}</span>}
+            {i > 0 && <span className="text-xs text-gray-400">{chord ? '+' : thenLabel}</span>}
             <Kbd>{k}</Kbd>
           </span>
         ))}
@@ -42,11 +44,10 @@ export function KeyboardShortcutsModal({ open, onClose }: { open: boolean; onClo
     {
       title: t('shortcuts.navigation'),
       shortcuts: [
-        { keys: ['g', 'p'], label: t('shortcuts.navigation.switchProject') },
+        { keys: ['Ctrl/\u2318', 'K'], label: t('shortcuts.navigation.commandPalette'), chord: true },
         { keys: ['g', 'o'], label: t('shortcuts.navigation.goToItems') },
         { keys: ['g', 'i'], label: t('shortcuts.navigation.goToInbox') },
-        { keys: ['g', 'k'], label: t('shortcuts.actions.globalSearch') },
-        { keys: ['Ctrl', ','], label: t('shortcuts.navigation.preferences') },
+        { keys: ['Ctrl', ','], label: t('shortcuts.navigation.preferences'), chord: true },
         { keys: ['['], label: t('shortcuts.navigation.toggleSidebar') },
       ],
     },
@@ -106,7 +107,7 @@ export function KeyboardShortcutsModal({ open, onClose }: { open: boolean; onClo
             </h3>
             <div className="divide-y divide-gray-100 dark:divide-gray-700">
               {cat.shortcuts.map((s, i) => (
-                <ShortcutRow key={i} keys={s.keys} label={s.label} thenLabel={t('shortcuts.then')} />
+                <ShortcutRow key={i} keys={s.keys} label={s.label} chord={s.chord} thenLabel={t('shortcuts.then')} />
               ))}
             </div>
           </div>

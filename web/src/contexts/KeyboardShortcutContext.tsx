@@ -1,5 +1,6 @@
 import { createContext, useContext, useRef, useCallback, useLayoutEffect } from 'react'
 import type { ReactNode } from 'react'
+import { resolveSequenceKey } from '@/utils/keySequence'
 
 interface SequentialCombo {
   keys: string[]
@@ -49,33 +50,42 @@ export function KeyboardShortcutProvider({ children }: { children: ReactNode }) 
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
       if ((e.target as HTMLElement).isContentEditable) return
 
-      const key = e.key.toLowerCase()
+      const decision = resolveSequenceKey(pendingKeyRef.current, e, combosRef.current)
 
-      // Check if this key completes a pending combo
-      if (pendingKeyRef.current) {
-        const sequence = [pendingKeyRef.current, key]
+      if (decision.action !== 'start') {
         clearTimeout(timeoutRef.current)
         pendingKeyRef.current = null
-
-        for (const combo of combosRef.current) {
-          if (combo.keys.length === sequence.length &&
-              combo.keys.every((k, i) => k === sequence[i])) {
-            e.preventDefault()
-            combo.callback()
-            return
-          }
-        }
-        // No match — fall through
-        return
       }
 
-      // Check if this key starts a combo
-      const startsCombo = combosRef.current.some((c) => c.keys[0] === key)
-      if (startsCombo) {
-        pendingKeyRef.current = key
-        timeoutRef.current = setTimeout(() => {
-          pendingKeyRef.current = null
-        }, COMBO_TIMEOUT_MS)
+      switch (decision.action) {
+        case 'start':
+          pendingKeyRef.current = decision.pendingKey
+          clearTimeout(timeoutRef.current)
+          timeoutRef.current = setTimeout(() => {
+            pendingKeyRef.current = null
+          }, COMBO_TIMEOUT_MS)
+          return
+        case 'complete': {
+          // The second key of a sequence belongs to the sequence. This provider's
+          // listener is registered in a layout effect, ahead of every
+          // `useKeyboardShortcut` listener (passive effects), so stopping
+          // immediate propagation reliably keeps the key from also firing a bare
+          // single-key shortcut such as `o` on a list page.
+          e.preventDefault()
+          e.stopImmediatePropagation()
+          combosRef.current.find((c) => c.id === decision.comboId)?.callback()
+          return
+        }
+        case 'consume':
+          // Matched nothing, but it was still the sequence's second key.
+          e.preventDefault()
+          e.stopImmediatePropagation()
+          return
+        case 'cancel':
+        case 'passThrough':
+          // A chord is never a sequence key: any pending sequence was dropped
+          // above and the event continues on to the chord's own handler.
+          return
       }
     }
 
