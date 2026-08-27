@@ -1,4 +1,5 @@
 import { api } from './client'
+import { buildSearchParams } from '@/utils/searchRequest'
 
 // --- Types ---
 
@@ -45,12 +46,25 @@ interface DataResponse<T> {
  */
 export async function unifiedSearch(
   query: string,
-  options?: { entityTypes?: string[]; limit?: number; signal?: AbortSignal },
+  options?: {
+    entityTypes?: string[]
+    limit?: number
+    /**
+     * Project key (e.g. `TF`) to scope the search to. Everything but `project`
+     * hits comes back limited to that project; omit it for a global search.
+     * An unknown or inaccessible key is rejected with 403 by the backend — it
+     * never silently falls back to the unscoped search.
+     */
+    project?: string | null
+    signal?: AbortSignal
+  },
 ): Promise<UnifiedSearchResponse> {
-  const params = new URLSearchParams()
-  params.set('q', query)
-  if (options?.entityTypes?.length) params.set('entity_type', options.entityTypes.join(','))
-  if (options?.limit) params.set('limit', String(options.limit))
+  const params = buildSearchParams({
+    query,
+    entityTypes: options?.entityTypes,
+    limit: options?.limit,
+    project: options?.project,
+  })
   const res = await api.get<DataResponse<UnifiedSearchResponse>>(`/search?${params}`, {
     signal: options?.signal,
   })

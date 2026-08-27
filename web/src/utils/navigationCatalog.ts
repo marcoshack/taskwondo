@@ -16,7 +16,7 @@
  *
  * This module must stay free of `@/api/client` — see `@/utils/sidebarNav`.
  */
-import { Building2, Settings } from 'lucide-react'
+import { Building2, FolderKanban, Settings } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import {
   isCustomerOnly,
@@ -105,6 +105,17 @@ export function buildNavigationCatalog(input: NavigationCatalogInput): Navigatio
       ...fromSidebar('project', projectNavItems(t, base, isCustomerProject(user, activeProjectKey))),
     )
   }
+
+  // The project list. Deliberately first in the `user` group and outside the
+  // `isCustomerOnly` gate, mirroring AppSidebar, which links `/projects` for
+  // everyone. It must not depend on `activeProjectKey`: with `g p` retired,
+  // the palette is the only way to reach the list, including from a session
+  // that has never opened a project.
+  entries.push(
+    ...fromSidebar('user', [
+      { to: p('/projects'), label: t('sidebar.projects'), icon: FolderKanban, end: true },
+    ]),
+  )
 
   // Personal pages — hidden for users who are customers in every project,
   // matching what AppSidebar does.

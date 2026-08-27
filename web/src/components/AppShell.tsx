@@ -18,7 +18,7 @@ import { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react
 import { useKeyboardShortcutContext } from '@/contexts/KeyboardShortcutContext'
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
 import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal'
-import { SearchModal } from '@/components/SearchModal'
+import { CommandPalette } from '@/components/CommandPalette'
 import { WelcomeModal } from '@/components/WelcomeModal'
 import { usePreference, useSetPreference } from '@/hooks/usePreferences'
 import { useBrand } from '@/contexts/BrandContext'
@@ -386,7 +386,7 @@ export function AppShell() {
           guardedNavigate(`/${segment}/projects/${key}${projectSection}`)
         }}
       />
-      <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
+      <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} projectKey={activeProjectKey} />
       <KeyboardShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
       <WelcomeModal
         open={welcomeOpen}

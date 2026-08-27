@@ -1380,6 +1380,12 @@
   "namespaces.revokeInviteConfirmTitle": "Revoke invite",
   "namespaces.revokeInviteConfirmBody": "Are you sure you want to revoke the invite for <bold>{{email}}</bold>?",
 
+  "palette.placeholder": "Search or jump to...",
+  "palette.group.project": "Project {{project}}",
+  "palette.group.user": "Workspace",
+  "palette.group.preferences": "Preferences",
+  "palette.group.admin": "System Settings",
+  "palette.group.namespace": "Namespaces",
   "palette.nav.switchToNamespace": "Switch to {{name}}",
   "palette.nav.namespaceSettings": "{{name}} settings",
 

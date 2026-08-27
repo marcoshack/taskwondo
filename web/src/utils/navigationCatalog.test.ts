@@ -116,21 +116,48 @@ describe('buildNavigationCatalog — active project', () => {
 })
 
 describe('buildNavigationCatalog — user pages', () => {
-  it('lists Inbox, Watchlist and Feed', () => {
+  it('lists Projects, Inbox, Watchlist and Feed', () => {
     expect(labels(inGroup(build(), 'user'))).toEqual([
+      'sidebar.projects',
       'user.sidebar.inbox',
       'user.sidebar.watchlist',
       'user.sidebar.feed',
     ])
   })
 
-  it('hides them for a user who is a customer in every project', () => {
+  it('hides the personal pages for a user who is a customer in every project', () => {
     const customerOnly: NavUser = {
       global_role: 'member',
       total_project_count: 1,
       portal_projects: [{ project_key: 'TF' }],
     }
-    expect(inGroup(build({ user: customerOnly }), 'user')).toEqual([])
+    // Projects survives the gate — AppSidebar links it for customers too.
+    expect(labels(inGroup(build({ user: customerOnly }), 'user'))).toEqual(['sidebar.projects'])
+  })
+})
+
+describe('buildNavigationCatalog — the project list', () => {
+  const projectsRow = (entries: NavigationEntry[]) =>
+    entries.find((e) => e.label === 'sidebar.projects')
+
+  it('routes to the namespace-prefixed project list', () => {
+    expect(projectsRow(build())?.target).toEqual({ kind: 'route', to: '/d/projects' })
+  })
+
+  it('is present when no project is active — the palette is the only way there', () => {
+    const entries = build()
+    expect(inGroup(entries, 'project')).toEqual([])
+    expect(projectsRow(entries)).toBeDefined()
+  })
+
+  it('is present when a project is active, and is not one of that project\'s sections', () => {
+    const entries = build({ activeProjectKey: 'TF' })
+    expect(projectsRow(entries)?.group).toBe('user')
+    expect(labels(inGroup(entries, 'project'))).not.toContain('sidebar.projects')
+  })
+
+  it('is matchable by name from the very first character', () => {
+    expect(labels(matchNavigationItems(build(), 'sidebar.proj'))).toEqual(['sidebar.projects'])
   })
 })
 

@@ -5,6 +5,12 @@ import type { SearchResult } from '@/api/search'
 interface UseSearchOptions {
   query: string
   limit?: number
+  /**
+   * Project key (e.g. `TF`) to scope results to. Work items, milestones,
+   * queues, teams, comments and attachments come back limited to that project;
+   * `project` hits stay global. Omit for the unscoped, cross-project search.
+   */
+  project?: string | null
 }
 
 interface UseSearchReturn {
@@ -16,7 +22,7 @@ interface UseSearchReturn {
   isLoading: boolean
 }
 
-export function useSearch({ query, limit = 20 }: UseSearchOptions): UseSearchReturn {
+export function useSearch({ query, limit = 20, project }: UseSearchOptions): UseSearchReturn {
   const [ftsResults, setFtsResults] = useState<SearchResult[]>([])
   const [semanticResults, setSemanticResults] = useState<SearchResult[]>([])
   const [semanticAvailable, setSemanticAvailable] = useState(false)
@@ -50,7 +56,7 @@ export function useSearch({ query, limit = 20 }: UseSearchOptions): UseSearchRet
     setSemanticError(null)
     setIsLoading(true)
 
-    unifiedSearch(query, { limit, signal: controller.signal })
+    unifiedSearch(query, { limit, project, signal: controller.signal })
       .then((data) => {
         setFtsResults(data.fts.results ?? [])
         setSemanticAvailable(data.semantic.available)
@@ -73,7 +79,7 @@ export function useSearch({ query, limit = 20 }: UseSearchOptions): UseSearchRet
     return () => {
       controller.abort()
     }
-  }, [query, limit, resetState])
+  }, [query, limit, project, resetState])
 
   return {
     ftsResults,
