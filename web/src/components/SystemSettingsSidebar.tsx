@@ -2,34 +2,15 @@ import { NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useSidebar } from '@/contexts/SidebarContext'
 import { useNavigationGuard } from '@/contexts/NavigationGuardContext'
-import {
-  Settings,
-  Users,
-  Route,
-  Plug,
-  Lock,
-  ToggleRight,
-  Key,
-  PanelLeftClose,
-  PanelLeftOpen,
-} from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
+import { systemSettingsNavItems } from '@/utils/sidebarNav'
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 
 export function SystemSettingsSidebar() {
   const { t } = useTranslation()
   const { collapsed, toggleCollapsed } = useSidebar('settings')
   const { guardRef, guardedNavigate } = useNavigationGuard()
-  const base = '/admin'
-
-  const navItems: { to: string; label: string; icon: LucideIcon; end: boolean }[] = [
-    { to: 'general', label: t('admin.sidebar.general'), icon: Settings, end: false },
-    { to: 'directory', label: t('admin.sidebar.directory'), icon: Users, end: false },
-    { to: 'workflows', label: t('admin.sidebar.workflows'), icon: Route, end: false },
-    { to: 'authentication', label: t('admin.sidebar.authentication'), icon: Lock, end: false },
-    { to: 'api-keys', label: t('admin.sidebar.apiKeys'), icon: Key, end: false },
-    { to: 'integrations', label: t('admin.sidebar.integrations'), icon: Plug, end: false },
-    { to: 'features', label: t('admin.sidebar.features'), icon: ToggleRight, end: false },
-  ]
+  // Shared with the command palette's navigation catalog — see @/utils/sidebarNav
+  const navItems = systemSettingsNavItems(t)
 
   function renderNavItems(showLabels: boolean) {
     return (
@@ -37,12 +18,12 @@ export function SystemSettingsSidebar() {
         {navItems.map((item) => (
           <li key={item.to}>
             <NavLink
-              to={`${base}/${item.to}`}
+              to={item.to}
               end={item.end}
               onClick={(e) => {
                 if (guardRef.current?.()) {
                   e.preventDefault()
-                  guardedNavigate(`${base}/${item.to}`)
+                  guardedNavigate(item.to)
                 }
               }}
               className={({ isActive }) =>

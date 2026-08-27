@@ -613,6 +613,8 @@
   "namespaces.title": "Espaços de nomes",
   "namespaces.updateError": "Falha ao atualizar o espaço de nomes.",
   "namespaces.updateRoleError": "Falha ao atualizar o papel.",
+  "palette.nav.switchToNamespace": "Mudar para {{name}}",
+  "palette.nav.namespaceSettings": "Configurações de {{name}}",
   "nav.help": "Ajuda",
   "nav.home": "Início",
   "nav.preferences": "Preferências",

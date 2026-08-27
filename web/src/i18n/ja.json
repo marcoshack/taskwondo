@@ -613,6 +613,8 @@
   "namespaces.title": "名前空間",
   "namespaces.updateError": "名前空間の更新に失敗しました。",
   "namespaces.updateRoleError": "ロールの更新に失敗しました。",
+  "palette.nav.switchToNamespace": "{{name}} に切り替え",
+  "palette.nav.namespaceSettings": "{{name}} の設定",
   "nav.help": "ヘルプ",
   "nav.home": "ホーム",
   "nav.preferences": "設定",

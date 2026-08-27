@@ -1380,6 +1380,9 @@
   "namespaces.revokeInviteConfirmTitle": "Revoke invite",
   "namespaces.revokeInviteConfirmBody": "Are you sure you want to revoke the invite for <bold>{{email}}</bold>?",
 
+  "palette.nav.switchToNamespace": "Switch to {{name}}",
+  "palette.nav.namespaceSettings": "{{name}} settings",
+
   "projects.settings.transferNamespace": "Transfer to another namespace",
   "projects.settings.transferNamespaceDescription": "Move this project to a different namespace.",
   "projects.settings.transfer": "Transfer",

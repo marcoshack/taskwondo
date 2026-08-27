@@ -1,15 +1,11 @@
 import { useCallback } from 'react'
 import { useNamespaceContext } from '@/contexts/NamespaceContext'
+import { toUrlSegment, fromUrlSegment } from '@/utils/namespaceUrl'
 
-/** Map namespace slug to URL segment: 'default' → 'd', anything else unchanged */
-export function toUrlSegment(slug: string): string {
-  return slug === 'default' ? 'd' : slug
-}
-
-/** Map URL segment back to namespace slug: 'd' → 'default', anything else unchanged */
-export function fromUrlSegment(segment: string): string {
-  return segment === 'd' ? 'default' : segment
-}
+// Re-exported for existing callers; the implementations live in a client-free
+// module so pure, DOM-less units (e.g. the command palette catalog) can build
+// namespace URLs without dragging in `@/api/client`.
+export { toUrlSegment, fromUrlSegment }
 
 /** Hook returning a path-prefix function `p(path)` for namespace-scoped URLs */
 export function useNamespacePath() {

@@ -1,29 +1,14 @@
 import { NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useSidebar } from '@/contexts/SidebarContext'
-import {
-  User,
-  Settings,
-  Palette,
-  Lock,
-  Bell,
-  PanelLeftClose,
-  PanelLeftOpen,
-} from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
+import { preferencesNavItems } from '@/utils/sidebarNav'
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 
 export function PreferencesSidebar() {
   const { t } = useTranslation()
   const { collapsed, toggleCollapsed } = useSidebar('settings')
-  const base = '/preferences'
-
-  const navItems: { to: string; label: string; icon: LucideIcon; end: boolean }[] = [
-    { to: 'profile', label: t('preferences.sidebar.profile'), icon: User, end: false },
-    { to: 'general', label: t('preferences.sidebar.general'), icon: Settings, end: false },
-    { to: 'appearance', label: t('preferences.sidebar.appearance'), icon: Palette, end: false },
-    { to: 'notifications', label: t('preferences.sidebar.notifications'), icon: Bell, end: false },
-    { to: 'authentication', label: t('preferences.sidebar.authentication'), icon: Lock, end: false },
-  ]
+  // Shared with the command palette's navigation catalog — see @/utils/sidebarNav
+  const navItems = preferencesNavItems(t)
 
   function renderNavItems(showLabels: boolean) {
     return (
@@ -31,7 +16,7 @@ export function PreferencesSidebar() {
         {navItems.map((item) => (
           <li key={item.to}>
             <NavLink
-              to={`${base}/${item.to}`}
+              to={item.to}
               end={item.end}
               className={({ isActive }) =>
                 `group/nav relative flex items-center gap-3 rounded-md text-sm font-medium transition-colors ${

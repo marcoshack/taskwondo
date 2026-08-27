@@ -613,6 +613,8 @@
   "namespaces.title": "Espaces de noms",
   "namespaces.updateError": "Échec de la mise à jour de l'espace de noms.",
   "namespaces.updateRoleError": "Échec de la mise à jour du rôle.",
+  "palette.nav.switchToNamespace": "Basculer vers {{name}}",
+  "palette.nav.namespaceSettings": "Paramètres de {{name}}",
   "nav.help": "Aide",
   "nav.home": "Accueil",
   "nav.preferences": "Préférences",

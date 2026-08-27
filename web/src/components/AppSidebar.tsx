@@ -11,22 +11,19 @@ import { NamespaceIcon } from '@/components/NamespaceIcon'
 import { CreateNamespaceModal } from '@/components/CreateNamespaceModal'
 import { useInboxCount } from '@/hooks/useInbox'
 import {
-  Inbox,
-  Rss,
-  Bookmark,
+  isCustomerOnly as isCustomerOnlyUser,
+  isCustomerProject as isCustomerInProject,
+  projectNavItems,
+  userNavItems,
+} from '@/utils/sidebarNav'
+import type { SidebarNavItem } from '@/utils/sidebarNav'
+import {
   FolderKanban,
-  Headphones,
-  LayoutDashboard,
-  ClipboardList,
-  SquareStack,
-  Target,
-  Route,
   Settings,
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
 } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
 
 interface AppSidebarProps {
   projectKey?: string
@@ -36,11 +33,7 @@ interface AppSidebarProps {
   mobileOnly?: boolean
 }
 
-interface NavItem {
-  to: string
-  label: string
-  icon: LucideIcon
-  end: boolean
+interface NavItem extends SidebarNavItem {
   badge?: number
 }
 
@@ -83,14 +76,11 @@ export function AppSidebar({ projectKey, customerProject, mobileOnly }: AppSideb
   const { user } = useAuth()
 
   // Detect customer project: explicit prop or derived from portal_projects for the remembered project
-  const isCustomerProject = customerProject
-    || (!projectKey && !!activeProjectKey && user?.global_role !== 'admin'
-        && (user?.portal_projects ?? []).some((pp) => pp.project_key === activeProjectKey))
+  const isCustomerProject = !!customerProject
+    || (!projectKey && isCustomerInProject(user, activeProjectKey))
 
   // Hide inbox/watchlist/feed when user is a customer in ALL their projects
-  const portalCount = user?.portal_projects?.length ?? 0
-  const totalCount = user?.total_project_count ?? 0
-  const isCustomerOnly = portalCount > 0 && portalCount === totalCount && user?.global_role !== 'admin'
+  const isCustomerOnly = isCustomerOnlyUser(user)
 
   // Close mobile sidebar and namespace dropdown on route change
   useEffect(() => {
@@ -98,27 +88,18 @@ export function AppSidebar({ projectKey, customerProject, mobileOnly }: AppSideb
     setNsDropdownOpen(false)
   }, [location.pathname, closeMobile])
 
-  const userNavItems: NavItem[] = [
-    { to: '/user/inbox', label: t('user.sidebar.inbox'), icon: Inbox, end: true, badge: inboxCount && inboxCount > 0 ? inboxCount : undefined },
-    { to: '/user/watchlist', label: t('user.sidebar.watchlist'), icon: Bookmark, end: false },
-    { to: '/user/feed', label: t('user.sidebar.feed'), icon: Rss, end: false },
-  ]
+  // Nav definitions are shared with the command palette's navigation catalog —
+  // see @/utils/sidebarNav. Only the inbox badge is sidebar-specific.
+  const userNav: NavItem[] = userNavItems(t).map((item) =>
+    item.to === '/user/inbox'
+      ? { ...item, badge: inboxCount && inboxCount > 0 ? inboxCount : undefined }
+      : item,
+  )
 
   const projectBase = activeProjectKey ? p(`/projects/${activeProjectKey}`) : ''
 
-  const projectNavItems: NavItem[] = activeProjectKey
-    ? isCustomerProject
-      ? [
-          { to: `${projectBase}/support`, label: t('sidebar.support'), icon: Headphones, end: false },
-        ]
-      : [
-          { to: `${projectBase}/`, label: t('sidebar.overview'), icon: LayoutDashboard, end: true },
-          { to: `${projectBase}/items`, label: t('sidebar.items'), icon: ClipboardList, end: false },
-          { to: `${projectBase}/milestones`, label: t('sidebar.milestones'), icon: Target, end: false },
-          { to: `${projectBase}/queues`, label: t('sidebar.queues'), icon: SquareStack, end: false },
-          { to: `${projectBase}/workflows`, label: t('sidebar.workflows'), icon: Route, end: false },
-          { to: `${projectBase}/settings`, label: t('sidebar.settings'), icon: Settings, end: false },
-        ]
+  const projectNav: NavItem[] = activeProjectKey
+    ? projectNavItems(t, projectBase, isCustomerProject)
     : []
 
   function renderNavItem(item: NavItem, showLabels: boolean) {
@@ -359,7 +340,7 @@ export function AppSidebar({ projectKey, customerProject, mobileOnly }: AppSideb
         {!isCustomerOnly && (
           <>
             <ul className="space-y-1">
-              {userNavItems.map((item) => renderNavItem(item, showLabels))}
+              {userNav.map((item) => renderNavItem(item, showLabels))}
             </ul>
 
             {/* Separator */}
@@ -376,9 +357,9 @@ export function AppSidebar({ projectKey, customerProject, mobileOnly }: AppSideb
         </ul>
 
         {/* Active project context */}
-        {activeProjectKey && projectNavItems.length > 0 && (
+        {activeProjectKey && projectNav.length > 0 && (
           <ul className="space-y-1 mt-1">
-            {projectNavItems.map((item) => renderNavItem(item, showLabels))}
+            {projectNav.map((item) => renderNavItem(item, showLabels))}
           </ul>
         )}
       </>

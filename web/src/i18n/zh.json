@@ -613,6 +613,8 @@
   "namespaces.title": "命名空间",
   "namespaces.updateError": "更新命名空间失败。",
   "namespaces.updateRoleError": "更新角色失败。",
+  "palette.nav.switchToNamespace": "切换到 {{name}}",
+  "palette.nav.namespaceSettings": "{{name}} 设置",
   "nav.help": "帮助",
   "nav.home": "首页",
   "nav.preferences": "偏好设置",

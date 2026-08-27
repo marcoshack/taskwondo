@@ -613,6 +613,8 @@
   "namespaces.title": "네임스페이스",
   "namespaces.updateError": "네임스페이스 업데이트에 실패했습니다.",
   "namespaces.updateRoleError": "역할 업데이트에 실패했습니다.",
+  "palette.nav.switchToNamespace": "{{name}}(으)로 전환",
+  "palette.nav.namespaceSettings": "{{name}} 설정",
   "nav.help": "도움말",
   "nav.home": "홈",
   "nav.preferences": "환경설정",

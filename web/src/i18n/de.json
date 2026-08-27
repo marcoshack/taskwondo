@@ -613,6 +613,8 @@
   "namespaces.title": "Namensräume",
   "namespaces.updateError": "Namensraum konnte nicht aktualisiert werden.",
   "namespaces.updateRoleError": "Rolle konnte nicht aktualisiert werden.",
+  "palette.nav.switchToNamespace": "Zu {{name}} wechseln",
+  "palette.nav.namespaceSettings": "Einstellungen für {{name}}",
   "nav.help": "Hilfe",
   "nav.home": "Startseite",
   "nav.preferences": "Einstellungen",

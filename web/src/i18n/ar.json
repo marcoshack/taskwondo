@@ -613,6 +613,8 @@
   "namespaces.title": "مساحات الأسماء",
   "namespaces.updateError": "فشل تحديث مساحة الاسم.",
   "namespaces.updateRoleError": "فشل تحديث الدور.",
+  "palette.nav.switchToNamespace": "التبديل إلى {{name}}",
+  "palette.nav.namespaceSettings": "إعدادات {{name}}",
   "nav.help": "مساعدة",
   "nav.home": "الرئيسية",
   "nav.preferences": "التفضيلات",
