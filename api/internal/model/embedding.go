@@ -66,7 +66,15 @@ type SearchFilter struct {
 	Query       string
 	EntityTypes []string
 	ProjectIDs  []uuid.UUID
-	Limit       int
+	// ScopeProjectID restricts the project-scoped entity types (work_item,
+	// milestone, queue, team, comment, attachment) to a single project.
+	// Results of type "project" are deliberately left unscoped so a caller can
+	// still discover every project it can see — the command palette relies on
+	// that carve-out to navigate across projects while everything else is
+	// scoped to the current one. Nil means "search everything reachable",
+	// which is the historical behaviour.
+	ScopeProjectID *uuid.UUID
+	Limit          int
 }
 
 // SearchAccess describes a user's RBAC access for search operations. It

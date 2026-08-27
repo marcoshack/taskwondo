@@ -134,6 +134,16 @@ func (r *EmbeddingRepository) SearchByVector(ctx context.Context, vector []float
 		conditions = append(conditions, fmt.Sprintf("e.entity_type IN (%s)", strings.Join(placeholders, ",")))
 	}
 
+	// Project scope: narrow the project-scoped entity types to a single
+	// project while leaving "project" rows alone, so a scoped search still
+	// lists every project the caller can reach. This narrows on top of the
+	// RBAC clause above and can never widen it.
+	if filter.ScopeProjectID != nil {
+		args = append(args, *filter.ScopeProjectID)
+		conditions = append(conditions, fmt.Sprintf("(e.entity_type = '%s' OR e.project_id = $%d)", model.EntityTypeProject, argIdx))
+		argIdx++
+	}
+
 	where := ""
 	if len(conditions) > 0 {
 		where = "WHERE " + strings.Join(conditions, " AND ")

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -54,8 +55,14 @@ type errorEventPayload struct {
 	} `json:"error"`
 }
 
-// Search handles GET /api/v1/search?q=...&entity_type=work_item,comment&limit=20
+// Search handles GET /api/v1/search?q=...&entity_type=work_item,comment&project=TF&limit=20
 // Supports SSE streaming (Accept: text/event-stream) and regular JSON responses.
+//
+// The optional `project` parameter takes a project key and scopes the
+// project-scoped entity types (work_item, milestone, queue, team, comment,
+// attachment) to that project. Results of type `project` stay global so a
+// client can navigate across projects. Omitting it searches everything the
+// caller can reach, which is the historical behaviour.
 func (h *SearchHandler) Search(w http.ResponseWriter, r *http.Request) {
 	info := model.AuthInfoFromContext(r.Context())
 	if info == nil {
@@ -82,6 +89,26 @@ func (h *SearchHandler) Search(w http.ResponseWriter, r *http.Request) {
 		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 && parsed <= 100 {
 			filter.Limit = parsed
 		}
+	}
+
+	// Optional project scope, given as a project key like the rest of the API.
+	// Resolved before any streaming starts so a bad scope is reported as a
+	// normal JSON error even for SSE requests, and treated as fatal — a scope
+	// that cannot be resolved must never degrade into an unscoped search.
+	if projectKey := strings.TrimSpace(r.URL.Query().Get("project")); projectKey != "" {
+		projectID, err := h.search.ResolveProjectScope(r.Context(), info, projectKey)
+		if err != nil {
+			if errors.Is(err, model.ErrForbidden) || errors.Is(err, model.ErrNotFound) {
+				// Identical response whether the project does not exist or the
+				// caller simply cannot see it — no existence leak.
+				writeError(w, http.StatusForbidden, CodeForbidden, "project not found or not accessible")
+				return
+			}
+			log.Ctx(r.Context()).Error().Err(err).Str("project_key", projectKey).Msg("failed to resolve search project scope")
+			writeError(w, http.StatusInternalServerError, CodeInternalError, "search failed")
+			return
+		}
+		filter.ScopeProjectID = &projectID
 	}
 
 	// Content negotiation: SSE vs JSON
