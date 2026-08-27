@@ -2,6 +2,7 @@ import { test as base, expect } from '../../lib/fixtures';
 import { getAdminToken } from '../../lib/fixtures';
 import * as api from '../../lib/api';
 import { randomUUID } from 'crypto';
+import { openProjectSwitcher } from '../../lib/palette';
 
 // These tests share the namespaces_enabled setting, so run serially.
 base.describe.configure({ mode: 'serial' });
@@ -56,6 +57,8 @@ test.describe('Project switcher — cross-namespace', () => {
 
     // Dismiss welcome modal
     await api.setPreference(request, adminToken, 'welcome_dismissed', true);
+    // The switcher must list both namespaces' projects for these assertions.
+    await api.setPreference(request, adminToken, 'project_switcher_all_namespaces', true);
   });
 
   test.afterAll(async ({ request }) => {
@@ -65,16 +68,12 @@ test.describe('Project switcher — cross-namespace', () => {
   });
 
   test('project switcher shows projects from all namespaces with namespace info', async ({ page }) => {
-    // Navigate to the default namespace projects page
-    await page.goto('/d/projects');
+    // Start on the default-namespace project: `g p` is retired, so the switcher
+    // opens from the nav project badge, which needs an active project.
+    await page.goto(`/d/projects/${defaultProjectKey}`);
     await page.waitForLoadState('networkidle');
 
-    // Open project switcher via keyboard shortcut
-    await page.keyboard.press('g');
-    await page.keyboard.press('p');
-
-    // The switcher modal should be visible
-    const modal = page.getByRole('dialog');
+    const modal = await openProjectSwitcher(page);
     await expect(modal.getByRole('heading', { name: 'Switch Project' })).toBeVisible({ timeout: 5000 });
 
     // Both projects should be visible in the modal (match by button containing the key)
@@ -90,16 +89,11 @@ test.describe('Project switcher — cross-namespace', () => {
   });
 
   test('search filters by namespace slug', async ({ page }) => {
-    await page.goto('/d/projects');
+    await page.goto(`/d/projects/${defaultProjectKey}`);
     await page.waitForLoadState('networkidle');
 
-    // Open project switcher
-    await page.keyboard.press('g');
-    await page.keyboard.press('p');
-
-    const modal = page.getByRole('dialog');
+    const modal = await openProjectSwitcher(page);
     const searchInput = modal.getByRole('textbox', { name: /search projects/i });
-    await expect(searchInput).toBeVisible({ timeout: 5000 });
 
     // Search by namespace slug — only the NS project should remain
     await searchInput.fill(nsSlug);
@@ -109,16 +103,11 @@ test.describe('Project switcher — cross-namespace', () => {
 
   test('selecting a project from another namespace navigates correctly', async ({ page }) => {
     // Start on the default namespace
-    await page.goto('/d/projects');
+    await page.goto(`/d/projects/${defaultProjectKey}`);
     await page.waitForLoadState('networkidle');
 
-    // Open project switcher
-    await page.keyboard.press('g');
-    await page.keyboard.press('p');
-
-    const modal = page.getByRole('dialog');
+    const modal = await openProjectSwitcher(page);
     const searchInput = modal.getByRole('textbox', { name: /search projects/i });
-    await expect(searchInput).toBeVisible({ timeout: 5000 });
 
     // Search for the NS project and select it
     await searchInput.fill(nsProjectKey);
@@ -137,12 +126,8 @@ test.describe('Project switcher — cross-namespace', () => {
     await expect(page.getByText(`Default Project ${defaultProjectKey}`)).toBeVisible({ timeout: 5000 });
 
     // Open project switcher and navigate to project in the other namespace
-    await page.keyboard.press('g');
-    await page.keyboard.press('p');
-
-    const modal = page.getByRole('dialog');
+    const modal = await openProjectSwitcher(page);
     const searchInput = modal.getByRole('textbox', { name: /search projects/i });
-    await expect(searchInput).toBeVisible({ timeout: 5000 });
 
     await searchInput.fill(nsProjectKey);
     const nsProjectRow = modal.getByRole('button', { name: new RegExp(nsProjectKey, 'i') });

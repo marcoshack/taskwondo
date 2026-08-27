@@ -1,6 +1,7 @@
 import { test, expect } from '../../lib/fixtures';
 import * as api from '../../lib/api';
 import { randomUUID } from 'crypto';
+import { switchProject } from '../../lib/palette';
 
 /**
  * The project switcher keeps the user on the equivalent page of the target
@@ -22,18 +23,10 @@ test.describe('Project switcher — section preservation', () => {
     throw new Error('unreachable');
   }
 
+  // `g p` was retired with the command palette (TF-431); the switcher now opens
+  // from the nav project badge.
   async function switchTo(page: import('@playwright/test').Page, projectKey: string) {
-    await page.keyboard.press('g');
-    await page.keyboard.press('p');
-
-    const modal = page.getByRole('dialog');
-    const searchInput = modal.getByRole('textbox', { name: /search projects/i });
-    await expect(searchInput).toBeVisible({ timeout: 5000 });
-
-    await searchInput.fill(projectKey);
-    const row = modal.getByRole('button', { name: new RegExp(projectKey, 'i') });
-    await expect(row).toBeVisible({ timeout: 3000 });
-    await row.click();
+    await switchProject(page, projectKey);
   }
 
   test('switching from the work items list lands on the target items list', async ({ page, request, testUser, testProject }) => {

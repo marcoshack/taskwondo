@@ -1,6 +1,7 @@
 import { test as base, expect, getAdminToken } from '../../lib/fixtures';
 import * as api from '../../lib/api';
 import { randomUUID } from 'crypto';
+import { openProjectSwitcher } from '../../lib/palette';
 
 // Run serially inside this file — tests share the namespaces_enabled setting
 // and the shared project fixture set up in beforeAll.
@@ -86,11 +87,9 @@ test.describe('g-o shortcut after namespace switch (TF-345)', () => {
     // 2. Open the same project key in the *default* namespace via the project
     //    switcher (SPA nav). `activeProjectKey` stays equal to `sharedKey`, but
     //    the namespace segment flips from `<nsSlug>` to `d`, so `p` changes.
-    await page.keyboard.press('g');
-    await page.keyboard.press('p');
-    const modal = page.getByRole('dialog');
+    // `g p` is retired (TF-431) — the switcher opens from the nav project badge.
+    const modal = await openProjectSwitcher(page);
     const searchInput = modal.getByRole('textbox', { name: /search projects/i });
-    await expect(searchInput).toBeVisible({ timeout: 5000 });
     // Search the unique project name so only the default-namespace row matches.
     await searchInput.fill(`Default Proj ${sharedKey}`);
     const defaultRow = modal.getByRole('button', { name: new RegExp(`Default Proj ${sharedKey}`, 'i') });

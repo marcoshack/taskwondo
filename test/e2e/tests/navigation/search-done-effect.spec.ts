@@ -1,5 +1,6 @@
 import { test, expect, getAdminToken } from '../../lib/fixtures';
 import * as api from '../../lib/api';
+import { openPalette, paletteInput } from '../../lib/palette';
 
 /** Transition a work item to done through valid workflow steps. */
 async function completeWorkItem(
@@ -23,9 +24,8 @@ async function dismissWelcomeModal(page: import('@playwright/test').Page) {
 }
 
 async function openSearchAndType(page: import('@playwright/test').Page, query: string) {
-  await page.keyboard.press('g');
-  await page.keyboard.press('k');
-  const searchInput = page.getByPlaceholder(/search across/i);
+  await openPalette(page);
+  const searchInput = paletteInput(page);
   await expect(searchInput).toBeVisible({ timeout: 3000 });
   await searchInput.fill(query);
   return searchInput;

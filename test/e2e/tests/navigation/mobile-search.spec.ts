@@ -1,4 +1,5 @@
 import { test, expect } from '../../lib/fixtures';
+import { openPalette, paletteInput } from '../../lib/palette';
 
 async function waitForPageReady(page: import('@playwright/test').Page) {
   await page.waitForLoadState('networkidle');
@@ -21,7 +22,7 @@ test.describe('Mobile search icon and top bar layout', () => {
 
     // Click it to open search modal
     await searchButton.click();
-    const searchInput = page.getByPlaceholder(/search across/i);
+    const searchInput = paletteInput(page);
     await expect(searchInput).toBeVisible({ timeout: 3000 });
     await expect(searchInput).toBeFocused();
 
@@ -163,10 +164,9 @@ test.describe('Mobile search icon and top bar layout', () => {
     await page.goto(`/d/projects/${testProject.key}/items`);
     await waitForPageReady(page);
 
-    // Open search modal
-    await page.keyboard.press('g');
-    await page.keyboard.press('k');
-    const searchInput = page.getByPlaceholder(/search across/i);
+    // Open the command palette
+    await openPalette(page);
+    const searchInput = paletteInput(page);
     await expect(searchInput).toBeVisible({ timeout: 3000 });
 
     // The keyboard hints footer should have the hidden + pointer-fine:flex classes

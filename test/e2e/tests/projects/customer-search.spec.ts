@@ -2,6 +2,7 @@ import { test, expect, getAdminToken } from '../../lib/fixtures';
 import type { APIRequestContext, BrowserContext, Page } from '@playwright/test';
 import * as api from '../../lib/api';
 import { randomUUID } from 'crypto';
+import { PALETTE_PLACEHOLDER } from '../../lib/palette';
 
 const TEST_PASSWORD = 'TestPass123!';
 const BASE_URL = process.env.BASE_URL || 'http://localhost:5173';
@@ -330,18 +331,21 @@ test.describe('Customer role — search UI', () => {
     });
 
     // Log in as testUser via the UI (storage state already injects the token,
-    // but we explicitly navigate to the AppShell).
-    await page.goto(`/d/projects/${testProject.key}/items`);
+    // but we explicitly navigate to the AppShell). Entity search is scoped to
+    // the active project (TF-432/434), so the palette has to be opened from the
+    // customer project for its items to be in range at all — which is also
+    // where the customer-visibility filter has to hold.
+    await page.goto(`/d/projects/${custProjKey}/support`);
     await page.waitForLoadState('domcontentloaded');
 
-    // Open the search modal via the nav search button (the first matching
+    // Open the command palette via the nav search button (the first matching
     // "Search" aria-label — the work item list filter input also contains
     // "Search" so we must target the nav button explicitly).
     await page.locator('button[aria-label="Search"]').click();
 
-    // The modal input uses the exact placeholder "Search across all projects..."
+    // The palette input uses the exact placeholder "Search or jump to..."
     // which is distinct from the work item list filter ("Search items...").
-    const modalInput = page.getByPlaceholder('Search across all projects...');
+    const modalInput = page.getByPlaceholder(PALETTE_PLACEHOLDER);
     await expect(modalInput).toBeVisible({ timeout: 5000 });
     await modalInput.fill(uniqueTag);
 
@@ -359,10 +363,13 @@ test.describe('Customer role — search UI', () => {
     // Cleanup
     await api.deactivateUser(request, adminToken, otherCustomer.id).catch(() => {});
 
-    // Avoid unused-var warnings
+    // Avoid unused-var warnings. testProject stays in the fixture list on
+    // purpose: it makes testUser a full member somewhere, so this is a
+    // mixed-role user rather than a customer-only one.
     expect(hiddenInternal.id).toBeTruthy();
     expect(otherTicket.id).toBeTruthy();
     expect(ownTicket.id).toBeTruthy();
+    expect(testProject.key).toBeTruthy();
 
     // Also exercise the loginAs helper so we keep it linked (no-op flow).
     void loginAs;
@@ -373,10 +380,6 @@ test.describe('Customer role — search UI', () => {
     const adminToken = getAdminToken();
     const suffix = randomUUID().slice(0, 4).toUpperCase();
     const uniqueTag = `NavTag${suffix}`;
-
-    // Owned project (full access) — search will be opened from here
-    await page.goto(`/d/projects/${testProject.key}/items`);
-    await page.waitForLoadState('domcontentloaded');
 
     // Create a second project where testUser is a CUSTOMER
     const custProjKey = `N${suffix}`;
@@ -393,13 +396,16 @@ test.describe('Customer role — search UI', () => {
       title: `Nav target ${uniqueTag}`,
     });
 
-    // Reload so the AuthContext picks up the new customer membership (portal_projects).
-    await page.reload();
+    // Open the customer project's support view. Entity search is scoped to the
+    // active project (TF-432/434), so this is where the ticket is in range, and
+    // loading it fresh lets AuthContext pick up the customer membership
+    // (portal_projects) that decides the /support/:num route below.
+    await page.goto(`/d/projects/${custProjKey}/support`);
     await page.waitForLoadState('domcontentloaded');
 
-    // Open the unified search modal via the nav button.
+    // Open the command palette via the nav button.
     await page.locator('button[aria-label="Search"]').click();
-    const modalInput = page.getByPlaceholder('Search across all projects...');
+    const modalInput = page.getByPlaceholder(PALETTE_PLACEHOLDER);
     await expect(modalInput).toBeVisible({ timeout: 5000 });
     await modalInput.fill(uniqueTag);
 
@@ -422,6 +428,9 @@ test.describe('Customer role — search UI', () => {
 
     // The PortalTicketDetailPage should have loaded and show the title.
     await expect(page.getByText(`Nav target ${uniqueTag}`).first()).toBeVisible({ timeout: 5000 });
+
+    // testProject stays in the fixture list so testUser is a mixed-role user.
+    expect(testProject.key).toBeTruthy();
   });
 
   test('UI: direct navigation to /d/projects/KEY/items/N as a customer redirects once to /support and does not loop', async ({ page, request, testUser, testProject }) => {

@@ -1,5 +1,7 @@
 import { test, expect } from '../../lib/fixtures';
 import * as api from '../../lib/api';
+import { openPalette, paletteInput, navRows, entityRows } from '../../lib/palette';
+import { randomUUID } from 'crypto';
 
 async function dismissWelcomeModal(page: import('@playwright/test').Page) {
   const welcomeHeading = page.getByRole('heading', { name: 'Welcome' });
@@ -9,16 +11,31 @@ async function dismissWelcomeModal(page: import('@playwright/test').Page) {
   }
 }
 
-test.describe('Search modal (g then k)', () => {
-  test('g then k opens search modal and Escape closes it', async ({ page, testProject }) => {
+
+/** A second project owned by the same user, so scoping has something to exclude. */
+async function createSecondProject(
+  request: import('@playwright/test').APIRequestContext,
+  token: string,
+) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const suffix = randomUUID().slice(0, 4).toUpperCase();
+    try {
+      return await api.createProject(request, token, `S${suffix}`, `E2E Scope ${suffix}`);
+    } catch (err: any) {
+      if (attempt === 2 || !err.message?.includes('already in use')) throw err;
+    }
+  }
+  throw new Error('unreachable');
+}
+
+test.describe('Command palette — entity search', () => {
+  test('Cmd/Ctrl+K opens the palette and Escape closes it', async ({ page, testProject }) => {
     await page.goto(`/d/projects/${testProject.key}/items`);
     await dismissWelcomeModal(page);
     await expect(page.getByRole('heading', { name: /items/i })).toBeVisible({ timeout: 5000 });
 
-    // Open search modal
-    await page.keyboard.press('g');
-    await page.keyboard.press('k');
-    const searchInput = page.getByPlaceholder(/search across/i);
+    await openPalette(page);
+    const searchInput = paletteInput(page);
     await expect(searchInput).toBeVisible({ timeout: 3000 });
     await expect(searchInput).toBeFocused();
 
@@ -44,10 +61,8 @@ test.describe('Search modal (g then k)', () => {
     await dismissWelcomeModal(page);
     await expect(page.getByRole('heading', { name: /items/i })).toBeVisible({ timeout: 5000 });
 
-    // Open search modal
-    await page.keyboard.press('g');
-    await page.keyboard.press('k');
-    const searchInput = page.getByPlaceholder(/search across/i);
+    await openPalette(page);
+    const searchInput = paletteInput(page);
     await expect(searchInput).toBeVisible({ timeout: 3000 });
 
     // Type search query
@@ -76,9 +91,8 @@ test.describe('Search modal (g then k)', () => {
     await expect(page.getByRole('heading', { name: /items/i })).toBeVisible({ timeout: 5000 });
 
     // Open search and search by display ID
-    await page.keyboard.press('g');
-    await page.keyboard.press('k');
-    const searchInput = page.getByPlaceholder(/search across/i);
+    await openPalette(page);
+    const searchInput = paletteInput(page);
     await searchInput.fill(item.display_id);
 
     // First result should appear
@@ -98,10 +112,8 @@ test.describe('Search modal (g then k)', () => {
     await dismissWelcomeModal(page);
     await expect(page.getByRole('heading', { name: /items/i })).toBeVisible({ timeout: 5000 });
 
-    // Open search modal
-    await page.keyboard.press('g');
-    await page.keyboard.press('k');
-    const searchInput = page.getByPlaceholder(/search across/i);
+    await openPalette(page);
+    const searchInput = paletteInput(page);
     await expect(searchInput).toBeVisible({ timeout: 3000 });
 
     // Search for something that doesn't exist
@@ -132,10 +144,8 @@ test.describe('Search modal (g then k)', () => {
     await dismissWelcomeModal(page);
     await expect(page.getByRole('heading', { name: /items/i })).toBeVisible({ timeout: 5000 });
 
-    // Open search and search
-    await page.keyboard.press('g');
-    await page.keyboard.press('k');
-    const searchInput = page.getByPlaceholder(/search across/i);
+    await openPalette(page);
+    const searchInput = paletteInput(page);
     await searchInput.fill(prefix);
 
     // Wait for results
@@ -173,9 +183,8 @@ test.describe('Search modal (g then k)', () => {
     await expect(page.getByRole('heading', { name: /items/i })).toBeVisible({ timeout: 5000 });
 
     // Open search and find the item
-    await page.keyboard.press('g');
-    await page.keyboard.press('k');
-    const searchInput = page.getByPlaceholder(/search across/i);
+    await openPalette(page);
+    const searchInput = paletteInput(page);
     await searchInput.fill(uniqueTitle);
 
     // Wait for result
@@ -209,9 +218,8 @@ test.describe('Search modal (g then k)', () => {
     await expect(page.getByRole('heading', { name: /items/i })).toBeVisible({ timeout: 5000 });
 
     // Open search and find the item
-    await page.keyboard.press('g');
-    await page.keyboard.press('k');
-    const searchInput = page.getByPlaceholder(/search across/i);
+    await openPalette(page);
+    const searchInput = paletteInput(page);
     await searchInput.fill(uniqueTitle);
 
     // Wait for result and click it
@@ -226,14 +234,27 @@ test.describe('Search modal (g then k)', () => {
     );
   });
 
-  test('search hint shown before typing', async ({ page, testProject }) => {
+  // An empty query used to show the two-character hint; the palette shows the
+  // navigation catalog instead, and keeps the hint for the one-character case
+  // where navigation already answers but entity search has not started.
+  test('empty query shows the navigation catalog, one character shows the entity hint', async ({
+    page,
+    testProject,
+  }) => {
     await page.goto(`/d/projects/${testProject.key}/items`);
     await dismissWelcomeModal(page);
     await expect(page.getByRole('heading', { name: /items/i })).toBeVisible({ timeout: 5000 });
 
-    await page.keyboard.press('g');
-    await page.keyboard.press('k');
+    const input = await openPalette(page);
+
+    // Empty query: the catalog, not the hint.
+    await expect(navRows(page).first()).toBeVisible({ timeout: 3000 });
+    await expect(page.getByText(/type at least 2 characters/i)).toHaveCount(0);
+
+    // One character: navigation still filters live, entity search does not run.
+    await input.fill('m');
     await expect(page.getByText(/type at least 2 characters/i)).toBeVisible({ timeout: 3000 });
+    await expect(entityRows(page)).toHaveCount(0);
   });
 
   test('comment deep-link opens comments tab and highlights the comment', async ({
@@ -302,25 +323,38 @@ test.describe('Search modal (g then k)', () => {
     await expect(page.getByText('test-deeplink.txt')).toBeVisible({ timeout: 5000 });
   });
 
-  test('project search result navigates to project page', async ({
+  // TF-432/434: entity hits are scoped to the active project. `project` hits
+  // stay global on the backend, but they only exist in the semantic index,
+  // which is off in the E2E stack — the palette's route to another project
+  // here is the navigation catalog, covered in command-palette.spec.ts.
+  test('entity results are scoped to the active project', async ({
     page,
+    request,
+    testUser,
     testProject,
   }) => {
+    const prefix = `ScopeTest${Date.now()}`;
+    const other = await createSecondProject(request, testUser.token);
+
+    await api.createWorkItem(request, testUser.token, testProject.key, {
+      title: `${prefix} here`,
+      type: 'task',
+    });
+    await api.createWorkItem(request, testUser.token, other.key, {
+      title: `${prefix} elsewhere`,
+      type: 'task',
+    });
+
     await page.goto(`/d/projects/${testProject.key}/items`);
     await dismissWelcomeModal(page);
     await expect(page.getByRole('heading', { name: /items/i })).toBeVisible({ timeout: 5000 });
 
-    // Open search and search for the project name
-    await page.keyboard.press('g');
-    await page.keyboard.press('k');
-    const searchInput = page.getByPlaceholder(/search across/i);
-    await searchInput.fill(testProject.name.slice(0, 12));
+    const searchInput = await openPalette(page);
+    await searchInput.fill(prefix);
 
-    // Wait for results (FTS returns work items; project may or may not appear)
-    // Just verify searching doesn't crash and results appear or empty state shows
-    const hasResults = page.locator('[data-search-item]').first();
-    const emptyState = page.getByText(/no results found/i);
-    await expect(hasResults.or(emptyState)).toBeVisible({ timeout: 10000 });
+    const results = entityRows(page);
+    await expect(results.filter({ hasText: `${prefix} here` })).toHaveCount(1, { timeout: 10000 });
+    await expect(results.filter({ hasText: `${prefix} elsewhere` })).toHaveCount(0);
   });
 
   test('query and results persist after closing with Escape', async ({
@@ -340,9 +374,8 @@ test.describe('Search modal (g then k)', () => {
     await expect(page.getByRole('heading', { name: /items/i })).toBeVisible({ timeout: 5000 });
 
     // Open search, type, wait for results
-    await page.keyboard.press('g');
-    await page.keyboard.press('k');
-    const searchInput = page.getByPlaceholder(/search across/i);
+    await openPalette(page);
+    const searchInput = paletteInput(page);
     await searchInput.fill(uniqueTitle);
 
     const result = page.locator('[data-search-item]').first();
@@ -354,8 +387,7 @@ test.describe('Search modal (g then k)', () => {
     await expect(searchInput).not.toBeVisible({ timeout: 3000 });
 
     // Reopen — query and results should still be there
-    await page.keyboard.press('g');
-    await page.keyboard.press('k');
+    await openPalette(page);
     await expect(searchInput).toBeVisible({ timeout: 3000 });
     await expect(searchInput).toHaveValue(uniqueTitle);
     await expect(searchInput).toBeFocused();
@@ -380,9 +412,8 @@ test.describe('Search modal (g then k)', () => {
     await expect(page.getByRole('heading', { name: /items/i })).toBeVisible({ timeout: 5000 });
 
     // Open search, type, wait for results, press Enter to navigate
-    await page.keyboard.press('g');
-    await page.keyboard.press('k');
-    const searchInput = page.getByPlaceholder(/search across/i);
+    await openPalette(page);
+    const searchInput = paletteInput(page);
     await searchInput.fill(uniqueTitle);
 
     const result = page.locator('[data-search-item]').first();
@@ -395,8 +426,7 @@ test.describe('Search modal (g then k)', () => {
     );
 
     // Reopen search — previous query and results should persist
-    await page.keyboard.press('g');
-    await page.keyboard.press('k');
+    await openPalette(page);
     await expect(searchInput).toBeVisible({ timeout: 3000 });
     await expect(searchInput).toHaveValue(uniqueTitle);
     await expect(searchInput).toBeFocused();
@@ -427,17 +457,15 @@ test.describe('Search modal (g then k)', () => {
     await expect(page.getByRole('heading', { name: /items/i })).toBeVisible({ timeout: 5000 });
 
     // First search
-    await page.keyboard.press('g');
-    await page.keyboard.press('k');
-    const searchInput = page.getByPlaceholder(/search across/i);
+    await openPalette(page);
+    const searchInput = paletteInput(page);
     await searchInput.fill(firstTitle);
     await expect(page.locator('[data-search-item]').first()).toBeVisible({ timeout: 10000 });
 
     // Close and reopen
     await page.keyboard.press('Escape');
     await expect(searchInput).not.toBeVisible({ timeout: 3000 });
-    await page.keyboard.press('g');
-    await page.keyboard.press('k');
+    await openPalette(page);
     await expect(searchInput).toBeVisible({ timeout: 3000 });
     // Wait for the previous query to be restored before typing the replacement
     await expect(searchInput).toHaveValue(firstTitle, { timeout: 3000 });

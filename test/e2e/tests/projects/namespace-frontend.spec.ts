@@ -1,6 +1,7 @@
 import { test as base, expect, test as userTest } from '../../lib/fixtures';
 import { getAdminToken } from '../../lib/fixtures';
 import * as api from '../../lib/api';
+import { openProjectSwitcher } from '../../lib/palette';
 
 // Tests in this file share mutable global state (namespaces_enabled setting)
 // so they must run serially to avoid race conditions.
@@ -445,15 +446,17 @@ test.describe('Namespace Frontend UI', () => {
     const projName = `ToggleNSProject ${uid}`;
     await api.createProject(request, adminToken, projKey, projName, slug);
 
+    // A default-namespace project too: `g p` is retired (TF-431), so the
+    // switcher opens from the nav project badge, which needs an active project
+    // — and it guarantees at least one row survives the all-namespaces filter.
+    const defProjKey = `TD${uid}`;
+    await api.createProject(request, adminToken, defProjKey, `ToggleDefaultProject ${uid}`);
+
     // Navigate fresh to pick up the new project
-    await page.goto('/d/projects');
+    await page.goto(`/d/projects/${defProjKey}`);
     await page.waitForLoadState('networkidle');
 
-    // Open project switcher
-    await page.keyboard.press('g');
-    await page.keyboard.press('p');
-    const dialog = page.getByRole('dialog');
-    await expect(dialog).toBeVisible();
+    const dialog = await openProjectSwitcher(page);
 
     // The all-namespaces toggle should be visible
     const toggle = dialog.getByTestId('all-namespaces-toggle');
@@ -490,15 +493,16 @@ test.describe('Namespace Frontend UI', () => {
     await page.keyboard.press('Escape');
     await expect(dialog).not.toBeVisible();
 
-    await page.keyboard.press('g');
-    await page.keyboard.press('p');
-    await expect(dialog).toBeVisible();
+    await openProjectSwitcher(page);
     // Should still be unchecked (persisted preference)
     await expect(dialog.getByText(projName)).not.toBeVisible();
     await attach(page, testInfo, '04-persisted');
 
     // Cleanup (best effort — namespace may have residual state from retries)
     await request.delete(`${BASE_URL}/api/v1/${slug}/projects/${projKey}`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    }).catch(() => {});
+    await request.delete(`${BASE_URL}/api/v1/default/projects/${defProjKey}`, {
       headers: { Authorization: `Bearer ${adminToken}` },
     }).catch(() => {});
     await api.deleteNamespace(request, adminToken, slug).catch(() => {});

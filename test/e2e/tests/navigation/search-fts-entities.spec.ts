@@ -1,5 +1,6 @@
 import { test, expect } from '../../lib/fixtures';
 import * as api from '../../lib/api';
+import { openPalette, paletteInput } from '../../lib/palette';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:5173';
 
@@ -127,10 +128,9 @@ test.describe('FTS search for teams, queues, and milestones', () => {
 
     await expect(page.getByRole('heading', { name: /items/i })).toBeVisible({ timeout: 5000 });
 
-    // Open search modal
-    await page.keyboard.press('g');
-    await page.keyboard.press('k');
-    const searchInput = page.getByPlaceholder(/search across/i);
+    // Open the command palette
+    await openPalette(page);
+    const searchInput = paletteInput(page);
     await expect(searchInput).toBeVisible({ timeout: 3000 });
 
     // Search for the team
@@ -162,10 +162,9 @@ test.describe('FTS search for teams, queues, and milestones', () => {
     }
     await expect(page.getByRole('heading', { name: /items/i })).toBeVisible({ timeout: 5000 });
 
-    // Open search modal and find the team
-    await page.keyboard.press('g');
-    await page.keyboard.press('k');
-    const searchInput = page.getByPlaceholder(/search across/i);
+    // Open the command palette and find the team
+    await openPalette(page);
+    const searchInput = paletteInput(page);
     await expect(searchInput).toBeVisible({ timeout: 3000 });
     await searchInput.fill(unique);
 
@@ -230,9 +229,8 @@ test.describe('FTS search for teams, queues, and milestones', () => {
     await expect(page.getByRole('heading', { name: /items/i })).toBeVisible({ timeout: 5000 });
 
     // Open search and type the unique title
-    await page.keyboard.press('g');
-    await page.keyboard.press('k');
-    const searchInput = page.getByPlaceholder(/search across/i);
+    await openPalette(page);
+    const searchInput = paletteInput(page);
     await expect(searchInput).toBeVisible({ timeout: 3000 });
     await searchInput.fill(unique);
 

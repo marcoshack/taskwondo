@@ -201,6 +201,7 @@ export function AppShell() {
                 <button
                   onClick={() => setSwitcherOpen(true)}
                   className="hidden sm:flex items-center gap-2.5 hover:opacity-80 transition-opacity min-w-0"
+                  data-testid="project-switcher-badge"
                 >
                   <ProjectKeyBadge size="nav">{activeProject.key}</ProjectKeyBadge>
                   <span className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">

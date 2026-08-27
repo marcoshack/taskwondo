@@ -1,5 +1,6 @@
 import { test, expect, getAdminToken } from '../../lib/fixtures';
 import * as api from '../../lib/api';
+import { openPalette, paletteInput } from '../../lib/palette';
 
 async function dismissWelcomeModal(page: import('@playwright/test').Page) {
   const welcomeHeading = page.getByRole('heading', { name: 'Welcome' });
@@ -11,7 +12,7 @@ async function dismissWelcomeModal(page: import('@playwright/test').Page) {
 
 // These tests toggle the global namespaces_enabled setting, so they run in the
 // namespace project (serial) to avoid racing with other namespace tests.
-test.describe('Search modal cross-namespace navigation', () => {
+test.describe('Command palette cross-namespace navigation', () => {
   test('cross-namespace search result navigates and fully loads work item', async ({
     page,
     request,
@@ -42,25 +43,28 @@ test.describe('Search modal cross-namespace navigation', () => {
     expect(itemRes.ok()).toBeTruthy();
     const item = (await itemRes.json()).data;
 
-    // Also create a default-namespace project so we start on a real page inside NamespaceGuard
+    // Also create a default-namespace project so the default namespace has real
+    // content behind the page we start on.
     const defProjKey = `XD${Date.now().toString(36).slice(-3).toUpperCase()}`;
     await api.createProject(request, testUser.token, defProjKey, 'Default NS Search Proj');
-    const defItem = await api.createWorkItem(request, testUser.token, defProjKey, {
+    await api.createWorkItem(request, testUser.token, defProjKey, {
       title: `DefItem-${Date.now()}`,
       type: 'task',
     });
 
     try {
-      // Start on a work item detail page in the default namespace (inside NamespaceGuard)
-      // so the test covers the re-render path (not fresh mount)
-      await page.goto(`/d/projects/${defProjKey}/items/${defItem.item_number}`);
+      // Start on the default namespace's project list (inside NamespaceGuard).
+      // This used to start on a work item detail page, but entity search is now
+      // scoped to the active project (TF-432/434), and a cross-namespace hit is
+      // only reachable while no project is active — which is the case here,
+      // because this context has never opened a project page.
+      await page.goto('/d/projects');
       await dismissWelcomeModal(page);
       await page.waitForLoadState('networkidle');
 
-      // Open search and search for the cross-namespace item
-      await page.keyboard.press('g');
-      await page.keyboard.press('k');
-      const searchInput = page.getByPlaceholder(/search across/i);
+      // Open the palette and search for the cross-namespace item
+      await openPalette(page);
+      const searchInput = paletteInput(page);
       await expect(searchInput).toBeVisible({ timeout: 3000 });
       await searchInput.fill(uniqueTitle);
 
@@ -131,9 +135,8 @@ test.describe('Search modal cross-namespace navigation', () => {
       await page.waitForLoadState('networkidle');
 
       // Open search, type, and press Enter
-      await page.keyboard.press('g');
-      await page.keyboard.press('k');
-      const searchInput = page.getByPlaceholder(/search across/i);
+      await openPalette(page);
+      const searchInput = paletteInput(page);
       await expect(searchInput).toBeVisible({ timeout: 3000 });
       await searchInput.fill(uniqueTitle);
 
