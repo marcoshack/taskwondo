@@ -47,6 +47,13 @@ const OAUTH_PROVIDERS: Record<string, { icon: React.ReactNode }> = {
       </svg>
     ),
   },
+  sso: {
+    icon: (
+      <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
+      </svg>
+    ),
+  },
 }
 
 const PENDING_INVITE_KEY = 'taskwondo_pending_invite'
@@ -114,7 +121,7 @@ export function LoginPage() {
 
   const providerOrder = Array.isArray(publicSettings?.oauth_provider_order)
     ? publicSettings.oauth_provider_order as string[]
-    : ['discord', 'google', 'github', 'microsoft']
+    : ['discord', 'google', 'github', 'microsoft', 'sso']
 
   const enabledProviders = providers
     ? Object.keys(OAUTH_PROVIDERS)
@@ -205,18 +212,24 @@ export function LoginPage() {
             )}
 
             <div className="space-y-3">
-              {enabledProviders.map((provider) => (
-                <Button
-                  key={provider}
-                  type="button"
-                  variant="secondary"
-                  className="w-full"
-                  onClick={() => handleOAuthLogin(provider)}
-                >
-                  {OAUTH_PROVIDERS[provider]?.icon}
-                  {t(`login.${provider}.button`)}
-                </Button>
-              ))}
+              {enabledProviders.map((provider) => {
+                const ssoLabel = provider === 'sso' && typeof publicSettings?.oauth_sso_button_label === 'string'
+                  ? (publicSettings.oauth_sso_button_label as string)
+                  : ''
+                const label = ssoLabel || t(`login.${provider}.button`)
+                return (
+                  <Button
+                    key={provider}
+                    type="button"
+                    variant="secondary"
+                    className="w-full"
+                    onClick={() => handleOAuthLogin(provider)}
+                  >
+                    {OAUTH_PROVIDERS[provider]?.icon}
+                    {label}
+                  </Button>
+                )
+              })}
             </div>
           </>
         )}

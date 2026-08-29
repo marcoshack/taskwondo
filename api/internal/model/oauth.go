@@ -12,6 +12,8 @@ const (
 	OAuthProviderGoogle    = "google"
 	OAuthProviderGitHub    = "github"
 	OAuthProviderMicrosoft = "microsoft"
+	// OAuthProviderSSO is the generic OIDC provider configured by admins.
+	OAuthProviderSSO = "sso"
 )
 
 // OAuthAccount represents a linked external identity.

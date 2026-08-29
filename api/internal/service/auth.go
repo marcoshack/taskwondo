@@ -116,6 +116,7 @@ type AuthService struct {
 	emailSender        EmailSender
 	encryptor          *crypto.Encryptor
 	storage            storage.Storage
+	ssoCache           *SSODiscoveryCache
 	baseURL            string
 	jwtSecret          []byte
 	jwtExpiry          time.Duration
@@ -142,6 +143,7 @@ func NewAuthService(
 		jwtSecret:     []byte(jwtSecret),
 		jwtExpiry:     jwtExpiry,
 		providers:     pm,
+		ssoCache:      NewSSODiscoveryCache(),
 	}
 }
 
@@ -189,6 +191,7 @@ func (s *AuthService) getProvider(ctx context.Context, name string) OAuthProvide
 					if err != nil {
 						log.Ctx(ctx).Error().Err(err).Str("provider", name).Msg("failed to decrypt oauth client secret, falling back to static provider")
 					} else {
+						cfg.ClientSecret = secret
 						redirectURI := s.baseURL + "/auth/" + name + "/callback"
 						switch name {
 						case model.OAuthProviderDiscord:
@@ -199,6 +202,8 @@ func (s *AuthService) getProvider(ctx context.Context, name string) OAuthProvide
 							return NewGitHubProvider(cfg.ClientID, secret, redirectURI, nil)
 						case model.OAuthProviderMicrosoft:
 							return NewMicrosoftProvider(cfg.ClientID, secret, redirectURI, nil)
+						case model.OAuthProviderSSO:
+							return NewSSOProvider(cfg, redirectURI, s.encryptor, s.ssoCache, nil)
 						}
 					}
 				}
@@ -593,27 +598,17 @@ func (s *AuthService) SeedAdminUser(ctx context.Context, email, password string)
 // When a setting doesn't exist: OAuth defaults to enabled (backward compat),
 // email login defaults to enabled, email registration defaults to disabled.
 func (s *AuthService) EnabledProviders(ctx context.Context) map[string]bool {
-	result := make(map[string]bool, 4)
+	result := make(map[string]bool, len(model.KnownOAuthProviders)+2)
 
 	// Check each known OAuth provider — configured via DB or static env vars
-	for _, name := range []string{model.OAuthProviderDiscord, model.OAuthProviderGoogle, model.OAuthProviderGitHub, model.OAuthProviderMicrosoft} {
-		if s.isOAuthConfigured(ctx, name) {
-			settingKey := ""
-			switch name {
-			case model.OAuthProviderDiscord:
-				settingKey = model.SettingAuthDiscordEnabled
-			case model.OAuthProviderGoogle:
-				settingKey = model.SettingAuthGoogleEnabled
-			case model.OAuthProviderGitHub:
-				settingKey = model.SettingAuthGitHubEnabled
-			case model.OAuthProviderMicrosoft:
-				settingKey = model.SettingAuthMicrosoftEnabled
-			}
-			if settingKey != "" {
-				result[name] = s.getBoolSetting(ctx, settingKey, true)
-			} else {
-				result[name] = true
-			}
+	for _, name := range model.KnownOAuthProviders {
+		if !s.isOAuthConfigured(ctx, name) {
+			continue
+		}
+		if settingKey := model.OAuthEnabledSettingKey(name); settingKey != "" {
+			result[name] = s.getBoolSetting(ctx, settingKey, true)
+		} else {
+			result[name] = true
 		}
 	}
 
@@ -636,6 +631,10 @@ func (s *AuthService) isOAuthConfigured(ctx context.Context, name string) bool {
 			if err == nil {
 				var cfg model.OAuthProviderConfig
 				if err := json.Unmarshal(setting.Value, &cfg); err == nil && cfg.ClientID != "" {
+					// The SSO provider cannot work without an issuer to discover.
+					if name == model.OAuthProviderSSO {
+						return cfg.Issuer != "" && s.encryptor != nil
+					}
 					return true
 				}
 			}
@@ -989,12 +988,34 @@ func (s *AuthService) OAuthURL(ctx context.Context, providerName string) (string
 		return "", fmt.Errorf("oauth provider %q is not configured", providerName)
 	}
 
+	state, err := s.oauthState(ctx, provider)
+	if err != nil {
+		return "", err
+	}
+
+	// OIDC providers must reach the network for discovery to build the URL, and
+	// they need the per-login secrets that live inside the sealed state.
+	if contextual, ok := provider.(ContextualAuthURL); ok {
+		return contextual.AuthURLContext(ctx, state)
+	}
+	return provider.AuthURL(state), nil
+}
+
+// oauthState produces the anti-CSRF state parameter, delegating to the provider
+// when it carries its own per-login secrets.
+func (s *AuthService) oauthState(ctx context.Context, provider OAuthProvider) (string, error) {
+	if binder, ok := provider.(StateBinder); ok {
+		state, err := binder.NewState(ctx)
+		if err != nil {
+			return "", fmt.Errorf("generating %s state: %w", provider.Name(), err)
+		}
+		return state, nil
+	}
 	state, err := s.generateOAuthState()
 	if err != nil {
 		return "", fmt.Errorf("generating state: %w", err)
 	}
-
-	return provider.AuthURL(state), nil
+	return state, nil
 }
 
 // OAuthCallback validates state, exchanges the code via the provider, and finds or creates a user.
@@ -1004,12 +1025,17 @@ func (s *AuthService) OAuthCallback(ctx context.Context, providerName, code, sta
 		return "", nil, fmt.Errorf("oauth provider %q is not configured", providerName)
 	}
 
-	if err := s.validateOAuthState(state); err != nil {
+	ctx, err := s.validateProviderState(ctx, provider, state)
+	if err != nil {
 		return "", nil, fmt.Errorf("invalid state: %w", err)
 	}
 
 	userInfo, err := provider.ExchangeCode(ctx, code)
 	if err != nil {
+		var ssoErr *SSOError
+		if errors.As(err, &ssoErr) {
+			return "", nil, model.NewKeyedError(ssoErr.Sentinel, ssoErr.Key, ssoErr.Message, nil)
+		}
 		return "", nil, fmt.Errorf("exchanging code: %w", err)
 	}
 
@@ -1028,6 +1054,15 @@ func (s *AuthService) OAuthCallback(ctx context.Context, providerName, code, sta
 	}
 
 	return token, user, nil
+}
+
+// validateProviderState checks the state parameter and returns the context
+// carrying any per-login secrets the provider unsealed from it.
+func (s *AuthService) validateProviderState(ctx context.Context, provider OAuthProvider, state string) (context.Context, error) {
+	if binder, ok := provider.(StateBinder); ok {
+		return binder.ValidateState(ctx, state)
+	}
+	return ctx, s.validateOAuthState(state)
 }
 
 func (s *AuthService) findOrCreateOAuthUser(ctx context.Context, provider string, info model.OAuthUserInfo) (*model.User, error) {
@@ -1065,6 +1100,15 @@ func (s *AuthService) findOrCreateOAuthUser(ctx context.Context, provider string
 
 	// Case 3: Create new user.
 	if user == nil {
+		// Automatic provisioning is off by default for the generic SSO
+		// provider: an administrator's identity provider must not be able to
+		// mint accounts here just by adding someone to a directory.
+		if provider == model.OAuthProviderSSO &&
+			!s.getBoolSetting(ctx, model.SettingSSOAutoProvision, false) {
+			return nil, model.NewKeyedError(model.ErrForbidden, "sso_account_not_provisioned",
+				"no account exists for this single sign-on identity; an administrator must create it or enable automatic provisioning", nil)
+		}
+
 		email := info.Email
 		if email == "" {
 			email = provider + "_" + info.ProviderUserID + "@oauth.taskwondo.local"

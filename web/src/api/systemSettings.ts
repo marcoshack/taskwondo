@@ -69,6 +69,12 @@ export async function testSMTPConfig(): Promise<{ message: string }> {
 export interface OAuthProviderConfig {
   client_id: string
   client_secret: string
+  // Generic OIDC / custom SSO only. Absent for the built-in providers.
+  issuer?: string
+  scopes?: string[]
+  button_label?: string
+  disable_pkce?: boolean
+  require_verified_email?: boolean
 }
 
 export async function getOAuthConfig(provider: string): Promise<OAuthProviderConfig> {

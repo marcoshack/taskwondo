@@ -268,6 +268,19 @@ func (h *AuthHandler) OAuthCallback(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusForbidden, CodeForbidden, "account is disabled")
 			return
 		}
+		// Service errors carrying an error_key are user-facing (localised by
+		// the client); anything else stays a generic message so provider
+		// internals don't leak into the login page.
+		if key, _ := model.ErrorKey(err); key != "" {
+			status := http.StatusUnauthorized
+			code := CodeOAuthError
+			if errors.Is(err, model.ErrForbidden) {
+				status = http.StatusForbidden
+				code = CodeForbidden
+			}
+			writeErrorFromService(w, status, code, err)
+			return
+		}
 		log.Ctx(r.Context()).Error().Err(err).Msg(provider + " oauth callback failed")
 		writeError(w, http.StatusUnauthorized, CodeOAuthError, provider+" authentication failed")
 		return

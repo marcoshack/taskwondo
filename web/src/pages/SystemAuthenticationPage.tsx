@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { usePublicSettings, useSetSystemSetting, useSMTPConfig, useOAuthConfig, useSetOAuthConfig } from '@/hooks/useSystemSettings'
 import type { OAuthProviderConfig } from '@/api/systemSettings'
+import { getOAuthConfigError } from '@/utils/oauthConfigError'
 import { Toggle } from '@/components/ui/Toggle'
 import { Input } from '@/components/ui/Input'
 import { Spinner } from '@/components/ui/Spinner'
@@ -13,6 +14,16 @@ const PASSWORD_MASK = '••••••••'
 const emptyConfig: OAuthProviderConfig = {
   client_id: '',
   client_secret: '',
+}
+
+const emptySSOConfig: OAuthProviderConfig = {
+  client_id: '',
+  client_secret: '',
+  issuer: '',
+  scopes: [],
+  button_label: '',
+  disable_pkce: false,
+  require_verified_email: true,
 }
 
 function RedirectUriField({ provider }: { provider: string }) {
@@ -67,6 +78,8 @@ interface OAuthProviderDef {
   titleKey: string
   descriptionKey: string
   enabledSettingKey: string
+  /** Extra fields rendered for this provider beyond client id/secret. */
+  sso?: boolean
 }
 
 const OAUTH_PROVIDERS: OAuthProviderDef[] = [
@@ -89,14 +102,15 @@ const OAUTH_PROVIDERS: OAuthProviderDef[] = [
     enabledSettingKey: 'auth_github_enabled',
   },
   {
-    provider: 'microsoft',
-    titleKey: 'admin.authentication.microsoft.title',
-    descriptionKey: 'admin.authentication.microsoft.description',
-    enabledSettingKey: 'auth_microsoft_enabled',
+    provider: 'sso',
+    titleKey: 'admin.authentication.sso.title',
+    descriptionKey: 'admin.authentication.sso.description',
+    enabledSettingKey: 'auth_sso_enabled',
+    sso: true,
   },
 ]
 
-const DEFAULT_PROVIDER_ORDER = ['discord', 'google', 'github', 'microsoft']
+const DEFAULT_PROVIDER_ORDER = ['discord', 'google', 'github', 'microsoft', 'sso']
 
 function sortProviders(providers: OAuthProviderDef[], order: string[]): OAuthProviderDef[] {
   const orderMap = new Map(order.map((p, i) => [p, i]))
@@ -112,6 +126,7 @@ function OAuthProviderCard({
   titleKey,
   descriptionKey,
   enabledSettingKey,
+  sso,
   enabled,
   onToggleEnabled,
   isFirst,
@@ -123,6 +138,7 @@ function OAuthProviderCard({
   titleKey: string
   descriptionKey: string
   enabledSettingKey: string
+  sso: boolean
   enabled: boolean
   onToggleEnabled: (key: string, value: boolean) => void
   isFirst: boolean
@@ -139,25 +155,28 @@ function OAuthProviderCard({
   const [saveError, setSaveError] = useState('')
   const [secretTouched, setSecretTouched] = useState(false)
 
-  const cfg = localConfig ?? savedConfig ?? emptyConfig
-  const hasExistingConfig = !!(savedConfig && savedConfig.client_id)
+  const cfg = localConfig ?? savedConfig ?? (sso ? emptySSOConfig : emptyConfig)
+  // A custom SSO provider is unusable until its issuer can be discovered, so
+  // an issuer-less config counts as unconfigured even when credentials exist.
+  const hasExistingConfig = !!(savedConfig && savedConfig.client_id && (!sso || savedConfig.issuer))
 
   const updateField = <K extends keyof OAuthProviderConfig>(field: K, value: OAuthProviderConfig[K]) => {
-    setLocalConfig((prev) => ({ ...(prev ?? savedConfig ?? emptyConfig), [field]: value }))
+    setLocalConfig((prev) => ({ ...(prev ?? savedConfig ?? (sso ? emptySSOConfig : emptyConfig)), [field]: value }))
     setSaved(false)
     setSaveError('')
   }
 
   const isDirty = localConfig !== null || secretTouched
 
-  const isFormComplete = () => {
-    return (
-      cfg.client_id.trim() !== '' &&
-      (cfg.client_secret !== '' || (hasExistingConfig && savedConfig?.client_secret === PASSWORD_MASK && !secretTouched))
-    )
-  }
+  const hasCredentials =
+    cfg.client_id.trim() !== '' &&
+    (cfg.client_secret !== '' ||
+      (hasExistingConfig && savedConfig?.client_secret === PASSWORD_MASK && !secretTouched))
 
-  const canSave = isDirty && isFormComplete()
+  const canSave =
+    isDirty &&
+    hasCredentials &&
+    (!sso || (cfg.issuer ?? '').trim() !== '')
 
   const handleSave = () => {
     setSaved(false)
@@ -174,7 +193,7 @@ function OAuthProviderCard({
         setLocalConfig(null)
         setSecretTouched(false)
       },
-      onError: () => setSaveError(t('admin.authentication.oauth.saveError')),
+      onError: (err) => setSaveError(getOAuthConfigError(err, t)),
     })
   }
 
@@ -255,6 +274,80 @@ function OAuthProviderCard({
         }}
       />
       <RedirectUriField provider={provider} />
+
+      {sso && (
+        <>
+          <div className="border-t border-gray-200 dark:border-gray-700 my-4" />
+          <div>
+            <Input
+              label={t('admin.authentication.sso.issuer')}
+              placeholder={t('admin.authentication.sso.issuerPlaceholder')}
+              value={cfg.issuer ?? ''}
+              onChange={(e) => updateField('issuer', e.target.value)}
+            />
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {t('admin.authentication.sso.issuerHelp')}
+            </p>
+          </div>
+          <div>
+            <Input
+              label={t('admin.authentication.sso.scopes')}
+              placeholder={t('admin.authentication.sso.scopesPlaceholder')}
+              value={(cfg.scopes ?? []).join(', ')}
+              onChange={(e) => {
+                const scopes = e.target.value
+                  .split(/[\s,]+/)
+                  .map((s) => s.trim())
+                  .filter((s) => s.length > 0)
+                updateField('scopes', scopes)
+              }}
+            />
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {t('admin.authentication.sso.scopesHelp')}
+            </p>
+          </div>
+          <div>
+            <Input
+              label={t('admin.authentication.sso.buttonLabel')}
+              placeholder={t('admin.authentication.sso.buttonLabelPlaceholder')}
+              value={cfg.button_label ?? ''}
+              onChange={(e) => updateField('button_label', e.target.value)}
+              maxLength={40}
+            />
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {t('admin.authentication.sso.buttonLabelHelp')}
+            </p>
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                {t('admin.authentication.sso.disablePKCE')}
+              </label>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {t('admin.authentication.sso.disablePKCEHelp')}
+              </p>
+            </div>
+            <Toggle
+              enabled={cfg.disable_pkce ?? false}
+              onChange={(val) => updateField('disable_pkce', val)}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                {t('admin.authentication.sso.requireVerifiedEmail')}
+              </label>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {t('admin.authentication.sso.requireVerifiedEmailHelp')}
+              </p>
+            </div>
+            <Toggle
+              enabled={cfg.require_verified_email ?? true}
+              onChange={(val) => updateField('require_verified_email', val)}
+            />
+          </div>
+        </>
+      )}
     </ExpandableConfigCard>
   )
 }
@@ -301,7 +394,10 @@ export function SystemAuthenticationPage() {
     auth_google_enabled: settings.auth_google_enabled === true,
     auth_github_enabled: settings.auth_github_enabled === true,
     auth_microsoft_enabled: settings.auth_microsoft_enabled === true,
+    auth_sso_enabled: settings.auth_sso_enabled === true,
   }
+
+  const ssoAutoProvisionEnabled = settings.sso_auto_provision_enabled === true
 
   const handleReorder = (index: number, direction: 'up' | 'down') => {
     const currentOrder = sortedProviders.map((p) => p.provider)
@@ -384,6 +480,7 @@ export function SystemAuthenticationPage() {
           titleKey={def.titleKey}
           descriptionKey={def.descriptionKey}
           enabledSettingKey={def.enabledSettingKey}
+          sso={def.sso ?? false}
           enabled={enabledMap[def.enabledSettingKey]}
           onToggleEnabled={handleToggle}
           isFirst={idx === 0}
@@ -392,6 +489,24 @@ export function SystemAuthenticationPage() {
           onMoveDown={() => handleReorder(idx, 'down')}
         />
       ))}
+
+      {/* SSO Auto-provision setting */}
+      <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+              {t('admin.authentication.sso.autoProvision')}
+            </h3>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              {t('admin.authentication.sso.autoProvisionHelp')}
+            </p>
+          </div>
+          <Toggle
+            enabled={ssoAutoProvisionEnabled}
+            onChange={(val) => handleToggle('sso_auto_provision_enabled', val)}
+          />
+        </div>
+      </div>
     </div>
   )
 }

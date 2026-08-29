@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 
@@ -86,4 +87,61 @@ func (e *Encryptor) Decrypt(encoded string) (string, error) {
 	}
 
 	return string(plaintext), nil
+}
+
+// SealJSON marshals v, encrypts it with AES-256-GCM and returns it as an
+// unpadded URL-safe base64 token, suitable for a query parameter such as an
+// OAuth state. Confidentiality comes from the GCM tag as well as the cipher:
+// a token that was not produced by this key cannot be forged.
+func (e *Encryptor) SealJSON(v any) (string, error) {
+	plaintext, err := json.Marshal(v)
+	if err != nil {
+		return "", fmt.Errorf("marshaling payload: %w", err)
+	}
+
+	block, err := aes.NewCipher(e.key)
+	if err != nil {
+		return "", fmt.Errorf("creating cipher: %w", err)
+	}
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return "", fmt.Errorf("creating gcm: %w", err)
+	}
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		return "", fmt.Errorf("generating nonce: %w", err)
+	}
+
+	sealed := gcm.Seal(nonce, nonce, plaintext, nil)
+	return base64.RawURLEncoding.EncodeToString(sealed), nil
+}
+
+// OpenJSON decrypts a token produced by SealJSON into v. It fails if the token
+// was sealed with a different key, tampered with, or malformed.
+func (e *Encryptor) OpenJSON(token string, v any) error {
+	data, err := base64.RawURLEncoding.DecodeString(token)
+	if err != nil {
+		return fmt.Errorf("decoding token: %w", err)
+	}
+	block, err := aes.NewCipher(e.key)
+	if err != nil {
+		return fmt.Errorf("creating cipher: %w", err)
+	}
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return fmt.Errorf("creating gcm: %w", err)
+	}
+	nonceSize := gcm.NonceSize()
+	if len(data) < nonceSize {
+		return fmt.Errorf("token too short")
+	}
+	nonce, ciphertext := data[:nonceSize], data[nonceSize:]
+	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		return fmt.Errorf("decrypting token: %w", err)
+	}
+	if err := json.Unmarshal(plaintext, v); err != nil {
+		return fmt.Errorf("unmarshaling payload: %w", err)
+	}
+	return nil
 }

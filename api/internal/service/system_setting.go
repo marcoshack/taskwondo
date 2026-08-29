@@ -147,6 +147,7 @@ func (s *SystemSettingService) GetPublic(ctx context.Context) (map[string]json.R
 		model.SettingAuthGoogleEnabled,
 		model.SettingAuthGitHubEnabled,
 		model.SettingAuthMicrosoftEnabled,
+		model.SettingAuthSSOEnabled,
 		model.SettingOAuthProviderOrder,
 		model.SettingFeatureStatsTimeline,
 		model.SettingFeatureSemanticSearch,
@@ -166,7 +167,30 @@ func (s *SystemSettingService) GetPublic(ctx context.Context) (map[string]json.R
 		result[key] = setting.Value
 	}
 
+	if label := s.ssoButtonLabel(ctx); label != "" {
+		raw, err := json.Marshal(label)
+		if err != nil {
+			return nil, fmt.Errorf("marshaling sso button label: %w", err)
+		}
+		result["oauth_sso_button_label"] = raw
+	}
+
 	return result, nil
+}
+
+// ssoButtonLabel returns the operator-configured login button text for the
+// generic SSO provider. The config setting holds an encrypted client secret,
+// so only this single plaintext field is ever published.
+func (s *SystemSettingService) ssoButtonLabel(ctx context.Context) string {
+	setting, err := s.settings.Get(ctx, model.SettingOAuthSSOConfig)
+	if err != nil {
+		return ""
+	}
+	var cfg model.OAuthProviderConfig
+	if err := json.Unmarshal(setting.Value, &cfg); err != nil {
+		return ""
+	}
+	return cfg.ButtonLabel
 }
 
 // SeedDefaultLimits creates default values for max_projects_per_user and

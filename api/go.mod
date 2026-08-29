@@ -3,6 +3,7 @@ module github.com/marcoshack/taskwondo
 go 1.25.5
 
 require (
+	github.com/coreos/go-oidc/v3 v3.20.0
 	github.com/go-chi/chi/v5 v5.2.5
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/golang-migrate/migrate/v4 v4.19.1
@@ -16,6 +17,7 @@ require (
 	github.com/rs/zerolog v1.34.0
 	golang.org/x/crypto v0.48.0
 	golang.org/x/image v0.36.0
+	golang.org/x/oauth2 v0.36.0
 	golang.org/x/time v0.14.0
 )
 
@@ -25,6 +27,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
 	github.com/google/go-tpm v0.9.8 // indirect
 	github.com/klauspost/compress v1.18.3 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.11 // indirect
