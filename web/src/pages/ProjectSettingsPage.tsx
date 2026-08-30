@@ -183,7 +183,7 @@ function RoleMenu({
   return (
     <div
       ref={menuRef}
-      className="fixed z-[9999] w-72 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg py-1 max-h-80 overflow-y-auto"
+      className="fixed z-[9999] w-72 rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg py-1 max-h-80 overflow-y-auto"
       style={pos}
     >
       {allRoles.map((role) => (
@@ -590,7 +590,7 @@ export function ProjectSettingsPage() {
 
           {/* Add user form */}
           {canManageMembers && (
-            <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3">
+            <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 space-y-3">
               <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('projects.settings.addUser')}</h3>
               <div className="flex gap-2 items-start">
                 <UserSearchInput
@@ -642,7 +642,7 @@ export function ProjectSettingsPage() {
 
           {/* Member list */}
           {((members && members.length > 0) || pendingEmailInvites.length > 0) && (
-            <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
+            <div className="border border-gray-200 dark:border-gray-600 rounded-lg divide-y divide-gray-200 dark:divide-gray-600">
               {members?.map((member) => {
                 const isSelf = member.user_id === user?.id
                 const memberIsOwner = member.role === 'owner'
@@ -754,7 +754,7 @@ export function ProjectSettingsPage() {
           {inviteError && <p className="text-sm text-red-600 dark:text-red-400">{inviteError}</p>}
 
           {/* Create invite form */}
-          <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3">
+          <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 space-y-3">
             <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('projects.settings.createInvite')}</h3>
             <div className="flex gap-2 items-end flex-wrap">
               <div>
@@ -840,7 +840,7 @@ export function ProjectSettingsPage() {
 
           {/* Invite list */}
           {invites && invites.length > 0 ? (
-            <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
+            <div className="border border-gray-200 dark:border-gray-600 rounded-lg divide-y divide-gray-200 dark:divide-gray-600">
               {invites.map((invite) => {
                 const isExpired = invite.expires_at && new Date(invite.expires_at) < new Date()
 
@@ -937,7 +937,7 @@ export function ProjectSettingsPage() {
 
           {complexityError && <p className="text-sm text-red-600 dark:text-red-400">{complexityError}</p>}
 
-          <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3">
+          <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 space-y-3">
             <Input
               label={t('projects.settings.complexityValues')}
               value={complexityInput ?? project.allowed_complexity_values.join(', ')}
@@ -1150,7 +1150,7 @@ export function ProjectSettingsPage() {
           {transferDropdownOpen && createPortal(
             <div
               ref={transferMenuRef}
-              className="fixed z-[9999] rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg py-1 max-h-60 overflow-y-auto"
+              className="fixed z-[9999] rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg py-1 max-h-60 overflow-y-auto"
               style={{
                 top: (transferButtonRef.current?.getBoundingClientRect().bottom ?? 0) + 4,
                 left: transferButtonRef.current?.getBoundingClientRect().left ?? 0,

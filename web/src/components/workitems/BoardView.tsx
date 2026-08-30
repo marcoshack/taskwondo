@@ -244,7 +244,7 @@ function BoardCard({
 
   return (
     <div
-      className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 shadow-sm hover:shadow-md cursor-pointer relative ${isDragging ? 'opacity-50' : ''}`}
+      className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 p-3 shadow-sm hover:shadow-md cursor-pointer relative ${isDragging ? 'opacity-50' : ''}`}
       draggable={!readOnly}
       onClick={onClick}
       onDragStart={(e) => {
@@ -269,7 +269,7 @@ function BoardCard({
               </button>
             </Tooltip>
             {showMenu && (
-              <div className="absolute right-0 top-5 z-10 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg py-1 min-w-[140px]">
+              <div className="absolute right-0 top-5 z-10 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg py-1 min-w-[140px]">
                 {allowed.map((toStatus) => {
                   const ws = statuses.find((s) => s.name === toStatus)
                   return (

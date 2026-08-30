@@ -180,7 +180,7 @@ export function ProjectWorkflowsPage() {
             <Lock className="h-3.5 w-3.5" />
             {t('workflows.systemWorkflows')}
           </h3>
-          <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
+          <div className="border border-gray-200 dark:border-gray-600 rounded-lg divide-y divide-gray-200 dark:divide-gray-600">
             {systemWorkflows.map((wf) => (
               <div key={wf.id} className="p-4">
                 <div className="flex items-center justify-between mb-2">
@@ -226,7 +226,7 @@ export function ProjectWorkflowsPage() {
             )}
           </div>
         ) : (
-          <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
+          <div className="border border-gray-200 dark:border-gray-600 rounded-lg divide-y divide-gray-200 dark:divide-gray-600">
             {projectWorkflows.map((wf) => (
               <div key={wf.id} className="p-4">
                 <div className="flex items-center justify-between mb-2">
@@ -280,7 +280,7 @@ export function ProjectWorkflowsPage() {
 
       {workflowError && <p className="text-sm text-red-600 dark:text-red-400">{workflowError}</p>}
 
-      <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
+      <div className="border border-gray-200 dark:border-gray-600 rounded-lg divide-y divide-gray-200 dark:divide-gray-600">
         {['task', 'ticket', 'bug', 'feedback', 'epic'].map((itemType) => {
           const mapping = typeWorkflows?.find((tw) => tw.work_item_type === itemType)
           return (
@@ -347,7 +347,7 @@ export function ProjectWorkflowsPage() {
           <p className="text-sm text-gray-500 dark:text-gray-400">{t('escalation.noLists')}</p>
         </div>
       ) : (
-        <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
+        <div className="border border-gray-200 dark:border-gray-600 rounded-lg divide-y divide-gray-200 dark:divide-gray-600">
           {escalationLists.map((el) => {
             const isExpanded = expandedEscalationIds.has(el.id)
             return (
@@ -431,7 +431,7 @@ export function ProjectWorkflowsPage() {
 
       {escalationMappingError && <p className="text-sm text-red-600 dark:text-red-400">{escalationMappingError}</p>}
 
-      <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
+      <div className="border border-gray-200 dark:border-gray-600 rounded-lg divide-y divide-gray-200 dark:divide-gray-600">
         {['task', 'ticket', 'bug', 'feedback', 'epic'].map((itemType) => {
           const escMapping = escalationMappings?.find((m) => m.work_item_type === itemType)
           const wfMapping = typeWorkflows?.find((tw) => tw.work_item_type === itemType)
@@ -524,7 +524,7 @@ export function ProjectWorkflowsPage() {
 
           {bhError && <p className="text-sm text-red-600 dark:text-red-400">{bhError}</p>}
 
-          <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-4">
+          <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 space-y-4">
             {(() => {
               const currentDays = bhDays ?? project.business_hours?.days ?? []
               const currentStart = bhStart ?? project.business_hours?.start_hour ?? 9
@@ -1273,7 +1273,7 @@ function WorkflowEditorModal({
         </div>
 
         {/* Actions */}
-        <div className="flex justify-end gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex justify-end gap-2 pt-2 border-t border-gray-200 dark:border-gray-600">
           <Button variant="secondary" onClick={onClose}>
             {t('common.cancel')}
           </Button>

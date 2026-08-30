@@ -89,7 +89,7 @@ export function QueuesPage() {
           )}
         </div>
       ) : (
-        <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
+        <div className="border border-gray-200 dark:border-gray-600 rounded-lg divide-y divide-gray-200 dark:divide-gray-600">
           {queues.map((queue) => (
             <Link
               key={queue.id}

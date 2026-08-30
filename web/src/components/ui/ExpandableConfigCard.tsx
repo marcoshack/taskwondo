@@ -46,7 +46,7 @@ export function ExpandableConfigCard({
   const { t } = useTranslation()
 
   return (
-    <div className="rounded-lg border border-gray-200 dark:border-gray-700">
+    <div className="rounded-lg border border-gray-200 dark:border-gray-600">
       {/* Header — always visible */}
       <div className={`flex justify-between p-6${headerExtra ? ' items-stretch' : ' items-center'}`}>
         <button
@@ -76,7 +76,7 @@ export function ExpandableConfigCard({
 
       {/* Expandable body */}
       {expanded && (
-        <div className="border-t border-gray-200 dark:border-gray-700 px-6 pb-6 pt-4">
+        <div className="border-t border-gray-200 dark:border-gray-600 px-6 pb-6 pt-4">
           <div className="space-y-4">{children}</div>
 
           {/* Actions */}

@@ -224,7 +224,7 @@ function MembersTab({
       )}
 
       {teamMembers && teamMembers.length > 0 ? (
-        <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
+        <div className="border border-gray-200 dark:border-gray-600 rounded-lg divide-y divide-gray-200 dark:divide-gray-600">
           {teamMembers.map((member) => (
             <div key={member.user_id} className="p-3 flex items-center justify-between gap-2">
               <div className="flex items-center gap-3 min-w-0">

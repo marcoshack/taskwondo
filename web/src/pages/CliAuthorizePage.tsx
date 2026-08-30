@@ -91,7 +91,7 @@ export function CliAuthorizePage() {
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 px-4">
       <div className="flex-1 flex items-center justify-center">
         <div className="max-w-md w-full">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-8">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 p-8">
             <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6 text-center">
               {t('cliAuth.title')}
             </h1>

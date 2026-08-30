@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Search, Plus, Check } from 'lucide-react'
+import { Search, Plus, Check, FolderKanban } from 'lucide-react'
 import { getLocalizedError } from '@/utils/apiError'
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
 import { useNamespacePath } from '@/hooks/useNamespacePath'
@@ -14,12 +14,14 @@ import { AppSidebar } from '@/components/AppSidebar'
 import { CreateNamespaceModal } from '@/components/CreateNamespaceModal'
 import { NamespaceIcon } from '@/components/NamespaceIcon'
 import { DataTable } from '@/components/ui/DataTable'
-import { Spinner } from '@/components/ui/Spinner'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { ProjectKeyBadge } from '@/components/ui/ProjectKeyBadge'
 import { Tooltip } from '@/components/ui/Tooltip'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { LoadingState } from '@/components/ui/LoadingState'
 import type { Column } from '@/components/ui/DataTable'
 import type { Project } from '@/api/projects'
 
@@ -228,8 +230,8 @@ export function ProjectListPage() {
       <div className={`${containerClass(true)} py-6`}>
         <div className={`flex transition-all duration-200 ${collapsed ? 'gap-4' : 'gap-8'}`}>
           <AppSidebar />
-          <div className="flex-1 min-w-0 flex items-center justify-center py-24">
-            <Spinner size="lg" />
+          <div className="flex-1 min-w-0">
+            <LoadingState />
           </div>
         </div>
       </div>
@@ -254,13 +256,13 @@ export function ProjectListPage() {
       <div className={`flex transition-all duration-200 ${collapsed ? 'gap-4' : 'gap-8'}`}>
         <AppSidebar />
         <div className="flex-1 min-w-0">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('projects.title')}</h1>
-        {!isCustomerOnly && <Button onClick={openCreateModal} className="border border-transparent">{t('projects.new')}</Button>}
-      </div>
+      <PageHeader
+        title={t('projects.title')}
+        actions={!isCustomerOnly ? <Button onClick={openCreateModal} className="border border-transparent">{t('projects.new')}</Button> : undefined}
+      />
 
       {/* Search */}
-      <div className="relative mb-4">
+      <div className="relative mb-6">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
         <Input
           ref={searchRef}
@@ -275,7 +277,12 @@ export function ProjectListPage() {
       {/* Mobile card view */}
       <div className="sm:hidden space-y-3">
         {projectList.length === 0 ? (
-          <p className="text-center text-sm text-gray-500 dark:text-gray-400 py-12">{t('projects.empty')}</p>
+          <EmptyState
+            icon={FolderKanban}
+            title={t('projects.empty')}
+            description={!isCustomerOnly ? t('projects.emptyDescription') : undefined}
+            action={!isCustomerOnly ? <Button onClick={openCreateModal}>{t('projects.new')}</Button> : undefined}
+          />
         ) : (
           projectList.map((proj) => {
             const isCustomer = proj.member_role === 'customer'
@@ -283,7 +290,7 @@ export function ProjectListPage() {
               <button
                 key={proj.key}
                 onClick={() => navigate(p(`/projects/${proj.key}${isCustomer ? '/support' : ''}`))}
-                className="w-full text-left bg-white dark:bg-gray-800 rounded-lg shadow p-4 active:bg-gray-50 dark:active:bg-gray-700 transition-colors"
+                className="w-full text-left bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 p-4 active:bg-gray-50 dark:active:bg-gray-700 transition-colors"
               >
                 <div className="flex items-center gap-3">
                   <ProjectKeyBadge>{proj.key}</ProjectKeyBadge>
@@ -329,7 +336,7 @@ export function ProjectListPage() {
       </div>
 
       {/* Desktop table view */}
-      <div className="hidden sm:block bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+      <div className="hidden sm:block bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden">
         <DataTable
           columns={columns}
           data={projectList}
@@ -443,7 +450,7 @@ export function ProjectListPage() {
             </button>
           ))}
         </div>
-        <div className="border-t border-gray-100 dark:border-gray-700 mt-3 pt-3">
+        <div className="border-t border-gray-100 dark:border-gray-600 mt-3 pt-3">
           <button
             onClick={() => setShowNsCreate(true)}
             className="w-full text-left px-3 py-2.5 rounded-md text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3"

@@ -30,7 +30,7 @@ interface WorkItemMobileCardProps {
 export function WorkItemMobileCard({ item, statuses, showDates, assigneeName, inboxItemId, isWatching, isCompleted = false, onClick }: WorkItemMobileCardProps) {
   return (
     <div
-      className="relative w-full text-left rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 shadow-sm hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors cursor-pointer"
+      className="relative w-full text-left rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 p-3 hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors cursor-pointer"
       onClick={onClick}
       role="button"
       tabIndex={0}

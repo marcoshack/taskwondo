@@ -105,7 +105,7 @@ export function KeyboardShortcutsModal({ open, onClose }: { open: boolean; onClo
             <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1">
               {cat.title}
             </h3>
-            <div className="divide-y divide-gray-100 dark:divide-gray-700">
+            <div className="divide-y divide-gray-100 dark:divide-gray-600">
               {cat.shortcuts.map((s, i) => (
                 <ShortcutRow key={i} keys={s.keys} label={s.label} chord={s.chord} thenLabel={t('shortcuts.then')} />
               ))}

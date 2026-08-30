@@ -141,7 +141,7 @@ export function ProjectOverviewPage() {
               <button
                 key={panel.key}
                 onClick={() => navigateToItems(panel.key)}
-                className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 text-left hover:border-indigo-300 dark:hover:border-indigo-600 hover:shadow-md transition-all cursor-pointer"
+                className="rounded-lg border border-gray-200 dark:border-gray-600 p-3 text-left hover:border-indigo-300 dark:hover:border-indigo-600 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer"
               >
                 <div className="flex items-center gap-1.5 mb-1">
                   <span className={`inline-block h-2 w-2 rounded-full ${panel.iconBg}`} />
@@ -162,7 +162,7 @@ export function ProjectOverviewPage() {
         <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
           {t('projects.overview.about')}
         </h2>
-        <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-5">
+        <div className="rounded-lg border border-gray-200 dark:border-gray-600 p-5">
           {project?.description ? (
             <div className="prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 break-words">
               <Markdown remarkPlugins={[remarkGfm]}>{project.description}</Markdown>
@@ -177,7 +177,7 @@ export function ProjectOverviewPage() {
         <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
           {t('projects.overview.members')}
         </h2>
-        <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+        <div className="rounded-lg border border-gray-200 dark:border-gray-600 p-4">
           {membersLoading ? (
             <Spinner />
           ) : !members || members.length === 0 ? (

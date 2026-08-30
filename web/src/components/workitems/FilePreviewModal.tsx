@@ -135,7 +135,7 @@ export function FilePreviewModal({ target, onClose }: FilePreviewModalProps) {
     <Modal open={!!target} onClose={onClose} size="full">
      <div ref={containerRef} tabIndex={-1} className="flex flex-col h-full outline-none">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 shrink-0" onMouseEnter={() => containerRef.current?.focus()}>
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-600 shrink-0" onMouseEnter={() => containerRef.current?.focus()}>
         <div className="min-w-0 mr-4 truncate">
           <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
             {info?.filename}

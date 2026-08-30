@@ -123,7 +123,7 @@ export function MultiSelect({ options, selected, onChange, placeholder = 'All', 
               />
             </div>
           )}
-          <div className="flex items-center gap-2 px-3 py-1.5 border-b border-gray-100 dark:border-gray-700">
+          <div className="flex items-center gap-2 px-3 py-1.5 border-b border-gray-100 dark:border-gray-600">
             <button type="button" className="text-xs text-indigo-600 hover:text-indigo-800" onClick={selectAll}>
               {t('common.all')}
             </button>

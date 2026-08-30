@@ -105,7 +105,7 @@ export function SavedSearchSelector({
 
   // Shared search filter + search input
   const searchInput = (
-    <div className={variant === 'mobile' ? 'px-0 pb-2' : 'p-2 border-b border-gray-200 dark:border-gray-700'}>
+    <div className={variant === 'mobile' ? 'px-0 pb-2' : 'p-2 border-b border-gray-200 dark:border-gray-600'}>
       <div className="relative">
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
         <input
@@ -156,7 +156,7 @@ export function SavedSearchSelector({
 
         {filteredShared.length > 0 && (
           <>
-            {filteredUser.length > 0 && <div className="my-1 border-t border-gray-200 dark:border-gray-700" />}
+            {filteredUser.length > 0 && <div className="my-1 border-t border-gray-200 dark:border-gray-600" />}
             <p className="px-3 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               {t('savedSearches.shared')}
             </p>
@@ -267,7 +267,7 @@ export function SavedSearchSelector({
           </button>
 
           {open && (
-            <div className="absolute left-0 top-full mt-1 w-[22rem] z-50 rounded-md border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
+            <div className="absolute left-0 top-full mt-1 w-[22rem] z-50 rounded-md border border-gray-200 bg-white shadow-lg dark:border-gray-600 dark:bg-gray-800">
               {desktopContent}
             </div>
           )}

@@ -321,7 +321,7 @@ export function PortalTicketDetailPage() {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 dark:border-gray-700 mb-4 flex items-center justify-between">
+      <div className="border-b border-gray-200 dark:border-gray-600 mb-4 flex items-center justify-between">
         <nav className="flex gap-6 pr-8 overflow-x-auto scrollbar-none">
           {tabs.map((tab) => (
             <button
@@ -376,7 +376,7 @@ export function PortalTicketDetailPage() {
           ) : (
             <div className="space-y-4">
               {(sortOrder === 'desc' ? [...comments].reverse() : comments).map((c: PortalComment) => (
-                <div key={c.id} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+                <div key={c.id} className="rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{c.author_name}</span>
                     <span className="text-xs text-gray-400 dark:text-gray-500">{new Date(c.created_at).toLocaleString()}</span>
@@ -398,7 +398,7 @@ export function PortalTicketDetailPage() {
           className={`space-y-4 rounded-lg transition-colors ${dragging ? 'bg-indigo-50 dark:bg-indigo-900/20 ring-2 ring-indigo-400 ring-dashed' : ''}`}
         >
           {/* Upload form — matches AttachmentList */}
-          <div className="space-y-2 pb-3 border-b border-gray-100 dark:border-gray-700">
+          <div className="space-y-2 pb-3 border-b border-gray-100 dark:border-gray-600">
             <input
               type="text"
               className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-1.5 text-sm"
@@ -423,7 +423,7 @@ export function PortalTicketDetailPage() {
 
           {/* Attachment list — matches AttachmentList */}
           {(sortOrder === 'desc' ? [...(attachments ?? [])].reverse() : (attachments ?? [])).map((a: PortalAttachment) => (
-            <div key={a.id} className="flex items-start gap-3 border-b border-gray-100 dark:border-gray-700 pb-3">
+            <div key={a.id} className="flex items-start gap-3 border-b border-gray-100 dark:border-gray-600 pb-3">
               <div className="flex-1 min-w-0">
                 <button
                   onClick={() => handleAttachmentClick(a)}

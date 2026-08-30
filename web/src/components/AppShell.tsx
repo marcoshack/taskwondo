@@ -157,7 +157,7 @@ export function AppShell() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
-      <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+      <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-600">
         <div className={containerClass(true)}>
           <div className="flex justify-between h-14 relative">
             <div className="flex items-center gap-6 min-w-0">
@@ -290,7 +290,7 @@ export function AppShell() {
                           )}
                         </button>
                       ))}
-                      <div className="border-t border-gray-100 dark:border-gray-700 mt-1 pt-1">
+                      <div className="border-t border-gray-100 dark:border-gray-600 mt-1 pt-1">
                         <button
                           onClick={() => {
                             setNsDropdownOpen(false)
@@ -323,7 +323,7 @@ export function AppShell() {
               </button>
               {menuOpen && (
                 <div className="absolute right-0 top-full mt-1 w-48 bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm rounded-md shadow-lg border border-gray-200 dark:border-gray-600 py-1 z-50">
-                  <div className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
+                  <div className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-600">
                     {user?.email}
                   </div>
                   <button
@@ -349,7 +349,7 @@ export function AppShell() {
                     <HelpCircle className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                     {t('nav.help')}
                   </button>
-                  <div className="border-t border-gray-100 dark:border-gray-700" />
+                  <div className="border-t border-gray-100 dark:border-gray-600" />
                   <button
                     onClick={handleLogout}
                     className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
@@ -528,7 +528,7 @@ function ProjectSwitcherModal({
         </ul>
       )}
       {showNamespaces && (
-        <div className="flex justify-end mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+        <div className="flex justify-end mt-2 pt-2 border-t border-gray-100 dark:border-gray-600">
           <label className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none" data-testid="all-namespaces-toggle">
             <input
               type="checkbox"

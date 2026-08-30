@@ -451,7 +451,7 @@ function SummaryCounters({
   return (
     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
       {counters.map((c) => (
-        <div key={c.label} className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 text-center">
+        <div key={c.label} className="rounded-lg border border-gray-200 dark:border-gray-600 p-3 text-center">
           <div className={`text-2xl font-bold ${c.color}`}>{c.value}</div>
           <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{c.label}</div>
         </div>
@@ -483,7 +483,7 @@ function BreakdownChart({
   const maxCount = Math.max(...entries.map(([, v]) => v.open + v.closed), 1)
 
   return (
-    <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+    <div className="rounded-lg border border-gray-200 dark:border-gray-600 p-4">
       <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">{title}</h3>
       <div className="space-y-2">
         {entries.map(([key, counts]) => {
@@ -529,7 +529,7 @@ function LabelBreakdown({ labels }: { labels: Record<string, number> }) {
         {entries.map(([label, count]) => (
           <span
             key={label}
-            className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 dark:border-gray-700 px-3 py-1 text-xs text-gray-700 dark:text-gray-300"
+            className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 dark:border-gray-600 px-3 py-1 text-xs text-gray-700 dark:text-gray-300"
           >
             {label}
             <span className="font-medium text-gray-900 dark:text-gray-100">{count}</span>
@@ -552,7 +552,7 @@ function TimeTrackingSection({ milestone }: { milestone: Milestone }) {
   const timePercent = estimated > 0 ? Math.min(Math.round((spent / estimated) * 100), 100) : 0
 
   return (
-    <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+    <div className="rounded-lg border border-gray-200 dark:border-gray-600 p-4">
       <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
         <Clock className="h-4 w-4" />
         {t('milestone.dashboard.timeTracking')}
@@ -667,7 +667,7 @@ function WorkItemsTable({
           <p className="text-sm text-gray-500 dark:text-gray-400">{t('milestone.dashboard.noItems')}</p>
         </div>
       ) : (
-        <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+        <div className="border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden divide-y divide-gray-200 dark:divide-gray-600 text-sm">
           {visibleItems.map((item) => {
             const cat = statuses?.find((s) => s.name === item.status)?.category
             return (
@@ -685,7 +685,7 @@ function WorkItemsTable({
             )
           })}
           {(hasHiddenItems || hasMore) && (
-            <div className="border-t border-gray-200 dark:border-gray-700 p-2 text-center">
+            <div className="border-t border-gray-200 dark:border-gray-600 p-2 text-center">
               {hasHiddenItems && !expanded ? (
                 <button
                   onClick={() => setExpanded(true)}

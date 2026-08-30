@@ -413,10 +413,10 @@ export function DirectoryUsersTab() {
             gridTemplateColumns: `25% repeat(${dataCols}, minmax(0, 1fr)) 2rem`,
           }
           return (
-        <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+        <div className="border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden">
           {/* Desktop column headers */}
           <div
-            className="hidden sm:grid items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700"
+            className="hidden sm:grid items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-600"
             style={gridStyle}
           >
             <SortableHeader sortKey="name" active={sortBy === 'name'} order={sortOrder} onSort={handleSort}>
@@ -444,7 +444,7 @@ export function DirectoryUsersTab() {
             </SortableHeader>
             <span aria-hidden="true" />
           </div>
-          <div className="divide-y divide-gray-200 dark:divide-gray-700">
+          <div className="divide-y divide-gray-200 dark:divide-gray-600">
           {filteredUsers.map((u) => {
             const isSelf = u.id === currentUser?.id
             const isExpanded = expandedUserId === u.id
@@ -870,7 +870,7 @@ function UserProjectsPanel({
   return (
     <div className="px-3 pb-3 pl-12 space-y-3">
       {mobileProjectLimit && (
-        <div className="sm:hidden border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+        <div className="sm:hidden border border-gray-200 dark:border-gray-600 rounded-lg p-3">
           <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
             {t('admin.general.projectLimit.label')}
           </label>
@@ -898,7 +898,7 @@ function UserProjectsPanel({
         </div>
       )}
       {mobileNamespaceLimit && (
-        <div className="sm:hidden border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+        <div className="sm:hidden border border-gray-200 dark:border-gray-600 rounded-lg p-3">
           <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
             {t('admin.general.namespaceLimit.label')}
           </label>
@@ -925,7 +925,7 @@ function UserProjectsPanel({
           </div>
         </div>
       )}
-      <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-3">
+      <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-3 space-y-3">
         <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
           {t('admin.users.projects')}
         </h4>
@@ -991,7 +991,7 @@ function UserProjectsPanel({
 
         {/* Add to project form */}
         {availableProjects.length > 0 && (
-          <div className="flex gap-2 items-center pt-2 border-t border-gray-100 dark:border-gray-700">
+          <div className="flex gap-2 items-center pt-2 border-t border-gray-100 dark:border-gray-600">
             <select
               className="min-w-0 flex-1 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1.5 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               value={selectedProjectId}

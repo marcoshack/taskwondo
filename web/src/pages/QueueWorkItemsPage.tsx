@@ -427,9 +427,9 @@ export function QueueWorkItemsPage() {
       ) : viewMode === 'list' ? (
         <>
           {/* Desktop: table view */}
-          <div className="hidden lg:block border dark:border-gray-700 rounded-lg overflow-hidden">
+          <div className="hidden lg:block border dark:border-gray-600 rounded-lg overflow-hidden">
             {!readOnly && (
-              <div className="bg-gray-50 dark:bg-gray-800 px-6 py-2 border-b dark:border-gray-700">
+              <div className="bg-gray-50 dark:bg-gray-800 px-6 py-2 border-b dark:border-gray-600">
                 <label className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                   <input
                     type="checkbox"

@@ -61,7 +61,7 @@ export function SystemSettingsSidebar() {
         {renderNavItems(!collapsed)}
 
         <div
-          className={`mt-4 border-t border-gray-200 pt-4 dark:border-gray-700 ${
+          className={`mt-4 border-t border-gray-200 pt-4 dark:border-gray-600 ${
             collapsed ? 'flex justify-center' : ''
           }`}
         >

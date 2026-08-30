@@ -204,7 +204,7 @@ export function SystemAPIKeysPage() {
       )}
 
       {/* Create Form */}
-      <div className="mb-8 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+      <div className="mb-8 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 p-4">
         <h2 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-4">
           {t('admin.apiKeys.createNew')}
         </h2>
@@ -248,7 +248,7 @@ export function SystemAPIKeysPage() {
                 <div
                   key={rp.resource}
                   data-testid={`resource-${rp.resource}`}
-                  className="flex items-center gap-4 rounded-md border border-gray-200 dark:border-gray-700 px-3 py-2"
+                  className="flex items-center gap-4 rounded-md border border-gray-200 dark:border-gray-600 px-3 py-2"
                 >
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-28">
                     {t(rp.labelKey)}
@@ -299,7 +299,7 @@ export function SystemAPIKeysPage() {
           <p>{t('admin.apiKeys.empty')}</p>
         </div>
       ) : (
-        <div className="rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-200 dark:divide-gray-700">
+        <div className="rounded-lg border border-gray-200 dark:border-gray-600 divide-y divide-gray-200 dark:divide-gray-600">
           {keys.map((key) => {
             const exp = formatExpiration(key)
             const isEditing = editingKeyId === key.id

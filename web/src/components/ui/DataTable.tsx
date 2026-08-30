@@ -135,7 +135,7 @@ export function DataTable<T>({
 
   return (
     <div className="overflow-hidden">
-      <table className="w-full table-fixed sm:divide-y sm:divide-gray-200 sm:dark:divide-gray-700 sm:border-b sm:border-gray-200 sm:dark:border-gray-700">
+      <table className="w-full table-fixed sm:divide-y sm:divide-gray-200 sm:dark:divide-gray-600 sm:border-b sm:border-gray-200 sm:dark:border-gray-600">
         <colgroup>
           {columns.map((col) => (
             <col
@@ -177,7 +177,7 @@ export function DataTable<T>({
             })}
           </tr>
         </thead>
-        <tbody className="bg-white dark:bg-gray-900 sm:divide-y sm:divide-gray-200 sm:dark:divide-gray-700">
+        <tbody className="bg-white dark:bg-gray-900 sm:divide-y sm:divide-gray-200 sm:dark:divide-gray-600">
           {data.length === 0 ? (
             <tr>
               <td colSpan={columns.length} className="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400">

@@ -13,6 +13,7 @@ import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
 import { Spinner } from '@/components/ui/Spinner'
+import { LoadingState } from '@/components/ui/LoadingState'
 import { Modal } from '@/components/ui/Modal'
 import { PriorityBadge } from '@/components/workitems/PriorityBadge'
 import { TypeBadge } from '@/components/workitems/TypeBadge'
@@ -717,11 +718,11 @@ export function WorkItemListPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-4">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 shrink-0">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 shrink-0">
           <span className="lg:hidden">{t('workitems.titleShort')}</span>
           <span className="hidden lg:inline">{t('workitems.title')}</span>
         </h2>
-        <div className="grid grid-cols-2 rounded-md shadow-sm shrink-0">
+        <div className="grid grid-cols-2 rounded-md border border-gray-200 dark:border-gray-600 shrink-0">
           <button
             className={`flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium rounded-l-md border ${
               viewMode === 'list' ? 'bg-indigo-50 text-indigo-700 border-indigo-300 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-700' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700'
@@ -872,15 +873,13 @@ export function WorkItemListPage() {
       )}
 
       {isLoading ? (
-        <div className="flex justify-center py-12">
-          <Spinner size="lg" />
-        </div>
+        <LoadingState />
       ) : viewMode === 'list' ? (
         <>
           {/* Desktop: table view */}
-          <div className="hidden lg:block border dark:border-gray-700 rounded-lg overflow-hidden">
+          <div className="hidden lg:block border dark:border-gray-600 rounded-lg overflow-hidden">
             {!readOnly && (
-              <div className="bg-gray-50 dark:bg-gray-800 px-6 py-2 border-b dark:border-gray-700">
+              <div className="bg-gray-50 dark:bg-gray-800 px-6 py-2 border-b dark:border-gray-600">
                 <label className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                   <input
                     type="checkbox"

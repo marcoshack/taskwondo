@@ -44,7 +44,7 @@ export function AppearancePage({ hideCompletedItems = false }: { hideCompletedIt
                 className={`rounded-lg border-2 p-4 text-left transition-colors ${
                   theme === th.value
                     ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
-                    : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600'
+                    : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600'
                 }`}
               >
                 {th.value === 'system' ? (
@@ -106,7 +106,7 @@ export function AppearancePage({ hideCompletedItems = false }: { hideCompletedIt
                 className={`rounded-lg border-2 p-4 text-left transition-colors ${
                   layout === lo.value
                     ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
-                    : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600'
+                    : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600'
                 }`}
               >
                 <div className="mb-3 rounded-md border border-gray-300 dark:border-gray-600 overflow-hidden">
@@ -139,7 +139,7 @@ export function AppearancePage({ hideCompletedItems = false }: { hideCompletedIt
                 className={`rounded-lg border-2 p-4 text-left transition-colors ${
                   fontSize === fs.value
                     ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
-                    : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600'
+                    : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600'
                 }`}
               >
                 <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{fs.label}</p>
@@ -161,7 +161,7 @@ export function AppearancePage({ hideCompletedItems = false }: { hideCompletedIt
                 className={`rounded-lg border-2 p-4 text-left transition-colors ${
                   language === lang.value
                     ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
-                    : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600'
+                    : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600'
                 }`}
               >
                 <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{lang.nativeLabel}</p>
@@ -175,7 +175,7 @@ export function AppearancePage({ hideCompletedItems = false }: { hideCompletedIt
           <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
             {t('preferences.completedItems')}
           </h2>
-          <div className="rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-3">
+          <div className="rounded-lg border border-gray-200 dark:border-gray-600 px-4 py-3">
             <label className="flex items-start gap-3 cursor-pointer">
               <input
                 type="checkbox"

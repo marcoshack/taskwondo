@@ -406,7 +406,7 @@ export function CommandPalette({ open, onClose, projectKey }: CommandPaletteProp
         )}
       </div>
 
-      <div className="border-t border-gray-200 dark:border-gray-700" />
+      <div className="border-t border-gray-200 dark:border-gray-600" />
 
       <div ref={listRef} className="max-h-[60vh] overflow-y-auto py-2">
         {/* Navigation — always first, matched live from the first character. */}
@@ -461,7 +461,7 @@ export function CommandPalette({ open, onClose, projectKey }: CommandPaletteProp
         {semanticAvailable && (
           <>
             {showSectionHeaders && hasSemanticResults && (
-              <div className="flex items-center gap-2 px-3 py-1.5 mt-3 mb-1 border-t border-gray-100 dark:border-gray-700/50 pt-3">
+              <div className="flex items-center gap-2 px-3 py-1.5 mt-3 mb-1 border-t border-gray-100 dark:border-gray-600/50 pt-3">
                 {sectionHeading(t('search.relatedResults'))}
                 <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium bg-gray-100 text-gray-500 dark:bg-gray-700/50 dark:text-gray-400">
                   <FlaskConical className="h-3 w-3" />
@@ -472,7 +472,7 @@ export function CommandPalette({ open, onClose, projectKey }: CommandPaletteProp
             {hasSemanticResults && renderEntitySections(semanticSections, true)}
 
             {semanticStatus === 'pending' && (
-              <div className="flex items-center gap-2 px-3 py-3 mt-2 border-t border-gray-100 dark:border-gray-700/50">
+              <div className="flex items-center gap-2 px-3 py-3 mt-2 border-t border-gray-100 dark:border-gray-600/50">
                 <Loader2 className="h-3.5 w-3.5 text-gray-400 animate-spin" />
                 <span className="text-xs text-gray-400 dark:text-gray-500">
                   {t('search.semanticLoading')}
@@ -481,7 +481,7 @@ export function CommandPalette({ open, onClose, projectKey }: CommandPaletteProp
             )}
 
             {semanticError && (
-              <div className="flex items-center gap-2 px-3 py-3 mt-2 border-t border-gray-100 dark:border-gray-700/50">
+              <div className="flex items-center gap-2 px-3 py-3 mt-2 border-t border-gray-100 dark:border-gray-600/50">
                 <AlertCircle className="h-3.5 w-3.5 text-gray-400 shrink-0" />
                 <span className="text-xs text-gray-400 dark:text-gray-500">
                   {t('search.semanticError')}
@@ -524,7 +524,7 @@ export function CommandPalette({ open, onClose, projectKey }: CommandPaletteProp
         )}
       </div>
 
-      <div className="border-t border-gray-200 dark:border-gray-700 pt-2 mt-1 hidden [@media(hover:hover)_and_(pointer:fine)]:flex items-center justify-between">
+      <div className="border-t border-gray-200 dark:border-gray-600 pt-2 mt-1 hidden [@media(hover:hover)_and_(pointer:fine)]:flex items-center justify-between">
         <div className="flex items-center gap-2 text-xs text-gray-400">
           <kbd className="inline-flex items-center justify-center min-w-[1.25rem] px-1 py-0.5 font-mono text-[10px] text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded">
             ↑↓

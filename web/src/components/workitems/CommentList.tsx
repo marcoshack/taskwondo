@@ -155,7 +155,7 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
   return (
     <div className="space-y-4">
       {!readOnly && (
-        <div ref={addCommentRef} className="space-y-2 pb-3 border-b border-gray-100 dark:border-gray-700">
+        <div ref={addCommentRef} className="space-y-2 pb-3 border-b border-gray-100 dark:border-gray-600">
           <textarea
             ref={newCommentRef}
             className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm"
@@ -214,7 +214,7 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
         <div
           key={c.id}
           ref={c.id === highlightedCommentId ? highlightRef : undefined}
-          className={`group/comment border-b border-gray-100 dark:border-gray-700 pb-3 rounded-md transition-colors duration-700 ${
+          className={`group/comment border-b border-gray-100 dark:border-gray-600 pb-3 rounded-md transition-colors duration-700 ${
             c.id === highlightedCommentId ? 'bg-indigo-50 dark:bg-indigo-900/30 ring-1 ring-indigo-300 dark:ring-indigo-600 px-2 py-2 -mx-2' : ''
           }`}
         >
@@ -303,7 +303,7 @@ export function CommentList({ projectKey, itemNumber, sortOrder = 'desc', highli
                       {t('inlineComments.view')}
                     </button>
                   </div>
-                  <pre className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded p-2 overflow-x-auto">
+                  <pre className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-600 rounded p-2 overflow-x-auto">
                     {c.anchor.snippet}
                   </pre>
                 </div>

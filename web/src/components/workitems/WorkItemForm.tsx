@@ -521,7 +521,7 @@ export function WorkItemForm({
             so they don't add to the row's height: revealing "More fields"
             scrolls this column instead of growing the modal.
           */}
-          <div className="border-t border-gray-200 dark:border-gray-700 md:relative md:border-l md:border-t-0">
+          <div className="border-t border-gray-200 dark:border-gray-600 md:relative md:border-l md:border-t-0">
             <div className="space-y-4 px-6 py-5 md:absolute md:inset-0 md:overflow-y-auto md:overscroll-contain">
               {projectField}
               {typeField}
@@ -538,7 +538,7 @@ export function WorkItemForm({
           </div>
         </div>
       </div>
-      <div className="shrink-0 border-t border-gray-200 px-6 py-4 dark:border-gray-700">
+      <div className="shrink-0 border-t border-gray-200 px-6 py-4 dark:border-gray-600">
         {submitError && <p className="mb-2 text-sm text-red-600 dark:text-red-400">{submitError}</p>}
         <div className="flex items-center gap-4">
           {attachmentsField}

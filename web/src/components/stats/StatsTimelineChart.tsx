@@ -179,7 +179,7 @@ export function StatsTimelineChart({ projectKey }: Props) {
           </div>
         </div>
       </div>
-      <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+      <div className="rounded-lg border border-gray-200 dark:border-gray-600 p-4">
         {isLoading ? (
           <div className="flex items-center justify-center" style={{ height: 200 }}>
             <Spinner />

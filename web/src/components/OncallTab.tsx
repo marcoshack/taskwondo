@@ -177,7 +177,7 @@ function RotationDetailsCard({ data }: { data: OncallRotationWithMembers }) {
   const { t } = useTranslation()
 
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3">
+    <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 space-y-3">
       <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
         {t('teams.oncall.title')}
       </p>
@@ -211,7 +211,7 @@ function RotationMembersPanel({ data }: { data: OncallRotationWithMembers }) {
   const sortedMembers = [...data.members].sort((a, b) => a.position - b.position)
 
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3">
+    <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 space-y-3">
       <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
         {t('teams.oncall.participants')}
       </p>
@@ -523,7 +523,7 @@ function RotationForm({
                   onDragEnd={handleDragEnd}
                   className={`flex items-center gap-2 px-3 py-2 cursor-grab active:cursor-grabbing ${
                     draggedIdx === idx ? 'bg-indigo-50 dark:bg-indigo-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-700'
-                  } ${idx > 0 ? 'border-t border-gray-100 dark:border-gray-700' : ''}`}
+                  } ${idx > 0 ? 'border-t border-gray-100 dark:border-gray-600' : ''}`}
                 >
                   <GripVertical className="h-3.5 w-3.5 text-gray-400 shrink-0" />
                   <span className="text-xs text-gray-400 w-5 text-right shrink-0">{idx + 1}</span>
@@ -631,7 +631,7 @@ function OverridePanel({
 
   return (
     <>
-      <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3">
+      <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 space-y-3">
         <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
           {t('teams.oncall.override.title')}
         </p>
@@ -954,7 +954,7 @@ function HistoryLog({
   return (
     <div className="space-y-3">
       <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('teams.oncall.history')}</h3>
-      <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
+      <div className="border border-gray-200 dark:border-gray-600 rounded-lg divide-y divide-gray-200 dark:divide-gray-600">
         {history.map((entry) => (
           <div key={entry.id} className="p-3 flex items-center gap-3">
             <Avatar name={entry.display_name} avatarUrl={entry.avatar_url} size="xs" />

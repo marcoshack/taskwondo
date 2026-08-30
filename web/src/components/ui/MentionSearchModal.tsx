@@ -294,7 +294,7 @@ export function MentionSearchModal({ open, position, onClose, onSelect }: Mentio
       style={{ top, left }}
       onKeyDown={handleKeyDown}
     >
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-200 dark:border-gray-600">
         <Search className="h-4 w-4 text-gray-400 shrink-0" />
         <input
           ref={inputRef}
@@ -340,7 +340,7 @@ export function MentionSearchModal({ open, position, onClose, onSelect }: Mentio
             {semanticAvailable && (
               <>
                 {showSectionHeaders && hasSemanticResults && (
-                  <div className="flex items-center gap-1.5 px-3 py-1 mt-1 border-t border-gray-100 dark:border-gray-700/50 pt-2">
+                  <div className="flex items-center gap-1.5 px-3 py-1 mt-1 border-t border-gray-100 dark:border-gray-600/50 pt-2">
                     <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
                       {t('search.relatedResults')}
                     </span>
@@ -353,7 +353,7 @@ export function MentionSearchModal({ open, position, onClose, onSelect }: Mentio
                 {hasSemanticResults && renderGroups(semanticGroups)}
 
                 {semanticStatus === 'pending' && (
-                  <div className="flex items-center gap-1.5 px-3 py-2 mt-1 border-t border-gray-100 dark:border-gray-700/50">
+                  <div className="flex items-center gap-1.5 px-3 py-2 mt-1 border-t border-gray-100 dark:border-gray-600/50">
                     <Loader2 className="h-3 w-3 text-gray-400 animate-spin" />
                     <span className="text-[10px] text-gray-400 dark:text-gray-500">
                       {t('search.semanticLoading')}

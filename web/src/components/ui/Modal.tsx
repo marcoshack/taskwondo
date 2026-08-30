@@ -65,7 +65,7 @@ export function Modal({ open, onClose, title, position = 'center', size = 'defau
         {title && (
           // 'wide' owns its own padding and separates the header with a rule so
           // the body can scroll under a pinned header and footer.
-          <div className={`flex items-center gap-3 ${size === 'wide' ? 'shrink-0 border-b border-gray-200 dark:border-gray-700 px-6 py-4' : 'mb-4'}`}>
+          <div className={`flex items-center gap-3 ${size === 'wide' ? 'shrink-0 border-b border-gray-200 dark:border-gray-600 px-6 py-4' : 'mb-4'}`}>
             <h2 className="flex-1 min-w-0 truncate text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
             {headerRight}
             {/* Matching flex-1 on both sides centres headerRight in the row. */}

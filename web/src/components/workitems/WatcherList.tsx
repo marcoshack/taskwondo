@@ -38,7 +38,7 @@ export function WatcherList({ projectKey, itemNumber, members, currentUserRole }
     const isWatching = !!watcherData.me
     return (
       <div className="space-y-4">
-        <div className="flex items-center gap-2 pb-3 border-b border-gray-100 dark:border-gray-700">
+        <div className="flex items-center gap-2 pb-3 border-b border-gray-100 dark:border-gray-600">
           <Button
             className="py-2 text-sm"
             onClick={() => toggleMutation.mutate()}
@@ -73,7 +73,7 @@ export function WatcherList({ projectKey, itemNumber, members, currentUserRole }
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center gap-2 pb-3 border-b border-gray-100 dark:border-gray-700">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 pb-3 border-b border-gray-100 dark:border-gray-600">
         <Button
           className="py-2 text-sm"
           onClick={() => toggleMutation.mutate()}

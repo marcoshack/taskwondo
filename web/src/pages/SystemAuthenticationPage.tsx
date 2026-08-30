@@ -5,7 +5,7 @@ import type { OAuthProviderConfig } from '@/api/systemSettings'
 import { getOAuthConfigError } from '@/utils/oauthConfigError'
 import { Toggle } from '@/components/ui/Toggle'
 import { Input } from '@/components/ui/Input'
-import { Spinner } from '@/components/ui/Spinner'
+import { LoadingState } from '@/components/ui/LoadingState'
 import { ExpandableConfigCard } from '@/components/ui/ExpandableConfigCard'
 import { Copy, Check, TriangleAlert, ArrowUp, ArrowDown } from 'lucide-react'
 
@@ -277,7 +277,7 @@ function OAuthProviderCard({
 
       {sso && (
         <>
-          <div className="border-t border-gray-200 dark:border-gray-700 my-4" />
+          <div className="border-t border-gray-200 dark:border-gray-600 my-4" />
           <div>
             <Input
               label={t('admin.authentication.sso.issuer')}
@@ -359,11 +359,7 @@ export function SystemAuthenticationPage() {
   const setSetting = useSetSystemSetting()
 
   if (settingsLoading || smtpLoading) {
-    return (
-      <div className="flex justify-center py-12">
-        <Spinner />
-      </div>
-    )
+    return <LoadingState />
   }
 
   const settings = publicSettings ?? {}
@@ -423,7 +419,7 @@ export function SystemAuthenticationPage() {
       </h3>
 
       {/* Email/Password Login */}
-      <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+      <div className="rounded-lg border border-gray-200 dark:border-gray-600 p-6">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
@@ -441,7 +437,7 @@ export function SystemAuthenticationPage() {
       </div>
 
       {/* Email Registration */}
-      <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+      <div className="rounded-lg border border-gray-200 dark:border-gray-600 p-6">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
@@ -491,7 +487,7 @@ export function SystemAuthenticationPage() {
       ))}
 
       {/* SSO Auto-provision setting */}
-      <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+      <div className="rounded-lg border border-gray-200 dark:border-gray-600 p-6">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">

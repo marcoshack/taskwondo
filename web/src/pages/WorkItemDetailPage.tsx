@@ -589,7 +589,7 @@ export function WorkItemDetailPage() {
 
           {/* Tabs */}
           <div>
-            <div className="border-b border-gray-200 dark:border-gray-700 mb-4 flex items-center justify-between">
+            <div className="border-b border-gray-200 dark:border-gray-600 mb-4 flex items-center justify-between">
               <nav className="flex gap-6 pr-8 overflow-x-auto scrollbar-none">
                 {tabs.map((tab) => (
                   <button

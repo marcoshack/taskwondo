@@ -27,7 +27,7 @@ export function DiffPreviewModal({ target, onClose }: DiffPreviewModalProps) {
     <Modal open={!!target} onClose={onClose} size="full">
       <div className="flex flex-col h-full">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 shrink-0">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-600 shrink-0">
           <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate min-w-0">{title}</span>
           <button
             className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -56,7 +56,7 @@ function FieldDiffContent({ oldValue, newValue, diffLines }: { oldValue?: string
   if (diffLines) {
     const groups = pairDiffLines(diffLines)
     return (
-      <div className="max-w-4xl mx-auto rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm font-mono overflow-hidden">
+      <div className="max-w-4xl mx-auto rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-sm font-mono overflow-hidden">
         {groups.map((group, gi) => {
           if (group.length === 2) {
             const { oldSpans, newSpans } = computeWordDiff(group[0].text, group[1].text)
@@ -75,13 +75,13 @@ function FieldDiffContent({ oldValue, newValue, diffLines }: { oldValue?: string
 
   // Fallback for single-line field changes (no diffLines provided)
   return (
-    <div className="max-w-4xl mx-auto rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm font-mono overflow-hidden">
+    <div className="max-w-4xl mx-auto rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-sm font-mono overflow-hidden">
       {oldValue && (
         <>
           <div className="px-4 py-1.5 bg-gray-100 dark:bg-gray-700 text-xs font-sans font-medium text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-600">
             {t('activity.diff.removed')}
           </div>
-          <div className="px-4 py-3 bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300 whitespace-pre-wrap break-words border-b border-gray-200 dark:border-gray-700">
+          <div className="px-4 py-3 bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300 whitespace-pre-wrap break-words border-b border-gray-200 dark:border-gray-600">
             {oldValue}
           </div>
         </>
@@ -103,7 +103,7 @@ function FieldDiffContent({ oldValue, newValue, diffLines }: { oldValue?: string
 function CommentDiffContent({ lines }: { lines: DiffLine[] }) {
   const groups = pairDiffLines(lines)
   return (
-    <div className="max-w-4xl mx-auto rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm font-mono overflow-hidden">
+    <div className="max-w-4xl mx-auto rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-sm font-mono overflow-hidden">
       {groups.map((group, gi) => {
         if (group.length === 2) {
           const { oldSpans, newSpans } = computeWordDiff(group[0].text, group[1].text)

@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { FlaskConical } from 'lucide-react'
 import { usePublicSettings, useSetSystemSetting } from '@/hooks/useSystemSettings'
 import { Toggle } from '@/components/ui/Toggle'
-import { Spinner } from '@/components/ui/Spinner'
+import { LoadingState } from '@/components/ui/LoadingState'
 
 export function SystemFeaturesPage() {
   const { t } = useTranslation()
@@ -10,11 +10,7 @@ export function SystemFeaturesPage() {
   const setSetting = useSetSystemSetting()
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center py-12">
-        <Spinner />
-      </div>
-    )
+    return <LoadingState />
   }
 
   const settings = publicSettings ?? {}
@@ -45,7 +41,7 @@ export function SystemFeaturesPage() {
       </div>
 
       {/* Activity Graph */}
-      <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+      <div className="rounded-lg border border-gray-200 dark:border-gray-600 p-6">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
@@ -63,7 +59,7 @@ export function SystemFeaturesPage() {
       </div>
 
       {/* Semantic Search */}
-      <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+      <div className="rounded-lg border border-gray-200 dark:border-gray-600 p-6">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
@@ -92,7 +88,7 @@ export function SystemFeaturesPage() {
         </div>
       </div>
       {/* Namespaces */}
-      <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+      <div className="rounded-lg border border-gray-200 dark:border-gray-600 p-6">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">

@@ -4,7 +4,7 @@ import { useSMTPConfig, useSetSMTPConfig, useTestSMTP } from '@/hooks/useSystemS
 import type { SMTPConfig } from '@/api/systemSettings'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
-import { Spinner } from '@/components/ui/Spinner'
+import { LoadingState } from '@/components/ui/LoadingState'
 import { ExpandableConfigCard } from '@/components/ui/ExpandableConfigCard'
 
 const PASSWORD_MASK = '••••••••'
@@ -102,11 +102,7 @@ export function SystemIntegrationsPage() {
   const canTest = cfg.enabled && isFormComplete() && !isDirty
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center py-12">
-        <Spinner />
-      </div>
-    )
+    return <LoadingState />
   }
 
   const encryptionOptions: { value: SMTPConfig['encryption']; label: string }[] = [
@@ -236,7 +232,7 @@ export function SystemIntegrationsPage() {
           </div>
 
           {/* IMAP section */}
-          <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+          <div className="border-t border-gray-200 dark:border-gray-600 pt-4 mt-4">
             <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t('admin.integrations.smtp.imapSection')}
             </h4>

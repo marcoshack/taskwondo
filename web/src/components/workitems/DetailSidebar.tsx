@@ -131,7 +131,7 @@ export function DetailSidebar({ item, projectKey, itemNumber, statuses, allowedT
         <p className="text-xs text-red-600 dark:text-red-400">{t('workitems.detail.updateError')}</p>
       )}
 
-      <div className="space-y-2 pb-4 border-b border-gray-100 dark:border-gray-700">
+      <div className="space-y-2 pb-4 border-b border-gray-100 dark:border-gray-600">
         <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
           <Tooltip content={t('workitems.detail.reporter')}>
             <Megaphone className="h-4 w-4 shrink-0" />
@@ -165,7 +165,7 @@ export function DetailSidebar({ item, projectKey, itemNumber, statuses, allowedT
         )}
       </div>
 
-      <div className="space-y-2 pb-4 border-b border-gray-100 dark:border-gray-700">
+      <div className="space-y-2 pb-4 border-b border-gray-100 dark:border-gray-600">
         <Field label={t('timeTracking.estimate')}>
           <Input
             type="text"
@@ -374,7 +374,7 @@ export function DetailSidebar({ item, projectKey, itemNumber, statuses, allowedT
       </Field>
 
       {!readOnly && onDelete && (
-        <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
+        <div className="border-t border-gray-100 dark:border-gray-600 pt-4">
           <Button variant="danger" size="sm" onClick={onDelete}>{t('workitems.detail.deleteItem')}</Button>
         </div>
       )}

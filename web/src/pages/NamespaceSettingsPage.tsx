@@ -321,7 +321,7 @@ export function NamespaceSettingsPage() {
               {/* Preview */}
               <div className="shrink-0">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('namespaces.preview')}</label>
-                <div className="flex flex-col items-center gap-3 rounded-lg border border-gray-200 dark:border-gray-700 px-6 py-5 bg-white dark:bg-gray-800">
+                <div className="flex flex-col items-center gap-3 rounded-lg border border-gray-200 dark:border-gray-600 px-6 py-5 bg-white dark:bg-gray-800">
                   <NamespaceIcon icon={currentIcon} color={currentColor} className="h-10 w-10" />
                   <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{currentDisplayName}</span>
                 </div>
@@ -370,7 +370,7 @@ export function NamespaceSettingsPage() {
           {memberError && <p className="text-sm text-red-600 dark:text-red-400">{memberError}</p>}
 
           {canManage && (
-            <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3">
+            <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 space-y-3">
               <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('namespaces.inviteByEmail')}</h3>
               <div className="flex gap-2 items-end">
                 <div className="flex-1 min-w-0">
@@ -402,7 +402,7 @@ export function NamespaceSettingsPage() {
           )}
 
           {((members && members.length > 0) || pendingEmailInvites.length > 0) && (
-            <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
+            <div className="border border-gray-200 dark:border-gray-600 rounded-lg divide-y divide-gray-200 dark:divide-gray-600">
               {members?.map((member) => {
                 const isSelf = member.user_id === user?.id
                 const memberIsOwner = member.role === 'owner'

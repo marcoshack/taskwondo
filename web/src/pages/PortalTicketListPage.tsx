@@ -263,7 +263,7 @@ export function PortalTicketListPage() {
               <Link
                 key={ticket.id}
                 to={`${ticket.item_number}`}
-                className="block rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors"
+                className="block rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 p-4 hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors"
               >
                 {/* Desktop: single row */}
                 <div className="hidden sm:flex sm:items-center sm:gap-4">

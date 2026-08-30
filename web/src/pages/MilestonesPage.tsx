@@ -94,7 +94,7 @@ export function MilestonesPage() {
           {openMilestones.length > 0 && (
             <div>
               <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">{t('milestones.statusOpen')} ({openMilestones.length})</h3>
-              <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
+              <div className="border border-gray-200 dark:border-gray-600 rounded-lg divide-y divide-gray-200 dark:divide-gray-600">
                 {openMilestones.map((m) => (
                   <MilestoneCard key={m.id} milestone={m} projectKey={projectKey ?? ''} saved={savedId === m.id} />
                 ))}
@@ -112,7 +112,7 @@ export function MilestonesPage() {
                 {t('milestones.statusClosed')} ({closedMilestones.length})
               </button>
               {closedExpanded && (
-                <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
+                <div className="border border-gray-200 dark:border-gray-600 rounded-lg divide-y divide-gray-200 dark:divide-gray-600">
                   {closedMilestones.map((m) => (
                     <MilestoneCard key={m.id} milestone={m} projectKey={projectKey ?? ''} saved={savedId === m.id} />
                   ))}

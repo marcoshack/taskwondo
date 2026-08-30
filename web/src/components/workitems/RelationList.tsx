@@ -142,7 +142,7 @@ export function RelationList({ projectKey, itemNumber, readOnly = false }: Relat
   return (
     <div className="space-y-4">
       {!readOnly && (
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2 pb-3 border-b border-gray-100 dark:border-gray-700">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 pb-3 border-b border-gray-100 dark:border-gray-600">
           <div className="sm:flex-1">
             <WorkItemPicker
               projectKey={projectKey}

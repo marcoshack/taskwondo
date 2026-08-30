@@ -273,9 +273,9 @@ export function SystemDirectoryPage() {
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('admin.directory.description')}</p>
         </div>
         {/* Mobile: single bordered row with horizontal scroll */}
-        <ScrollableRow className="sm:hidden rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2" gradientFrom="from-white dark:from-gray-900">
+        <ScrollableRow className="sm:hidden rounded-lg border border-gray-200 dark:border-gray-600 px-3 py-2" gradientFrom="from-white dark:from-gray-900">
           {statCards.map((card, i) => (
-            <div key={card.label} className={`flex items-center gap-1.5 shrink-0 ${i < statCards.length - 1 ? 'pr-3 border-r border-gray-200 dark:border-gray-700' : ''}`}>
+            <div key={card.label} className={`flex items-center gap-1.5 shrink-0 ${i < statCards.length - 1 ? 'pr-3 border-r border-gray-200 dark:border-gray-600' : ''}`}>
               <card.icon className="h-3.5 w-3.5 text-indigo-400" />
               <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{card.value}</span>
               <span className="text-xs text-gray-500 dark:text-gray-400">{card.label}</span>
@@ -285,7 +285,7 @@ export function SystemDirectoryPage() {
         {/* Desktop: individual cards */}
         <div className="hidden sm:grid grid-cols-4 gap-3">
           {statCards.map((card) => (
-            <div key={card.label} className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 text-center min-w-[100px]">
+            <div key={card.label} className="rounded-lg border border-gray-200 dark:border-gray-600 p-3 text-center min-w-[100px]">
               <div className="flex items-center justify-center gap-2">
                 <card.icon className="h-4 w-4 text-indigo-400" />
                 <span className="text-xl font-bold text-gray-900 dark:text-gray-100">{card.value}</span>
@@ -413,7 +413,7 @@ function ProjectLimitSection() {
   }
 
   return (
-    <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+    <div className="rounded-lg border border-gray-200 dark:border-gray-600 p-4 sm:p-6">
       <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
         {t('admin.general.projectLimit.title')}
       </h3>
@@ -472,7 +472,7 @@ function NamespaceLimitSection() {
   }
 
   return (
-    <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+    <div className="rounded-lg border border-gray-200 dark:border-gray-600 p-4 sm:p-6">
       <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
         {t('admin.general.namespaceLimit.title')}
       </h3>
@@ -545,7 +545,7 @@ function ReservedListSection({
   }
 
   return (
-    <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+    <div className="rounded-lg border border-gray-200 dark:border-gray-600 p-4 sm:p-6">
       <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">{title}</h3>
       <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{description}</p>
 

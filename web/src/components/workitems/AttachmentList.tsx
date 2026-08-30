@@ -97,7 +97,7 @@ export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc', hig
     <div className="space-y-4">
       {/* Upload form */}
       {!readOnly && (
-        <div className="space-y-2 pb-3 border-b border-gray-100 dark:border-gray-700">
+        <div className="space-y-2 pb-3 border-b border-gray-100 dark:border-gray-600">
           <input
             type="text"
             className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-1.5 text-sm"
@@ -126,7 +126,7 @@ export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc', hig
         <div
           key={a.id}
           ref={a.id === highlightedAttachmentId ? highlightRef : undefined}
-          className={`flex items-start gap-3 border-b border-gray-100 dark:border-gray-700 pb-3 rounded-md transition-colors duration-700 ${
+          className={`flex items-start gap-3 border-b border-gray-100 dark:border-gray-600 pb-3 rounded-md transition-colors duration-700 ${
             a.id === highlightedAttachmentId ? 'bg-indigo-50 dark:bg-indigo-900/30 ring-1 ring-indigo-300 dark:ring-indigo-600 px-2 py-2 -mx-2' : ''
           }`}
         >

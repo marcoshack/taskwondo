@@ -103,7 +103,7 @@ export function SystemWorkflowsPage() {
           </Button>
         </div>
       ) : (
-        <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
+        <div className="border border-gray-200 dark:border-gray-600 rounded-lg divide-y divide-gray-200 dark:divide-gray-600">
           {workflows.map((wf) => (
             <div key={wf.id} className="p-4">
               <div className="flex items-center justify-between mb-2">
@@ -152,7 +152,7 @@ export function SystemWorkflowsPage() {
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('admin.workflows.defaultMappingDescription')}</p>
       </div>
 
-      <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
+      <div className="border border-gray-200 dark:border-gray-600 rounded-lg divide-y divide-gray-200 dark:divide-gray-600">
         {['task', 'ticket', 'bug', 'feedback', 'epic'].map((itemType) => {
           const currentWfId = (defaultTypeWorkflows as Record<string, string> | undefined)?.[itemType] ?? ''
           return (
@@ -620,7 +620,7 @@ function SystemWorkflowEditorModal({
         </div>
 
         {/* Actions */}
-        <div className="flex justify-end gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex justify-end gap-2 pt-2 border-t border-gray-200 dark:border-gray-600">
           <Button variant="secondary" onClick={onClose}>
             {t('common.cancel')}
           </Button>

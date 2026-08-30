@@ -14,7 +14,7 @@ interface TabsProps {
 
 export function Tabs({ tabs, activeTab, onTabChange }: TabsProps) {
   return (
-    <div className="flex overflow-x-auto overflow-y-hidden border-b border-gray-200 dark:border-gray-700">
+    <div className="flex overflow-x-auto overflow-y-hidden border-b border-gray-200 dark:border-gray-600">
       {tabs.map((tab) => {
         const isActive = tab.key === activeTab
         const Icon = tab.icon

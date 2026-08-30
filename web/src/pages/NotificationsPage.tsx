@@ -163,7 +163,7 @@ function GlobalNotificationCard() {
   }
 
   return (
-    <div className="rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-3">
+    <div className="rounded-lg border border-gray-200 dark:border-gray-600 px-4 py-3">
       <div className="space-y-3">
         {globalNotificationOptions.map((option) => (
           <label
@@ -231,7 +231,7 @@ function ProjectNotificationCard({
   }
 
   return (
-    <div className="rounded-lg border border-gray-200 dark:border-gray-700">
+    <div className="rounded-lg border border-gray-200 dark:border-gray-600">
       <button
         onClick={onToggle}
         className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-lg transition-colors"
@@ -250,7 +250,7 @@ function ProjectNotificationCard({
       </button>
 
       {isExpanded && (
-        <div className="border-t border-gray-200 dark:border-gray-700 px-4 py-3">
+        <div className="border-t border-gray-200 dark:border-gray-600 px-4 py-3">
           {isLoading ? (
             <div className="flex justify-center py-4">
               <Spinner />

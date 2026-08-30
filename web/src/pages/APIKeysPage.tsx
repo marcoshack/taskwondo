@@ -128,7 +128,7 @@ export function APIKeysPage() {
       )}
 
       {/* Create Form */}
-      <div className="mb-8 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+      <div className="mb-8 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 p-4">
         <h2 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-4">{t('preferences.apiKeys.createNew')}</h2>
         <form onSubmit={handleCreate} className="space-y-4">
           <div>
@@ -181,7 +181,7 @@ export function APIKeysPage() {
           <p>{t('preferences.apiKeys.empty')}</p>
         </div>
       ) : (
-        <div className="rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-200 dark:divide-gray-700">
+        <div className="rounded-lg border border-gray-200 dark:border-gray-600 divide-y divide-gray-200 dark:divide-gray-600">
           {keys.map((key) => {
             const exp = formatExpiration(key)
             const isEditing = editingKeyId === key.id

@@ -82,7 +82,7 @@ function InboxRow({ item, isCompleted, isFirst, isLast, isActive, onRemove, onMo
   return (
     <tr
       ref={rowRef}
-      className={`group border-b border-gray-200 dark:border-gray-700
+      className={`group border-b border-gray-200 dark:border-gray-600
         ${reorderedId === item.id ? 'animate-[inbox-highlight_1s_ease-in-out]' : ''}
         ${isRemoving && autoRemove ? 'transition-all duration-300 opacity-0 -translate-y-2' : ''}
         ${isActive ? 'bg-indigo-50 dark:bg-indigo-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-800'} cursor-pointer`}
@@ -193,7 +193,7 @@ function InboxCard({ item, isCompleted, isFirst, isLast, isActive, editing, onRe
     <div
       ref={cardRef}
       className={`flex items-stretch gap-0 rounded-lg border bg-white dark:bg-gray-800 shadow-sm transition-colors
-        ${isActive ? 'border-indigo-400 dark:border-indigo-500 ring-1 ring-indigo-300 dark:ring-indigo-600' : 'border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600'}
+        ${isActive ? 'border-indigo-400 dark:border-indigo-500 ring-1 ring-indigo-300 dark:ring-indigo-600' : 'border-gray-200 dark:border-gray-600 hover:border-indigo-300 dark:hover:border-indigo-600'}
         ${reorderedId === item.id ? 'animate-[inbox-highlight_1s_ease-in-out]' : ''}
         ${isRemoving && autoRemove ? 'transition-all duration-300 opacity-0 -translate-y-2' : ''}`}
     >
@@ -843,7 +843,7 @@ function InboxListPage() {
       ) : (
         <>
           {/* Desktop table */}
-          <div className="hidden lg:block overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+          <div className="hidden lg:block overflow-hidden rounded-lg border border-gray-200 dark:border-gray-600">
             <table className="w-full table-fixed">
               <thead className="bg-gray-50 dark:bg-gray-800 group/thead">
                 <tr>
@@ -1030,7 +1030,7 @@ function MobileProjectFilterContent({ projectOptions, selectedProjects, setSelec
           className="text-sm"
         />
       </div>
-      <div className="flex items-center gap-2 px-1 pb-2 border-b border-gray-100 dark:border-gray-700">
+      <div className="flex items-center gap-2 px-1 pb-2 border-b border-gray-100 dark:border-gray-600">
         <button type="button" className="text-xs text-indigo-600 hover:text-indigo-800" onClick={() => setSelectedProjects(filtered.map((o) => o.value))}>
           {t('common.all')}
         </button>

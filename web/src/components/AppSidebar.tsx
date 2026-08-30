@@ -315,7 +315,7 @@ export function AppSidebar({ projectKey, customerProject, mobileOnly }: AppSideb
                 )}
               </button>
             ))}
-            <div className="border-t border-gray-100 dark:border-gray-700 mt-1 pt-1">
+            <div className="border-t border-gray-100 dark:border-gray-600 mt-1 pt-1">
               <button
                 onClick={() => {
                   setNsDropdownOpen(false)
@@ -344,7 +344,7 @@ export function AppSidebar({ projectKey, customerProject, mobileOnly }: AppSideb
             </ul>
 
             {/* Separator */}
-            <div className="border-t border-gray-200 dark:border-gray-700 my-2" />
+            <div className="border-t border-gray-200 dark:border-gray-600 my-2" />
           </>
         )}
 
@@ -385,7 +385,7 @@ export function AppSidebar({ projectKey, customerProject, mobileOnly }: AppSideb
         {mobileOpen && (
           <div className="fixed inset-0 z-40 sm:hidden" onClick={closeMobile}>
             <nav
-              className="absolute right-4 top-14 w-52 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-2"
+              className="absolute right-4 top-14 w-52 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 p-2"
               onClick={(e) => e.stopPropagation()}
             >
               {renderContent(true)}
@@ -408,7 +408,7 @@ export function AppSidebar({ projectKey, customerProject, mobileOnly }: AppSideb
         {renderContent(!collapsed)}
 
         <div
-          className={`mt-4 border-t border-gray-200 pt-4 dark:border-gray-700 ${
+          className={`mt-4 border-t border-gray-200 pt-4 dark:border-gray-600 ${
             collapsed ? 'flex justify-center' : ''
           }`}
         >

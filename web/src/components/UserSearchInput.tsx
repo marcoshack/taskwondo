@@ -150,7 +150,7 @@ export function UserSearchInput({
               )
             })}
             {!isLoading && showInviteRow && (
-              <li className={filtered.length > 0 ? 'border-t border-gray-200 dark:border-gray-700' : ''}>
+              <li className={filtered.length > 0 ? 'border-t border-gray-200 dark:border-gray-600' : ''}>
                 <button
                   type="button"
                   className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 flex items-center gap-2"

@@ -212,7 +212,7 @@ function ConnectedAccountsTab() {
           <p>{t('preferences.authentication.connectedAccounts.empty')}</p>
         </div>
       ) : (
-        <div className="rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-200 dark:divide-gray-700">
+        <div className="rounded-lg border border-gray-200 dark:border-gray-600 divide-y divide-gray-200 dark:divide-gray-600">
           {accounts.map((account) => (
             <div key={account.id} className="p-4 bg-white dark:bg-gray-800 first:rounded-t-lg last:rounded-b-lg">
               <div className="flex items-center justify-between">

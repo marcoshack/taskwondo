@@ -74,7 +74,7 @@ export function TimezoneSelect({ value, onChange, disabled = false }: Props) {
 
       {open && (
         <div className="absolute z-50 mt-1 w-full max-h-64 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg flex flex-col">
-          <div className="p-2 border-b border-gray-200 dark:border-gray-700">
+          <div className="p-2 border-b border-gray-200 dark:border-gray-600">
             <input
               ref={inputRef}
               type="text"

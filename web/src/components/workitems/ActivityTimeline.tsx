@@ -66,7 +66,7 @@ export function ActivityTimeline({ projectKey, itemNumber, sortOrder = 'desc', o
 
   return (
     <>
-      <div className="border-l-2 border-gray-200 dark:border-gray-700 pl-4 space-y-4">
+      <div className="border-l-2 border-gray-200 dark:border-gray-600 pl-4 space-y-4">
         {sorted.map((event) => (
           <div key={event.id} className="relative">
             <div className="absolute -left-[21px] top-1.5 w-2.5 h-2.5 rounded-full bg-gray-300 dark:bg-gray-600 border-2 border-white dark:border-gray-900" />
@@ -143,7 +143,7 @@ function FieldChangeDiff({ event, members, t, onExpand }: { event: WorkItemEvent
 
     return (
       <div
-        className={`mt-1 mb-1 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs font-mono overflow-hidden ${hasMore ? 'cursor-pointer hover:border-gray-300 dark:hover:border-gray-600' : ''}`}
+        className={`mt-1 mb-1 rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-xs font-mono overflow-hidden ${hasMore ? 'cursor-pointer hover:border-gray-300 dark:hover:border-gray-600' : ''}`}
         onClick={hasMore ? handleExpandModal : undefined}
         role={hasMore ? 'button' : undefined}
         tabIndex={hasMore ? 0 : undefined}
@@ -185,14 +185,14 @@ function FieldChangeDiff({ event, members, t, onExpand }: { event: WorkItemEvent
 
   return (
     <div
-      className={`mt-1 mb-1 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs font-mono overflow-hidden ${expandable ? 'cursor-pointer hover:border-gray-300 dark:hover:border-gray-600' : ''}`}
+      className={`mt-1 mb-1 rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-xs font-mono overflow-hidden ${expandable ? 'cursor-pointer hover:border-gray-300 dark:hover:border-gray-600' : ''}`}
       onClick={handleClick}
       role={expandable ? 'button' : undefined}
       tabIndex={expandable ? 0 : undefined}
       onKeyDown={expandable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClick() } } : undefined}
     >
       {resolvedOld && (
-        <div className="px-3 py-1.5 bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300 border-b border-gray-200 dark:border-gray-700">
+        <div className="px-3 py-1.5 bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300 border-b border-gray-200 dark:border-gray-600">
           <span className="select-none text-red-400 mr-2">&minus;</span>
           {truncate(resolvedOld)}
         </div>
@@ -409,7 +409,7 @@ function CommentPreview({ event, t, onExpand }: { event: WorkItemEvent; t: TFunc
 
     return (
       <div
-        className={`mt-1 mb-1 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs font-mono overflow-hidden ${hasMore ? 'cursor-pointer hover:border-gray-300 dark:hover:border-gray-600' : ''}`}
+        className={`mt-1 mb-1 rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-xs font-mono overflow-hidden ${hasMore ? 'cursor-pointer hover:border-gray-300 dark:hover:border-gray-600' : ''}`}
         onClick={hasMore ? handleExpandModal : undefined}
         role={hasMore ? 'button' : undefined}
         tabIndex={hasMore ? 0 : undefined}
@@ -443,7 +443,7 @@ function CommentPreview({ event, t, onExpand }: { event: WorkItemEvent; t: TFunc
   const displayText = expanded ? preview : firstLines(preview, 2)
 
   return (
-    <div className="mt-1 mb-1 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs overflow-hidden">
+    <div className="mt-1 mb-1 rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-xs overflow-hidden">
       <div className="px-3 py-1.5 text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{displayText}</div>
       {needsExpand && (
         <button

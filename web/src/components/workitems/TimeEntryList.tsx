@@ -121,7 +121,7 @@ export function TimeEntryList({ projectKey, itemNumber, sortOrder = 'desc', read
   return (
     <div className="space-y-4">
       {!readOnly && (
-        <div className="pb-3 border-b border-gray-100 dark:border-gray-700 space-y-2">
+        <div className="pb-3 border-b border-gray-100 dark:border-gray-600 space-y-2">
           <div className="flex gap-2 items-center">
             <Input
               type="text"
@@ -195,7 +195,7 @@ export function TimeEntryList({ projectKey, itemNumber, sortOrder = 'desc', read
       {sorted.map((entry) => (
         <div
           key={entry.id}
-          className="group/entry border-b border-gray-100 dark:border-gray-700 pb-3"
+          className="group/entry border-b border-gray-100 dark:border-gray-600 pb-3"
         >
           <div className="flex items-center justify-between gap-2 mb-1">
             <div className="flex items-center gap-2 min-w-0">

@@ -127,7 +127,7 @@ function DropdownMenu({
   return createPortal(
     <div
       ref={dropdownRef}
-      className="z-50 min-w-[120px] rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg py-1 animate-in fade-in duration-100"
+      className="z-50 min-w-[120px] rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg py-1 animate-in fade-in duration-100"
       style={style}
     >
       {INTERVAL_OPTIONS.map((opt) => (

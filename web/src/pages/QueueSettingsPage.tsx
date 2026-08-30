@@ -352,7 +352,7 @@ function CategoriesTab({
           <p className="text-sm text-gray-500 dark:text-gray-400">{t('queues.categories.noCategories')}</p>
         </div>
       ) : (
-        <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
+        <div className="border border-gray-200 dark:border-gray-600 rounded-lg divide-y divide-gray-200 dark:divide-gray-600">
           {sortedCategories.map((cat) => (
             <div key={cat.id} className="p-3 flex items-center justify-between gap-2">
               <div className="min-w-0 flex-1">
@@ -605,7 +605,7 @@ function TeamsTab({
           <p className="text-sm text-gray-500 dark:text-gray-400">{t('queues.teams.noTeams')}</p>
         </div>
       ) : (
-        <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
+        <div className="border border-gray-200 dark:border-gray-600 rounded-lg divide-y divide-gray-200 dark:divide-gray-600">
           {queueTeams.map((team) => (
             <div key={team.id} className="p-3 flex items-center justify-between gap-2">
               <div className="min-w-0 flex-1">
