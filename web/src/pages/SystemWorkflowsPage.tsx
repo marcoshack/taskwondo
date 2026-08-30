@@ -125,12 +125,10 @@ export function SystemWorkflowsPage() {
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
                   </Tooltip>
-                  <Tooltip content={wf.is_default ? t('admin.workflows.cannotDeleteDefault') : t('common.delete')}>
-                    <span>
-                      <Button variant="ghost" size="sm" onClick={() => setDeleteTarget({ id: wf.id, name: wf.name })} disabled={wf.is_default}>
-                        <Trash2 className={`h-3.5 w-3.5 ${wf.is_default ? 'text-gray-300 dark:text-gray-600' : 'text-red-500'}`} />
-                      </Button>
-                    </span>
+                  <Tooltip content={t('common.delete')}>
+                    <Button variant="ghost" size="sm" onClick={() => setDeleteTarget({ id: wf.id, name: wf.name })}>
+                      <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                    </Button>
                   </Tooltip>
                 </div>
               </div>
