@@ -198,9 +198,11 @@ func (r *WorkItemRepository) List(ctx context.Context, projectID uuid.UUID, filt
 		qb.add("wi.id = ANY(?)", pq.Array(filter.ItemIDs))
 	}
 
-	// Full-text search (OR simple config to match display_id tokens like "TF-29")
+	// Full-text search (OR simple config to match display_id tokens like "TF-29").
+	// CJK queries additionally get an ILIKE fallback (see searchFilterCondition).
 	if filter.Search != "" {
-		qb.add("(search_vector @@ plainto_tsquery('english', ?) OR search_vector @@ plainto_tsquery('simple', ?))", filter.Search, filter.Search)
+		cond, args := searchFilterCondition("search_vector", []string{"title", "coalesce(description, '')"}, filter.Search)
+		qb.add(cond, args...)
 	}
 
 	whereClause := qb.whereClause()
@@ -525,7 +527,9 @@ func (r *WorkItemRepository) SearchFTS(ctx context.Context, query string, access
 
 	qb := &queryBuilder{argIndex: 0}
 	qb.add("w.deleted_at IS NULL")
-	qb.add("(w.search_vector @@ plainto_tsquery('english', ?) OR w.search_vector @@ plainto_tsquery('simple', ?))", query, query)
+	// CJK queries additionally get an ILIKE fallback (see searchFilterCondition).
+	searchCond, searchArgs := searchFilterCondition("w.search_vector", []string{"w.title", "coalesce(w.description, '')"}, query)
+	qb.add(searchCond, searchArgs...)
 
 	// RBAC: full-access projects OR (customer projects AND own portal tickets)
 	switch {

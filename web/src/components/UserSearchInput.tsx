@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { useDebounce } from '@/hooks/useDebounce'
 import { useSearchUsers } from '@/hooks/useUsers'
+import { meetsSearchFloor } from '@/utils/searchRequest'
 import type { UserSearchResult } from '@/api/users'
 import { Mail } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
@@ -75,7 +76,7 @@ export function UserSearchInput({
   }, [open])
 
   useEffect(() => {
-    if (debouncedSearch.length >= 2) {
+    if (meetsSearchFloor(debouncedSearch)) {
       updateDropdownPosition()
       setOpen(true)
     }
@@ -108,10 +109,10 @@ export function UserSearchInput({
         placeholder={placeholder ?? t('projects.settings.addMemberPlaceholder')}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        onFocus={() => { if (debouncedSearch.length >= 2) { updateDropdownPosition(); setOpen(true) } }}
+        onFocus={() => { if (meetsSearchFloor(debouncedSearch)) { updateDropdownPosition(); setOpen(true) } }}
       />
 
-      {open && search.length >= 2 && createPortal(
+      {open && meetsSearchFloor(search) && createPortal(
         <div
           ref={dropdownRef}
           style={dropdownStyle}

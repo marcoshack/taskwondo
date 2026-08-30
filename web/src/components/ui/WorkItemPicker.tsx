@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useWorkItems } from '@/hooks/useWorkItems'
 import { useDebounce } from '@/hooks/useDebounce'
 import { Spinner } from '@/components/ui/Spinner'
+import { meetsSearchFloor } from '@/utils/searchRequest'
 
 interface WorkItemPickerProps {
   projectKey: string
@@ -29,7 +30,7 @@ export function WorkItemPicker({
   const listRef = useRef<HTMLUListElement>(null)
 
   const debouncedSearch = useDebounce(value, 300)
-  const shouldSearch = open && debouncedSearch.length >= 2
+  const shouldSearch = open && meetsSearchFloor(debouncedSearch)
 
   const { data, isFetching } = useWorkItems(
     projectKey,
@@ -104,7 +105,7 @@ export function WorkItemPicker({
         onKeyDown={handleKeyDown}
       />
 
-      {open && value.length >= 2 && (
+      {open && meetsSearchFloor(value) && (
         <div className="absolute z-20 mt-1 w-full bg-[var(--surface)] border border-[var(--border)] rounded-md shadow-[var(--shadow-md)]">
           {isFetching ? (
             <div className="flex items-center justify-center py-3">

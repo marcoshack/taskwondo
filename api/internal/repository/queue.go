@@ -32,8 +32,18 @@ func (r *QueueRepository) SearchFTS(ctx context.Context, query string, fullProje
 		return nil, nil
 	}
 
+	// CJK queries additionally get an ILIKE fallback over name/description,
+	// because Postgres' whitespace tokenizer cannot split CJK runs into lexemes.
+	matchCond := `q.search_vector @@ plainto_tsquery('english', $1)
+		     OR q.search_vector @@ plainto_tsquery('simple', $1)`
+	args := []interface{}{query, pq.Array(fullProjectIDs), limit}
+	if containsCJK(query) {
+		matchCond += "\n\t\t     OR q.name ILIKE $4 OR coalesce(q.description, '') ILIKE $4"
+		args = append(args, likePattern(query))
+	}
+
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT q.id, q.project_id, q.name, q.queue_type,
+		fmt.Sprintf(`SELECT q.id, q.project_id, q.name, q.queue_type,
 		        p.key AS project_key,
 		        COALESCE(n.slug, 'default') AS namespace_slug,
 		        ts_rank(q.search_vector, plainto_tsquery('english', $1)) +
@@ -41,12 +51,11 @@ func (r *QueueRepository) SearchFTS(ctx context.Context, query string, fullProje
 		 FROM queues q
 		 JOIN projects p ON p.id = q.project_id
 		 LEFT JOIN namespaces n ON n.id = p.namespace_id
-		 WHERE (q.search_vector @@ plainto_tsquery('english', $1)
-		     OR q.search_vector @@ plainto_tsquery('simple', $1))
+		 WHERE (%s)
 		   AND q.project_id = ANY($2)
 		 ORDER BY rank DESC, q.updated_at DESC
-		 LIMIT $3`,
-		query, pq.Array(fullProjectIDs), limit)
+		 LIMIT $3`, matchCond),
+		args...)
 	if err != nil {
 		return nil, fmt.Errorf("fts search queues: %w", err)
 	}

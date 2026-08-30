@@ -15,6 +15,7 @@ import {
 import { TypeBadge } from '@/components/workitems/TypeBadge'
 import { useSearch } from '@/hooks/useSearch'
 import { useDebounce } from '@/hooks/useDebounce'
+import { meetsSearchFloor } from '@/utils/searchRequest'
 import { nsPrefix } from '@/api/client'
 import { useNamespacePath } from '@/hooks/useNamespacePath'
 import type { SearchResult } from '@/api/search'
@@ -285,7 +286,7 @@ export function MentionSearchModal({ open, position, onClose, onSelect }: Mentio
     top = position.top - dropdownMaxHeight - 20
   }
 
-  const showResults = debouncedQuery.length >= 2
+  const showResults = meetsSearchFloor(debouncedQuery)
 
   return createPortal(
     <div

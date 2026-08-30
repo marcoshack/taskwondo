@@ -37,6 +37,7 @@ import {
 } from '@/utils/paletteResults'
 import type { PaletteEntitySection, PaletteRow } from '@/utils/paletteResults'
 import type { NavigationEntry } from '@/utils/navigationCatalog'
+import { meetsSearchFloor } from '@/utils/searchRequest'
 import type { SearchResult } from '@/api/search'
 
 function entityIcon(type: string) {
@@ -166,9 +167,9 @@ export function CommandPalette({ open, onClose, projectKey }: CommandPaletteProp
   const showSectionHeaders =
     semanticAvailable && (hasFtsResults || hasSemanticResults || semanticStatus === 'pending')
 
-  // Entity search only runs past the two-character floor; below it the palette
-  // is navigation-only and says so.
-  const belowEntityFloor = query.length > 0 && query.length < 2
+  // Entity search only runs past the character floor (one CJK character, two
+  // otherwise); below it the palette is navigation-only and says so.
+  const belowEntityFloor = query.length > 0 && !meetsSearchFloor(query)
   const showInitialLoading = isLoading && !hasFtsResults && !hasSemanticResults
 
   // Focus and select input when the palette opens (preserve previous query).

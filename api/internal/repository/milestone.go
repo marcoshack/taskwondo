@@ -32,8 +32,18 @@ func (r *MilestoneRepository) SearchFTS(ctx context.Context, query string, fullP
 		return nil, nil
 	}
 
+	// CJK queries additionally get an ILIKE fallback over name/description,
+	// because Postgres' whitespace tokenizer cannot split CJK runs into lexemes.
+	matchCond := `m.search_vector @@ plainto_tsquery('english', $1)
+		     OR m.search_vector @@ plainto_tsquery('simple', $1)`
+	args := []interface{}{query, pq.Array(fullProjectIDs), limit}
+	if containsCJK(query) {
+		matchCond += "\n\t\t     OR m.name ILIKE $4 OR coalesce(m.description, '') ILIKE $4"
+		args = append(args, likePattern(query))
+	}
+
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT m.id, m.project_id, m.name, m.status,
+		fmt.Sprintf(`SELECT m.id, m.project_id, m.name, m.status,
 		        p.key AS project_key,
 		        COALESCE(n.slug, 'default') AS namespace_slug,
 		        ts_rank(m.search_vector, plainto_tsquery('english', $1)) +
@@ -41,12 +51,11 @@ func (r *MilestoneRepository) SearchFTS(ctx context.Context, query string, fullP
 		 FROM milestones m
 		 JOIN projects p ON p.id = m.project_id
 		 LEFT JOIN namespaces n ON n.id = p.namespace_id
-		 WHERE (m.search_vector @@ plainto_tsquery('english', $1)
-		     OR m.search_vector @@ plainto_tsquery('simple', $1))
+		 WHERE (%s)
 		   AND m.project_id = ANY($2)
 		 ORDER BY rank DESC, m.updated_at DESC
-		 LIMIT $3`,
-		query, pq.Array(fullProjectIDs), limit)
+		 LIMIT $3`, matchCond),
+		args...)
 	if err != nil {
 		return nil, fmt.Errorf("fts search milestones: %w", err)
 	}

@@ -82,7 +82,9 @@ func (r *InboxRepository) List(ctx context.Context, userID uuid.UUID, excludeCom
 	}
 
 	if search != "" {
-		qb.add("(wi.search_vector @@ plainto_tsquery('english', ?) OR wi.search_vector @@ plainto_tsquery('simple', ?))", search, search)
+		// CJK queries additionally get an ILIKE fallback (see searchFilterCondition).
+		cond, args := searchFilterCondition("wi.search_vector", []string{"wi.title", "coalesce(wi.description, '')"}, search)
+		qb.add(cond, args...)
 	}
 
 	if workItemID != nil {
