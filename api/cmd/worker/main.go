@@ -46,11 +46,6 @@ func main() {
 	defer db.Close()
 	log.Info().Int("max_open", cfg.WorkerDBPool).Msg("connected to database")
 
-	// Run migrations (idempotent)
-	if err := database.Migrate(ctx, db); err != nil {
-		log.Fatal().Err(err).Msg("failed to run migrations")
-	}
-
 	// Initialize repositories
 	statsRepo := repository.NewStatsRepository(db)
 	userRepo := repository.NewUserRepository(db)
