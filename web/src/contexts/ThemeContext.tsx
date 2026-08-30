@@ -53,7 +53,9 @@ function applyColorTheme(colorTheme: ColorTheme) {
 }
 
 function applyFontSize(size: FontSize) {
-  document.documentElement.style.fontSize = fontSizePx[size]
+  // Scales every rem-based size in the UI; the root font-size itself additionally
+  // applies the per-script adjustment defined in index.css.
+  document.documentElement.style.setProperty('--app-font-size', fontSizePx[size])
 }
 
 function isValidTheme(v: unknown): v is Theme {

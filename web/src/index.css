@@ -3,7 +3,17 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+@theme {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", var(--font-cjk, sans-serif);
+}
+
 :root {
+  /* Root font size (user preference, see ThemeContext) and the per-script optical adjustment applied to it.
+     The fallback matches the 'normal' preference so first paint doesn't jump. */
+  --app-font-size: 17.6px;
+  --app-font-scale: 1;
+
   /* Background & Surface */
   --background: #ffffff;
   --background-secondary: #f9fafb;
@@ -214,9 +224,35 @@
 }
 
 html {
+  font-size: calc(var(--app-font-size) * var(--app-font-scale));
   scrollbar-gutter: stable;
   scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
   background-color: var(--background-secondary);
+}
+
+/*
+ * CJK glyphs fill the whole em box, so at a Latin-tuned size they read as oversized
+ * and heavy. Nudge the root size down and name the local script face explicitly
+ * instead of relying on the generic fallback.
+ */
+:root:lang(zh) {
+  --app-font-scale: 0.909;
+  --font-cjk: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC";
+}
+
+:root:lang(ja) {
+  --app-font-scale: 0.909;
+  --font-cjk: "Hiragino Sans", "Yu Gothic", "Noto Sans CJK JP", "Source Han Sans JP";
+}
+
+:root:lang(ko) {
+  --app-font-scale: 0.93;
+  --font-cjk: "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans CJK KR", "Source Han Sans KR";
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 html:where(.dark) {
