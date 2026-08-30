@@ -107,6 +107,8 @@ See [more screenshots](docs/overview.md) for a full walkthrough of features.
 
 ## Quick Start
 
+### Option 1: Docker Compose (Multi-Container)
+
 ```bash
 git clone https://github.com/marcoshack/taskwondo.git
 cd taskwondo
@@ -114,6 +116,30 @@ cd taskwondo
 ```
 
 Then open [http://localhost:3000](http://localhost:3000) and log in with the admin credentials printed by the installer.
+
+### Option 2: All-in-One Docker Image (Single Container)
+
+For simpler deployments, use the all-in-one image that bundles API, worker, and frontend into a single container with only one port exposed:
+
+```bash
+docker run -d \
+  --name taskwondo \
+  -p 80:80 \
+  -e DATABASE_URL="[REDACTED:connection_string]host:5432/taskwondo?sslmode=disable" \
+  -e JWT_SECRET="your-jwt-secret" \
+  -e STORAGE_ENDPOINT="s3.amazonaws.com" \
+  -e STORAGE_ACCESS_KEY="your-access-key" \
+  -e STORAGE_SECRET_KEY="your-secret-key" \
+  -e STORAGE_BUCKET="taskwondo-attachments" \
+  -e NATS_URL="nats://host:4222" \
+  ghcr.io/marcoshack/taskwondo/all-in-one:latest
+```
+
+Then open [http://localhost](http://localhost). Check logs for admin credentials: `docker logs taskwondo`
+
+For detailed configuration and build-from-source instructions, see [MANUAL_INSTALL.md](MANUAL_INSTALL.md).
+
+### Auto-start on Boot
 
 To start Taskwondo automatically on boot, install the included systemd service:
 
