@@ -47,6 +47,7 @@ export interface SMTPConfig {
   encryption: 'starttls' | 'tls' | 'none'
   from_address: string
   from_name: string
+  skip_cert_verify: boolean
 }
 
 export async function getSMTPConfig(): Promise<SMTPConfig> {

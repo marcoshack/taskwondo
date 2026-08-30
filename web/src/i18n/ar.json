@@ -179,6 +179,8 @@
   "admin.integrations.smtp.enable": "تفعيل SMTP",
   "admin.integrations.smtp.encryption": "التشفير",
   "admin.integrations.smtp.encryptionNone": "بدون / نص عادي (المنفذ 25)",
+  "admin.integrations.smtp.skipCertVerify": "تخطي التحقق من الشهادة",
+  "admin.integrations.smtp.skipCertVerifyHelp": "عدم التحقق من شهادة TLS الخاصة بالخادم. استخدمها فقط مع الخوادم المستضافة ذاتيًا التي تستخدم شهادات موقعة ذاتيًا أو منتهية الصلاحية.",
   "admin.integrations.smtp.encryptionStarttls": "STARTTLS (المنفذ 587)",
   "admin.integrations.smtp.encryptionTls": "TLS/SSL ضمني (المنفذ 465)",
   "admin.integrations.smtp.fromAddress": "عنوان المرسل",

@@ -179,6 +179,8 @@
   "admin.integrations.smtp.enable": "Activer SMTP",
   "admin.integrations.smtp.encryption": "Chiffrement",
   "admin.integrations.smtp.encryptionNone": "Aucun / Texte brut (port 25)",
+  "admin.integrations.smtp.skipCertVerify": "Ignorer la vérification du certificat",
+  "admin.integrations.smtp.skipCertVerifyHelp": "Ne pas vérifier le certificat TLS du serveur. À n'utiliser que pour les serveurs auto-hébergés avec des certificats auto-signés ou expirés.",
   "admin.integrations.smtp.encryptionStarttls": "STARTTLS (port 587)",
   "admin.integrations.smtp.encryptionTls": "TLS/SSL implicite (port 465)",
   "admin.integrations.smtp.fromAddress": "Adresse d'expédition",

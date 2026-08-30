@@ -179,6 +179,8 @@
   "admin.integrations.smtp.enable": "SMTP 활성화",
   "admin.integrations.smtp.encryption": "암호화",
   "admin.integrations.smtp.encryptionNone": "없음 / 평문 (포트 25)",
+  "admin.integrations.smtp.skipCertVerify": "인증서 검증 건너뛰기",
+  "admin.integrations.smtp.skipCertVerifyHelp": "서버 TLS 인증서를 검증하지 않습니다. 자체 서명된 인증서 또는 만료된 인증서를 사용하는 셀프 호스팅 서버에서만 사용하세요.",
   "admin.integrations.smtp.encryptionStarttls": "STARTTLS (포트 587)",
   "admin.integrations.smtp.encryptionTls": "암시적 TLS/SSL (포트 465)",
   "admin.integrations.smtp.fromAddress": "보내는 주소",

@@ -179,6 +179,8 @@
   "admin.integrations.smtp.enable": "SMTPを有効にする",
   "admin.integrations.smtp.encryption": "暗号化",
   "admin.integrations.smtp.encryptionNone": "なし / プレーンテキスト（ポート25）",
+  "admin.integrations.smtp.skipCertVerify": "証明書の検証をスキップ",
+  "admin.integrations.smtp.skipCertVerifyHelp": "サーバーの TLS 証明書の検証を行いません。自己署名証明書または有効期限切れの証明書を使用する自己ホスト型サーバーでのみ使用してください。",
   "admin.integrations.smtp.encryptionStarttls": "STARTTLS（ポート587）",
   "admin.integrations.smtp.encryptionTls": "暗黙的TLS/SSL（ポート465）",
   "admin.integrations.smtp.fromAddress": "送信元アドレス",

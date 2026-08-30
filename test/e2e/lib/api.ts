@@ -715,6 +715,7 @@ export interface SMTPConfig {
   encryption: 'starttls' | 'tls' | 'none';
   from_address: string;
   from_name: string;
+  skip_cert_verify?: boolean;
 }
 
 export async function setSMTPConfig(
@@ -772,6 +773,7 @@ export async function resetSMTPConfig(
     encryption: 'starttls',
     from_address: '',
     from_name: '',
+    skip_cert_verify: false,
   });
 }
 

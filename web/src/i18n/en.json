@@ -886,6 +886,8 @@
   "admin.integrations.smtp.encryptionStarttls": "STARTTLS (port 587)",
   "admin.integrations.smtp.encryptionTls": "Implicit TLS/SSL (port 465)",
   "admin.integrations.smtp.encryptionNone": "None / Plaintext (port 25)",
+  "admin.integrations.smtp.skipCertVerify": "Skip certificate verification",
+  "admin.integrations.smtp.skipCertVerifyHelp": "Do not verify the server TLS certificate. Use only for self-hosted servers with self-signed or expired certificates.",
   "admin.integrations.smtp.fromAddress": "From Address",
   "admin.integrations.smtp.fromAddressPlaceholder": "notifications@company.com",
   "admin.integrations.smtp.fromName": "From Name",

@@ -20,6 +20,7 @@ const defaultConfig: SMTPConfig = {
   encryption: 'starttls',
   from_address: '',
   from_name: '',
+  skip_cert_verify: false,
 }
 
 export function SystemIntegrationsPage() {
@@ -214,6 +215,25 @@ export function SystemIntegrationsPage() {
               ))}
             </select>
           </div>
+
+          {(cfg.encryption === 'tls' || cfg.encryption === 'starttls') && (
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={cfg.skip_cert_verify}
+                onChange={(e) => updateField('skip_cert_verify', e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-[var(--border)] text-[var(--primary)] focus:ring-[var(--focus-ring)] dark:border-[var(--border)] bg-[var(--surface)]"
+              />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-[var(--foreground)]">
+                  {t('admin.integrations.smtp.skipCertVerify')}
+                </div>
+                <p className="text-xs text-[var(--foreground-secondary)]">
+                  {t('admin.integrations.smtp.skipCertVerifyHelp')}
+                </p>
+              </div>
+            </label>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input

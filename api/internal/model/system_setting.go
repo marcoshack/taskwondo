@@ -76,6 +76,9 @@ type SMTPConfig struct {
 	Encryption  string `json:"encryption"` // "starttls", "tls", "none"
 	FromAddress string `json:"from_address"`
 	FromName    string `json:"from_name"`
+	// SkipCertVerify disables TLS certificate verification for SMTP connections.
+	// Intended for self-hosted servers with self-signed or expired certificates.
+	SkipCertVerify bool `json:"skip_cert_verify"`
 }
 
 // Validate checks that all required fields are present when SMTP is enabled.

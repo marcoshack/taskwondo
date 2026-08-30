@@ -179,6 +179,8 @@
   "admin.integrations.smtp.enable": "启用 SMTP",
   "admin.integrations.smtp.encryption": "加密",
   "admin.integrations.smtp.encryptionNone": "无 / 明文（端口 25）",
+  "admin.integrations.smtp.skipCertVerify": "跳过证书验证",
+  "admin.integrations.smtp.skipCertVerifyHelp": "不验证服务器 TLS 证书。仅适用于使用自签名或已过期证书的自建服务器。",
   "admin.integrations.smtp.encryptionStarttls": "STARTTLS（端口 587）",
   "admin.integrations.smtp.encryptionTls": "隐式 TLS/SSL（端口 465）",
   "admin.integrations.smtp.fromAddress": "发件人地址",
