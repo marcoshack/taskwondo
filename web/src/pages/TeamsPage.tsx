@@ -83,8 +83,8 @@ export function TeamsPage() {
     <div className="max-w-3xl space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('teams.title')}</h2>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('teams.description')}</p>
+          <h2 className="text-lg font-semibold text-[var(--foreground)]">{t('teams.title')}</h2>
+          <p className="mt-1 text-sm text-[var(--foreground-secondary)]">{t('teams.description')}</p>
         </div>
         {canManage && (
           <Button onClick={() => setCreateOpen(true)} className="border border-transparent">
@@ -94,11 +94,11 @@ export function TeamsPage() {
         )}
       </div>
 
-      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {error && <p className="text-sm text-[var(--danger)]">{error}</p>}
 
       {(!teams || teams.length === 0) ? (
-        <div className="border border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center">
-          <p className="text-sm text-gray-500 dark:text-gray-400">{t('teams.noTeams')}</p>
+        <div className="border border-dashed border-[var(--border)] rounded-lg p-6 text-center">
+          <p className="text-sm text-[var(--foreground-secondary)]">{t('teams.noTeams')}</p>
           {canManage && (
             <Button size="sm" variant="secondary" className="mt-3" onClick={() => setCreateOpen(true)}>
               <Plus className="h-4 w-4 mr-1" />
@@ -107,7 +107,7 @@ export function TeamsPage() {
           )}
         </div>
       ) : (
-        <div className="border border-gray-200 dark:border-gray-600 rounded-lg divide-y divide-gray-200 dark:divide-gray-600">
+        <div className="border border-[var(--border)] rounded-lg divide-y divide-[var(--border)]">
           {teams.map((team) => (
             <TeamCard
               key={team.id}
@@ -137,7 +137,7 @@ export function TeamsPage() {
 
       {/* Delete confirmation */}
       <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} title={t('teams.deleteConfirmTitle')}>
-        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+        <p className="text-sm text-[var(--foreground-secondary)] mb-4">
           <Trans i18nKey="teams.deleteConfirmBody" values={{ name: deleteTarget?.name }} components={{ bold: <strong /> }} />
         </p>
         <div className="flex justify-end gap-2">
@@ -181,7 +181,7 @@ function TeamCard({
           <div className="flex items-center gap-2 flex-wrap">
             <Link
               to={pathFn(`/projects/${projectKey}/teams/${team.id}`)}
-              className="text-base font-semibold text-gray-900 dark:text-gray-100 hover:text-indigo-600 dark:hover:text-indigo-400"
+              className="text-base font-semibold text-[var(--foreground)] hover:text-[var(--primary)] dark:hover:text-[var(--primary)]"
             >
               {team.name}
             </Link>
@@ -190,7 +190,7 @@ function TeamCard({
             </Badge>
           </div>
           {team.description && (
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{team.description}</p>
+            <p className="text-xs text-[var(--foreground-secondary)] mt-1">{team.description}</p>
           )}
         </div>
         <div className="flex items-center gap-1 shrink-0">
@@ -202,7 +202,7 @@ function TeamCard({
           </Link>
           {canManage && (
             <Button variant="ghost" size="sm" onClick={() => onDelete(team)}>
-              <Trash2 className="h-3.5 w-3.5 text-red-500" />
+              <Trash2 className="h-3.5 w-3.5 text-[var(--danger)]" />
             </Button>
           )}
         </div>
@@ -245,7 +245,7 @@ function TeamCreateForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {validationError && (
-        <p className="text-sm text-red-600 dark:text-red-400">{validationError}</p>
+        <p className="text-sm text-[var(--danger)]">{validationError}</p>
       )}
       <Input
         label={t('teams.name')}
@@ -256,12 +256,12 @@ function TeamCreateForm({
         autoFocus
       />
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
           {t('common.description')}
         </label>
         <textarea
           rows={3}
-          className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          className="block w-full rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--primary)]"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />

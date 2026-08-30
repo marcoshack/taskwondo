@@ -1555,5 +1555,11 @@
   "inlineComments.gutterTooltip_one": "인라인 댓글 {{count}}개",
   "inlineComments.gutterTooltip_other": "인라인 댓글 {{count}}개",
   "inlineComments.prevComment": "이전 댓글",
-  "inlineComments.nextComment": "다음 댓글"
+  "inlineComments.nextComment": "다음 댓글",
+  "preferences.colorTheme": "색상 테마",
+  "preferences.colorThemes.default": "인디고",
+  "preferences.colorThemes.slate": "슬레이트",
+  "preferences.colorThemes.blue": "블루",
+  "preferences.colorThemes.green": "그린",
+  "preferences.colorThemes.purple": "퍼플"
 }

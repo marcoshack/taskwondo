@@ -32,22 +32,22 @@ export function SystemFeaturesPage() {
   return (
     <div className="max-w-3xl space-y-6">
       <div className="mb-6">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+        <h2 className="text-xl font-semibold text-[var(--foreground)]">
           {t('admin.features.title')}
         </h2>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        <p className="mt-1 text-sm text-[var(--foreground-secondary)]">
           {t('admin.features.description')}
         </p>
       </div>
 
       {/* Activity Graph */}
-      <div className="rounded-lg border border-gray-200 dark:border-gray-600 p-6">
+      <div className="rounded-lg border border-[var(--border)] p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+            <h3 className="text-lg font-medium text-[var(--foreground)]">
               {t('admin.features.statsTimeline.title')}
             </h3>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            <p className="mt-1 text-sm text-[var(--foreground-secondary)]">
               {t('admin.features.statsTimeline.description')}
             </p>
           </div>
@@ -59,17 +59,17 @@ export function SystemFeaturesPage() {
       </div>
 
       {/* Semantic Search */}
-      <div className="rounded-lg border border-gray-200 dark:border-gray-600 p-6">
+      <div className="rounded-lg border border-[var(--border)] p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <h3 className="text-lg font-medium text-[var(--foreground)] flex items-center gap-2">
               {t('admin.features.semanticSearch.title')}
-              <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium bg-gray-100 text-gray-500 dark:bg-gray-700/50 dark:text-gray-400">
+              <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium bg-[var(--surface-tertiary)] text-[var(--foreground-secondary)] bg-[var(--surface-secondary)]/50 text-[var(--foreground-muted)]">
                 <FlaskConical className="h-3 w-3" />
                 {t('common.experimental')}
               </span>
             </h3>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            <p className="mt-1 text-sm text-[var(--foreground-secondary)]">
               {t('admin.features.semanticSearch.description')}
             </p>
             {ollamaAvailable !== undefined && (
@@ -88,13 +88,13 @@ export function SystemFeaturesPage() {
         </div>
       </div>
       {/* Namespaces */}
-      <div className="rounded-lg border border-gray-200 dark:border-gray-600 p-6">
+      <div className="rounded-lg border border-[var(--border)] p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+            <h3 className="text-lg font-medium text-[var(--foreground)]">
               {t('admin.features.namespaces.title')}
             </h3>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            <p className="mt-1 text-sm text-[var(--foreground-secondary)]">
               {t('admin.features.namespaces.description')}
             </p>
             {hasCustomNamespaces > 0 && namespacesEnabled && (

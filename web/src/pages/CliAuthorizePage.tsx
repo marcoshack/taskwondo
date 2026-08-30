@@ -28,7 +28,7 @@ export function CliAuthorizePage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen flex items-center justify-center bg-[var(--surface-secondary)] dark:bg-[var(--background)]">
         <Spinner />
       </div>
     )
@@ -41,9 +41,9 @@ export function CliAuthorizePage() {
 
   if (!callbackPort || callbackPort < 1024 || callbackPort > 65535) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[var(--surface-secondary)] dark:bg-[var(--background)] px-4">
         <div className="max-w-md w-full text-center">
-          <p className="text-gray-600 dark:text-gray-400">{t('cliAuth.missingParams')}</p>
+          <p className="text-[var(--foreground-secondary)]">{t('cliAuth.missingParams')}</p>
         </div>
       </div>
     )
@@ -69,7 +69,7 @@ export function CliAuthorizePage() {
 
   if (status === 'success') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[var(--surface-secondary)] dark:bg-[var(--background)] px-4">
         <div className="max-w-md w-full text-center">
           <p className="text-lg text-green-600 dark:text-green-400">{t('cliAuth.success')}</p>
         </div>
@@ -79,37 +79,37 @@ export function CliAuthorizePage() {
 
   if (status === 'denied') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[var(--surface-secondary)] dark:bg-[var(--background)] px-4">
         <div className="max-w-md w-full text-center">
-          <p className="text-lg text-gray-600 dark:text-gray-400">{t('cliAuth.denied')}</p>
+          <p className="text-lg text-[var(--foreground-secondary)]">{t('cliAuth.denied')}</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 px-4">
+    <div className="min-h-screen flex flex-col bg-[var(--surface-secondary)] dark:bg-[var(--background)] px-4">
       <div className="flex-1 flex items-center justify-center">
         <div className="max-w-md w-full">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 p-8">
-            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6 text-center">
+          <div className="bg-[var(--surface)] rounded-lg shadow-sm border border-[var(--border)] p-8">
+            <h1 className="text-xl font-bold text-[var(--foreground)] mb-6 text-center">
               {t('cliAuth.title')}
             </h1>
 
-            <p className="text-gray-700 dark:text-gray-300 mb-4 text-center">
+            <p className="text-[var(--foreground)] mb-4 text-center">
               {t('cliAuth.description', { clientName })}
             </p>
 
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-2 text-center">
+            <p className="text-sm text-[var(--foreground-secondary)] mb-2 text-center">
               {t('cliAuth.loggedInAs', { displayName: user.display_name, email: user.email })}
             </p>
 
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-8 text-center">
+            <p className="text-sm text-[var(--foreground-secondary)] mb-8 text-center">
               {t('cliAuth.permissions')}
             </p>
 
             {status === 'error' && (
-              <p className="text-sm text-red-600 dark:text-red-400 mb-4 text-center">{t('cliAuth.error')}</p>
+              <p className="text-sm text-[var(--danger)] mb-4 text-center">{t('cliAuth.error')}</p>
             )}
 
             <div className="flex gap-3">

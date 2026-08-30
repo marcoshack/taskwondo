@@ -1555,5 +1555,11 @@
   "inlineComments.gutterTooltip_one": "{{count}} commentaire intégré",
   "inlineComments.gutterTooltip_other": "{{count}} commentaires intégrés",
   "inlineComments.prevComment": "Commentaire précédent",
-  "inlineComments.nextComment": "Commentaire suivant"
+  "inlineComments.nextComment": "Commentaire suivant",
+  "preferences.colorTheme": "Thème de couleur",
+  "preferences.colorThemes.default": "Par défaut",
+  "preferences.colorThemes.slate": "Ardoise",
+  "preferences.colorThemes.blue": "Bleu",
+  "preferences.colorThemes.green": "Vert",
+  "preferences.colorThemes.purple": "Violet"
 }

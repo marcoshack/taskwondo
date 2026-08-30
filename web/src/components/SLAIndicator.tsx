@@ -13,7 +13,7 @@ interface Props {
 const STATUS_COLORS: Record<string, string> = {
   on_track: 'text-green-600 dark:text-green-400',
   warning: 'text-yellow-600 dark:text-yellow-400',
-  breached: 'text-red-600 dark:text-red-400',
+  breached: 'text-[var(--danger)]',
 }
 
 const STATUS_I18N_KEYS: Record<string, string> = {

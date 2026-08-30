@@ -97,10 +97,10 @@ export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc', hig
     <div className="space-y-4">
       {/* Upload form */}
       {!readOnly && (
-        <div className="space-y-2 pb-3 border-b border-gray-100 dark:border-gray-600">
+        <div className="space-y-2 pb-3 border-b border-[var(--border)]">
           <input
             type="text"
-            className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-1.5 text-sm"
+            className="block w-full rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-1.5 text-sm"
             placeholder={t('attachments.commentPlaceholder')}
             value={comment}
             onChange={(e) => setComment(e.target.value)}
@@ -109,14 +109,14 @@ export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc', hig
             <input
               ref={fileInputRef}
               type="file"
-              className="text-sm text-gray-500 file:mr-2 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-sm file:bg-indigo-50 file:text-indigo-600 dark:file:bg-indigo-900/30 dark:file:text-indigo-400 hover:file:bg-indigo-100"
+              className="text-sm text-[var(--foreground-secondary)] file:mr-2 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-sm file:bg-[var(--primary-muted)] file:text-[var(--primary)]  dark:file:text-[var(--primary)] hover:file:bg-[var(--primary-muted)]"
               onChange={handleFileSelect}
               disabled={uploadMutation.isPending}
             />
             {uploadMutation.isPending && <Spinner size="sm" />}
           </div>
           {uploadMutation.isError && (
-            <p className="text-xs text-red-500">{t('attachments.uploadFailed')}</p>
+            <p className="text-xs text-[var(--danger)]">{t('attachments.uploadFailed')}</p>
           )}
         </div>
       )}
@@ -126,8 +126,8 @@ export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc', hig
         <div
           key={a.id}
           ref={a.id === highlightedAttachmentId ? highlightRef : undefined}
-          className={`flex items-start gap-3 border-b border-gray-100 dark:border-gray-600 pb-3 rounded-md transition-colors duration-700 ${
-            a.id === highlightedAttachmentId ? 'bg-indigo-50 dark:bg-indigo-900/30 ring-1 ring-indigo-300 dark:ring-indigo-600 px-2 py-2 -mx-2' : ''
+          className={`flex items-start gap-3 border-b border-[var(--border)] pb-3 rounded-md transition-colors duration-200 ${
+            a.id === highlightedAttachmentId ? 'bg-[var(--primary-muted)] ring-1 ring-indigo-300 dark:ring-indigo-600 px-2 py-2 -mx-2' : ''
           }`}
         >
           <div className="flex-1 min-w-0">
@@ -140,7 +140,7 @@ export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc', hig
                     handleDownload(a.id, a.filename)
                   }
                 }}
-                className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline whitespace-nowrap text-left cursor-pointer"
+                className="text-sm font-medium text-[var(--primary)] hover:underline whitespace-nowrap text-left cursor-pointer"
               >
                 {a.filename}
               </button>
@@ -149,7 +149,7 @@ export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc', hig
               <div className="flex items-center gap-1 mt-0.5">
                 <input
                   type="text"
-                  className="text-xs border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded px-1.5 py-0.5 flex-1"
+                  className="text-xs border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] rounded px-1.5 py-0.5 flex-1"
                   value={editCommentDraft}
                   onChange={(e) => setEditCommentDraft(e.target.value)}
                   onKeyDown={(e) => {
@@ -162,20 +162,20 @@ export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc', hig
                   autoFocus
                 />
                 <button
-                  className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline"
+                  className="text-xs text-[var(--primary)] hover:underline"
                   onClick={() => {
                     updateCommentMutation.mutate({ attachmentId: a.id, comment: editCommentDraft })
                     setEditingCommentId(null)
                   }}
                 >{t('common.save')}</button>
                 <button
-                  className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  className="text-xs text-[var(--foreground-muted)] hover:text-[var(--foreground-secondary)] dark:hover:text-[var(--foreground-muted)]"
                   onClick={() => setEditingCommentId(null)}
                 >{t('common.cancel')}</button>
               </div>
             ) : a.comment ? (
               <p
-                className={`text-xs text-gray-500 dark:text-gray-400 mt-0.5 rounded ${canManageAttachment(a.uploader_id) ? 'hover:bg-gray-100 dark:hover:bg-gray-700 cursor-default' : ''}`}
+                className={`text-xs text-[var(--foreground-secondary)] mt-0.5 rounded ${canManageAttachment(a.uploader_id) ? 'hover:bg-[var(--surface-hover)] cursor-default' : ''}`}
                 onDoubleClick={() => {
                   if (canManageAttachment(a.uploader_id)) {
                     setEditingCommentId(a.id)
@@ -184,7 +184,7 @@ export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc', hig
                 }}
               >{a.comment}</p>
             ) : null}
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+            <p className="text-xs text-[var(--foreground-muted)] mt-0.5">
               {formatFileSize(a.size_bytes)} &middot; {uploaderName(a.uploader_id)} &middot; {new Date(a.created_at).toLocaleString()}
             </p>
           </div>
@@ -192,7 +192,7 @@ export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc', hig
             {canManageAttachment(a.uploader_id) && (
               <Tooltip content={t('attachments.editDescription')}>
                 <button
-                  className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                  className="p-1 text-[var(--foreground-muted)] hover:text-[var(--foreground-secondary)] dark:hover:text-[var(--foreground-muted)] rounded hover:bg-[var(--surface-hover)]"
                   onClick={() => {
                     setEditingCommentId(a.id)
                     setEditCommentDraft(a.comment ?? '')
@@ -206,7 +206,7 @@ export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc', hig
             )}
             <Tooltip content={t('preview.download')}>
               <button
-                className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                className="p-1 text-[var(--foreground-muted)] hover:text-[var(--foreground-secondary)] dark:hover:text-[var(--foreground-muted)] rounded hover:bg-[var(--surface-hover)]"
                 onClick={() => handleDownload(a.id, a.filename)}
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5">
@@ -217,7 +217,7 @@ export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc', hig
             {canManageAttachment(a.uploader_id) && (
               <Tooltip content={t('common.delete')}>
                 <button
-                  className="p-1 text-red-400 hover:text-red-600 dark:hover:text-red-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                  className="p-1 text-red-400 hover:text-[var(--danger)] dark:hover:text-red-300 rounded hover:bg-[var(--surface-hover)]"
                   onClick={() => setDeleteTarget(a)}
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5">
@@ -231,12 +231,12 @@ export function AttachmentList({ projectKey, itemNumber, sortOrder = 'desc', hig
       ))}
 
       {(attachments ?? []).length === 0 && (
-        <p className="text-sm text-gray-400 italic">{t('attachments.noAttachments')}</p>
+        <p className="text-sm text-[var(--foreground-muted)] italic">{t('attachments.noAttachments')}</p>
       )}
 
       {/* Delete confirmation modal */}
       <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} title={t('attachments.deleteTitle')}>
-        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+        <p className="text-sm text-[var(--foreground-secondary)] mb-4">
           {t('attachments.deleteConfirm')} <strong>{deleteTarget?.filename}</strong>
         </p>
         <div className="flex justify-end gap-3">

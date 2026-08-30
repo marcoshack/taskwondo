@@ -156,13 +156,13 @@ export function AppShell() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
-      <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-600">
+    <div className="min-h-screen flex flex-col bg-[var(--background-secondary)]">
+      <nav className="bg-[var(--surface)] border-b border-[var(--border)]">
         <div className={containerClass(true)}>
           <div className="flex justify-between h-14 relative">
             <div className="flex items-center gap-6 min-w-0">
               {/* Desktop: always show brand name */}
-              <button onClick={() => guardedNavigate(p('/projects'))} className="hidden sm:block text-lg font-bold text-indigo-600 dark:text-indigo-400 shrink-0">
+              <button onClick={() => guardedNavigate(p('/projects'))} className="hidden sm:block text-lg font-bold text-[var(--primary)] shrink-0">
                 {brandName}
               </button>
               {/* Mobile: home icon + project key when any project active, brand when none */}
@@ -170,7 +170,7 @@ export function AppShell() {
                 <div className="flex sm:hidden items-center gap-2 min-w-0">
                   <button
                     onClick={() => guardedNavigate(p('/projects'))}
-                    className="p-1.5 rounded-md text-indigo-600 dark:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-800 shrink-0"
+                    className="p-1.5 rounded-[var(--radius)] text-[var(--primary)] hover:bg-[var(--hover)] shrink-0 transition-colors"
                     aria-label={t('nav.home')}
                   >
                     <Home className="h-5 w-5" />
@@ -183,19 +183,19 @@ export function AppShell() {
                   </button>
                 </div>
               ) : (
-                <button onClick={() => guardedNavigate(p('/projects'))} className="sm:hidden text-lg font-bold text-indigo-600 dark:text-indigo-400 shrink-0">
+                <button onClick={() => guardedNavigate(p('/projects'))} className="sm:hidden text-lg font-bold text-[var(--primary)] shrink-0">
                   {brandName}
                 </button>
               )}
               {adminMatch ? (
                 <div className="hidden sm:flex items-center gap-2.5 min-w-0">
-                  <Settings className="h-5 w-5 text-gray-500 dark:text-gray-400 shrink-0" />
-                  <span className="text-base font-semibold text-gray-900 dark:text-gray-100">{t('admin.title')}</span>
+                  <Settings className="h-5 w-5 text-[var(--foreground-secondary)] shrink-0" />
+                  <span className="text-base font-semibold text-[var(--foreground)]">{t('admin.title')}</span>
                 </div>
               ) : preferencesMatch ? (
                 <div className="hidden sm:flex items-center gap-2.5 min-w-0">
-                  <UserCog className="h-5 w-5 text-gray-500 dark:text-gray-400 shrink-0" />
-                  <span className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">{t('preferences.navTitle')}</span>
+                  <UserCog className="h-5 w-5 text-[var(--foreground-secondary)] shrink-0" />
+                  <span className="text-base font-semibold text-[var(--foreground)] truncate">{t('preferences.navTitle')}</span>
                 </div>
               ) : activeProject ? (
                 <button
@@ -204,7 +204,7 @@ export function AppShell() {
                   data-testid="project-switcher-badge"
                 >
                   <ProjectKeyBadge size="nav">{activeProject.key}</ProjectKeyBadge>
-                  <span className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">
+                  <span className="text-base font-semibold text-[var(--foreground)] truncate">
                     {activeProject.name}
                   </span>
                 </button>
@@ -213,7 +213,7 @@ export function AppShell() {
             <div className="relative flex items-center gap-1.5 sm:gap-2 shrink-0" ref={menuRef}>
               <button
                 onClick={() => setSearchOpen(true)}
-                className="p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+                className="p-2 rounded-[var(--radius)] text-[var(--foreground-secondary)] hover:bg-[var(--hover)] transition-colors"
                 aria-label={t('nav.search')}
               >
                 <Search className="h-5 w-5" />
@@ -221,12 +221,12 @@ export function AppShell() {
               {!isCustomerOnly && (
                 <button
                   onClick={() => guardedNavigate('/user/inbox')}
-                  className="relative p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+                  className="relative p-2 rounded-[var(--radius)] text-[var(--foreground-secondary)] hover:bg-[var(--hover)] transition-colors"
                   aria-label={t('inbox.title')}
                 >
                   <Inbox className="h-5 w-5" />
                   {inboxCount != null && inboxCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-indigo-600 px-1 text-[10px] font-bold text-white">
+                    <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--primary)] px-1 text-[10px] font-bold text-[var(--primary-foreground)]">
                       {inboxCount > 99 ? '99+' : inboxCount}
                     </span>
                   )}
@@ -237,7 +237,7 @@ export function AppShell() {
                 <div className="relative" ref={nsRef}>
                   <button
                     onClick={() => setNsDropdownOpen(!nsDropdownOpen)}
-                    className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+                    className="p-2 rounded-[var(--radius)] hover:bg-[var(--hover)] transition-colors"
                     aria-label={t('namespaces.switchNamespace')}
                     data-testid="namespace-switcher"
                   >
@@ -248,8 +248,8 @@ export function AppShell() {
                     />
                   </button>
                   {nsDropdownOpen && (
-                    <div className="absolute right-0 top-full mt-1 w-64 bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm rounded-md shadow-lg border border-gray-200 dark:border-gray-600 py-1 z-50">
-                      <div className="px-3 py-1.5 text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                    <div className="absolute right-0 top-full mt-1 w-64 bg-[var(--surface)] rounded-[var(--radius-md)] shadow-[var(--shadow-lg)] border border-[var(--border)] py-1 z-50">
+                      <div className="px-3 py-1.5 text-xs font-medium text-[var(--foreground-muted)] uppercase tracking-wider">
                         {t('namespaces.title')}
                       </div>
                       {namespaces.map((ns) => (
@@ -261,19 +261,19 @@ export function AppShell() {
                               setActiveNamespace(ns.slug)
                             }
                           }}
-                          className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2.5 ${
+                          className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2.5 transition-colors ${
                             ns.slug === activeNamespace?.slug
-                              ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
-                              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                              ? 'bg-[var(--primary-muted)] text-[var(--primary)]'
+                              : 'text-[var(--foreground)] hover:bg-[var(--hover)]'
                           }`}
                         >
                           <NamespaceIcon icon={ns.icon} color={ns.color} className="h-4 w-4 shrink-0" />
                           <div className="min-w-0 flex-1">
                             <div className="font-medium truncate">{ns.display_name}</div>
-                            {!ns.is_default && <div className="text-xs text-gray-400 dark:text-gray-500">{ns.slug}</div>}
+                            {!ns.is_default && <div className="text-xs text-[var(--foreground-muted)]">{ns.slug}</div>}
                           </div>
                           {ns.slug === activeNamespace?.slug && (
-                            <span className="text-xs text-indigo-600 dark:text-indigo-400 shrink-0">{t('common.current')}</span>
+                            <span className="text-xs text-[var(--primary)] shrink-0">{t('common.current')}</span>
                           )}
                           {!ns.is_default && (
                             <button
@@ -282,7 +282,7 @@ export function AppShell() {
                                 setNsDropdownOpen(false)
                                 guardedNavigate(`/${toUrlSegment(ns.slug)}/settings`)
                               }}
-                              className="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0"
+                              className="p-1 rounded text-[var(--foreground-muted)] hover:text-[var(--foreground)] shrink-0 transition-colors"
                               aria-label={t('namespaces.settings')}
                             >
                               <Settings className="h-3.5 w-3.5" />
@@ -290,13 +290,13 @@ export function AppShell() {
                           )}
                         </button>
                       ))}
-                      <div className="border-t border-gray-100 dark:border-gray-600 mt-1 pt-1">
+                      <div className="border-t border-[var(--border)] mt-1 pt-1">
                         <button
                           onClick={() => {
                             setNsDropdownOpen(false)
                             setNsCreateOpen(true)
                           }}
-                          className="w-full text-left px-3 py-2 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2.5"
+                          className="w-full text-left px-3 py-2 text-sm text-[var(--foreground-secondary)] hover:bg-[var(--hover)] flex items-center gap-2.5 transition-colors"
                         >
                           <Plus className="h-4 w-4" />
                           {t('namespaces.createNew')}
@@ -308,53 +308,53 @@ export function AppShell() {
               )}
               <button
                 onClick={toggleMobileOpen}
-                className="sm:hidden p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+                className="sm:hidden p-2 rounded-[var(--radius)] text-[var(--foreground-secondary)] hover:bg-[var(--hover)] transition-colors"
                 aria-label={t('sidebar.menu')}
               >
                 <Menu className="h-5 w-5" />
               </button>
-              <div className="hidden sm:block w-px h-5 bg-gray-200 dark:bg-gray-700 mx-1" />
+              <div className="hidden sm:block w-px h-5 bg-[var(--border)] mx-1" />
               <button
                 onClick={() => setMenuOpen(!menuOpen)}
-                className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
+                className="flex items-center gap-2 text-sm text-[var(--foreground)] hover:text-[var(--foreground)] transition-colors"
               >
                 <Avatar name={user?.display_name ?? ''} avatarUrl={user?.avatar_url} size="sm" />
                 <span className="hidden sm:block">{user?.display_name}</span>
               </button>
               {menuOpen && (
-                <div className="absolute right-0 top-full mt-1 w-48 bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm rounded-md shadow-lg border border-gray-200 dark:border-gray-600 py-1 z-50">
-                  <div className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-600">
+                <div className="absolute right-0 top-full mt-1 w-48 bg-[var(--surface)] rounded-[var(--radius-md)] shadow-[var(--shadow-lg)] border border-[var(--border)] py-1 z-50">
+                  <div className="px-4 py-2 text-xs text-[var(--foreground-secondary)] border-b border-[var(--border)]">
                     {user?.email}
                   </div>
                   <button
                     onClick={() => { setMenuOpen(false); guardedNavigate('/preferences') }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                    className="w-full text-left px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--hover)] flex items-center gap-2 transition-colors"
                   >
-                    <UserCog className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                    <UserCog className="h-4 w-4 text-[var(--foreground-muted)]" />
                     {t('nav.preferences')}
                   </button>
                   {user?.global_role === 'admin' && (
                     <button
                       onClick={() => { setMenuOpen(false); guardedNavigate('/admin') }}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                      className="w-full text-left px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--hover)] flex items-center gap-2 transition-colors"
                     >
-                      <Settings className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                      <Settings className="h-4 w-4 text-[var(--foreground-muted)]" />
                       {t('nav.systemSettings')}
                     </button>
                   )}
                   <button
                     onClick={() => { setMenuOpen(false); setWelcomeOpen(true) }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                    className="w-full text-left px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--hover)] flex items-center gap-2 transition-colors"
                   >
-                    <HelpCircle className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                    <HelpCircle className="h-4 w-4 text-[var(--foreground-muted)]" />
                     {t('nav.help')}
                   </button>
-                  <div className="border-t border-gray-100 dark:border-gray-600" />
+                  <div className="border-t border-[var(--border)]" />
                   <button
                     onClick={handleLogout}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                    className="w-full text-left px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--hover)] flex items-center gap-2 transition-colors"
                   >
-                    <LogOut className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                    <LogOut className="h-4 w-4 text-[var(--foreground-muted)]" />
                     {t('nav.signOut')}
                   </button>
                 </div>
@@ -490,12 +490,12 @@ function ProjectSwitcherModal({
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         onKeyDown={handleKeyDown}
-        className="block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-400 mb-3"
+        className="block w-full rounded-md border border-[var(--border)] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--primary)] bg-[var(--surface)] text-[var(--foreground)] placeholder-[var(--foreground-muted)] mb-3"
       />
       {isLoading ? (
         <div className="flex justify-center py-6"><Spinner /></div>
       ) : filtered.length === 0 ? (
-        <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">{t('projects.noProjectsFound')}</p>
+        <p className="text-sm text-[var(--foreground-secondary)] py-4 text-center">{t('projects.noProjectsFound')}</p>
       ) : (
         <ul ref={listRef} className="max-h-64 overflow-y-auto -mx-2">
           {filtered.map((p, i) => (
@@ -505,18 +505,18 @@ function ProjectSwitcherModal({
                 onMouseEnter={() => setSelectedIndex(i)}
                 className={`w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-md text-sm ${
                   i === selectedIndex
-                    ? 'bg-indigo-50 dark:bg-indigo-900/30'
-                    : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                    ? 'bg-[var(--primary-muted)]'
+                    : 'hover:bg-[var(--surface-hover)]'
                 }`}
               >
                 <ProjectKeyBadge>{p.key}</ProjectKeyBadge>
-                <span className="text-gray-900 dark:text-gray-100 font-medium truncate">{p.name}</span>
+                <span className="text-[var(--foreground)] font-medium truncate">{p.name}</span>
                 <span className="ml-auto flex items-center gap-2 shrink-0">
                   {isCurrent(p) && (
-                    <span className="text-xs text-indigo-600 dark:text-indigo-400">{t('common.current')}</span>
+                    <span className="text-xs text-[var(--primary)]">{t('common.current')}</span>
                   )}
                   {showNamespaces && p.namespace_slug && (
-                    <span className="flex items-center gap-1 text-[0.7rem] text-gray-400 dark:text-gray-500">
+                    <span className="flex items-center gap-1 text-[0.7rem] text-[var(--foreground-muted)]">
                       <span>{p.namespace_slug}</span>
                       <NamespaceIcon icon={p.namespace_icon ?? 'building2'} color={p.namespace_color ?? 'slate'} className="h-3 w-3" />
                     </span>
@@ -528,13 +528,13 @@ function ProjectSwitcherModal({
         </ul>
       )}
       {showNamespaces && (
-        <div className="flex justify-end mt-2 pt-2 border-t border-gray-100 dark:border-gray-600">
-          <label className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none" data-testid="all-namespaces-toggle">
+        <div className="flex justify-end mt-2 pt-2 border-t border-[var(--border)]">
+          <label className="flex items-center gap-2 text-xs text-[var(--foreground-secondary)] cursor-pointer select-none" data-testid="all-namespaces-toggle">
             <input
               type="checkbox"
               checked={showAllNamespaces}
               onChange={handleToggleAllNamespaces}
-              className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 h-3.5 w-3.5"
+              className="rounded border-[var(--border)] text-[var(--primary)] focus:ring-[var(--focus-ring)] h-3.5 w-3.5"
             />
             {t('projects.switcher.showAllNamespaces')}
           </label>

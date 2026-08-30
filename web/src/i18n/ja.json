@@ -1555,5 +1555,11 @@
   "inlineComments.gutterTooltip_one": "{{count}}件のインラインコメント",
   "inlineComments.gutterTooltip_other": "{{count}}件のインラインコメント",
   "inlineComments.prevComment": "前のコメント",
-  "inlineComments.nextComment": "次のコメント"
+  "inlineComments.nextComment": "次のコメント",
+  "preferences.colorTheme": "カラーテーマ",
+  "preferences.colorThemes.default": "インディゴ",
+  "preferences.colorThemes.slate": "スレート",
+  "preferences.colorThemes.blue": "ブルー",
+  "preferences.colorThemes.green": "グリーン",
+  "preferences.colorThemes.purple": "パープル"
 }

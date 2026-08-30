@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Modal } from '@/components/ui/Modal'
@@ -135,14 +136,14 @@ export function FilePreviewModal({ target, onClose }: FilePreviewModalProps) {
     <Modal open={!!target} onClose={onClose} size="full">
      <div ref={containerRef} tabIndex={-1} className="flex flex-col h-full outline-none">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-600 shrink-0" onMouseEnter={() => containerRef.current?.focus()}>
+      <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] shrink-0" onMouseEnter={() => containerRef.current?.focus()}>
         <div className="min-w-0 mr-4 truncate">
-          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+          <span className="text-sm font-medium text-[var(--foreground)]">
             {info?.filename}
           </span>
           {info?.comment && (
             <Tooltip content={info.comment}>
-              <span className="text-sm text-gray-500 dark:text-gray-400">
+              <span className="text-sm text-[var(--foreground-secondary)]">
                 {' '}&mdash; {info.comment}
               </span>
             </Tooltip>
@@ -151,7 +152,7 @@ export function FilePreviewModal({ target, onClose }: FilePreviewModalProps) {
         <div className="flex items-center gap-2">
           <Tooltip content={t('preview.download')}>
             <button
-              className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="p-1.5 text-[var(--foreground-muted)] hover:text-[var(--foreground)] rounded hover:bg-[var(--surface-hover)]"
               onClick={handleDownload}
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5">
@@ -161,7 +162,7 @@ export function FilePreviewModal({ target, onClose }: FilePreviewModalProps) {
           </Tooltip>
           <Tooltip content={t('preview.close')}>
             <button
-              className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="p-1.5 text-[var(--foreground-muted)] hover:text-[var(--foreground)] rounded hover:bg-[var(--surface-hover)]"
               onClick={onClose}
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5">
@@ -177,7 +178,7 @@ export function FilePreviewModal({ target, onClose }: FilePreviewModalProps) {
         {loading && <Spinner size="lg" />}
 
         {error && (
-          <p className="text-sm text-red-500">{t('preview.loadError')}</p>
+          <p className="text-sm text-[var(--danger)]">{t('preview.loadError')}</p>
         )}
 
         {!loading && !error && info?.previewType === 'image' && blobUrl && (
@@ -203,7 +204,7 @@ export function FilePreviewModal({ target, onClose }: FilePreviewModalProps) {
         )}
 
         {!loading && !error && info?.previewType === 'text' && textContent !== null && (
-          <pre className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap font-mono bg-gray-50 dark:bg-gray-900 rounded p-4 max-w-4xl w-full self-start">
+          <pre className="text-sm text-[var(--foreground)] whitespace-pre-wrap font-mono bg-[var(--surface-secondary)] dark:bg-[var(--background)] rounded p-4 max-w-4xl w-full self-start">
             {textContent}
           </pre>
         )}

@@ -1,9 +1,11 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import type { ReactNode } from 'react'
 import { usePreference, useSetPreference } from '@/hooks/usePreferences'
 import { useAuth } from '@/contexts/AuthContext'
 
 export type Theme = 'light' | 'dark' | 'system'
+export type ColorTheme = 'default' | 'slate' | 'blue' | 'green' | 'purple'
 export type FontSize = 'small' | 'normal' | 'large'
 
 const fontSizePx: Record<FontSize, string> = {
@@ -15,11 +17,14 @@ const fontSizePx: Record<FontSize, string> = {
 interface ThemeContextValue {
   theme: Theme
   setTheme: (theme: Theme) => void
+  colorTheme: ColorTheme
+  setColorTheme: (colorTheme: ColorTheme) => void
   fontSize: FontSize
   setFontSize: (size: FontSize) => void
 }
 
 const THEME_KEY = 'taskwondo_theme'
+const COLOR_THEME_KEY = 'taskwondo_color_theme'
 const FONT_SIZE_KEY = 'taskwondo_font_size'
 const ThemeContext = createContext<ThemeContextValue | null>(null)
 
@@ -39,6 +44,14 @@ function applyTheme(theme: Theme) {
   }
 }
 
+function applyColorTheme(colorTheme: ColorTheme) {
+  if (colorTheme === 'default') {
+    document.documentElement.removeAttribute('data-theme')
+  } else {
+    document.documentElement.setAttribute('data-theme', colorTheme)
+  }
+}
+
 function applyFontSize(size: FontSize) {
   document.documentElement.style.fontSize = fontSizePx[size]
 }
@@ -47,10 +60,20 @@ function isValidTheme(v: unknown): v is Theme {
   return v === 'light' || v === 'dark' || v === 'system'
 }
 
+function isValidColorTheme(v: unknown): v is ColorTheme {
+  return v === 'default' || v === 'slate' || v === 'blue' || v === 'green' || v === 'purple'
+}
+
 function getStoredTheme(): Theme {
   const stored = localStorage.getItem(THEME_KEY)
   if (isValidTheme(stored)) return stored
   return 'system'
+}
+
+function getStoredColorTheme(): ColorTheme {
+  const stored = localStorage.getItem(COLOR_THEME_KEY)
+  if (isValidColorTheme(stored)) return stored
+  return 'default'
 }
 
 function isValidFontSize(v: unknown): v is FontSize {
@@ -66,10 +89,12 @@ function getStoredFontSize(): FontSize {
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
   const [theme, setThemeState] = useState<Theme>(getStoredTheme)
+  const [colorTheme, setColorThemeState] = useState<ColorTheme>(getStoredColorTheme)
   const [fontSize, setFontSizeState] = useState<FontSize>(getStoredFontSize)
 
   // Fetch preferences from API when logged in
   const { data: apiTheme } = usePreference<string>(user ? 'theme' : '')
+  const { data: apiColorTheme } = usePreference<string>(user ? 'colorTheme' : '')
   const { data: apiFontSize } = usePreference<string>(user ? 'fontSize' : '')
   const setPreferenceMutation = useSetPreference()
 
@@ -80,6 +105,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       localStorage.setItem(THEME_KEY, apiTheme)
     }
   }, [apiTheme])
+
+  // Sync API color theme to local state on load
+  useEffect(() => {
+    if (isValidColorTheme(apiColorTheme)) {
+      setColorThemeState(apiColorTheme)
+      localStorage.setItem(COLOR_THEME_KEY, apiColorTheme)
+    }
+  }, [apiColorTheme])
 
   // Sync API font size to local state on load
   useEffect(() => {
@@ -93,6 +126,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     applyTheme(theme)
   }, [theme])
+
+  // Apply color theme whenever it changes
+  useEffect(() => {
+    applyColorTheme(colorTheme)
+  }, [colorTheme])
 
   // Listen for OS color scheme changes when theme is 'system'
   useEffect(() => {
@@ -119,6 +157,18 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     [user, setPreferenceMutation],
   )
 
+  const setColorTheme = useCallback(
+    (newColorTheme: ColorTheme) => {
+      setColorThemeState(newColorTheme)
+      localStorage.setItem(COLOR_THEME_KEY, newColorTheme)
+      applyColorTheme(newColorTheme)
+      if (user) {
+        setPreferenceMutation.mutate({ key: 'colorTheme', value: newColorTheme })
+      }
+    },
+    [user, setPreferenceMutation],
+  )
+
   const setFontSize = useCallback(
     (newSize: FontSize) => {
       setFontSizeState(newSize)
@@ -132,7 +182,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   )
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, fontSize, setFontSize }}>
+    <ThemeContext.Provider value={{ theme, setTheme, colorTheme, setColorTheme, fontSize, setFontSize }}>
       {children}
     </ThemeContext.Provider>
   )

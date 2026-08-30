@@ -133,12 +133,12 @@ function RoleSelect({
         type="button"
         onClick={() => !disabled && setOpen(!open)}
         disabled={disabled}
-        className={`flex items-center gap-1.5 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap ${sizeClasses}`}
+        className={`flex items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap ${sizeClasses}`}
         ref={buttonRef}
       >
         <span>{t(`projects.settings.roles.${value}`)}</span>
-        <Info className="h-3 w-3 text-gray-400 shrink-0" />
-        <ChevronDown className="h-3 w-3 text-gray-400 shrink-0" />
+        <Info className="h-3 w-3 text-[var(--foreground-muted)] shrink-0" />
+        <ChevronDown className="h-3 w-3 text-[var(--foreground-muted)] shrink-0" />
       </button>
       {open && createPortal(
         <RoleMenu
@@ -183,7 +183,7 @@ function RoleMenu({
   return (
     <div
       ref={menuRef}
-      className="fixed z-[9999] w-72 rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg py-1 max-h-80 overflow-y-auto"
+      className="fixed z-[9999] w-72 rounded-md border border-[var(--border)] bg-[var(--surface)] shadow-lg py-1 max-h-80 overflow-y-auto"
       style={pos}
     >
       {allRoles.map((role) => (
@@ -193,15 +193,15 @@ function RoleMenu({
           onClick={() => { onChange(role); setOpen(false) }}
           className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 ${
             role === value
-              ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
-              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+              ? 'bg-[var(--primary-muted)] text-[var(--primary)]'
+              : 'text-[var(--foreground)] hover:bg-[var(--surface-hover)]'
           }`}
         >
           <div className="flex-1 min-w-0">
             <div className="font-medium">{t(`projects.settings.roles.${role}`)}</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">{t(`projects.settings.roles.${role}.description`)}</div>
+            <div className="text-xs text-[var(--foreground-secondary)]">{t(`projects.settings.roles.${role}.description`)}</div>
           </div>
-          <Info className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+          <Info className="h-3.5 w-3.5 text-[var(--foreground-muted)] shrink-0" />
         </button>
       ))}
     </div>
@@ -223,6 +223,16 @@ export function ProjectSettingsPage() {
   const updateRoleMutation = useUpdateMemberRole(projectKey ?? '')
   const removeMemberMutation = useRemoveMember(projectKey ?? '')
   const { data: invites } = useInvites(projectKey ?? '')
+  const pendingEmailInvites = useMemo(
+    () =>
+      invites?.filter(
+        (inv) =>
+          inv.invitee_email &&
+          (inv.max_uses === 0 || inv.use_count < inv.max_uses) &&
+          (!inv.expires_at || new Date(inv.expires_at) >= new Date()),
+      ) ?? [],
+    [invites],
+  )
   const createInviteMutation = useCreateInvite(projectKey ?? '')
   const deleteInviteMutation = useDeleteInvite(projectKey ?? '')
   const assignableRoles = (project?.available_roles ?? []).filter((r: string) => r !== 'owner')
@@ -257,6 +267,7 @@ export function ProjectSettingsPage() {
   const [transferTarget, setTransferTarget] = useState('')
   const [transferConfirm, setTransferConfirm] = useState('')
   const [transferDropdownOpen, setTransferDropdownOpen] = useState(false)
+  const [transferMenuPos, setTransferMenuPos] = useState({ top: 0, left: 0, width: 0 })
   const [transferError, setTransferError] = useState('')
   const transferDropdownRef = useRef<HTMLDivElement>(null)
   const transferButtonRef = useRef<HTMLButtonElement>(null)
@@ -471,23 +482,12 @@ export function ProjectSettingsPage() {
 
   const memberIds = members?.map((m) => m.user_id) ?? []
 
-  const pendingEmailInvites = useMemo(
-    () =>
-      invites?.filter(
-        (inv) =>
-          inv.invitee_email &&
-          (inv.max_uses === 0 || inv.use_count < inv.max_uses) &&
-          (!inv.expires_at || new Date(inv.expires_at) >= new Date()),
-      ) ?? [],
-    [invites],
-  )
-
   return (
     <div className="max-w-3xl space-y-6">
       {/* Page Header */}
       <div>
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{t('projects.settings.title')}</h2>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('projects.settings.subtitle')}</p>
+        <h2 className="text-xl font-semibold text-[var(--foreground)]">{t('projects.settings.title')}</h2>
+        <p className="mt-1 text-sm text-[var(--foreground-secondary)]">{t('projects.settings.subtitle')}</p>
       </div>
 
       <Tabs tabs={tabs} activeTab={effectiveTab} onTabChange={setActiveTab} />
@@ -498,7 +498,7 @@ export function ProjectSettingsPage() {
           <form onSubmit={handleSave} className="space-y-4">
             <div className="flex gap-4">
               <div className="w-[30%]">
-                <Input label={t('projects.settings.projectKey')} value={project.key} disabled className="bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed" />
+                <Input label={t('projects.settings.projectKey')} value={project.key} disabled className="bg-[var(--surface-secondary)] text-[var(--foreground-secondary)] cursor-not-allowed" />
               </div>
               <div className="w-[70%]">
                 <Input
@@ -512,14 +512,14 @@ export function ProjectSettingsPage() {
             </div>
 
             <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="description" className="block text-sm font-medium text-[var(--foreground)] mb-1">
                 {t('common.description')}
               </label>
               <textarea
                 ref={descRef}
                 id="description"
                 rows={12}
-                className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="block w-full rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--primary)] disabled:opacity-60 disabled:cursor-not-allowed"
                 value={currentDescription}
                 onChange={(e) => setDescription(e.target.value)}
                 onKeyDown={descMention.onMentionKeyDown}
@@ -533,7 +533,7 @@ export function ProjectSettingsPage() {
               />
             </div>
 
-            {saveError && <p className="text-sm text-red-600 dark:text-red-400">{saveError}</p>}
+            {saveError && <p className="text-sm text-[var(--danger)]">{saveError}</p>}
 
             {canManageMembers && (
               <div className="flex items-center gap-2">
@@ -551,13 +551,13 @@ export function ProjectSettingsPage() {
           {canManageMembers && (
             <div className="border border-red-300 dark:border-red-800 rounded-lg">
               <div className="px-4 py-3 border-b border-red-300 dark:border-red-800">
-                <h3 className="text-base font-semibold text-red-600">{t('projects.settings.dangerZone')}</h3>
+                <h3 className="text-base font-semibold text-[var(--danger)]">{t('projects.settings.dangerZone')}</h3>
               </div>
               {hasMultipleNamespaces && (
                 <div className="p-4 flex items-center justify-between border-b border-red-200 dark:border-red-900">
                   <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('projects.settings.transferNamespace')}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{t('projects.settings.transferNamespaceDescription')}</p>
+                    <p className="text-sm font-medium text-[var(--foreground)]">{t('projects.settings.transferNamespace')}</p>
+                    <p className="text-sm text-[var(--foreground-secondary)]">{t('projects.settings.transferNamespaceDescription')}</p>
                   </div>
                   <Button variant="danger" className="min-w-[7.5rem] h-10" onClick={() => { setTransferTarget(''); setTransferConfirm(''); setTransferError(''); setShowTransferModal(true) }}>
                     <ArrowRightLeft className="h-4 w-4 mr-1" />
@@ -567,8 +567,8 @@ export function ProjectSettingsPage() {
               )}
               <div className="p-4 flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('projects.settings.deleteThisProject')}</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-sm font-medium text-[var(--foreground)]">{t('projects.settings.deleteThisProject')}</p>
+                  <p className="text-sm text-[var(--foreground-secondary)]">
                     {t('projects.settings.deleteWarning')}
                   </p>
                 </div>
@@ -584,14 +584,14 @@ export function ProjectSettingsPage() {
       {/* ───── Users tab ───── */}
       {effectiveTab === 'users' && (
         <div className="space-y-6">
-          <p className="text-sm text-gray-500 dark:text-gray-400">{t('projects.settings.membersDescription')}</p>
+          <p className="text-sm text-[var(--foreground-secondary)]">{t('projects.settings.membersDescription')}</p>
 
-          {memberError && <p className="text-sm text-red-600 dark:text-red-400">{memberError}</p>}
+          {memberError && <p className="text-sm text-[var(--danger)]">{memberError}</p>}
 
           {/* Add user form */}
           {canManageMembers && (
-            <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 space-y-3">
-              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('projects.settings.addUser')}</h3>
+            <div className="border border-[var(--border)] rounded-lg p-4 space-y-3">
+              <h3 className="text-sm font-medium text-[var(--foreground)]">{t('projects.settings.addUser')}</h3>
               <div className="flex gap-2 items-start">
                 <UserSearchInput
                   excludeUserIds={[...memberIds, ...stagedUsers.map((u) => u.id)]}
@@ -620,14 +620,14 @@ export function ProjectSettingsPage() {
                   {stagedUsers.map((u) => (
                     <span
                       key={u.id}
-                      className="inline-flex items-center gap-2 rounded-full bg-gray-100 dark:bg-gray-700 px-3 py-1 text-xs text-gray-800 dark:text-gray-200"
+                      className="inline-flex items-center gap-2 rounded-full bg-[var(--surface-secondary)] px-3 py-1 text-xs text-[var(--foreground)]"
                     >
                       <Avatar name={u.display_name} avatarUrl={u.avatar_url} size="xs" />
                       <span className="font-medium">{u.display_name}</span>
-                      <span className="text-gray-500 dark:text-gray-400 hidden sm:inline">{u.email}</span>
+                      <span className="text-[var(--foreground-secondary)] hidden sm:inline">{u.email}</span>
                       <button
                         type="button"
-                        className="ml-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                        className="ml-1 text-[var(--foreground-muted)] hover:text-[var(--foreground)]"
                         onClick={() => handleUnstageUser(u.id)}
                         aria-label={t('common.remove')}
                       >
@@ -642,7 +642,7 @@ export function ProjectSettingsPage() {
 
           {/* Member list */}
           {((members && members.length > 0) || pendingEmailInvites.length > 0) && (
-            <div className="border border-gray-200 dark:border-gray-600 rounded-lg divide-y divide-gray-200 dark:divide-gray-600">
+            <div className="border border-[var(--border)] rounded-lg divide-y divide-[var(--border)]">
               {members?.map((member) => {
                 const isSelf = member.user_id === user?.id
                 const memberIsOwner = member.role === 'owner'
@@ -655,11 +655,11 @@ export function ProjectSettingsPage() {
                     <div className="flex items-center gap-3 min-w-0">
                       <Avatar name={member.display_name} avatarUrl={member.avatar_url} size="sm" />
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                        <p className="text-sm font-medium text-[var(--foreground)] truncate">
                           {member.display_name}
-                          {isSelf && <span className="ml-1 text-xs text-gray-400">({t('common.you')})</span>}
+                          {isSelf && <span className="ml-1 text-xs text-[var(--foreground-muted)]">({t('common.you')})</span>}
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{member.email}</p>
+                        <p className="text-xs text-[var(--foreground-secondary)] truncate">{member.email}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
@@ -682,7 +682,7 @@ export function ProjectSettingsPage() {
                           </Tooltip>
                           <Tooltip content={isLastOwner ? t('projects.settings.lastOwnerTooltip') : undefined}>
                             <button
-                              className={`p-1 ${isLastOwner ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' : 'text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300'}`}
+                              className={`p-1 ${isLastOwner ? 'text-[var(--foreground-secondary)] cursor-not-allowed' : 'text-[var(--danger)] hover:text-red-700 text-[var(--danger)] dark:hover:text-red-300'}`}
                               onClick={() => !isLastOwner && setRemoveTarget({ userId: member.user_id, name: member.display_name })}
                               disabled={isLastOwner}
                             >
@@ -700,18 +700,18 @@ export function ProjectSettingsPage() {
                 )
               })}
               {members && membersTotalCount != null && membersTotalCount > members.length && (
-                <div className="py-2 text-sm text-gray-500 dark:text-gray-400 pl-[60px]">
+                <div className="py-2 text-sm text-[var(--foreground-secondary)] pl-[60px]">
                   {t('projects.settings.hiddenMembers', { count: membersTotalCount - members.length })}
                 </div>
               )}
               {pendingEmailInvites.map((invite) => (
                 <div key={invite.id} className="flex flex-wrap items-center justify-between gap-2 p-3">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="h-8 w-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
-                      <Mail className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                    <div className="h-8 w-8 rounded-full bg-[var(--surface-secondary)] flex items-center justify-center flex-shrink-0">
+                      <Mail className="h-4 w-4 text-[var(--foreground-muted)]" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                      <p className="text-sm text-[var(--foreground-secondary)] truncate">
                         {invite.invitee_email}
                       </p>
                     </div>
@@ -724,7 +724,7 @@ export function ProjectSettingsPage() {
                           {t(`projects.settings.roles.${invite.role}`)}
                         </Badge>
                         <button
-                          className="p-1 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                          className="p-1 text-[var(--danger)] hover:text-red-700 text-[var(--danger)] dark:hover:text-red-300"
                           onClick={() => setRevokeTarget({ id: invite.id, code: invite.code })}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -749,18 +749,18 @@ export function ProjectSettingsPage() {
       {/* ───── Invites tab ───── */}
       {effectiveTab === 'invites' && (
         <div className="space-y-6">
-          <p className="text-sm text-gray-500 dark:text-gray-400">{t('projects.settings.invitesDescription')}</p>
+          <p className="text-sm text-[var(--foreground-secondary)]">{t('projects.settings.invitesDescription')}</p>
 
-          {inviteError && <p className="text-sm text-red-600 dark:text-red-400">{inviteError}</p>}
+          {inviteError && <p className="text-sm text-[var(--danger)]">{inviteError}</p>}
 
           {/* Create invite form */}
-          <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 space-y-3">
-            <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('projects.settings.createInvite')}</h3>
+          <div className="border border-[var(--border)] rounded-lg p-4 space-y-3">
+            <h3 className="text-sm font-medium text-[var(--foreground)]">{t('projects.settings.createInvite')}</h3>
             <div className="flex gap-2 items-end flex-wrap">
               <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{t('projects.settings.inviteRole')}</label>
+                <label className="block text-xs font-medium text-[var(--foreground-secondary)] mb-1">{t('projects.settings.inviteRole')}</label>
                 <select
-                  className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
                   value={inviteRole}
                   onChange={(e) => {
                     const role = e.target.value
@@ -777,9 +777,9 @@ export function ProjectSettingsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{t('projects.settings.inviteExpiration')}</label>
+                <label className="block text-xs font-medium text-[var(--foreground-secondary)] mb-1">{t('projects.settings.inviteExpiration')}</label>
                 <select
-                  className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
                   value={inviteExpiration}
                   onChange={(e) => setInviteExpiration(e.target.value)}
                 >
@@ -791,11 +791,11 @@ export function ProjectSettingsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{t('projects.settings.inviteMaxUses')}</label>
+                <label className="block text-xs font-medium text-[var(--foreground-secondary)] mb-1">{t('projects.settings.inviteMaxUses')}</label>
                 <input
                   type="number"
                   min="0"
-                  className="w-24 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-24 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
                   value={inviteMaxUses}
                   onChange={(e) => setInviteMaxUses(e.target.value)}
                   placeholder={t('projects.settings.inviteMaxUsesPlaceholder')}
@@ -840,7 +840,7 @@ export function ProjectSettingsPage() {
 
           {/* Invite list */}
           {invites && invites.length > 0 ? (
-            <div className="border border-gray-200 dark:border-gray-600 rounded-lg divide-y divide-gray-200 dark:divide-gray-600">
+            <div className="border border-[var(--border)] rounded-lg divide-y divide-[var(--border)]">
               {invites.map((invite) => {
                 const isExpired = invite.expires_at && new Date(invite.expires_at) < new Date()
 
@@ -849,16 +849,16 @@ export function ProjectSettingsPage() {
                     <div className="flex flex-wrap items-center gap-3">
                       <TruncatedName
                         name={invite.created_by_name}
-                        className="text-xs font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap truncate w-[80px] flex-shrink-0 inline-block"
+                        className="text-xs font-semibold text-[var(--foreground)] whitespace-nowrap truncate w-[80px] flex-shrink-0 inline-block"
                       />
-                      <code className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded text-gray-700 dark:text-gray-300">
+                      <code className="text-xs bg-[var(--surface-secondary)] px-2 py-0.5 rounded text-[var(--foreground)]">
                         {invite.code}
                       </code>
                       <Badge color={ROLE_BADGE_COLORS[invite.role] ?? 'gray'}>
                         {t(`projects.settings.roles.${invite.role}`)}
                       </Badge>
                       {invite.invitee_email && (
-                        <span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[160px]" title={invite.invitee_email}>
+                        <span className="text-xs text-[var(--foreground-secondary)] truncate max-w-[160px]" title={invite.invitee_email}>
                           {invite.invitee_email}
                         </span>
                       )}
@@ -866,12 +866,12 @@ export function ProjectSettingsPage() {
                         <Badge color="gray">{t('projects.settings.inviteExpired')}</Badge>
                       )}
                       <div className="ml-auto flex items-center gap-3 flex-shrink-0">
-                        <span className="hidden md:inline text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                        <span className="hidden md:inline text-xs text-[var(--foreground-secondary)] whitespace-nowrap">
                           {invite.max_uses > 0
                             ? t('projects.settings.inviteUsage', { count: invite.use_count, max: invite.max_uses })
                             : t('projects.settings.inviteUsageUnlimited', { count: invite.use_count })}
                         </span>
-                        <span className="hidden md:inline text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                        <span className="hidden md:inline text-xs text-[var(--foreground-secondary)] whitespace-nowrap">
                           {invite.expires_at
                             ? (isExpired
                               ? t('projects.settings.inviteExpired')
@@ -887,7 +887,7 @@ export function ProjectSettingsPage() {
                         </span>
                         <Tooltip content={t('projects.settings.inviteCopy')}>
                           <button
-                            className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                            className="p-1 text-[var(--foreground-muted)] hover:text-[var(--foreground-secondary)] dark:hover:text-[var(--foreground-muted)]"
                             onClick={() => {
                               navigator.clipboard.writeText(invite.url)
                               showSaved(`copy:${invite.id}`)
@@ -897,14 +897,14 @@ export function ProjectSettingsPage() {
                           </button>
                         </Tooltip>
                         <button
-                          className="p-1 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                          className="p-1 text-[var(--danger)] hover:text-red-700 text-[var(--danger)] dark:hover:text-red-300"
                           onClick={() => setRevokeTarget({ id: invite.id, code: invite.code })}
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 md:hidden text-xs text-gray-500 dark:text-gray-400">
+                    <div className="flex items-center gap-3 md:hidden text-xs text-[var(--foreground-secondary)]">
                       <span>
                         {invite.max_uses > 0
                           ? t('projects.settings.inviteUsage', { count: invite.use_count, max: invite.max_uses })
@@ -925,7 +925,7 @@ export function ProjectSettingsPage() {
               })}
             </div>
           ) : (
-            <p className="text-sm text-gray-500 dark:text-gray-400">{t('projects.settings.noInvites')}</p>
+            <p className="text-sm text-[var(--foreground-secondary)]">{t('projects.settings.noInvites')}</p>
           )}
         </div>
       )}
@@ -933,11 +933,11 @@ export function ProjectSettingsPage() {
       {/* ───── Work Items tab ───── */}
       {effectiveTab === 'workItems' && (
         <div className="space-y-6">
-          <p className="text-sm text-gray-500 dark:text-gray-400">{t('projects.settings.complexityDescription')}</p>
+          <p className="text-sm text-[var(--foreground-secondary)]">{t('projects.settings.complexityDescription')}</p>
 
-          {complexityError && <p className="text-sm text-red-600 dark:text-red-400">{complexityError}</p>}
+          {complexityError && <p className="text-sm text-[var(--danger)]">{complexityError}</p>}
 
-          <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 space-y-3">
+          <div className="border border-[var(--border)] rounded-lg p-4 space-y-3">
             <Input
               label={t('projects.settings.complexityValues')}
               value={complexityInput ?? project.allowed_complexity_values.join(', ')}
@@ -1001,10 +1001,10 @@ export function ProjectSettingsPage() {
 
       {/* Delete confirmation modal */}
       <Modal open={showDeleteModal} onClose={() => setShowDeleteModal(false)} title={t('projects.settings.deleteConfirmTitle')}>
-        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+        <p className="text-sm text-[var(--foreground-secondary)] mb-4">
           <Trans i18nKey="projects.settings.deleteConfirmBody" values={{ projectKey: project.key }} components={{ bold: <strong /> }} />
         </p>
-        <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
+        <p className="text-sm text-[var(--foreground-secondary)] mb-2">
           <Trans i18nKey="projects.settings.deleteConfirmType" values={{ projectKey: project.key }} components={{ bold: <strong /> }} />
         </p>
         <Input
@@ -1028,7 +1028,7 @@ export function ProjectSettingsPage() {
 
       {/* Remove member confirmation modal */}
       <Modal open={!!removeTarget} onClose={() => setRemoveTarget(null)} title={t('projects.settings.removeMemberConfirmTitle')}>
-        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+        <p className="text-sm text-[var(--foreground-secondary)] mb-4">
           {removeTarget?.userId === user?.id ? (
             t('projects.settings.removeSelfConfirmBody')
           ) : (
@@ -1055,7 +1055,7 @@ export function ProjectSettingsPage() {
 
       {/* Revoke invite confirmation modal */}
       <Modal open={!!revokeTarget} onClose={() => setRevokeTarget(null)} title={t('projects.settings.deleteInviteConfirmTitle')}>
-        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+        <p className="text-sm text-[var(--foreground-secondary)] mb-4">
           {t('projects.settings.deleteInviteConfirmBody')}
         </p>
         <div className="flex justify-end gap-2">
@@ -1084,7 +1084,7 @@ export function ProjectSettingsPage() {
 
       {/* Email invite confirmation modal */}
       <Modal open={showEmailInviteModal} onClose={() => setShowEmailInviteModal(false)} title={t('projects.settings.emailInviteConfirmTitle')}>
-        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+        <p className="text-sm text-[var(--foreground-secondary)] mb-4">
           <Trans
             i18nKey="projects.settings.emailInviteConfirmBody"
             values={{ email: emailInput, role: t(`projects.settings.roles.${newMemberRole}`) }}
@@ -1106,26 +1106,33 @@ export function ProjectSettingsPage() {
 
       {/* Namespace transfer modal */}
       <Modal open={showTransferModal} onClose={() => setShowTransferModal(false)} title={t('projects.settings.transferConfirmTitle')}>
-        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+        <p className="text-sm text-[var(--foreground-secondary)] mb-4">
           <Trans i18nKey="projects.settings.transferConfirmBody" values={{ projectKey: project.key }} components={{ bold: <strong /> }} />
         </p>
-        <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">
+        <p className="text-sm text-[var(--foreground-secondary)] mb-1">
           <Trans i18nKey="projects.settings.transferConfirmType" values={{ projectKey: project.key }} components={{ bold: <strong /> }} />
         </p>
         <input
           type="text"
           value={transferConfirm}
           onChange={(e) => setTransferConfirm(e.target.value.toUpperCase())}
-          className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4"
+          className="block w-full rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] mb-4"
           placeholder={project.key}
         />
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('projects.settings.transferTargetNamespace')}</label>
+        <label className="block text-sm font-medium text-[var(--foreground)] mb-1">{t('projects.settings.transferTargetNamespace')}</label>
         <div className="mb-4" ref={transferDropdownRef}>
           <button
             ref={transferButtonRef}
             type="button"
-            onClick={() => setTransferDropdownOpen(!transferDropdownOpen)}
-            className="flex items-center gap-2 w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            onClick={() => {
+              const next = !transferDropdownOpen
+              setTransferDropdownOpen(next)
+              if (next && transferButtonRef.current) {
+                const rect = transferButtonRef.current.getBoundingClientRect()
+                setTransferMenuPos({ top: rect.bottom + 4, left: rect.left, width: rect.width })
+              }
+            }}
+            className="flex items-center gap-2 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
           >
             {(() => {
               const selected = namespaces.find((ns) => ns.slug === transferTarget)
@@ -1139,22 +1146,22 @@ export function ProjectSettingsPage() {
                   <span className="flex-1 text-left truncate">
                     {selected.display_name}
                   </span>
-                  <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0">{selected.slug}</span>
+                  <span className="text-xs text-[var(--foreground-muted)] shrink-0">{selected.slug}</span>
                 </>
               ) : (
-                <span className="flex-1 text-left text-gray-400 dark:text-gray-500">{t('projects.settings.selectNamespace')}</span>
+                <span className="flex-1 text-left text-[var(--foreground-muted)]">{t('projects.settings.selectNamespace')}</span>
               )
             })()}
-            <ChevronDown className="h-4 w-4 shrink-0 text-gray-400" />
+            <ChevronDown className="h-4 w-4 shrink-0 text-[var(--foreground-muted)]" />
           </button>
           {transferDropdownOpen && createPortal(
             <div
               ref={transferMenuRef}
-              className="fixed z-[9999] rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg py-1 max-h-60 overflow-y-auto"
+              className="fixed z-[9999] rounded-md border border-[var(--border)] bg-[var(--surface)] shadow-lg py-1 max-h-60 overflow-y-auto"
               style={{
-                top: (transferButtonRef.current?.getBoundingClientRect().bottom ?? 0) + 4,
-                left: transferButtonRef.current?.getBoundingClientRect().left ?? 0,
-                width: transferButtonRef.current?.getBoundingClientRect().width ?? 'auto',
+                top: transferMenuPos.top,
+                left: transferMenuPos.left,
+                width: transferMenuPos.width || 'auto',
               }}
             >
               {namespaces
@@ -1169,14 +1176,14 @@ export function ProjectSettingsPage() {
                     }}
                     className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2.5 ${
                       ns.slug === transferTarget
-                        ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                        ? 'bg-[var(--primary-muted)] text-[var(--primary)]'
+                        : 'text-[var(--foreground)] hover:bg-[var(--surface-hover)]'
                     }`}
                   >
                     <NamespaceIcon icon={ns.icon} color={ns.color} className="h-4 w-4 shrink-0" />
                     <div className="min-w-0 flex-1">
                       <div className="font-medium truncate">{ns.display_name}</div>
-                      {!ns.is_default && <div className="text-xs text-gray-400 dark:text-gray-500">{ns.slug}</div>}
+                      {!ns.is_default && <div className="text-xs text-[var(--foreground-muted)]">{ns.slug}</div>}
                     </div>
                   </button>
                 ))}
@@ -1184,7 +1191,7 @@ export function ProjectSettingsPage() {
             document.body,
           )}
         </div>
-        {transferError && <p className="text-sm text-red-600 dark:text-red-400 mb-4">{transferError}</p>}
+        {transferError && <p className="text-sm text-[var(--danger)] mb-4">{transferError}</p>}
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={() => setShowTransferModal(false)}>{t('common.cancel')}</Button>
           <Button

@@ -14,7 +14,7 @@ interface TabsProps {
 
 export function Tabs({ tabs, activeTab, onTabChange }: TabsProps) {
   return (
-    <div className="flex overflow-x-auto overflow-y-hidden border-b border-gray-200 dark:border-gray-600">
+    <div className="flex overflow-x-auto overflow-y-hidden border-b border-[var(--border)]">
       {tabs.map((tab) => {
         const isActive = tab.key === activeTab
         const Icon = tab.icon
@@ -24,8 +24,8 @@ export function Tabs({ tabs, activeTab, onTabChange }: TabsProps) {
             onClick={() => onTabChange(tab.key)}
             className={`px-4 py-2 text-sm font-medium transition-colors -mb-px inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
               isActive
-                ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400 font-semibold'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 border-b-2 border-transparent'
+                ? 'text-[var(--primary)] border-b-2 border-[var(--primary)] font-semibold'
+                : 'text-[var(--foreground-secondary)] hover:text-[var(--foreground)] border-b-2 border-transparent'
             }`}
           >
             {Icon && <Icon className="h-3.5 w-3.5" />}

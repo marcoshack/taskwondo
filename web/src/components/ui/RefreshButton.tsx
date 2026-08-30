@@ -63,11 +63,11 @@ export function RefreshButton({ interval, onIntervalChange, onRefresh, isRefresh
 
   return (
     <div ref={buttonRef} className="relative inline-flex">
-      <div className="inline-flex items-stretch rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden">
+      <div className="inline-flex items-stretch rounded-lg border border-[var(--border)] overflow-hidden">
         {/* Refresh button */}
         <button
           onClick={onRefresh}
-          className="flex items-center gap-1.5 px-2.5 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          className="flex items-center gap-1.5 px-2.5 py-2 text-sm text-[var(--foreground-secondary)] hover:bg-[var(--surface-hover)] transition-colors"
           aria-label={t('common.refresh')}
         >
           <RefreshCw className={`h-5 w-5 ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -76,7 +76,7 @@ export function RefreshButton({ interval, onIntervalChange, onRefresh, isRefresh
         {/* Dropdown toggle */}
         <button
           onClick={() => setOpen((v) => !v)}
-          className="flex items-center px-1.5 border-l border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          className="flex items-center px-1.5 border-l border-[var(--border)] text-[var(--foreground-muted)] hover:bg-[var(--surface-hover)] transition-colors"
           aria-label={t('common.autoRefresh')}
           aria-expanded={open}
         >
@@ -127,7 +127,7 @@ function DropdownMenu({
   return createPortal(
     <div
       ref={dropdownRef}
-      className="z-50 min-w-[120px] rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg py-1 animate-in fade-in duration-100"
+      className="z-50 min-w-[120px] rounded-lg border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-lg)] py-1 animate-in fade-in duration-100"
       style={style}
     >
       {INTERVAL_OPTIONS.map((opt) => (
@@ -136,8 +136,8 @@ function DropdownMenu({
           onClick={() => onSelect(opt.value)}
           className={`w-full text-left px-3 py-1.5 text-sm transition-colors ${
             interval === opt.value
-              ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium'
-              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+              ? 'bg-[var(--primary-muted)] text-[var(--primary)] font-medium'
+              : 'text-[var(--foreground)] hover:bg-[var(--surface-hover)]'
           }`}
         >
           {t(opt.labelKey)}

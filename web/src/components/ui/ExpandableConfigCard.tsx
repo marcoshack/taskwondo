@@ -46,7 +46,7 @@ export function ExpandableConfigCard({
   const { t } = useTranslation()
 
   return (
-    <div className="rounded-lg border border-gray-200 dark:border-gray-600">
+    <div className="rounded-lg border border-[var(--border)]">
       {/* Header — always visible */}
       <div className={`flex justify-between p-6${headerExtra ? ' items-stretch' : ' items-center'}`}>
         <button
@@ -55,15 +55,15 @@ export function ExpandableConfigCard({
           onClick={onToggleExpand}
         >
           {expanded ? (
-            <ChevronUp className="h-4 w-4 shrink-0 text-gray-400" />
+            <ChevronUp className="h-4 w-4 shrink-0 text-[var(--foreground-muted)]" />
           ) : (
-            <ChevronDown className="h-4 w-4 shrink-0 text-gray-400" />
+            <ChevronDown className="h-4 w-4 shrink-0 text-[var(--foreground-muted)]" />
           )}
           <div>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+            <h3 className="text-lg font-medium text-[var(--foreground)]">
               {title}
             </h3>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            <p className="mt-1 text-sm text-[var(--foreground-secondary)]">
               {description}
             </p>
           </div>
@@ -76,7 +76,7 @@ export function ExpandableConfigCard({
 
       {/* Expandable body */}
       {expanded && (
-        <div className="border-t border-gray-200 dark:border-gray-600 px-6 pb-6 pt-4">
+        <div className="border-t border-[var(--border)] px-6 pb-6 pt-4">
           <div className="space-y-4">{children}</div>
 
           {/* Actions */}
@@ -94,12 +94,12 @@ export function ExpandableConfigCard({
               )}
               {extraActions}
               {saved && (
-                <span className="text-sm text-green-600 dark:text-green-400">
+                <span className="text-sm text-[var(--success)]">
                   {savedMessage ?? t('common.saved')}
                 </span>
               )}
               {error && (
-                <span className="text-sm text-red-600 dark:text-red-400">
+                <span className="text-sm text-[var(--danger)]">
                   {error}
                 </span>
               )}

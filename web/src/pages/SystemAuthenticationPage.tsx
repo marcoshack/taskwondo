@@ -41,10 +41,10 @@ function RedirectUriField({ provider }: { provider: string }) {
   return (
     <div>
       <label className="block text-sm mb-1">
-        <span className="font-medium text-gray-700 dark:text-gray-300">
+        <span className="font-medium text-[var(--foreground)]">
           {t('admin.authentication.oauth.redirectUri')}
         </span>
-        <span className="ml-1.5 font-normal text-xs text-gray-400 dark:text-gray-500">
+        <span className="ml-1.5 font-normal text-xs text-[var(--foreground-muted)]">
           ({t('admin.authentication.oauth.redirectUriHint')})
         </span>
       </label>
@@ -52,7 +52,7 @@ function RedirectUriField({ provider }: { provider: string }) {
         <input
           value={redirectUri}
           readOnly
-          className="block w-full min-w-0 rounded-md border px-3 py-2 pr-10 text-sm shadow-sm border-gray-300 text-gray-500 bg-gray-50 dark:border-gray-600 dark:bg-gray-800/50 dark:text-gray-400 cursor-default"
+          className="block w-full min-w-0 rounded-md border px-3 py-2 pr-10 text-sm shadow-sm border-[var(--border)] text-[var(--foreground-secondary)] bg-[var(--surface-secondary)] dark:border-[var(--border)] bg-[var(--surface)]/50 text-[var(--foreground-muted)] cursor-default"
         />
         <button
           type="button"
@@ -62,9 +62,9 @@ function RedirectUriField({ provider }: { provider: string }) {
           {copied ? (
             <Check className="h-4 w-4 text-green-500" />
           ) : (
-            <Copy className="h-4 w-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" />
+            <Copy className="h-4 w-4 text-[var(--foreground-muted)] group-hover:text-[var(--foreground-secondary)] dark:group-hover:text-[var(--foreground-muted)]" />
           )}
-          <span className="absolute bottom-full right-0 mb-1.5 hidden group-hover:block whitespace-nowrap rounded bg-gray-900 dark:bg-gray-700 px-2 py-1 text-xs text-white shadow-lg">
+          <span className="absolute bottom-full right-0 mb-1.5 hidden group-hover:block whitespace-nowrap rounded bg-[var(--background)] bg-[var(--surface-secondary)] px-2 py-1 text-xs text-white shadow-lg">
             {copied ? t('common.copied') : t('common.copy')}
           </span>
         </button>
@@ -227,10 +227,10 @@ function OAuthProviderCard({
             type="button"
             disabled={isFirst}
             onClick={onMoveUp}
-            className="group relative rounded p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed"
+            className="group relative rounded p-0.5 text-[var(--foreground-muted)] hover:text-[var(--foreground-secondary)] dark:hover:text-[var(--foreground-muted)] disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <ArrowUp className="h-4 w-4" />
-            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block whitespace-nowrap rounded bg-gray-900 dark:bg-gray-700 px-2 py-1 text-xs text-white shadow-lg">
+            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block whitespace-nowrap rounded bg-[var(--background)] bg-[var(--surface-secondary)] px-2 py-1 text-xs text-white shadow-lg">
               {t('admin.authentication.oauth.changeOrder')}
             </span>
           </button>
@@ -238,10 +238,10 @@ function OAuthProviderCard({
             type="button"
             disabled={isLast}
             onClick={onMoveDown}
-            className="group relative rounded p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed"
+            className="group relative rounded p-0.5 text-[var(--foreground-muted)] hover:text-[var(--foreground-secondary)] dark:hover:text-[var(--foreground-muted)] disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <ArrowDown className="h-4 w-4" />
-            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block whitespace-nowrap rounded bg-gray-900 dark:bg-gray-700 px-2 py-1 text-xs text-white shadow-lg">
+            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block whitespace-nowrap rounded bg-[var(--background)] bg-[var(--surface-secondary)] px-2 py-1 text-xs text-white shadow-lg">
               {t('admin.authentication.oauth.changeOrder')}
             </span>
           </button>
@@ -277,7 +277,7 @@ function OAuthProviderCard({
 
       {sso && (
         <>
-          <div className="border-t border-gray-200 dark:border-gray-600 my-4" />
+          <div className="border-t border-[var(--border)] my-4" />
           <div>
             <Input
               label={t('admin.authentication.sso.issuer')}
@@ -285,7 +285,7 @@ function OAuthProviderCard({
               value={cfg.issuer ?? ''}
               onChange={(e) => updateField('issuer', e.target.value)}
             />
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <p className="text-xs text-[var(--foreground-secondary)] mt-1">
               {t('admin.authentication.sso.issuerHelp')}
             </p>
           </div>
@@ -302,7 +302,7 @@ function OAuthProviderCard({
                 updateField('scopes', scopes)
               }}
             />
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <p className="text-xs text-[var(--foreground-secondary)] mt-1">
               {t('admin.authentication.sso.scopesHelp')}
             </p>
           </div>
@@ -314,16 +314,16 @@ function OAuthProviderCard({
               onChange={(e) => updateField('button_label', e.target.value)}
               maxLength={40}
             />
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <p className="text-xs text-[var(--foreground-secondary)] mt-1">
               {t('admin.authentication.sso.buttonLabelHelp')}
             </p>
           </div>
           <div className="flex items-center justify-between">
             <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label className="block text-sm font-medium text-[var(--foreground)]">
                 {t('admin.authentication.sso.disablePKCE')}
               </label>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              <p className="text-xs text-[var(--foreground-secondary)] mt-1">
                 {t('admin.authentication.sso.disablePKCEHelp')}
               </p>
             </div>
@@ -334,10 +334,10 @@ function OAuthProviderCard({
           </div>
           <div className="flex items-center justify-between">
             <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label className="block text-sm font-medium text-[var(--foreground)]">
                 {t('admin.authentication.sso.requireVerifiedEmail')}
               </label>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              <p className="text-xs text-[var(--foreground-secondary)] mt-1">
                 {t('admin.authentication.sso.requireVerifiedEmailHelp')}
               </p>
             </div>
@@ -405,27 +405,27 @@ export function SystemAuthenticationPage() {
   return (
     <div className="max-w-3xl space-y-6">
       <div className="mb-6">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+        <h2 className="text-xl font-semibold text-[var(--foreground)]">
           {t('admin.authentication.title')}
         </h2>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        <p className="mt-1 text-sm text-[var(--foreground-secondary)]">
           {t('admin.authentication.description')}
         </p>
       </div>
 
       {/* Email & Password section */}
-      <h3 className="text-base font-medium text-gray-700 dark:text-gray-300 pt-2">
+      <h3 className="text-base font-medium text-[var(--foreground)] pt-2">
         {t('admin.authentication.section.emailPassword')}
       </h3>
 
       {/* Email/Password Login */}
-      <div className="rounded-lg border border-gray-200 dark:border-gray-600 p-6">
+      <div className="rounded-lg border border-[var(--border)] p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+            <h3 className="text-lg font-medium text-[var(--foreground)]">
               {t('admin.authentication.emailLogin.title')}
             </h3>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            <p className="mt-1 text-sm text-[var(--foreground-secondary)]">
               {t('admin.authentication.emailLogin.description')}
             </p>
           </div>
@@ -437,13 +437,13 @@ export function SystemAuthenticationPage() {
       </div>
 
       {/* Email Registration */}
-      <div className="rounded-lg border border-gray-200 dark:border-gray-600 p-6">
+      <div className="rounded-lg border border-[var(--border)] p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+            <h3 className="text-lg font-medium text-[var(--foreground)]">
               {t('admin.authentication.emailRegistration.title')}
             </h3>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            <p className="mt-1 text-sm text-[var(--foreground-secondary)]">
               {t('admin.authentication.emailRegistration.description')}
             </p>
           </div>
@@ -462,10 +462,10 @@ export function SystemAuthenticationPage() {
       </div>
 
       {/* OAuth Providers section */}
-      <h3 className="text-base font-medium text-gray-700 dark:text-gray-300 pt-2">
+      <h3 className="text-base font-medium text-[var(--foreground)] pt-2">
         {t('admin.authentication.section.oauth')}
       </h3>
-      <p className="text-sm text-gray-500 dark:text-gray-400 -mt-4">
+      <p className="text-sm text-[var(--foreground-secondary)] -mt-4">
         {t('admin.authentication.section.oauthDescription')}
       </p>
 
@@ -487,13 +487,13 @@ export function SystemAuthenticationPage() {
       ))}
 
       {/* SSO Auto-provision setting */}
-      <div className="rounded-lg border border-gray-200 dark:border-gray-600 p-6">
+      <div className="rounded-lg border border-[var(--border)] p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+            <h3 className="text-lg font-medium text-[var(--foreground)]">
               {t('admin.authentication.sso.autoProvision')}
             </h3>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            <p className="mt-1 text-sm text-[var(--foreground-secondary)]">
               {t('admin.authentication.sso.autoProvisionHelp')}
             </p>
           </div>

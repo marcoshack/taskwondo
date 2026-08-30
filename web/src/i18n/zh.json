@@ -1555,5 +1555,11 @@
   "inlineComments.gutterTooltip_one": "{{count}} 条内联评论",
   "inlineComments.gutterTooltip_other": "{{count}} 条内联评论",
   "inlineComments.prevComment": "上一条评论",
-  "inlineComments.nextComment": "下一条评论"
+  "inlineComments.nextComment": "下一条评论",
+  "preferences.colorTheme": "颜色主题",
+  "preferences.colorThemes.default": "靛蓝",
+  "preferences.colorThemes.slate": "石板灰",
+  "preferences.colorThemes.blue": "蓝色",
+  "preferences.colorThemes.green": "绿色",
+  "preferences.colorThemes.purple": "紫色"
 }

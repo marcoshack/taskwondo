@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import {
   Building2, Users, Briefcase, Code, Rocket, Shield, Heart, Zap,
   BookOpen, Star, Layers, Compass, Target, Lightbulb, Globe,
@@ -40,13 +41,13 @@ export type NamespaceColor = typeof NAMESPACE_COLORS[number]
 /** Tailwind color classes for each namespace color. */
 const COLOR_CLASSES: Record<string, { text: string; bg: string; ring: string }> = {
   slate:  { text: 'text-slate-500',  bg: 'bg-slate-500',  ring: 'ring-slate-500' },
-  red:    { text: 'text-red-500',    bg: 'bg-red-500',    ring: 'ring-red-500' },
+  red:    { text: 'text-[var(--danger)]',    bg: 'bg-red-500',    ring: 'ring-red-500' },
   orange: { text: 'text-orange-500', bg: 'bg-orange-500', ring: 'ring-orange-500' },
   amber:  { text: 'text-amber-500',  bg: 'bg-amber-500',  ring: 'ring-amber-500' },
   green:  { text: 'text-green-500',  bg: 'bg-green-500',  ring: 'ring-green-500' },
   teal:   { text: 'text-teal-500',   bg: 'bg-teal-500',   ring: 'ring-teal-500' },
   blue:   { text: 'text-blue-500',   bg: 'bg-blue-500',   ring: 'ring-blue-500' },
-  indigo: { text: 'text-indigo-500', bg: 'bg-indigo-500', ring: 'ring-indigo-500' },
+  indigo: { text: 'text-[var(--primary)]', bg: 'bg-[var(--primary-muted)]', ring: 'ring-[var(--focus-ring)]' },
   purple: { text: 'text-purple-500', bg: 'bg-purple-500', ring: 'ring-purple-500' },
   pink:   { text: 'text-pink-500',   bg: 'bg-pink-500',   ring: 'ring-pink-500' },
 }

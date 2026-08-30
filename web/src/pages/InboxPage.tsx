@@ -82,10 +82,10 @@ function InboxRow({ item, isCompleted, isFirst, isLast, isActive, onRemove, onMo
   return (
     <tr
       ref={rowRef}
-      className={`group border-b border-gray-200 dark:border-gray-600
+      className={`group border-b border-[var(--border)]
         ${reorderedId === item.id ? 'animate-[inbox-highlight_1s_ease-in-out]' : ''}
-        ${isRemoving && autoRemove ? 'transition-all duration-300 opacity-0 -translate-y-2' : ''}
-        ${isActive ? 'bg-indigo-50 dark:bg-indigo-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-800'} cursor-pointer`}
+        ${isRemoving && autoRemove ? 'transition-all duration-200 opacity-0 -translate-y-2' : ''}
+        ${isActive ? 'bg-[var(--primary-muted)]' : 'hover:bg-[var(--surface-hover)]'} cursor-pointer`}
       onClick={() => onClick(item)}
     >
       {/* Reorder arrows */}
@@ -94,7 +94,7 @@ function InboxRow({ item, isCompleted, isFirst, isLast, isActive, onRemove, onMo
           <button
             onClick={() => onMoveUp(item)}
             disabled={isFirst}
-            className={`p-0.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-gray-700 ${isFirst ? 'invisible' : ''}`}
+            className={`p-0.5 rounded text-[var(--foreground-muted)] hover:text-[var(--foreground-secondary)] hover:bg-[var(--surface-tertiary)] hover:bg-[var(--surface-hover)] ${isFirst ? 'invisible' : ''}`}
             aria-label={t('inbox.moveUp')}
           >
             <ChevronUp className="h-4 w-4" />
@@ -102,7 +102,7 @@ function InboxRow({ item, isCompleted, isFirst, isLast, isActive, onRemove, onMo
           <button
             onClick={() => onMoveDown(item)}
             disabled={isLast}
-            className={`p-0.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-gray-700 ${isLast ? 'invisible' : ''}`}
+            className={`p-0.5 rounded text-[var(--foreground-muted)] hover:text-[var(--foreground-secondary)] hover:bg-[var(--surface-tertiary)] hover:bg-[var(--surface-hover)] ${isLast ? 'invisible' : ''}`}
             aria-label={t('inbox.moveDown')}
           >
             <ChevronDown className="h-4 w-4" />
@@ -110,7 +110,7 @@ function InboxRow({ item, isCompleted, isFirst, isLast, isActive, onRemove, onMo
         </div>
       </td>
       {/* Display ID */}
-      <td style={columnWidths.display_id ? { width: columnWidths.display_id } : undefined} className={`px-3 py-3 text-sm font-mono whitespace-nowrap ${isCompleted && !isRemoving ? 'text-gray-400 dark:text-gray-500' : 'text-gray-500 dark:text-gray-400'} ${columnWidths.display_id ? '' : 'w-24'}`}>
+      <td style={columnWidths.display_id ? { width: columnWidths.display_id } : undefined} className={`px-3 py-3 text-sm font-mono whitespace-nowrap ${isCompleted && !isRemoving ? 'text-[var(--foreground-muted)]' : 'text-[var(--foreground-secondary)]'} ${columnWidths.display_id ? '' : 'w-24'}`}>
         {item.display_id}
       </td>
       {/* Type */}
@@ -118,8 +118,8 @@ function InboxRow({ item, isCompleted, isFirst, isLast, isActive, onRemove, onMo
         <TypeBadge type={item.type} />
       </td>
       {/* Title */}
-      <td className={`px-3 py-3 text-sm truncate ${item.description && !isCompleted ? 'text-gray-400 dark:text-gray-500' : ''}`}>
-        <span className={isCompleted && !isRemoving ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'}>
+      <td className={`px-3 py-3 text-sm truncate ${item.description && !isCompleted ? 'text-[var(--foreground-muted)]' : ''}`}>
+        <span className={isCompleted && !isRemoving ? 'line-through text-[var(--foreground-muted)]' : 'text-[var(--foreground)]'}>
           {item.title}
         </span>
         {item.description && !isCompleted && (
@@ -139,7 +139,7 @@ function InboxRow({ item, isCompleted, isFirst, isLast, isActive, onRemove, onMo
         <SLAIndicator sla={item.sla} />
       </td>
       {/* Updated */}
-      <td style={columnWidths.updated ? { width: columnWidths.updated } : undefined} className={`px-3 py-3 whitespace-nowrap text-sm text-right ${isCompleted && !isRemoving ? 'text-gray-300 dark:text-gray-600' : 'text-gray-500 dark:text-gray-400'} ${columnWidths.updated ? '' : 'w-[130px]'}`}>
+      <td style={columnWidths.updated ? { width: columnWidths.updated } : undefined} className={`px-3 py-3 whitespace-nowrap text-sm text-right ${isCompleted && !isRemoving ? 'text-[var(--foreground-secondary)]' : 'text-[var(--foreground-secondary)]'} ${columnWidths.updated ? '' : 'w-[130px]'}`}>
         {new Date(item.updated_at).toLocaleDateString()}
       </td>
       {/* Remove button */}
@@ -149,7 +149,7 @@ function InboxRow({ item, isCompleted, isFirst, isLast, isActive, onRemove, onMo
         ) : (
           <button
             onClick={() => onRemove(item.id)}
-            className="lg:opacity-0 lg:group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity"
+            className="lg:opacity-0 lg:group-hover:opacity-100 text-[var(--foreground-muted)] hover:text-[var(--danger)] transition-opacity"
             aria-label={t('inbox.removeFromInbox')}
           >
             <X className="h-4 w-4" />
@@ -192,10 +192,10 @@ function InboxCard({ item, isCompleted, isFirst, isLast, isActive, editing, onRe
   return (
     <div
       ref={cardRef}
-      className={`flex items-stretch gap-0 rounded-lg border bg-white dark:bg-gray-800 shadow-sm transition-colors
-        ${isActive ? 'border-indigo-400 dark:border-indigo-500 ring-1 ring-indigo-300 dark:ring-indigo-600' : 'border-gray-200 dark:border-gray-600 hover:border-indigo-300 dark:hover:border-indigo-600'}
+      className={`flex items-stretch gap-0 rounded-lg border bg-[var(--surface)] shadow-sm transition-colors
+        ${isActive ? 'border-[var(--primary-border)] dark:border-[var(--primary)] ring-1 ring-indigo-300 dark:ring-indigo-600' : 'border-[var(--border)] hover:border-[var(--primary-border)] dark:hover:border-[var(--primary-border)]'}
         ${reorderedId === item.id ? 'animate-[inbox-highlight_1s_ease-in-out]' : ''}
-        ${isRemoving && autoRemove ? 'transition-all duration-300 opacity-0 -translate-y-2' : ''}`}
+        ${isRemoving && autoRemove ? 'transition-all duration-200 opacity-0 -translate-y-2' : ''}`}
     >
       {/* Card content */}
       <button
@@ -204,13 +204,13 @@ function InboxCard({ item, isCompleted, isFirst, isLast, isActive, editing, onRe
       >
         {/* Line 1: Display ID + badges */}
         <div className="flex items-center gap-2 overflow-x-auto scrollbar-none">
-          <span className={`shrink-0 font-mono text-sm font-semibold ${dimmed ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'}`}>{item.display_id}</span>
+          <span className={`shrink-0 font-mono text-sm font-semibold ${dimmed ? 'text-[var(--foreground-muted)]' : 'text-[var(--foreground)]'}`}>{item.display_id}</span>
           <span className={`shrink-0 inline-flex ${dimmed ? 'opacity-40' : ''}`}><TypeBadge type={item.type} /></span>
           <span className="shrink-0 inline-flex"><InboxStatusBadge status={item.status} category={item.status_category} /></span>
           <span className={`shrink-0 inline-flex ${dimmed ? 'opacity-40' : ''}`}><PriorityBadge priority={item.priority} /></span>
         </div>
         {/* Line 2: Assignee, Updated, SLA */}
-        <div className={`flex items-center gap-3 mt-1.5 text-xs overflow-x-auto scrollbar-none ${dimmed ? 'text-gray-300 dark:text-gray-600' : 'text-gray-400 dark:text-gray-500'}`}>
+        <div className={`flex items-center gap-3 mt-1.5 text-xs overflow-x-auto scrollbar-none ${dimmed ? 'text-[var(--foreground-secondary)]' : 'text-[var(--foreground-muted)]'}`}>
           <span className="shrink-0 inline-flex items-center gap-1">
             <User className="h-3 w-3" />
             <span className="truncate max-w-[8rem]">{assigneeName}</span>
@@ -222,23 +222,23 @@ function InboxCard({ item, isCompleted, isFirst, isLast, isActive, editing, onRe
           {!dimmed && item.sla && <span className="shrink-0 inline-flex"><SLAIndicator sla={item.sla} /></span>}
         </div>
         {/* Line 3: Title */}
-        <p className={`mt-1.5 text-sm font-medium truncate ${dimmed ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'}`}>
+        <p className={`mt-1.5 text-sm font-medium truncate ${dimmed ? 'line-through text-[var(--foreground-muted)]' : 'text-[var(--foreground)]'}`}>
           {item.title}
         </p>
         {/* Line 4: Description (first line) */}
         {item.description && (
-          <p className={`mt-0.5 text-xs truncate ${dimmed ? 'text-gray-300 dark:text-gray-600' : 'text-gray-500 dark:text-gray-400'}`}>
+          <p className={`mt-0.5 text-xs truncate ${dimmed ? 'text-[var(--foreground-secondary)]' : 'text-[var(--foreground-secondary)]'}`}>
             {item.description}
           </p>
         )}
       </button>
       {/* Edit controls — right column, fits within card's natural height */}
       {editing && (
-        <div className="flex flex-col items-center justify-between flex-shrink-0 rounded-r-lg bg-indigo-50 dark:bg-indigo-900/20 border-l border-indigo-200 dark:border-indigo-700/50 px-2 py-1">
+        <div className="flex flex-col items-center justify-between flex-shrink-0 rounded-r-lg bg-[var(--primary-muted)] border-l border-[var(--primary-border)] dark:border-[var(--primary-border)]/50 px-2 py-1">
           {/* Remove at top */}
           <button
             onClick={() => onRemove(item.id)}
-            className="p-1 rounded text-red-400 hover:text-red-600 hover:bg-red-100 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/30"
+            className="p-1 rounded text-red-400 hover:text-[var(--danger)] hover:bg-red-100 text-[var(--danger)] dark:hover:text-red-300 dark:hover:bg-red-900/30"
             aria-label={t('inbox.removeFromInbox')}
           >
             <X className="h-3.5 w-3.5" />
@@ -248,7 +248,7 @@ function InboxCard({ item, isCompleted, isFirst, isLast, isActive, editing, onRe
             <button
               onClick={() => onMoveUp(item)}
               disabled={isFirst}
-              className={`p-0.5 rounded text-indigo-400 hover:text-indigo-600 hover:bg-indigo-100 dark:text-indigo-400 dark:hover:text-indigo-300 dark:hover:bg-indigo-800/40 ${isFirst ? 'invisible' : ''}`}
+              className={`p-0.5 rounded text-[var(--primary)] hover:text-[var(--primary)] hover:bg-[var(--primary-muted)] dark:text-[var(--primary)] dark:hover:text-[var(--primary)] hover:bg-[var(--primary-muted)] ${isFirst ? 'invisible' : ''}`}
               aria-label={t('inbox.moveUp')}
             >
               <ChevronUp className="h-4 w-4" />
@@ -256,7 +256,7 @@ function InboxCard({ item, isCompleted, isFirst, isLast, isActive, editing, onRe
             <button
               onClick={() => onMoveDown(item)}
               disabled={isLast}
-              className={`p-0.5 rounded text-indigo-400 hover:text-indigo-600 hover:bg-indigo-100 dark:text-indigo-400 dark:hover:text-indigo-300 dark:hover:bg-indigo-800/40 ${isLast ? 'invisible' : ''}`}
+              className={`p-0.5 rounded text-[var(--primary)] hover:text-[var(--primary)] hover:bg-[var(--primary-muted)] dark:text-[var(--primary)] dark:hover:text-[var(--primary)] hover:bg-[var(--primary-muted)] ${isLast ? 'invisible' : ''}`}
               aria-label={t('inbox.moveDown')}
             >
               <ChevronDown className="h-4 w-4" />
@@ -298,38 +298,7 @@ function InboxListPage() {
   // Column resize drag logic (mirrors DataTable)
   const resizingRef = useRef<{ key: string; startX: number; startWidth: number } | null>(null)
   const onResizeRef = useRef(onColumnResize)
-  onResizeRef.current = onColumnResize
-
-  const handleResizeMove = useRef((e: MouseEvent) => {
-    if (!resizingRef.current) return
-    const { key, startX, startWidth } = resizingRef.current
-    const diff = e.clientX - startX
-    const newWidth = Math.max(40, startWidth + diff)
-    onResizeRef.current?.(key, newWidth)
-  }).current
-
-  const handleResizeEnd = useRef(() => {
-    resizingRef.current = null
-    document.removeEventListener('mousemove', handleResizeMove)
-    document.removeEventListener('mouseup', handleResizeEnd)
-    document.body.style.cursor = ''
-    document.body.style.userSelect = ''
-    document.addEventListener('click', suppressClick, true)
-  }).current
-
-  const suppressClick = useRef((e: MouseEvent) => {
-    e.stopPropagation()
-    e.preventDefault()
-    document.removeEventListener('click', suppressClick, true)
-  }).current
-
-  useEffect(() => {
-    return () => {
-      document.removeEventListener('mousemove', handleResizeMove)
-      document.removeEventListener('mouseup', handleResizeEnd)
-      document.removeEventListener('click', suppressClick, true)
-    }
-  }, [handleResizeMove, handleResizeEnd, suppressClick])
+  useEffect(() => { onResizeRef.current = onColumnResize }, [onColumnResize])
 
   const handleResizeStart = useCallback((e: React.MouseEvent, colKey: string) => {
     e.preventDefault()
@@ -338,11 +307,31 @@ function InboxListPage() {
     if (!th) return
     const startWidth = th.getBoundingClientRect().width
     resizingRef.current = { key: colKey, startX: e.clientX, startWidth }
-    document.addEventListener('mousemove', handleResizeMove)
-    document.addEventListener('mouseup', handleResizeEnd)
+    const handleMove = (e: MouseEvent) => {
+      if (!resizingRef.current) return
+      const { key, startX, startWidth } = resizingRef.current
+      const diff = e.clientX - startX
+      const newWidth = Math.max(40, startWidth + diff)
+      onResizeRef.current?.(key, newWidth)
+    }
+    const handleEnd = () => {
+      resizingRef.current = null
+      document.removeEventListener('mousemove', handleMove)
+      document.removeEventListener('mouseup', handleEnd)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+      const suppress = (e: MouseEvent) => {
+        e.stopPropagation()
+        e.preventDefault()
+        document.removeEventListener('click', suppress, true)
+      }
+      document.addEventListener('click', suppress, true)
+    }
+    document.addEventListener('mousemove', handleMove)
+    document.addEventListener('mouseup', handleEnd)
     document.body.style.cursor = 'col-resize'
     document.body.style.userSelect = 'none'
-  }, [handleResizeMove, handleResizeEnd])
+  }, [onColumnResize])
 
   const { data: autoRemovePref } = usePreference<boolean>('inbox_auto_remove')
   const autoRemove = autoRemovePref ?? true
@@ -388,7 +377,7 @@ function InboxListPage() {
         <ProjectKeyBadge size="icon">{p.key}</ProjectKeyBadge>
         <span className="truncate">{p.name}</span>
         {showNamespaces && p.namespace_slug && (
-          <span className="ml-auto flex items-center gap-1 text-[0.7rem] text-gray-400 dark:text-gray-500 shrink-0">
+          <span className="ml-auto flex items-center gap-1 text-[0.7rem] text-[var(--foreground-muted)] shrink-0">
             <span>{p.namespace_slug}</span>
             <NamespaceIcon icon={p.namespace_icon ?? 'building2'} color={p.namespace_color ?? 'slate'} className="h-3 w-3" />
           </span>
@@ -604,9 +593,9 @@ function InboxListPage() {
       {/* Header: title + search + actions */}
       <div className="flex items-center justify-between gap-4 mb-4">
         <div className="flex items-center gap-3 min-w-0 shrink lg:shrink-0">
-          <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('inbox.title')}</h1>
+          <h1 className="text-lg font-semibold text-[var(--foreground)]">{t('inbox.title')}</h1>
           {data && (
-            <span className="text-sm text-gray-500 dark:text-gray-400">
+            <span className="text-sm text-[var(--foreground-secondary)]">
               ({data.total})
             </span>
           )}
@@ -628,7 +617,7 @@ function InboxListPage() {
               {searchInput && (
                 <button
                   onClick={() => { setSearchInput(''); searchRef.current?.focus() }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-[var(--foreground-muted)] hover:text-[var(--foreground-secondary)] dark:hover:text-[var(--foreground-muted)]"
                   aria-label={t('common.clear')}
                 >
                   <X className="h-4 w-4" />
@@ -648,14 +637,14 @@ function InboxListPage() {
       <Modal open={settingsOpen} onClose={() => setSettingsOpen(false)} title={t('inbox.settings')}>
         <div className="py-2">
           <label className="flex items-center justify-between cursor-pointer select-none">
-            <span className="text-sm text-gray-700 dark:text-gray-300">{t('inbox.autoRemove')}</span>
+            <span className="text-sm text-[var(--foreground)]">{t('inbox.autoRemove')}</span>
             <button
               type="button"
               role="switch"
               aria-checked={autoRemove}
               onClick={() => setPreferenceMutation.mutate({ key: 'inbox_auto_remove', value: !autoRemove })}
               className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors ${
-                autoRemove ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-600'
+                autoRemove ? 'bg-[var(--primary)]' : 'bg-[var(--surface-tertiary)] dark:bg-[var(--foreground-secondary)]'
               }`}
             >
               <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow ring-0 transition-transform ${
@@ -663,7 +652,7 @@ function InboxListPage() {
               }`} />
             </button>
           </label>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('inbox.autoRemoveDescription')}</p>
+          <p className="text-xs text-[var(--foreground-secondary)] mt-1">{t('inbox.autoRemoveDescription')}</p>
         </div>
       </Modal>
 
@@ -685,14 +674,14 @@ function InboxListPage() {
         {/* Auto-hide toggle */}
         <Tooltip content={t('inbox.autoRemoveDescription')}>
           <label className="flex items-center gap-2 cursor-pointer select-none">
-            <span className="text-sm text-gray-600 dark:text-gray-400">{t('inbox.autoRemove')}</span>
+            <span className="text-sm text-[var(--foreground-secondary)]">{t('inbox.autoRemove')}</span>
             <button
               type="button"
               role="switch"
               aria-checked={autoRemove}
               onClick={() => setPreferenceMutation.mutate({ key: 'inbox_auto_remove', value: !autoRemove })}
               className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors ${
-                autoRemove ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-600'
+                autoRemove ? 'bg-[var(--primary)]' : 'bg-[var(--surface-tertiary)] dark:bg-[var(--foreground-secondary)]'
               }`}
             >
               <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow ring-0 transition-transform ${
@@ -706,10 +695,10 @@ function InboxListPage() {
           <button
             onClick={() => clearCompletedMutation.mutate()}
             disabled={clearCompletedMutation.isPending || completedItems.length === 0}
-            className={`relative p-2 rounded-lg border border-gray-300 dark:border-gray-600 transition-colors ${
+            className={`relative p-2 rounded-lg border border-[var(--border)] transition-colors ${
               completedItems.length === 0
-                ? 'opacity-40 cursor-not-allowed text-gray-400 dark:text-gray-500'
-                : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-300'
+                ? 'opacity-40 cursor-not-allowed text-[var(--foreground-muted)]'
+                : 'text-[var(--foreground-secondary)] hover:bg-[var(--surface-tertiary)] hover:text-[var(--foreground)] text-[var(--foreground-muted)] dark:hover:bg-[var(--surface)] dark:hover:text-[var(--foreground-muted)]'
             }`}
             aria-label={t('inbox.clearCompleted')}
           >
@@ -736,7 +725,7 @@ function InboxListPage() {
       {/* Mobile: Search + project filter + icons */}
       <div className="flex lg:hidden items-center gap-2 mb-4">
         <div className="relative flex-1 min-w-0">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--foreground-muted)]" />
           <Input
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
@@ -749,7 +738,7 @@ function InboxListPage() {
           {searchInput && (
             <button
               onClick={() => setSearchInput('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-[var(--foreground-muted)] hover:text-[var(--foreground-secondary)] dark:hover:text-[var(--foreground-muted)]"
               aria-label={t('common.clear')}
             >
               <X className="h-4 w-4" />
@@ -761,14 +750,14 @@ function InboxListPage() {
           onClick={() => setProjectFilterOpen(true)}
           className={`relative shrink-0 p-2 rounded-lg border transition-colors ${
             selectedProjects.length > 0
-              ? 'border-indigo-400 bg-indigo-50 text-indigo-600 dark:border-indigo-500 dark:bg-indigo-900/30 dark:text-indigo-400'
-              : 'border-gray-300 dark:border-gray-600 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-300'
+              ? 'border-[var(--primary-border)] bg-[var(--primary-muted)] text-[var(--primary)] dark:border-[var(--primary)]  dark:text-[var(--primary)]'
+              : 'border-[var(--border)] text-[var(--foreground-secondary)] hover:bg-[var(--surface-tertiary)] hover:text-[var(--foreground)] text-[var(--foreground-muted)] dark:hover:bg-[var(--surface)] dark:hover:text-[var(--foreground-muted)]'
           }`}
           aria-label={t('inbox.filterByProject')}
         >
           <FolderKanban className="h-5 w-5" />
           {selectedProjects.length > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-600 text-[10px] font-bold text-white">
+            <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--primary)] text-[10px] font-bold text-white">
               {selectedProjects.length}
             </span>
           )}
@@ -777,10 +766,10 @@ function InboxListPage() {
         <button
           onClick={() => clearCompletedMutation.mutate()}
           disabled={clearCompletedMutation.isPending || completedItems.length === 0}
-          className={`relative shrink-0 p-2 rounded-lg border border-gray-300 dark:border-gray-600 transition-colors ${
+          className={`relative shrink-0 p-2 rounded-lg border border-[var(--border)] transition-colors ${
             completedItems.length === 0
-              ? 'opacity-40 cursor-not-allowed text-gray-400 dark:text-gray-500'
-              : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-300'
+              ? 'opacity-40 cursor-not-allowed text-[var(--foreground-muted)]'
+              : 'text-[var(--foreground-secondary)] hover:bg-[var(--surface-tertiary)] hover:text-[var(--foreground)] text-[var(--foreground-muted)] dark:hover:bg-[var(--surface)] dark:hover:text-[var(--foreground-muted)]'
           }`}
           aria-label={t('inbox.clearCompleted')}
         >
@@ -796,8 +785,8 @@ function InboxListPage() {
           onClick={() => setEditing((v) => !v)}
           className={`p-2 rounded-lg border transition-colors ${
             editing
-              ? 'border-indigo-400 bg-indigo-50 text-indigo-600 dark:border-indigo-500 dark:bg-indigo-900/30 dark:text-indigo-400'
-              : 'border-gray-300 dark:border-gray-600 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-300'
+              ? 'border-[var(--primary-border)] bg-[var(--primary-muted)] text-[var(--primary)] dark:border-[var(--primary)]  dark:text-[var(--primary)]'
+              : 'border-[var(--border)] text-[var(--foreground-secondary)] hover:bg-[var(--surface-tertiary)] hover:text-[var(--foreground)] text-[var(--foreground-muted)] dark:hover:bg-[var(--surface)] dark:hover:text-[var(--foreground-muted)]'
           }`}
           aria-label={t('common.edit')}
         >
@@ -806,7 +795,7 @@ function InboxListPage() {
         {/* Mobile: settings button */}
         <button
           onClick={() => setSettingsOpen(true)}
-          className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-300 transition-colors"
+          className="p-2 rounded-lg border border-[var(--border)] text-[var(--foreground-secondary)] hover:bg-[var(--surface-tertiary)] hover:text-[var(--foreground)] text-[var(--foreground-muted)] dark:hover:bg-[var(--surface)] dark:hover:text-[var(--foreground-muted)] transition-colors"
           aria-label={t('inbox.settings')}
         >
           <Settings className="h-5 w-5" />
@@ -835,7 +824,7 @@ function InboxListPage() {
       </Modal>
 
       {allItems.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-gray-500 dark:text-gray-400">
+        <div className="flex flex-col items-center justify-center py-16 text-[var(--foreground-secondary)]">
           <Inbox className="h-16 w-16 mb-4 opacity-30" />
           <p className="text-lg font-medium">{t('inbox.empty')}</p>
           <p className="text-sm mt-1">{t('inbox.emptyHint')}</p>
@@ -843,35 +832,35 @@ function InboxListPage() {
       ) : (
         <>
           {/* Desktop table */}
-          <div className="hidden lg:block overflow-hidden rounded-lg border border-gray-200 dark:border-gray-600">
+          <div className="hidden lg:block overflow-hidden rounded-lg border border-[var(--border)]">
             <table className="w-full table-fixed">
-              <thead className="bg-gray-50 dark:bg-gray-800 group/thead">
+              <thead className="bg-[var(--surface-secondary)] group/thead">
                 <tr>
                   <th className="w-10 px-1 py-3"></th>
-                  <th style={columnWidths.display_id ? { width: columnWidths.display_id } : undefined} className={`relative px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase ${columnWidths.display_id ? '' : 'w-24'}`}>
+                  <th style={columnWidths.display_id ? { width: columnWidths.display_id } : undefined} className={`relative px-3 py-3 text-left text-xs font-medium text-[var(--foreground-secondary)] uppercase ${columnWidths.display_id ? '' : 'w-24'}`}>
                     {t('workitems.table.id')}
-                    <div className="absolute right-0.5 top-0 bottom-0 w-1.5 cursor-col-resize opacity-0 group-hover/thead:opacity-100 bg-indigo-300/40 hover:!bg-indigo-400/60 active:!bg-indigo-500/60 dark:bg-indigo-500/30 dark:hover:!bg-indigo-400/50 dark:active:!bg-indigo-500/50 transition-opacity z-10" onMouseDown={(e) => handleResizeStart(e, 'display_id')} onDoubleClick={(e) => { e.stopPropagation(); resetColumnWidth('display_id') }} />
+                    <div className="absolute right-0.5 top-0 bottom-0 w-1.5 cursor-col-resize opacity-0 group-hover/thead:opacity-100 bg-[var(--primary)]/40 hover:!bg-[var(--primary-hover)]/60 active:!bg-[var(--primary-muted)]/60 dark:bg-[var(--primary-muted)]/30 hover:!bg-[var(--primary-hover)]/50 dark:active:!bg-[var(--primary-muted)]/50 transition-opacity z-10" onMouseDown={(e) => handleResizeStart(e, 'display_id')} onDoubleClick={(e) => { e.stopPropagation(); resetColumnWidth('display_id') }} />
                   </th>
-                  <th style={columnWidths.type ? { width: columnWidths.type } : undefined} className={`relative px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase ${columnWidths.type ? '' : 'w-20'}`}>
+                  <th style={columnWidths.type ? { width: columnWidths.type } : undefined} className={`relative px-3 py-3 text-left text-xs font-medium text-[var(--foreground-secondary)] uppercase ${columnWidths.type ? '' : 'w-20'}`}>
                     {t('workitems.table.type')}
-                    <div className="absolute right-0.5 top-0 bottom-0 w-1.5 cursor-col-resize opacity-0 group-hover/thead:opacity-100 bg-indigo-300/40 hover:!bg-indigo-400/60 active:!bg-indigo-500/60 dark:bg-indigo-500/30 dark:hover:!bg-indigo-400/50 dark:active:!bg-indigo-500/50 transition-opacity z-10" onMouseDown={(e) => handleResizeStart(e, 'type')} onDoubleClick={(e) => { e.stopPropagation(); resetColumnWidth('type') }} />
+                    <div className="absolute right-0.5 top-0 bottom-0 w-1.5 cursor-col-resize opacity-0 group-hover/thead:opacity-100 bg-[var(--primary)]/40 hover:!bg-[var(--primary-hover)]/60 active:!bg-[var(--primary-muted)]/60 dark:bg-[var(--primary-muted)]/30 hover:!bg-[var(--primary-hover)]/50 dark:active:!bg-[var(--primary-muted)]/50 transition-opacity z-10" onMouseDown={(e) => handleResizeStart(e, 'type')} onDoubleClick={(e) => { e.stopPropagation(); resetColumnWidth('type') }} />
                   </th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('workitems.table.title')}</th>
-                  <th style={columnWidths.status ? { width: columnWidths.status } : undefined} className={`relative px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase ${columnWidths.status ? '' : 'w-28'}`}>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-[var(--foreground-secondary)] uppercase">{t('workitems.table.title')}</th>
+                  <th style={columnWidths.status ? { width: columnWidths.status } : undefined} className={`relative px-3 py-3 text-left text-xs font-medium text-[var(--foreground-secondary)] uppercase ${columnWidths.status ? '' : 'w-28'}`}>
                     {t('workitems.table.status')}
-                    <div className="absolute right-0.5 top-0 bottom-0 w-1.5 cursor-col-resize opacity-0 group-hover/thead:opacity-100 bg-indigo-300/40 hover:!bg-indigo-400/60 active:!bg-indigo-500/60 dark:bg-indigo-500/30 dark:hover:!bg-indigo-400/50 dark:active:!bg-indigo-500/50 transition-opacity z-10" onMouseDown={(e) => handleResizeStart(e, 'status')} onDoubleClick={(e) => { e.stopPropagation(); resetColumnWidth('status') }} />
+                    <div className="absolute right-0.5 top-0 bottom-0 w-1.5 cursor-col-resize opacity-0 group-hover/thead:opacity-100 bg-[var(--primary)]/40 hover:!bg-[var(--primary-hover)]/60 active:!bg-[var(--primary-muted)]/60 dark:bg-[var(--primary-muted)]/30 hover:!bg-[var(--primary-hover)]/50 dark:active:!bg-[var(--primary-muted)]/50 transition-opacity z-10" onMouseDown={(e) => handleResizeStart(e, 'status')} onDoubleClick={(e) => { e.stopPropagation(); resetColumnWidth('status') }} />
                   </th>
-                  <th style={columnWidths.priority ? { width: columnWidths.priority } : undefined} className={`relative px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase ${columnWidths.priority ? '' : 'w-24'}`}>
+                  <th style={columnWidths.priority ? { width: columnWidths.priority } : undefined} className={`relative px-3 py-3 text-left text-xs font-medium text-[var(--foreground-secondary)] uppercase ${columnWidths.priority ? '' : 'w-24'}`}>
                     {t('workitems.table.priority')}
-                    <div className="absolute right-0.5 top-0 bottom-0 w-1.5 cursor-col-resize opacity-0 group-hover/thead:opacity-100 bg-indigo-300/40 hover:!bg-indigo-400/60 active:!bg-indigo-500/60 dark:bg-indigo-500/30 dark:hover:!bg-indigo-400/50 dark:active:!bg-indigo-500/50 transition-opacity z-10" onMouseDown={(e) => handleResizeStart(e, 'priority')} onDoubleClick={(e) => { e.stopPropagation(); resetColumnWidth('priority') }} />
+                    <div className="absolute right-0.5 top-0 bottom-0 w-1.5 cursor-col-resize opacity-0 group-hover/thead:opacity-100 bg-[var(--primary)]/40 hover:!bg-[var(--primary-hover)]/60 active:!bg-[var(--primary-muted)]/60 dark:bg-[var(--primary-muted)]/30 hover:!bg-[var(--primary-hover)]/50 dark:active:!bg-[var(--primary-muted)]/50 transition-opacity z-10" onMouseDown={(e) => handleResizeStart(e, 'priority')} onDoubleClick={(e) => { e.stopPropagation(); resetColumnWidth('priority') }} />
                   </th>
-                  <th style={columnWidths.sla ? { width: columnWidths.sla } : undefined} className={`relative px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase ${columnWidths.sla ? '' : 'w-[110px]'}`}>
+                  <th style={columnWidths.sla ? { width: columnWidths.sla } : undefined} className={`relative px-3 py-3 text-left text-xs font-medium text-[var(--foreground-secondary)] uppercase ${columnWidths.sla ? '' : 'w-[110px]'}`}>
                     {t('sla.columnHeader')}
-                    <div className="absolute right-0.5 top-0 bottom-0 w-1.5 cursor-col-resize opacity-0 group-hover/thead:opacity-100 bg-indigo-300/40 hover:!bg-indigo-400/60 active:!bg-indigo-500/60 dark:bg-indigo-500/30 dark:hover:!bg-indigo-400/50 dark:active:!bg-indigo-500/50 transition-opacity z-10" onMouseDown={(e) => handleResizeStart(e, 'sla')} onDoubleClick={(e) => { e.stopPropagation(); resetColumnWidth('sla') }} />
+                    <div className="absolute right-0.5 top-0 bottom-0 w-1.5 cursor-col-resize opacity-0 group-hover/thead:opacity-100 bg-[var(--primary)]/40 hover:!bg-[var(--primary-hover)]/60 active:!bg-[var(--primary-muted)]/60 dark:bg-[var(--primary-muted)]/30 hover:!bg-[var(--primary-hover)]/50 dark:active:!bg-[var(--primary-muted)]/50 transition-opacity z-10" onMouseDown={(e) => handleResizeStart(e, 'sla')} onDoubleClick={(e) => { e.stopPropagation(); resetColumnWidth('sla') }} />
                   </th>
-                  <th style={columnWidths.updated ? { width: columnWidths.updated } : undefined} className={`relative px-3 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase ${columnWidths.updated ? '' : 'w-[130px]'}`}>
+                  <th style={columnWidths.updated ? { width: columnWidths.updated } : undefined} className={`relative px-3 py-3 text-right text-xs font-medium text-[var(--foreground-secondary)] uppercase ${columnWidths.updated ? '' : 'w-[130px]'}`}>
                     {t('workitems.table.updated')}
-                    <div className="absolute right-0.5 top-0 bottom-0 w-1.5 cursor-col-resize opacity-0 group-hover/thead:opacity-100 bg-indigo-300/40 hover:!bg-indigo-400/60 active:!bg-indigo-500/60 dark:bg-indigo-500/30 dark:hover:!bg-indigo-400/50 dark:active:!bg-indigo-500/50 transition-opacity z-10" onMouseDown={(e) => handleResizeStart(e, 'updated')} onDoubleClick={(e) => { e.stopPropagation(); resetColumnWidth('updated') }} />
+                    <div className="absolute right-0.5 top-0 bottom-0 w-1.5 cursor-col-resize opacity-0 group-hover/thead:opacity-100 bg-[var(--primary)]/40 hover:!bg-[var(--primary-hover)]/60 active:!bg-[var(--primary-muted)]/60 dark:bg-[var(--primary-muted)]/30 hover:!bg-[var(--primary-hover)]/50 dark:active:!bg-[var(--primary-muted)]/50 transition-opacity z-10" onMouseDown={(e) => handleResizeStart(e, 'updated')} onDoubleClick={(e) => { e.stopPropagation(); resetColumnWidth('updated') }} />
                   </th>
                   <th className="w-10 px-2 py-3"></th>
                 </tr>
@@ -957,7 +946,7 @@ function InboxListPage() {
             setRemoveConfirmItem(null)
           }
         }}>
-          <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+          <p className="text-sm text-[var(--foreground-secondary)] mb-4">
             <Trans i18nKey="inbox.removeConfirmBody" values={{ displayId: removeConfirmItem?.display_id ?? '' }} components={{ bold: <strong /> }} />
           </p>
           <label className="flex items-center gap-2 mb-4 cursor-pointer select-none">
@@ -966,7 +955,7 @@ function InboxListPage() {
               checked={dontShowAgainChecked}
               onChange={(e) => setDontShowAgainChecked(e.target.checked)}
             />
-            <span className="text-sm text-gray-500 dark:text-gray-400">{t('inbox.dontShowAgain')}</span>
+            <span className="text-sm text-[var(--foreground-secondary)]">{t('inbox.dontShowAgain')}</span>
           </label>
           <div className="flex justify-end gap-3">
             <Button type="button" variant="secondary" onClick={() => setRemoveConfirmItem(null)}>{t('common.cancel')}</Button>
@@ -989,7 +978,7 @@ function InboxListPage() {
 function FeedPage() {
   const { t } = useTranslation()
   return (
-    <div className="flex flex-col items-center justify-center h-64 text-gray-500 dark:text-gray-400">
+    <div className="flex flex-col items-center justify-center h-64 text-[var(--foreground-secondary)]">
       <Rss className="h-12 w-12 mb-4 opacity-30" />
       <p className="text-lg font-medium">{t('user.feedComingSoon')}</p>
     </div>
@@ -1030,34 +1019,34 @@ function MobileProjectFilterContent({ projectOptions, selectedProjects, setSelec
           className="text-sm"
         />
       </div>
-      <div className="flex items-center gap-2 px-1 pb-2 border-b border-gray-100 dark:border-gray-600">
-        <button type="button" className="text-xs text-indigo-600 hover:text-indigo-800" onClick={() => setSelectedProjects(filtered.map((o) => o.value))}>
+      <div className="flex items-center gap-2 px-1 pb-2 border-b border-[var(--border)]">
+        <button type="button" className="text-xs text-[var(--primary)] hover:text-[var(--primary-hover)]" onClick={() => setSelectedProjects(filtered.map((o) => o.value))}>
           {t('common.all')}
         </button>
-        <button type="button" className="ml-auto text-xs text-gray-400 hover:text-gray-600" onClick={() => setSelectedProjects([])}>
+        <button type="button" className="ml-auto text-xs text-[var(--foreground-muted)] hover:text-[var(--foreground-secondary)]" onClick={() => setSelectedProjects([])}>
           {t('common.none')}
         </button>
       </div>
       <div className="max-h-60 overflow-y-auto space-y-1 pt-1">
         {filtered.length === 0 ? (
-          <p className="text-sm text-gray-400 dark:text-gray-500 py-2">{t('common.noResults')}</p>
+          <p className="text-sm text-[var(--foreground-muted)] py-2">{t('common.noResults')}</p>
         ) : (
           filtered.map((opt) => {
             const p = projectMap.get(opt.value)
             return (
-              <label key={opt.value} className="flex items-center gap-2 px-1 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer text-sm text-gray-700 dark:text-gray-300 rounded">
+              <label key={opt.value} className="flex items-center gap-2 px-1 py-2 hover:bg-[var(--surface-hover)] cursor-pointer text-sm text-[var(--foreground)] rounded">
                 <input
                   type="checkbox"
                   checked={selectedProjects.includes(opt.value)}
                   onChange={() => setSelectedProjects((prev: string[]) =>
                     prev.includes(opt.value) ? prev.filter((v) => v !== opt.value) : [...prev, opt.value]
                   )}
-                  className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 shrink-0"
+                  className="rounded border-[var(--border)] text-[var(--primary)] focus:ring-[var(--focus-ring)] shrink-0"
                 />
                 <ProjectKeyBadge size="icon">{opt.value}</ProjectKeyBadge>
                 <span className="truncate">{p?.name ?? opt.label}</span>
                 {showNamespaces && p?.namespace_slug && (
-                  <span className="ml-auto flex items-center gap-1 text-[0.7rem] text-gray-400 dark:text-gray-500 shrink-0">
+                  <span className="ml-auto flex items-center gap-1 text-[0.7rem] text-[var(--foreground-muted)] shrink-0">
                     <span>{p.namespace_slug}</span>
                     <NamespaceIcon icon={p.namespace_icon ?? 'building2'} color={p.namespace_color ?? 'slate'} className="h-3 w-3" />
                   </span>

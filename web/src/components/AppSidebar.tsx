@@ -115,19 +115,19 @@ export function AppSidebar({ projectKey, customerProject, mobileOnly }: AppSideb
             }
           }}
           className={({ isActive }) =>
-            `group/nav relative flex items-center gap-3 rounded-md text-sm font-medium transition-colors min-w-0 ${
+            `group/nav relative flex items-center gap-3 rounded-[var(--radius)] text-sm font-medium transition-colors min-w-0 ${
               !showLabels ? 'justify-center px-0 py-2' : 'px-3 py-2'
             } ${
               isActive
-                ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
-                : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
+                ? 'bg-[var(--primary-muted)] text-[var(--primary)]'
+                : 'text-[var(--foreground)] hover:bg-[var(--hover)]'
             }`
           }
         >
           <span className="relative shrink-0">
             <item.icon className="h-5 w-5" />
             {!showLabels && item.badge != null && (
-              <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-indigo-600 px-1 text-[10px] font-bold text-white">
+              <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--primary)] px-1 text-[10px] font-bold text-[var(--primary-foreground)]">
                 {item.badge > 99 ? '99+' : item.badge}
               </span>
             )}
@@ -136,14 +136,14 @@ export function AppSidebar({ projectKey, customerProject, mobileOnly }: AppSideb
             <>
               <span className="flex-1 truncate">{item.label}</span>
               {item.badge != null && (
-                <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/40 px-1.5 text-xs font-medium text-indigo-700 dark:text-indigo-300">
+                <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--primary-muted)] px-1.5 text-xs font-medium text-[var(--primary)]">
                   {item.badge > 99 ? '99+' : item.badge}
                 </span>
               )}
             </>
           )}
           {!showLabels && (
-            <span className="pointer-events-none absolute left-full ml-2 rounded bg-gray-900 px-2 py-1 text-xs whitespace-nowrap text-white opacity-0 transition-opacity group-hover/nav:opacity-100 dark:bg-gray-700 z-50">
+            <span className="pointer-events-none absolute left-full ml-2 rounded bg-[var(--foreground)] px-2 py-1 text-xs whitespace-nowrap text-[var(--background)] opacity-0 transition-opacity group-hover/nav:opacity-100 z-50">
               {item.label}
             </span>
           )}
@@ -169,15 +169,15 @@ export function AppSidebar({ projectKey, customerProject, mobileOnly }: AppSideb
                 }
               }}
               className={({ isActive }) =>
-                `group/nav relative flex items-center justify-center rounded-md text-sm font-bold transition-colors min-w-0 px-0 py-2 ${
+                `group/nav relative flex items-center justify-center rounded-[var(--radius)] text-sm font-bold transition-colors min-w-0 px-0 py-2 ${
                   isActive
-                    ? 'bg-indigo-200 text-indigo-800 dark:bg-indigo-800/50 dark:text-indigo-200'
-                    : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 dark:bg-indigo-900/40 dark:text-indigo-300 dark:hover:bg-indigo-800/50'
+                    ? 'bg-[var(--primary-muted)] text-[var(--primary)]'
+                    : 'bg-[var(--primary-muted)]/50 text-[var(--primary)] hover:bg-[var(--primary-muted)]'
                 }`
               }
             >
               {activeProjectKey}
-              <span className="pointer-events-none absolute left-full ml-2 rounded bg-gray-900 px-2 py-1 text-xs whitespace-nowrap text-white opacity-0 transition-opacity group-hover/nav:opacity-100 dark:bg-gray-700 z-50">
+              <span className="pointer-events-none absolute left-full ml-2 rounded bg-[var(--foreground)] px-2 py-1 text-xs whitespace-nowrap text-[var(--background)] opacity-0 transition-opacity group-hover/nav:opacity-100 z-50">
                 {t('sidebar.projects')}
               </span>
             </NavLink>
@@ -198,16 +198,16 @@ export function AppSidebar({ projectKey, customerProject, mobileOnly }: AppSideb
               }
             }}
             className={({ isActive }) =>
-              `group/nav relative flex items-center gap-3 rounded-md text-sm font-medium transition-colors min-w-0 px-3 py-2 ${
+              `group/nav relative flex items-center gap-3 rounded-[var(--radius)] text-sm font-medium transition-colors min-w-0 px-3 py-2 ${
                 isActive
-                  ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
-                  : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
+                  ? 'bg-[var(--primary-muted)] text-[var(--primary)]'
+                  : 'text-[var(--foreground)] hover:bg-[var(--hover)]'
               }`
             }
           >
             <FolderKanban className="h-5 w-5 shrink-0" />
             <span className="flex-1 truncate">{t('sidebar.projects')}</span>
-            <span className="ml-auto inline-flex items-center justify-center rounded-md bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-xs font-bold px-1.5 py-1 shrink-0">
+            <span className="ml-auto inline-flex items-center justify-center rounded-[var(--radius-sm)] bg-[var(--primary-muted)] text-[var(--primary)] text-xs font-bold px-1.5 py-1 shrink-0">
               {activeProjectKey}
             </span>
           </NavLink>
@@ -227,19 +227,19 @@ export function AppSidebar({ projectKey, customerProject, mobileOnly }: AppSideb
             }
           }}
           className={({ isActive }) =>
-            `group/nav relative flex items-center gap-3 rounded-md text-sm font-medium transition-colors min-w-0 ${
+            `group/nav relative flex items-center gap-3 rounded-[var(--radius)] text-sm font-medium transition-colors min-w-0 ${
               !showLabels ? 'justify-center px-0 py-2' : 'px-3 py-2'
             } ${
               isActive
-                ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
-                : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
+                ? 'bg-[var(--primary-muted)] text-[var(--primary)]'
+                : 'text-[var(--foreground)] hover:bg-[var(--hover)]'
             }`
           }
         >
           <FolderKanban className="h-5 w-5 shrink-0" />
           {showLabels && <span className="truncate">{t('sidebar.projects')}</span>}
           {!showLabels && (
-            <span className="pointer-events-none absolute left-full ml-2 rounded bg-gray-900 px-2 py-1 text-xs whitespace-nowrap text-white opacity-0 transition-opacity group-hover/nav:opacity-100 dark:bg-gray-700 z-50">
+            <span className="pointer-events-none absolute left-full ml-2 rounded bg-[var(--foreground)] px-2 py-1 text-xs whitespace-nowrap text-[var(--background)] opacity-0 transition-opacity group-hover/nav:opacity-100 z-50">
               {t('sidebar.projects')}
             </span>
           )}
@@ -255,9 +255,9 @@ export function AppSidebar({ projectKey, customerProject, mobileOnly }: AppSideb
       <div className="relative mb-1" ref={nsRef}>
         <button
           onClick={() => setNsDropdownOpen(!nsDropdownOpen)}
-          className={`group/ns w-full flex items-center gap-2.5 rounded-md text-sm font-semibold transition-colors ${
+          className={`group/ns w-full flex items-center gap-2.5 rounded-[var(--radius)] text-sm font-semibold transition-colors ${
             showLabels ? 'px-3 py-2' : 'justify-center py-2'
-          } text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800`}
+          } text-[var(--foreground)] hover:bg-[var(--hover)]`}
           aria-label={t('namespaces.switchNamespace')}
         >
           <NamespaceIcon icon={activeNamespace.icon} color={activeNamespace.color} className="h-5 w-5 shrink-0" />
@@ -265,16 +265,16 @@ export function AppSidebar({ projectKey, customerProject, mobileOnly }: AppSideb
             <span className="flex-1 truncate text-left">{activeNamespace.display_name}</span>
           )}
           {!showLabels && (
-            <span className="pointer-events-none absolute left-full ml-2 rounded bg-gray-900 px-2 py-1 text-xs whitespace-nowrap text-white opacity-0 transition-opacity group-hover/ns:opacity-100 dark:bg-gray-700 z-50">
+            <span className="pointer-events-none absolute left-full ml-2 rounded bg-[var(--foreground)] px-2 py-1 text-xs whitespace-nowrap text-[var(--background)] opacity-0 transition-opacity group-hover/ns:opacity-100 z-50">
               {activeNamespace.display_name}
             </span>
           )}
         </button>
         {nsDropdownOpen && (
-          <div className={`absolute z-50 w-64 bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm rounded-md shadow-lg border border-gray-200 dark:border-gray-600 py-1 ${
+          <div className={`absolute z-50 w-64 bg-[var(--surface)] rounded-[var(--radius-md)] shadow-[var(--shadow-lg)] border border-[var(--border)] py-1 ${
             showLabels ? 'left-0 top-full mt-1' : 'left-full top-0 ml-2'
           }`}>
-            <div className="px-3 py-1.5 text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+            <div className="px-3 py-1.5 text-xs font-medium text-[var(--foreground-muted)] uppercase tracking-wider">
               {t('namespaces.title')}
             </div>
             {namespaces.map((ns) => (
@@ -286,19 +286,19 @@ export function AppSidebar({ projectKey, customerProject, mobileOnly }: AppSideb
                     setActiveNamespace(ns.slug)
                   }
                 }}
-                className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2.5 ${
+                className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2.5 transition-colors ${
                   ns.slug === activeNamespace.slug
-                    ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    ? 'bg-[var(--primary-muted)] text-[var(--primary)]'
+                    : 'text-[var(--foreground)] hover:bg-[var(--hover)]'
                 }`}
               >
                 <NamespaceIcon icon={ns.icon} color={ns.color} className="h-4 w-4 shrink-0" />
                 <div className="min-w-0 flex-1">
                   <div className="font-medium truncate">{ns.display_name}</div>
-                  {!ns.is_default && <div className="text-xs text-gray-400 dark:text-gray-500">{ns.slug}</div>}
+                  {!ns.is_default && <div className="text-xs text-[var(--foreground-muted)]">{ns.slug}</div>}
                 </div>
                 {ns.slug === activeNamespace.slug && (
-                  <span className="text-xs text-indigo-600 dark:text-indigo-400 shrink-0">{t('common.current')}</span>
+                  <span className="text-xs text-[var(--primary)] shrink-0">{t('common.current')}</span>
                 )}
                 {!ns.is_default && (
                   <button
@@ -307,7 +307,7 @@ export function AppSidebar({ projectKey, customerProject, mobileOnly }: AppSideb
                       setNsDropdownOpen(false)
                       guardedNavigate(`/${toUrlSegment(ns.slug)}/settings`)
                     }}
-                    className="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0"
+                    className="p-1 rounded text-[var(--foreground-muted)] hover:text-[var(--foreground)] shrink-0 transition-colors"
                     aria-label={t('namespaces.settings')}
                   >
                     <Settings className="h-3.5 w-3.5" />
@@ -315,13 +315,13 @@ export function AppSidebar({ projectKey, customerProject, mobileOnly }: AppSideb
                 )}
               </button>
             ))}
-            <div className="border-t border-gray-100 dark:border-gray-600 mt-1 pt-1">
+            <div className="border-t border-[var(--border)] mt-1 pt-1">
               <button
                 onClick={() => {
                   setNsDropdownOpen(false)
                   setNsCreateOpen(true)
                 }}
-                className="w-full text-left px-3 py-2 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2.5"
+                className="w-full text-left px-3 py-2 text-sm text-[var(--foreground-secondary)] hover:bg-[var(--hover)] flex items-center gap-2.5 transition-colors"
               >
                 <Plus className="h-4 w-4" />
                 {t('namespaces.createNew')}
@@ -339,12 +339,12 @@ export function AppSidebar({ projectKey, customerProject, mobileOnly }: AppSideb
         {/* User section — hidden when user is customer in all projects */}
         {!isCustomerOnly && (
           <>
-            <ul className="space-y-1">
+            <ul className="space-y-0.5">
               {userNav.map((item) => renderNavItem(item, showLabels))}
             </ul>
 
             {/* Separator */}
-            <div className="border-t border-gray-200 dark:border-gray-600 my-2" />
+            <div className="border-t border-[var(--border)] my-2" />
           </>
         )}
 
@@ -352,15 +352,18 @@ export function AppSidebar({ projectKey, customerProject, mobileOnly }: AppSideb
         {renderNamespaceBanner(showLabels)}
 
         {/* Projects section */}
-        <ul className="space-y-1">
+        <ul className="space-y-0.5">
           {renderProjectsLink(showLabels)}
         </ul>
 
         {/* Active project context */}
         {activeProjectKey && projectNav.length > 0 && (
-          <ul className="space-y-1 mt-1">
-            {projectNav.map((item) => renderNavItem(item, showLabels))}
-          </ul>
+          <>
+            <div className="border-t border-[var(--border)] my-2" />
+            <ul className="space-y-0.5">
+              {projectNav.map((item) => renderNavItem(item, showLabels))}
+            </ul>
+          </>
         )}
       </>
     )
@@ -385,7 +388,7 @@ export function AppSidebar({ projectKey, customerProject, mobileOnly }: AppSideb
         {mobileOpen && (
           <div className="fixed inset-0 z-40 sm:hidden" onClick={closeMobile}>
             <nav
-              className="absolute right-4 top-14 w-52 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 p-2"
+              className="absolute right-4 top-14 w-52 bg-[var(--surface)] rounded-[var(--radius-lg)] shadow-[var(--shadow-lg)] border border-[var(--border)] p-2"
               onClick={(e) => e.stopPropagation()}
             >
               {renderContent(true)}
@@ -402,19 +405,19 @@ export function AppSidebar({ projectKey, customerProject, mobileOnly }: AppSideb
       {/* Desktop sidebar */}
       <nav
         className={`hidden sm:block shrink-0 transition-all duration-200 ${
-          collapsed ? 'w-14' : 'w-48'
+          collapsed ? 'w-14' : 'w-56'
         }`}
       >
         {renderContent(!collapsed)}
 
         <div
-          className={`mt-4 border-t border-gray-200 pt-4 dark:border-gray-600 ${
+          className={`mt-4 border-t border-[var(--border)] pt-4 ${
             collapsed ? 'flex justify-center' : ''
           }`}
         >
           <button
             onClick={toggleCollapsed}
-            className={`group/toggle relative flex items-center gap-3 rounded-md text-sm font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-300 min-w-0 ${
+            className={`group/toggle relative flex items-center gap-3 rounded-[var(--radius)] text-sm font-medium text-[var(--foreground-secondary)] transition-colors hover:bg-[var(--hover)] hover:text-[var(--foreground)] min-w-0 ${
               collapsed ? 'justify-center px-0 py-2 w-full' : 'px-3 py-2 w-full'
             }`}
             aria-label={collapsed ? t('sidebar.expand') : t('sidebar.collapse')}
@@ -428,7 +431,7 @@ export function AppSidebar({ projectKey, customerProject, mobileOnly }: AppSideb
               </>
             )}
             {collapsed && (
-              <span className="pointer-events-none absolute left-full ml-2 rounded bg-gray-900 px-2 py-1 text-xs whitespace-nowrap text-white opacity-0 transition-opacity group-hover/toggle:opacity-100 dark:bg-gray-700 z-50">
+              <span className="pointer-events-none absolute left-full ml-2 rounded bg-[var(--foreground)] px-2 py-1 text-xs whitespace-nowrap text-[var(--background)] opacity-0 transition-opacity group-hover/toggle:opacity-100 z-50">
                 {t('sidebar.expand')}
               </span>
             )}

@@ -27,10 +27,10 @@ export function DiffPreviewModal({ target, onClose }: DiffPreviewModalProps) {
     <Modal open={!!target} onClose={onClose} size="full">
       <div className="flex flex-col h-full">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-600 shrink-0">
-          <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate min-w-0">{title}</span>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] shrink-0">
+          <span className="text-sm font-medium text-[var(--foreground)] truncate min-w-0">{title}</span>
           <button
-            className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="p-1.5 text-[var(--foreground-muted)] hover:text-[var(--foreground)] rounded hover:bg-[var(--surface-hover)]"
             onClick={onClose}
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5">
@@ -56,7 +56,7 @@ function FieldDiffContent({ oldValue, newValue, diffLines }: { oldValue?: string
   if (diffLines) {
     const groups = pairDiffLines(diffLines)
     return (
-      <div className="max-w-4xl mx-auto rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-sm font-mono overflow-hidden">
+      <div className="max-w-4xl mx-auto rounded-md border border-[var(--border)] bg-[var(--surface-secondary)] text-sm font-mono overflow-hidden">
         {groups.map((group, gi) => {
           if (group.length === 2) {
             const { oldSpans, newSpans } = computeWordDiff(group[0].text, group[1].text)
@@ -75,20 +75,20 @@ function FieldDiffContent({ oldValue, newValue, diffLines }: { oldValue?: string
 
   // Fallback for single-line field changes (no diffLines provided)
   return (
-    <div className="max-w-4xl mx-auto rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-sm font-mono overflow-hidden">
+    <div className="max-w-4xl mx-auto rounded-md border border-[var(--border)] bg-[var(--surface-secondary)] text-sm font-mono overflow-hidden">
       {oldValue && (
         <>
-          <div className="px-4 py-1.5 bg-gray-100 dark:bg-gray-700 text-xs font-sans font-medium text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-600">
+          <div className="px-4 py-1.5 bg-[var(--surface-secondary)] text-xs font-sans font-medium text-[var(--foreground-secondary)] border-b border-[var(--border)]">
             {t('activity.diff.removed')}
           </div>
-          <div className="px-4 py-3 bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300 whitespace-pre-wrap break-words border-b border-gray-200 dark:border-gray-600">
+          <div className="px-4 py-3 bg-red-50 dark:bg-red-900/30 text-red-800 text-[var(--danger)] whitespace-pre-wrap break-words border-b border-[var(--border)]">
             {oldValue}
           </div>
         </>
       )}
       {newValue && (
         <>
-          <div className="px-4 py-1.5 bg-gray-100 dark:bg-gray-700 text-xs font-sans font-medium text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-600">
+          <div className="px-4 py-1.5 bg-[var(--surface-secondary)] text-xs font-sans font-medium text-[var(--foreground-secondary)] border-b border-[var(--border)]">
             {t('activity.diff.added')}
           </div>
           <div className="px-4 py-3 bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300 whitespace-pre-wrap break-words">
@@ -103,7 +103,7 @@ function FieldDiffContent({ oldValue, newValue, diffLines }: { oldValue?: string
 function CommentDiffContent({ lines }: { lines: DiffLine[] }) {
   const groups = pairDiffLines(lines)
   return (
-    <div className="max-w-4xl mx-auto rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-sm font-mono overflow-hidden">
+    <div className="max-w-4xl mx-auto rounded-md border border-[var(--border)] bg-[var(--surface-secondary)] text-sm font-mono overflow-hidden">
       {groups.map((group, gi) => {
         if (group.length === 2) {
           const { oldSpans, newSpans } = computeWordDiff(group[0].text, group[1].text)
@@ -193,12 +193,12 @@ function ModalDiffLine({ line, wordSpans }: { line: DiffLine; wordSpans?: WordSp
   const isAdd = line.type === 'add'
 
   const bg = isRemove
-    ? 'px-4 py-0.5 bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300'
+    ? 'px-4 py-0.5 bg-red-50 dark:bg-red-900/30 text-red-800 text-[var(--danger)]'
     : isAdd
       ? 'px-4 py-0.5 bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300'
-      : 'px-4 py-0.5 text-gray-600 dark:text-gray-400'
+      : 'px-4 py-0.5 text-[var(--foreground-secondary)]'
 
-  const symbolColor = isRemove ? 'text-red-400' : isAdd ? 'text-green-400' : 'text-gray-400'
+  const symbolColor = isRemove ? 'text-red-400' : isAdd ? 'text-green-400' : 'text-[var(--foreground-muted)]'
   const symbol = isRemove ? '\u2212' : isAdd ? '+' : ' '
 
   return (

@@ -280,7 +280,7 @@ export function WorkItemDetailPage() {
   }
 
   if (!item) {
-    return <p className="text-red-600">{t('workitems.notFound')}</p>
+    return <p className="text-[var(--danger)]">{t('workitems.notFound')}</p>
   }
 
   const allowed = transitionsMap?.[item.status]?.map((tr) => tr.to_status) ?? []
@@ -303,8 +303,8 @@ export function WorkItemDetailPage() {
       onDrop={readOnly ? undefined : handlePageDrop}
     >
       {draggingOver && (
-        <div className="fixed inset-0 z-50 bg-indigo-500/10 border-2 border-dashed border-indigo-400 flex items-center justify-center pointer-events-none">
-          <span className="text-lg font-medium text-indigo-600 dark:text-indigo-400 bg-white dark:bg-gray-900 px-6 py-3 rounded-lg shadow-lg">
+        <div className="fixed inset-0 z-50 bg-[var(--primary-muted)]/10 border-2 border-dashed border-[var(--primary-border)] flex items-center justify-center pointer-events-none">
+          <span className="text-lg font-medium text-[var(--primary)] bg-[var(--surface)] px-6 py-3 rounded-lg shadow-lg">
             {t('workitems.dropToAttach')}
           </span>
         </div>
@@ -313,7 +313,7 @@ export function WorkItemDetailPage() {
       {/* Back link + mobile properties button */}
       <div className="flex items-center">
         <button
-          className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          className="text-sm text-[var(--foreground-muted)] hover:text-[var(--foreground-secondary)] dark:hover:text-[var(--foreground-muted)]"
           onClick={() => guardedNavigate(backToListUrl)}
         >
           &larr; {t(backLabelKey)}
@@ -323,7 +323,7 @@ export function WorkItemDetailPage() {
           {item && <WatchButton projectKey={projectKey ?? ''} itemNumber={itemNumber} isWatching={isWatching} className="p-1.5" />}
           <button
             onClick={() => setShowProperties(true)}
-            className="p-1.5 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="p-1.5 rounded-md text-[var(--foreground-secondary)] hover:bg-[var(--surface-hover)]"
             aria-label={t('workitems.detail.properties')}
           >
             <Settings2 className="h-5 w-5" />
@@ -340,7 +340,7 @@ export function WorkItemDetailPage() {
               <Tooltip content={copiedId ? t('common.copied') : t('common.clickToCopy')}>
                 <button
                   type="button"
-                  className="text-base lg:text-base font-bold lg:font-semibold font-mono text-gray-600 lg:text-gray-500 dark:text-gray-400 dark:lg:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 cursor-pointer transition-colors"
+                  className="text-base lg:text-base font-bold lg:font-semibold font-mono text-[var(--foreground-secondary)] lg:text-[var(--foreground-secondary)] dark:lg:text-[var(--foreground-muted)] hover:text-[var(--foreground)] cursor-pointer transition-colors"
                   onClick={async (e) => {
                     e.stopPropagation()
                     try {
@@ -367,7 +367,7 @@ export function WorkItemDetailPage() {
               <PriorityBadge priority={item.priority} />
               <span className="hidden lg:inline-flex">
                 <Tooltip content={t('workitems.form.assignee')}>
-                  <span className="inline-flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
+                  <span className="inline-flex items-center gap-1 text-xs text-[var(--foreground-muted)]">
                     <User className="h-3.5 w-3.5" />
                     {item.assignee_id
                       ? members?.find(m => m.user_id === item.assignee_id)?.display_name ?? t('userPicker.unassigned')
@@ -376,7 +376,7 @@ export function WorkItemDetailPage() {
                 </Tooltip>
               </span>
               {item.due_date && (
-                <span className="hidden lg:inline-flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
+                <span className="hidden lg:inline-flex items-center gap-1 text-xs text-[var(--foreground-muted)]">
                   <Calendar className="h-3.5 w-3.5" />
                   {item.due_date}
                 </span>
@@ -385,8 +385,8 @@ export function WorkItemDetailPage() {
                 <Tooltip content={t(`workitems.visibilities.${item.visibility}.description`)}>
                   <span className={`inline-flex items-center gap-1 text-xs ${
                     item.visibility === 'portal' ? 'text-yellow-500 dark:text-yellow-400' :
-                    item.visibility === 'public' ? 'text-red-500 dark:text-red-400' :
-                    'text-gray-400 dark:text-gray-500'
+                    item.visibility === 'public' ? 'text-[var(--danger)]' :
+                    'text-[var(--foreground-muted)]'
                   }`}>
                     {item.visibility === 'internal' && <Lock className="h-3.5 w-3.5" />}
                     {item.visibility === 'portal' && <Unlock className="h-3.5 w-3.5" />}
@@ -420,12 +420,12 @@ export function WorkItemDetailPage() {
               </span>
               {childrenTotal > 0 && (
                 <span className="hidden lg:inline-flex items-center gap-2 ml-auto">
-                  <span className="text-xs text-gray-400 dark:text-gray-500">
+                  <span className="text-xs text-[var(--foreground-muted)]">
                     {t('relations.childrenProgress', { completed: childrenCompleted, total: childrenTotal })}
                   </span>
-                  <span className="inline-block w-24 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                  <span className="inline-block w-24 h-1.5 rounded-full bg-[var(--surface-tertiary)] overflow-hidden">
                     <span
-                      className="block h-full rounded-full bg-green-500 dark:bg-green-400 transition-all duration-300"
+                      className="block h-full rounded-full bg-green-500 dark:bg-green-400 transition-all duration-200"
                       style={{ width: `${(childrenCompleted / childrenTotal) * 100}%` }}
                     />
                   </span>
@@ -434,7 +434,7 @@ export function WorkItemDetailPage() {
             </div>
 
             {/* Mobile metadata line */}
-            <ScrollableRow className="lg:hidden mb-2" contentClassName="gap-3 text-xs text-gray-400 dark:text-gray-500">
+            <ScrollableRow className="lg:hidden mb-2" contentClassName="gap-3 text-xs text-[var(--foreground-muted)]">
               <span className="inline-flex items-center gap-1 shrink-0">
                 <User className="h-3.5 w-3.5" />
                 {item.assignee_id
@@ -459,7 +459,7 @@ export function WorkItemDetailPage() {
               {childrenTotal > 0 && (
                 <span className="inline-flex items-center gap-2 shrink-0">
                   <span>{t('relations.childrenProgress', { completed: childrenCompleted, total: childrenTotal })}</span>
-                  <span className="inline-block w-16 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                  <span className="inline-block w-16 h-1.5 rounded-full bg-[var(--surface-tertiary)] overflow-hidden">
                     <span
                       className="block h-full rounded-full bg-green-500 dark:bg-green-400"
                       style={{ width: `${(childrenCompleted / childrenTotal) * 100}%` }}
@@ -473,7 +473,7 @@ export function WorkItemDetailPage() {
             {!readOnly && editingTitle ? (
               <div className="flex gap-2 items-center">
                 <input
-                  className="text-xl font-semibold text-gray-900 dark:text-gray-100 border-b border-indigo-500 outline-none flex-1 bg-transparent"
+                  className="text-xl font-semibold text-[var(--foreground)] border-b border-[var(--primary)] outline-none flex-1 bg-transparent"
                   value={titleDraft}
                   onChange={(e) => setTitleDraft(e.target.value)}
                   onKeyDown={(e) => {
@@ -491,7 +491,7 @@ export function WorkItemDetailPage() {
             ) : (
               <div className="flex items-center gap-2">
                 <h1
-                  className={`text-xl font-semibold text-gray-900 dark:text-gray-100 rounded px-1 -mx-1 ${readOnly ? '' : 'cursor-pointer border border-transparent hover:border-gray-300 dark:hover:border-gray-600'}`}
+                  className={`text-xl font-semibold text-[var(--foreground)] rounded px-1 -mx-1 ${readOnly ? '' : 'cursor-pointer border border-transparent hover:border-[var(--border)] dark:hover:border-[var(--border)]'}`}
                   onClick={readOnly ? undefined : () => { setTitleDraft(item.title); setEditingTitle(true) }}
                 >
                   {item.title}
@@ -505,19 +505,19 @@ export function WorkItemDetailPage() {
           <div className="group/desc">
             <div className="flex items-center gap-1 mb-1">
               <h3
-                className="text-sm font-medium text-gray-500 dark:text-gray-400 select-none"
+                className="text-sm font-medium text-[var(--foreground-secondary)] select-none"
                 onDoubleClick={readOnly ? undefined : () => { setDescDraft(item.description ?? ''); setEditingDesc(true) }}
               >{t('workitems.detail.description')}</h3>
               <ConfirmCheck visible={descConfirmed} />
               {!readOnly && !editingDesc && (
                 <button
-                  className="group/edit relative inline-flex items-center justify-center w-7 h-7 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-gray-700 transition-colors opacity-0 group-hover/desc:opacity-100"
+                  className="group/edit relative inline-flex items-center justify-center w-7 h-7 rounded-md text-[var(--foreground-muted)] hover:text-[var(--foreground-secondary)] hover:bg-[var(--surface-tertiary)] hover:bg-[var(--surface-hover)] transition-colors opacity-0 group-hover/desc:opacity-100"
                   onClick={() => { setDescDraft(item.description ?? ''); setEditingDesc(true) }}
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M11.5 2.5a1.5 1.5 0 012.121 2.121L6.5 11.743l-2.5.757.757-2.5L11.5 2.5z" />
                   </svg>
-                  <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs text-white bg-gray-900 dark:bg-gray-700 rounded whitespace-nowrap opacity-0 group-hover/edit:opacity-100 transition-opacity">
+                  <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs text-white bg-[var(--background)] bg-[var(--surface-secondary)] rounded whitespace-nowrap opacity-0 group-hover/edit:opacity-100 transition-opacity">
                     {t('common.edit')}
                   </span>
                 </button>
@@ -526,7 +526,7 @@ export function WorkItemDetailPage() {
                 <CopyButton text={item.description} className="opacity-0 group-hover/desc:opacity-100" />
               )}
               {!readOnly && !editingDesc && (
-                <span className="ml-auto text-xs text-gray-400 dark:text-gray-500 opacity-0 group-hover/desc:opacity-100 transition-opacity select-none pointer-events-none">
+                <span className="ml-auto text-xs text-[var(--foreground-muted)] opacity-0 group-hover/desc:opacity-100 transition-opacity select-none pointer-events-none">
                   {t('workitems.detail.descriptionEditHint')}
                 </span>
               )}
@@ -535,7 +535,7 @@ export function WorkItemDetailPage() {
               <div className="space-y-2">
                 <textarea
                   ref={descTextareaRef}
-                  className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm"
+                  className="block w-full rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm"
                   rows={6}
                   value={descDraft}
                   onChange={(e) => setDescDraft(e.target.value)}
@@ -566,7 +566,7 @@ export function WorkItemDetailPage() {
               </div>
             ) : (
               <div
-                className="relative group/descbody border border-transparent hover:border-gray-300 dark:hover:border-gray-600 rounded p-2 min-h-[2rem]"
+                className="relative group/descbody border border-transparent hover:border-[var(--border)] dark:hover:border-[var(--border)] rounded p-2 min-h-[2rem]"
                 onDoubleClick={readOnly ? undefined : () => { setDescDraft(item.description ?? ''); setEditingDesc(true) }}
               >
                 {item.description ? (
@@ -581,7 +581,7 @@ export function WorkItemDetailPage() {
                     onOpenThread={setOpenThreadRootId}
                   />
                 ) : (
-                  <span className="text-sm text-gray-400 dark:text-gray-500 italic">{t('workitems.detail.noDescription')}</span>
+                  <span className="text-sm text-[var(--foreground-muted)] italic">{t('workitems.detail.noDescription')}</span>
                 )}
               </div>
             )}
@@ -589,15 +589,15 @@ export function WorkItemDetailPage() {
 
           {/* Tabs */}
           <div>
-            <div className="border-b border-gray-200 dark:border-gray-600 mb-4 flex items-center justify-between">
+            <div className="border-b border-[var(--border)] mb-4 flex items-center justify-between">
               <nav className="flex gap-6 pr-8 overflow-x-auto scrollbar-none">
                 {tabs.map((tab) => (
                   <button
                     key={tab.key}
                     className={`pb-2 text-sm font-medium border-b-2 whitespace-nowrap ${
                       activeTab === tab.key
-                        ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                        ? 'border-[var(--primary)] text-[var(--primary)]'
+                        : 'border-transparent text-[var(--foreground-secondary)] hover:text-[var(--foreground)] text-[var(--foreground-muted)] dark:hover:text-[var(--foreground-muted)]'
                     }`}
                     onClick={() => setActiveTab(tab.key)}
                   >
@@ -608,7 +608,7 @@ export function WorkItemDetailPage() {
               {(activeTab === 'comments' || activeTab === 'activity' || activeTab === 'attachments' || activeTab === 'time') && (
                 <Tooltip content={sortOrder === 'desc' ? t('common.showingNewestFirst') : t('common.showingOldestFirst')}>
                   <button
-                    className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 pb-2 flex items-center gap-1"
+                    className="text-xs text-[var(--foreground-muted)] hover:text-[var(--foreground-secondary)] dark:hover:text-[var(--foreground-muted)] pb-2 flex items-center gap-1"
                     onClick={() => setSortOrder((s) => (s === 'desc' ? 'asc' : 'desc'))}
                   >
                   <span className="text-base lg:text-xs">{sortOrder === 'desc' ? '\u2193' : '\u2191'}</span>
@@ -682,7 +682,7 @@ export function WorkItemDetailPage() {
             onSuccess: () => navigate(backToListUrl),
           })
         }}>
-          <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+          <p className="text-sm text-[var(--foreground-secondary)] mb-4">
             <Trans i18nKey="workitems.detail.deleteConfirmBody" values={{ displayId: item.display_id }} components={{ bold: <strong /> }} />
           </p>
           <div className="flex justify-end gap-3">
@@ -701,7 +701,7 @@ export function WorkItemDetailPage() {
 
       {/* Unsaved comment warning */}
       <Modal open={!!pendingPath} onClose={cancelNavigation} title={t('comments.unsavedTitle')}>
-        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+        <p className="text-sm text-[var(--foreground-secondary)] mb-4">
           {t('comments.unsavedBody')}
         </p>
         <div className="flex justify-end gap-3">

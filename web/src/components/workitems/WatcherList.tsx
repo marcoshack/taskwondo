@@ -38,7 +38,7 @@ export function WatcherList({ projectKey, itemNumber, members, currentUserRole }
     const isWatching = !!watcherData.me
     return (
       <div className="space-y-4">
-        <div className="flex items-center gap-2 pb-3 border-b border-gray-100 dark:border-gray-600">
+        <div className="flex items-center gap-2 pb-3 border-b border-[var(--border)]">
           <Button
             className="py-2 text-sm"
             onClick={() => toggleMutation.mutate()}
@@ -49,19 +49,19 @@ export function WatcherList({ projectKey, itemNumber, members, currentUserRole }
           </Button>
         </div>
         {isWatching && (
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-sm text-[var(--foreground-secondary)]">
             {t('watchers.youAreWatching')}
           </p>
         )}
         {watcherData.other_count > 0 && (
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-sm text-[var(--foreground-secondary)]">
             {isWatching
               ? t('watchers.otherWatchers', { count: watcherData.other_count })
               : t('watchers.totalWatchers', { count: watcherData.other_count })}
           </p>
         )}
         {!isWatching && watcherData.other_count === 0 && (
-          <p className="text-sm text-gray-400">{t('watchers.noWatchers')}</p>
+          <p className="text-sm text-[var(--foreground-muted)]">{t('watchers.noWatchers')}</p>
         )}
       </div>
     )
@@ -73,7 +73,7 @@ export function WatcherList({ projectKey, itemNumber, members, currentUserRole }
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center gap-2 pb-3 border-b border-gray-100 dark:border-gray-600">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 pb-3 border-b border-[var(--border)]">
         <Button
           className="py-2 text-sm"
           onClick={() => toggleMutation.mutate()}
@@ -95,7 +95,7 @@ export function WatcherList({ projectKey, itemNumber, members, currentUserRole }
       </div>
 
       {watchers.length === 0 ? (
-        <p className="text-sm text-gray-400">{t('watchers.noWatchers')}</p>
+        <p className="text-sm text-[var(--foreground-muted)]">{t('watchers.noWatchers')}</p>
       ) : (
         <div className="space-y-1">
           {watchers.map((w) => {
@@ -105,17 +105,17 @@ export function WatcherList({ projectKey, itemNumber, members, currentUserRole }
               <div key={w.id} className="group/watcher flex items-center justify-between text-sm py-1.5">
                 <div className="flex items-center gap-2 min-w-0">
                   <Avatar name={w.display_name} avatarUrl={w.avatar_url} size="sm" />
-                  <span className="text-gray-900 dark:text-gray-100 truncate">{w.display_name}</span>
-                  <span className="text-gray-400 dark:text-gray-500 text-xs truncate">{w.email}</span>
+                  <span className="text-[var(--foreground)] truncate">{w.display_name}</span>
+                  <span className="text-[var(--foreground-muted)] text-xs truncate">{w.email}</span>
                   {isSelf && (
-                    <span className="text-xs text-indigo-500 dark:text-indigo-400 font-medium shrink-0">
+                    <span className="text-xs text-[var(--primary)] dark:text-[var(--primary)] font-medium shrink-0">
                       ({t('common.you')})
                     </span>
                   )}
                 </div>
                 {canRemove && (
                   <button
-                    className="inline-flex items-center justify-center w-7 h-7 rounded-md text-red-400 hover:text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/30 transition-colors sm:opacity-0 sm:group-hover/watcher:opacity-100 shrink-0 ml-2"
+                    className="inline-flex items-center justify-center w-7 h-7 rounded-md text-red-400 hover:text-[var(--danger)] hover:bg-red-50 text-[var(--danger)] dark:hover:text-red-300 dark:hover:bg-red-900/30 transition-colors sm:opacity-0 sm:group-hover/watcher:opacity-100 shrink-0 ml-2"
                     onClick={() => removeMutation.mutate(w.user_id)}
                     aria-label={t('common.remove')}
                   >
@@ -181,11 +181,11 @@ function AddWatcherForm({ members, existingWatcherIds, onAdd, isPending }: AddWa
       </Button>
 
       {open && (
-        <div className="absolute z-20 mt-1 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg">
+        <div className="absolute z-20 mt-1 w-64 bg-[var(--surface)] border border-[var(--border)] rounded-md shadow-lg">
           <div className="p-2">
             <input
               ref={inputRef}
-              className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="block w-full rounded-md border border-[var(--border)] bg-[var(--surface-secondary)] text-[var(--foreground)] px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)]"
               placeholder={t('userPicker.searchMembers')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -196,7 +196,7 @@ function AddWatcherForm({ members, existingWatcherIds, onAdd, isPending }: AddWa
               <li key={m.user_id}>
                 <button
                   type="button"
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-[var(--surface-hover)] text-[var(--foreground)]"
                   onClick={() => {
                     onAdd(m.user_id)
                     setOpen(false)
@@ -207,14 +207,14 @@ function AddWatcherForm({ members, existingWatcherIds, onAdd, isPending }: AddWa
                     <Avatar name={m.display_name} avatarUrl={m.avatar_url} size="xs" />
                     <div>
                       <div className="font-medium">{m.display_name}</div>
-                      <div className="text-xs text-gray-400">{m.email}</div>
+                      <div className="text-xs text-[var(--foreground-muted)]">{m.email}</div>
                     </div>
                   </div>
                 </button>
               </li>
             ))}
             {filtered.length === 0 && (
-              <li className="px-3 py-2 text-sm text-gray-400 dark:text-gray-500">{t('userPicker.noMembersFound')}</li>
+              <li className="px-3 py-2 text-sm text-[var(--foreground-muted)]">{t('userPicker.noMembersFound')}</li>
             )}
           </ul>
         </div>

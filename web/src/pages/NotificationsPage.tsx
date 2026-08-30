@@ -83,19 +83,19 @@ export function NotificationsPage() {
 
   return (
     <div>
-      <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+      <h2 className="text-xl font-semibold text-[var(--foreground)]">
         {t('preferences.notifications.title')}
       </h2>
-      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+      <p className="mt-1 text-sm text-[var(--foreground-secondary)]">
         {t('preferences.notifications.description')}
       </p>
 
       {/* Global notifications section */}
       <div className="mt-6">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+        <h3 className="text-sm font-semibold text-[var(--foreground)]">
           {t('preferences.notifications.globalSection')}
         </h3>
-        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+        <p className="mt-1 text-xs text-[var(--foreground-secondary)]">
           {t('preferences.notifications.globalDescription')}
         </p>
         <div className="mt-3">
@@ -105,15 +105,15 @@ export function NotificationsPage() {
 
       {/* Per-project notifications section */}
       <div className="mt-8">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+        <h3 className="text-sm font-semibold text-[var(--foreground)]">
           {t('preferences.notifications.perProjectSection')}
         </h3>
-        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+        <p className="mt-1 text-xs text-[var(--foreground-secondary)]">
           {t('preferences.notifications.perProjectDescription')}
         </p>
         <div className="mt-3 space-y-3">
           {!projects || projects.length === 0 ? (
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-sm text-[var(--foreground-secondary)]">
               {t('preferences.notifications.noProjects')}
             </p>
           ) : (
@@ -163,7 +163,7 @@ function GlobalNotificationCard() {
   }
 
   return (
-    <div className="rounded-lg border border-gray-200 dark:border-gray-600 px-4 py-3">
+    <div className="rounded-lg border border-[var(--border)] px-4 py-3">
       <div className="space-y-3">
         {globalNotificationOptions.map((option) => (
           <label
@@ -177,18 +177,18 @@ function GlobalNotificationCard() {
               checked={currentPrefs[option.key]}
               onChange={() => handleToggle(option.key)}
               disabled={!option.enabled}
-              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800"
+              className="mt-0.5 h-4 w-4 rounded border-[var(--border)] text-[var(--primary)] focus:ring-[var(--focus-ring)] disabled:opacity-50 dark:border-[var(--border)] bg-[var(--surface)]"
             />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                <span className="text-sm font-medium text-[var(--foreground)]">
                   {t(option.labelKey)}
                 </span>
                 {savedId === option.key && (
                   <Check className="h-4 w-4 text-green-500" />
                 )}
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <p className="text-xs text-[var(--foreground-secondary)]">
                 {t(option.descKey)}
               </p>
             </div>
@@ -231,26 +231,26 @@ function ProjectNotificationCard({
   }
 
   return (
-    <div className="rounded-lg border border-gray-200 dark:border-gray-600">
+    <div className="rounded-lg border border-[var(--border)]">
       <button
         onClick={onToggle}
-        className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-lg transition-colors"
+        className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-[var(--surface-hover)]/50 rounded-lg transition-colors"
       >
         <div className="flex items-center gap-2">
           {isExpanded ? (
-            <ChevronDown className="h-4 w-4 text-gray-400" />
+            <ChevronDown className="h-4 w-4 text-[var(--foreground-muted)]" />
           ) : (
-            <ChevronRight className="h-4 w-4 text-gray-400" />
+            <ChevronRight className="h-4 w-4 text-[var(--foreground-muted)]" />
           )}
-          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+          <span className="text-sm font-medium text-[var(--foreground)]">
             {projectName}
           </span>
-          <span className="text-xs text-gray-400 dark:text-gray-500">{projectKey}</span>
+          <span className="text-xs text-[var(--foreground-muted)]">{projectKey}</span>
         </div>
       </button>
 
       {isExpanded && (
-        <div className="border-t border-gray-200 dark:border-gray-600 px-4 py-3">
+        <div className="border-t border-[var(--border)] px-4 py-3">
           {isLoading ? (
             <div className="flex justify-center py-4">
               <Spinner />
@@ -269,15 +269,15 @@ function ProjectNotificationCard({
                     checked={currentPrefs[option.key]}
                     onChange={() => handleToggle(option.key)}
                     disabled={!option.enabled}
-                    className="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800"
+                    className="mt-0.5 h-4 w-4 rounded border-[var(--border)] text-[var(--primary)] focus:ring-[var(--focus-ring)] disabled:opacity-50 dark:border-[var(--border)] bg-[var(--surface)]"
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      <span className="text-sm font-medium text-[var(--foreground)]">
                         {t(option.labelKey)}
                       </span>
                       {!option.enabled && (
-                        <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                        <span className="inline-flex items-center rounded-full bg-[var(--surface-tertiary)] px-2 py-0.5 text-xs font-medium text-[var(--foreground-secondary)] bg-[var(--surface)] text-[var(--foreground-muted)]">
                           {t('preferences.notifications.comingSoon')}
                         </span>
                       )}
@@ -285,7 +285,7 @@ function ProjectNotificationCard({
                         <Check className="h-4 w-4 text-green-500" />
                       )}
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <p className="text-xs text-[var(--foreground-secondary)]">
                       {t(option.descKey)}
                     </p>
                   </div>

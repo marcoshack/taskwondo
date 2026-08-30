@@ -178,7 +178,7 @@ export function MentionSearchModal({ open, position, onClose, onSelect }: Mentio
 
   // Close on click outside
   const onCloseRef = useRef(onClose)
-  onCloseRef.current = onClose
+  useEffect(() => { onCloseRef.current = onClose }, [onClose])
   useEffect(() => {
     if (!open) return
     function handler(e: MouseEvent) {
@@ -208,8 +208,8 @@ export function MentionSearchModal({ open, position, onClose, onSelect }: Mentio
       return (
         <div key={group.entityType} className="mb-1 last:mb-0">
           <div className="flex items-center gap-1.5 px-3 py-1">
-            <Icon className="h-3 w-3 text-gray-400" />
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+            <Icon className="h-3 w-3 text-[var(--foreground-muted)]" />
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--foreground-muted)]">
               {t(`search.entityType.${group.entityType}`)}
             </span>
           </div>
@@ -226,21 +226,21 @@ export function MentionSearchModal({ open, position, onClose, onSelect }: Mentio
                 onMouseEnter={() => setSelectedIndex(globalIndex)}
                 className={`w-full text-left flex items-center gap-2 px-3 py-1.5 text-sm ${
                   isSelected
-                    ? 'bg-indigo-50 dark:bg-indigo-900/30'
-                    : 'hover:bg-gray-50 dark:hover:bg-gray-700'
+                    ? 'bg-[var(--primary-muted)]'
+                    : 'hover:bg-[var(--surface-hover)]'
                 }`}
               >
                 {parsed.type && <TypeBadge type={parsed.type} />}
                 {result.entity_type === 'work_item' && result.project_key && result.item_number != null && (
-                  <span className="font-mono text-xs text-indigo-600 dark:text-indigo-400 shrink-0">
+                  <span className="font-mono text-xs text-[var(--primary)] shrink-0">
                     {result.project_key}-{result.item_number}
                   </span>
                 )}
-                <span className="text-gray-900 dark:text-gray-100 truncate flex-1">
+                <span className="text-[var(--foreground)] truncate flex-1">
                   {parsed.text}
                 </span>
                 {result.project_key && result.entity_type !== 'project' && result.entity_type !== 'work_item' && (
-                  <span className="text-[10px] text-gray-400 shrink-0">
+                  <span className="text-[10px] text-[var(--foreground-muted)] shrink-0">
                     {result.project_key}
                   </span>
                 )}
@@ -264,7 +264,7 @@ export function MentionSearchModal({ open, position, onClose, onSelect }: Mentio
         onSelect(buildMarkdownLink(allFlat[selectedIndex], p))
       }
     }
-  }, [allFlat, selectedIndex, onSelect])
+  }, [allFlat, selectedIndex, onSelect, p])
 
   if (!open) return null
 
@@ -290,36 +290,36 @@ export function MentionSearchModal({ open, position, onClose, onSelect }: Mentio
   return createPortal(
     <div
       ref={containerRef}
-      className="fixed z-50 w-96 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-xl"
+      className="fixed z-50 w-96 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] shadow-[var(--shadow-lg)]"
       style={{ top, left }}
       onKeyDown={handleKeyDown}
     >
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-200 dark:border-gray-600">
-        <Search className="h-4 w-4 text-gray-400 shrink-0" />
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--border)]">
+        <Search className="h-4 w-4 text-[var(--foreground-muted)] shrink-0" />
         <input
           ref={inputRef}
           type="text"
           placeholder={t('mention.searchPlaceholder')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="block w-full text-sm bg-transparent border-none outline-none text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+          className="block w-full text-sm bg-transparent border-none outline-none text-[var(--foreground)] placeholder-[var(--foreground-muted)]"
         />
         {isLoading && showResults && (
-          <Loader2 className="h-4 w-4 text-gray-400 animate-spin shrink-0" />
+          <Loader2 className="h-4 w-4 text-[var(--foreground-muted)] animate-spin shrink-0" />
         )}
       </div>
 
       <div ref={listRef} className="max-h-60 overflow-auto py-1">
         {!showResults ? (
-          <p className="text-xs text-gray-400 dark:text-gray-500 py-4 text-center">
+          <p className="text-xs text-[var(--foreground-muted)] py-4 text-center">
             {t('search.hint')}
           </p>
         ) : isLoading && !hasAnyResults ? (
           <div className="flex justify-center py-6">
-            <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />
+            <Loader2 className="h-5 w-5 text-[var(--foreground-muted)] animate-spin" />
           </div>
         ) : !hasAnyResults && !isLoading ? (
-          <p className="text-xs text-gray-400 dark:text-gray-500 py-4 text-center">
+          <p className="text-xs text-[var(--foreground-muted)] py-4 text-center">
             {t('mention.noResults')}
           </p>
         ) : (
@@ -328,7 +328,7 @@ export function MentionSearchModal({ open, position, onClose, onSelect }: Mentio
               <>
                 {showSectionHeaders && (
                   <div className="px-3 py-1">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--foreground-muted)]">
                       {t('search.perfectMatches')}
                     </span>
                   </div>
@@ -340,11 +340,11 @@ export function MentionSearchModal({ open, position, onClose, onSelect }: Mentio
             {semanticAvailable && (
               <>
                 {showSectionHeaders && hasSemanticResults && (
-                  <div className="flex items-center gap-1.5 px-3 py-1 mt-1 border-t border-gray-100 dark:border-gray-600/50 pt-2">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                  <div className="flex items-center gap-1.5 px-3 py-1 mt-1 border-t border-[var(--border)]/50 pt-2">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--foreground-muted)]">
                       {t('search.relatedResults')}
                     </span>
-                    <span className="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-medium bg-gray-100 text-gray-500 dark:bg-gray-700/50 dark:text-gray-400">
+                    <span className="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-medium bg-[var(--surface-secondary)] text-[var(--foreground-muted)]">
                       <FlaskConical className="h-2.5 w-2.5" />
                       {t('common.experimental')}
                     </span>
@@ -353,9 +353,9 @@ export function MentionSearchModal({ open, position, onClose, onSelect }: Mentio
                 {hasSemanticResults && renderGroups(semanticGroups)}
 
                 {semanticStatus === 'pending' && (
-                  <div className="flex items-center gap-1.5 px-3 py-2 mt-1 border-t border-gray-100 dark:border-gray-600/50">
-                    <Loader2 className="h-3 w-3 text-gray-400 animate-spin" />
-                    <span className="text-[10px] text-gray-400 dark:text-gray-500">
+                  <div className="flex items-center gap-1.5 px-3 py-2 mt-1 border-t border-[var(--border)]/50">
+                    <Loader2 className="h-3 w-3 text-[var(--foreground-muted)] animate-spin" />
+                    <span className="text-[10px] text-[var(--foreground-muted)]">
                       {t('search.semanticLoading')}
                     </span>
                   </div>

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef } from 'react'
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useWorkItems, useBulkUpdateWorkItems, type BulkUpdateResult } from '@/hooks/useWorkItems'
@@ -84,10 +84,13 @@ export function QueueWorkItemsPage() {
 
   // Initialize status filter to open statuses once available
   const filterInitRef = useRef(false)
-  if (!filterInitRef.current && defaultOpenStatuses && !filter.status) {
-    filterInitRef.current = true
-    setFilter((prev) => ({ ...prev, status: defaultOpenStatuses }))
-  }
+  useEffect(() => {
+    if (filterInitRef.current) return
+    if (defaultOpenStatuses && !filter.status) {
+      filterInitRef.current = true
+      setFilter((prev) => ({ ...prev, status: defaultOpenStatuses }))
+    }
+  }, [defaultOpenStatuses, filter.status])
 
   const activeFilter = useMemo(() => ({
     ...filter,
@@ -229,7 +232,7 @@ export function QueueWorkItemsPage() {
       sortKey: 'item_number',
       render: (row) => {
         const done = strikethroughEnabled && isItemCompleted(row.status, allStatuses ?? statuses)
-        return <span className={`font-mono ${done ? 'text-gray-400 dark:text-gray-500' : 'text-gray-500 dark:text-gray-400'}`}>{row.display_id}</span>
+        return <span className={`font-mono ${done ? 'text-[var(--foreground-muted)]' : 'text-[var(--foreground-secondary)]'}`}>{row.display_id}</span>
       },
     },
     {
@@ -253,8 +256,8 @@ export function QueueWorkItemsPage() {
         return (
           <div className="flex items-center gap-1 min-w-0">
             <Tooltip content={row.title} className="relative block min-w-0 flex-1">
-              <span className={`truncate block ${!done && row.description ? 'text-gray-400 dark:text-gray-500' : ''}`}>
-                <span className={done ? 'line-through text-gray-400 dark:text-gray-500' : 'font-medium text-gray-900 dark:text-gray-100'}>{row.title}</span>
+              <span className={`truncate block ${!done && row.description ? 'text-[var(--foreground-muted)]' : ''}`}>
+                <span className={done ? 'line-through text-[var(--foreground-muted)]' : 'font-medium text-[var(--foreground)]'}>{row.title}</span>
                 {row.description && !done && (
                   <span className="font-normal text-xs"> – {getDescriptionPreview(row.description)}</span>
                 )}
@@ -298,7 +301,7 @@ export function QueueWorkItemsPage() {
       sortKey: 'updated_at',
       render: (row) => {
         const done = strikethroughEnabled && isItemCompleted(row.status, allStatuses ?? statuses)
-        return <span className={done ? 'text-gray-300 dark:text-gray-600' : 'text-gray-500 dark:text-gray-400'}>{new Date(row.updated_at).toLocaleDateString()}</span>
+        return <span className={done ? 'text-[var(--foreground-secondary)]' : 'text-[var(--foreground-secondary)]'}>{new Date(row.updated_at).toLocaleDateString()}</span>
       },
     },
   ]
@@ -317,12 +320,12 @@ export function QueueWorkItemsPage() {
       <div className="flex items-center gap-4">
         <Link
           to={p(`/projects/${projectKey}/queues`)}
-          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0"
+          className="text-[var(--foreground-muted)] hover:text-[var(--foreground-secondary)] dark:hover:text-[var(--foreground-muted)] shrink-0"
         >
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <div className="flex items-center gap-2 shrink-0">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          <h2 className="text-lg font-semibold text-[var(--foreground)]">
             {queue?.name ?? t('queues.workItems')}
           </h2>
           {queue && (
@@ -332,7 +335,7 @@ export function QueueWorkItemsPage() {
         <div className="grid grid-cols-2 rounded-md shadow-sm shrink-0">
           <button
             className={`flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium rounded-l-md border ${
-              viewMode === 'list' ? 'bg-indigo-50 text-indigo-700 border-indigo-300 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-700' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700'
+              viewMode === 'list' ? 'bg-[var(--primary-muted)] text-[var(--primary)] border-[var(--primary-border)]  dark:text-[var(--primary)] dark:border-[var(--primary-border)]' : 'bg-white text-[var(--foreground)] border-[var(--border)] hover:bg-[var(--surface-secondary)] text-[var(--foreground)] dark:border-[var(--border)] hover:bg-[var(--surface-hover)]'
             }`}
             onClick={() => setViewMode('list')}
           >
@@ -341,7 +344,7 @@ export function QueueWorkItemsPage() {
           </button>
           <button
             className={`flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium rounded-r-md border-t border-r border-b ${
-              viewMode === 'board' ? 'bg-indigo-50 text-indigo-700 border-indigo-300 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-700' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700'
+              viewMode === 'board' ? 'bg-[var(--primary-muted)] text-[var(--primary)] border-[var(--primary-border)]  dark:text-[var(--primary)] dark:border-[var(--primary-border)]' : 'bg-white text-[var(--foreground)] border-[var(--border)] hover:bg-[var(--surface-secondary)] text-[var(--foreground)] dark:border-[var(--border)] hover:bg-[var(--surface-hover)]'
             }`}
             onClick={() => setViewMode('board')}
           >
@@ -363,7 +366,7 @@ export function QueueWorkItemsPage() {
               {search && (
                 <button
                   onClick={() => { handleSearchChange(''); searchRef.current?.focus() }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-[var(--foreground-muted)] hover:text-[var(--foreground-secondary)] dark:hover:text-[var(--foreground-muted)]"
                   aria-label={t('common.clear')}
                 >
                   <X className="h-4 w-4" />
@@ -392,8 +395,8 @@ export function QueueWorkItemsPage() {
 
       {/* Bulk action toolbar */}
       {!readOnly && selected.size > 0 && (
-        <div className="flex items-center gap-3 rounded-md bg-indigo-50 dark:bg-indigo-900/30 px-4 py-2">
-          <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">{t('workitems.selected', { count: selected.size })}</span>
+        <div className="flex items-center gap-3 rounded-md bg-[var(--primary-muted)] px-4 py-2">
+          <span className="text-sm font-medium text-[var(--primary)]">{t('workitems.selected', { count: selected.size })}</span>
           <div className="w-40">
             <Select onChange={(e) => handleBulkStatus(e.target.value)} value="">
               <option value="">{t('workitems.bulk.changeStatus')}</option>
@@ -414,7 +417,7 @@ export function QueueWorkItemsPage() {
           <Button variant="ghost" size="sm" onClick={() => { setSelected(new Set()); setBulkError(null) }}>{t('common.clear')}</Button>
           {bulkMutation.isPending && <Spinner size="sm" />}
           {bulkError && (
-            <span className="text-sm text-red-600 dark:text-red-400">{bulkError}</span>
+            <span className="text-sm text-[var(--danger)]">{bulkError}</span>
           )}
         </div>
       )}
@@ -427,10 +430,10 @@ export function QueueWorkItemsPage() {
       ) : viewMode === 'list' ? (
         <>
           {/* Desktop: table view */}
-          <div className="hidden lg:block border dark:border-gray-600 rounded-lg overflow-hidden">
+          <div className="hidden lg:block border dark:border-[var(--border)] rounded-lg overflow-hidden">
             {!readOnly && (
-              <div className="bg-gray-50 dark:bg-gray-800 px-6 py-2 border-b dark:border-gray-600">
-                <label className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+              <div className="bg-[var(--surface-secondary)] px-6 py-2 border-b dark:border-[var(--border)]">
+                <label className="flex items-center gap-2 text-xs text-[var(--foreground-secondary)]">
                   <input
                     type="checkbox"
                     checked={items.length > 0 && selected.size === items.length}
@@ -459,7 +462,7 @@ export function QueueWorkItemsPage() {
           {/* Mobile: card view */}
           <div className="lg:hidden space-y-2">
             {allItems.length === 0 ? (
-              <p className="text-center text-sm text-gray-500 dark:text-gray-400 py-12">{t('queues.noItems')}</p>
+              <p className="text-center text-sm text-[var(--foreground-secondary)] py-12">{t('queues.noItems')}</p>
             ) : (
               allItems.map((item) => {
                 const assigneeName = item.assignee_id

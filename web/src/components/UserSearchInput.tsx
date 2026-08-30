@@ -104,7 +104,7 @@ export function UserSearchInput({
     <div ref={ref} className="relative flex-1">
       <input
         ref={inputRef}
-        className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+        className="block w-full rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--primary)]"
         placeholder={placeholder ?? t('projects.settings.addMemberPlaceholder')}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
@@ -115,14 +115,14 @@ export function UserSearchInput({
         <div
           ref={dropdownRef}
           style={dropdownStyle}
-          className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg"
+          className="bg-[var(--surface)] border border-[var(--border)] rounded-md shadow-lg"
         >
           <ul className="max-h-64 overflow-auto">
             {isLoading && (
-              <li className="px-3 py-2 text-sm text-gray-400 dark:text-gray-500">...</li>
+              <li className="px-3 py-2 text-sm text-[var(--foreground-muted)]">...</li>
             )}
             {!isLoading && filtered.length === 0 && !showInviteRow && (
-              <li className="px-3 py-2 text-sm text-gray-400 dark:text-gray-500">
+              <li className="px-3 py-2 text-sm text-[var(--foreground-muted)]">
                 {t('projects.settings.noUsersFound')}
               </li>
             )}
@@ -132,16 +132,16 @@ export function UserSearchInput({
                 <li key={user.id}>
                   <button
                     type="button"
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 flex items-center gap-2"
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-[var(--surface-hover)] text-[var(--foreground)] flex items-center gap-2"
                     onClick={() => (isMember ? handleSelectMember(user) : handleInviteUser(user))}
                   >
                     <Avatar name={user.display_name} avatarUrl={user.avatar_url} size="xs" />
                     <div className="min-w-0 flex-1">
                       <div className="font-medium truncate">{user.display_name}</div>
-                      <div className="text-xs text-gray-400 truncate">{user.email}</div>
+                      <div className="text-xs text-[var(--foreground-muted)] truncate">{user.email}</div>
                     </div>
                     {!isMember && (
-                      <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0">
+                      <span className="text-xs text-[var(--foreground-secondary)] shrink-0">
                         {t('projects.settings.notInNamespaceInvite')}
                       </span>
                     )}
@@ -150,13 +150,13 @@ export function UserSearchInput({
               )
             })}
             {!isLoading && showInviteRow && (
-              <li className={filtered.length > 0 ? 'border-t border-gray-200 dark:border-gray-600' : ''}>
+              <li className={filtered.length > 0 ? 'border-t border-[var(--border)]' : ''}>
                 <button
                   type="button"
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 flex items-center gap-2"
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-[var(--surface-hover)] text-[var(--foreground)] flex items-center gap-2"
                   onClick={handleInviteTyped}
                 >
-                  <Mail className="h-4 w-4 text-gray-400 shrink-0" />
+                  <Mail className="h-4 w-4 text-[var(--foreground-muted)] shrink-0" />
                   <span className="truncate">
                     {t('projects.settings.inviteByEmailRow', { email: trimmedSearch })}
                   </span>

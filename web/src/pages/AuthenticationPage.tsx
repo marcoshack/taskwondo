@@ -101,19 +101,19 @@ function PasswordTab() {
 
   return (
     <div className="mt-6">
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+      <p className="text-sm text-[var(--foreground-secondary)] mb-6">
         {t(descriptionKey)}
       </p>
       <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
         {hasPassword && (
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label htmlFor="old-password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label htmlFor="old-password" className="block text-sm font-medium text-[var(--foreground)]">
                 {t('changePassword.oldPassword')}
               </label>
               <Link
                 to="/forgot-password"
-                className="text-xs text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
+                className="text-xs text-[var(--primary)] hover:text-[var(--primary)] dark:text-[var(--primary)] dark:hover:text-[var(--primary)]"
               >
                 {t('preferences.authentication.password.forgotLink')}
               </Link>
@@ -146,7 +146,7 @@ function PasswordTab() {
           error={confirmPassword.length > 0 && !passwordsMatch ? t('changePassword.mismatch') : undefined}
         />
         {error && (
-          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+          <p className="text-sm text-[var(--danger)]">{error}</p>
         )}
         <div className="flex items-center gap-2">
           <Button type="submit" disabled={loading || !passwordsMatch}>
@@ -202,32 +202,32 @@ function ConnectedAccountsTab() {
 
   return (
     <div className="mt-6">
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+      <p className="text-sm text-[var(--foreground-secondary)] mb-6">
         {t('preferences.authentication.connectedAccounts.description')}
       </p>
 
       {!accounts || accounts.length === 0 ? (
-        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+        <div className="text-center py-8 text-[var(--foreground-secondary)]">
           <Link2 className="h-8 w-8 mx-auto mb-2 opacity-40" />
           <p>{t('preferences.authentication.connectedAccounts.empty')}</p>
         </div>
       ) : (
-        <div className="rounded-lg border border-gray-200 dark:border-gray-600 divide-y divide-gray-200 dark:divide-gray-600">
+        <div className="rounded-lg border border-[var(--border)] divide-y divide-[var(--border)]">
           {accounts.map((account) => (
-            <div key={account.id} className="p-4 bg-white dark:bg-gray-800 first:rounded-t-lg last:rounded-b-lg">
+            <div key={account.id} className="p-4 bg-[var(--surface)] first:rounded-t-lg last:rounded-b-lg">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="shrink-0">
-                    {PROVIDER_ICONS[account.provider] ?? <Link2 className="h-5 w-5 text-gray-400" />}
+                    {PROVIDER_ICONS[account.provider] ?? <Link2 className="h-5 w-5 text-[var(--foreground-muted)]" />}
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                      <span className="font-medium text-[var(--foreground)]">
                         {providerLabel(account.provider)}
                       </span>
                       <Badge color="gray">{t('preferences.authentication.connectedAccounts.linked')}</Badge>
                     </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    <div className="text-xs text-[var(--foreground-secondary)] mt-0.5">
                       {account.provider_email && <span>{account.provider_email}</span>}
                       {account.provider_email && account.provider_username && <span> &middot; </span>}
                       {account.provider_username && <span>{account.provider_username}</span>}
@@ -238,7 +238,7 @@ function ConnectedAccountsTab() {
                 </div>
                 <button
                   type="button"
-                  className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                  className="p-1.5 text-[var(--foreground-muted)] hover:text-[var(--danger)] dark:hover:text-red-400 transition-colors"
                   onClick={() => setUnlinkTarget(account)}
                   title={t('preferences.authentication.connectedAccounts.unlink')}
                 >
@@ -256,15 +256,15 @@ function ConnectedAccountsTab() {
         title={t('preferences.authentication.connectedAccounts.unlinkConfirmTitle')}
       >
         <div className="p-4">
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+          <p className="text-sm text-[var(--foreground-secondary)] mb-4">
             <Trans
               i18nKey="preferences.authentication.connectedAccounts.unlinkConfirmBody"
               values={{ provider: unlinkTarget ? providerLabel(unlinkTarget.provider) : '' }}
-              components={{ bold: <strong className="font-semibold text-gray-900 dark:text-gray-100" /> }}
+              components={{ bold: <strong className="font-semibold text-[var(--foreground)]" /> }}
             />
           </p>
           {unlinkError && (
-            <p className="text-sm text-red-600 dark:text-red-400 mb-4">{unlinkError}</p>
+            <p className="text-sm text-[var(--danger)] mb-4">{unlinkError}</p>
           )}
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={closeUnlinkModal}>{t('common.cancel')}</Button>
@@ -291,10 +291,10 @@ export function AuthenticationPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+        <h1 className="text-xl font-semibold text-[var(--foreground)]">
           {t('preferences.authentication.title')}
         </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+        <p className="text-sm text-[var(--foreground-secondary)] mt-1">
           {t('preferences.authentication.description')}
         </p>
       </div>

@@ -70,7 +70,7 @@ export function ProjectDetailPage() {
   if (error || !project) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <p className="text-red-600">{t('projects.notFound')}</p>
+        <p className="text-[var(--danger)]">{t('projects.notFound')}</p>
       </div>
     )
   }

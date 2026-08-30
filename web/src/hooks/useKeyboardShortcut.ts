@@ -16,10 +16,10 @@ export function useKeyboardShortcut(
 ) {
   const { isModalOpen } = useKeyboardShortcutContext()
   const callbackRef = useRef(callback)
-  callbackRef.current = callback
+  useEffect(() => { callbackRef.current = callback }, [callback])
 
   const optsRef = useRef(options)
-  optsRef.current = options
+  useEffect(() => { optsRef.current = options }, [options])
 
   useEffect(() => {
     if (!enabled) return

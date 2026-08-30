@@ -1555,5 +1555,11 @@
   "inlineComments.gutterTooltip_one": "{{count}} تعليق مضمّن",
   "inlineComments.gutterTooltip_other": "{{count}} تعليقات مضمّنة",
   "inlineComments.prevComment": "التعليق السابق",
-  "inlineComments.nextComment": "التعليق التالي"
+  "inlineComments.nextComment": "التعليق التالي",
+  "preferences.colorTheme": "سمة اللون",
+  "preferences.colorThemes.default": "نيلي",
+  "preferences.colorThemes.slate": "حجري",
+  "preferences.colorThemes.blue": "أزرق",
+  "preferences.colorThemes.green": "أخضر",
+  "preferences.colorThemes.purple": "بنفسجي"
 }

@@ -35,7 +35,7 @@ export function WatchButton({ projectKey, itemNumber, isWatching, className = ''
     <Tooltip content={isWatching ? t('watchers.unwatch') : t('watchers.watch')}>
       <button
         onClick={handleClick}
-        className={`${isWatching ? 'text-indigo-500 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300' : 'text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400'} transition-colors ${className}`}
+        className={`${isWatching ? 'text-[var(--primary)] dark:text-[var(--primary)] hover:text-[var(--primary)] dark:hover:text-[var(--primary)]' : 'text-[var(--foreground-muted)] hover:text-[var(--primary)] dark:hover:text-[var(--primary)]'} transition-colors ${className}`}
         aria-label={isWatching ? t('watchers.unwatch') : t('watchers.watch')}
       >
         <Bell className="h-4 w-4" />

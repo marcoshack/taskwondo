@@ -12,7 +12,7 @@ interface ProjectKeyBadgeProps {
 
 export function ProjectKeyBadge({ children, size = 'default' }: ProjectKeyBadgeProps) {
   return (
-    <span className={`inline-flex items-center justify-center rounded-md bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-bold shrink-0 ${sizeClasses[size]}`}>
+    <span className={`inline-flex items-center justify-center rounded-md bg-[var(--primary-muted)] text-[var(--primary)] font-bold shrink-0 ${sizeClasses[size]}`}>
       {children}
     </span>
   )

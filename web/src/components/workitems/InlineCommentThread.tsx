@@ -79,11 +79,11 @@ export function InlineCommentThread({
 
   return (
     <div
-      className="rounded-md border border-indigo-300 dark:border-indigo-600 bg-white dark:bg-gray-800 shadow-lg"
+      className="rounded-md border border-[var(--primary-border)]  bg-[var(--surface)] shadow-lg"
       data-testid="inline-comment-thread"
     >
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-indigo-200 dark:border-indigo-700">
-        <span className="text-xs font-medium text-indigo-700 dark:text-indigo-300">
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--primary-border)] dark:border-[var(--primary-border)]">
+        <span className="text-xs font-medium text-[var(--primary)]">
           {t('inlineComments.threadHeader')}
         </span>
         {outdated && (
@@ -95,12 +95,12 @@ export function InlineCommentThread({
           </span>
         )}
         {total > 1 && (
-          <span className="ml-auto flex items-center gap-1 text-gray-500 dark:text-gray-400">
+          <span className="ml-auto flex items-center gap-1 text-[var(--foreground-secondary)]">
             <button
               type="button"
               aria-label={t('inlineComments.prevComment')}
               data-testid="inline-comment-prev"
-              className="inline-flex items-center justify-center w-5 h-5 rounded hover:bg-indigo-100 dark:hover:bg-indigo-900/40 hover:text-indigo-600"
+              className="inline-flex items-center justify-center w-5 h-5 rounded hover:bg-[var(--primary-muted)]  hover:text-[var(--primary)]"
               onClick={onPrev}
             >
               <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
@@ -114,7 +114,7 @@ export function InlineCommentThread({
               type="button"
               aria-label={t('inlineComments.nextComment')}
               data-testid="inline-comment-next"
-              className="inline-flex items-center justify-center w-5 h-5 rounded hover:bg-indigo-100 dark:hover:bg-indigo-900/40 hover:text-indigo-600"
+              className="inline-flex items-center justify-center w-5 h-5 rounded hover:bg-[var(--primary-muted)]  hover:text-[var(--primary)]"
               onClick={onNext}
             >
               <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
@@ -127,7 +127,7 @@ export function InlineCommentThread({
           type="button"
           aria-label={t('common.close')}
           data-testid="inline-comment-thread-close"
-          className={`${total > 1 ? '' : 'ml-auto'} text-gray-400 hover:text-gray-600 dark:hover:text-gray-300`}
+          className={`${total > 1 ? '' : 'ml-auto'} text-[var(--foreground-muted)] hover:text-[var(--foreground-secondary)] dark:hover:text-[var(--foreground-muted)]`}
           onClick={onClose}
         >
           <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
@@ -141,12 +141,12 @@ export function InlineCommentThread({
           <div key={c.id} className="px-3 py-2" data-testid="inline-comment-thread-item">
             <div className="flex items-center gap-2 mb-1">
               <Avatar name={authorName(c.author_id)} avatarUrl={authorAvatar(c.author_id)} size="xs" />
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <span className="text-sm font-medium text-[var(--foreground)]">
                 {authorName(c.author_id)}
               </span>
               <ScrollableDate date={c.created_at} />
             </div>
-            <div className="prose prose-sm dark:prose-invert max-w-none text-gray-900 dark:text-gray-100 break-words pl-7">
+            <div className="prose prose-sm dark:prose-invert max-w-none text-[var(--foreground)] break-words pl-7">
               <Markdown remarkPlugins={[remarkGfm]} components={mdComponents}>
                 {c.body}
               </Markdown>
@@ -156,10 +156,10 @@ export function InlineCommentThread({
       </div>
 
       {!readOnly && (
-        <div className="px-3 py-2 border-t border-indigo-200 dark:border-indigo-700">
+        <div className="px-3 py-2 border-t border-[var(--primary-border)] dark:border-[var(--primary-border)]">
           <textarea
             ref={replyRef}
-            className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+            className="block w-full rounded-md border border-[var(--border)] dark:bg-[var(--background)] text-[var(--foreground)] px-3 py-2 text-sm"
             rows={2}
             placeholder={t('inlineComments.replyPlaceholder')}
             value={replyBody}

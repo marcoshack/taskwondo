@@ -93,7 +93,7 @@ export function PortalTicketListPage() {
     <div>
       {/* Mobile header */}
       <div className="flex sm:hidden items-center justify-between mb-6">
-        <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+        <h1 className="text-xl font-semibold text-[var(--foreground)]">
           {t('portal.myTickets')}
         </h1>
         {hasPublicQueue && (
@@ -121,14 +121,14 @@ export function PortalTicketListPage() {
             placeholder={t('portal.ticketTitle')}
           />
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
               {t('portal.ticketDescription')}
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
-              className="block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-400"
+              className="block w-full rounded-md border border-[var(--border)] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--primary)] bg-[var(--surface)] text-[var(--foreground)] placeholder-[var(--foreground-muted)]"
               placeholder={t('portal.ticketDescription')}
             />
           </div>
@@ -138,7 +138,7 @@ export function PortalTicketListPage() {
             ))}
           </Select>
           {createError && (
-            <p className="text-sm text-red-600 dark:text-red-400">{createError}</p>
+            <p className="text-sm text-[var(--danger)]">{createError}</p>
           )}
           <div className="flex justify-end gap-3 pt-2">
             <Button type="button" variant="secondary" onClick={() => { setCreateOpen(false); resetForm() }}>
@@ -153,11 +153,11 @@ export function PortalTicketListPage() {
 
       {/* Desktop header + toolbar (single row) */}
       <div className="hidden sm:flex items-center gap-3 mb-4">
-        <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
+        <h1 className="text-xl font-semibold text-[var(--foreground)] whitespace-nowrap">
           {t('portal.myTickets')}
         </h1>
         <div className="relative flex-1 mx-3">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--foreground-muted)]" />
           <Input
             placeholder={t('common.search')}
             value={search}
@@ -165,7 +165,7 @@ export function PortalTicketListPage() {
             className="pl-9"
           />
         </div>
-        <label className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 cursor-pointer select-none whitespace-nowrap">
+        <label className="flex items-center gap-2 text-sm text-[var(--foreground-secondary)] cursor-pointer select-none whitespace-nowrap">
           {t('portal.hideCompleted')}
           <button
             type="button"
@@ -173,7 +173,7 @@ export function PortalTicketListPage() {
             aria-checked={hideCompleted}
             onClick={() => setPreferenceMutation.mutate({ key: 'portal_hide_completed', value: !hideCompleted })}
             className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors ${
-              hideCompleted ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-600'
+              hideCompleted ? 'bg-[var(--primary)]' : 'bg-[var(--surface-tertiary)] dark:bg-[var(--foreground-secondary)]'
             }`}
           >
             <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow ring-0 transition-transform ${
@@ -201,7 +201,7 @@ export function PortalTicketListPage() {
       {/* Mobile toolbar */}
       <div className="flex sm:hidden items-stretch gap-2 mb-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--foreground-muted)]" />
           <Input
             placeholder={t('common.search')}
             value={search}
@@ -211,7 +211,7 @@ export function PortalTicketListPage() {
         </div>
         <button
           onClick={() => setSettingsOpen(true)}
-          className="shrink-0 px-2.5 flex items-center rounded-md border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+          className="shrink-0 px-2.5 flex items-center rounded-md border border-[var(--border)] text-[var(--foreground-secondary)] hover:bg-[var(--surface-hover)]"
           aria-label={t('workitems.settings.title')}
         >
           <Settings className="h-5 w-5" />
@@ -230,14 +230,14 @@ export function PortalTicketListPage() {
       {/* Mobile settings modal */}
       <Modal open={settingsOpen} onClose={() => setSettingsOpen(false)} title={t('workitems.settings.title')} position="top" containerClassName="!pt-[10.5rem]">
         <label className="flex items-center justify-between cursor-pointer">
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('portal.hideCompleted')}</span>
+          <span className="text-sm font-medium text-[var(--foreground)]">{t('portal.hideCompleted')}</span>
           <button
             type="button"
             role="switch"
             aria-checked={hideCompleted}
             onClick={() => setPreferenceMutation.mutate({ key: 'portal_hide_completed', value: !hideCompleted })}
             className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors ${
-              hideCompleted ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-600'
+              hideCompleted ? 'bg-[var(--primary)]' : 'bg-[var(--surface-tertiary)] dark:bg-[var(--foreground-secondary)]'
             }`}
           >
             <span className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow ring-0 transition-transform ${
@@ -252,7 +252,7 @@ export function PortalTicketListPage() {
           <Spinner size="lg" />
         </div>
       ) : tickets.length === 0 ? (
-        <p className="text-sm text-gray-500 dark:text-gray-400 py-8 text-center">
+        <p className="text-sm text-[var(--foreground-secondary)] py-8 text-center">
           {t('portal.noTickets')}
         </p>
       ) : (
@@ -263,15 +263,15 @@ export function PortalTicketListPage() {
               <Link
                 key={ticket.id}
                 to={`${ticket.item_number}`}
-                className="block rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 p-4 hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors"
+                className="block rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 hover:border-[var(--primary-border)] dark:hover:border-[var(--primary-border)] transition-colors"
               >
                 {/* Desktop: single row */}
                 <div className="hidden sm:flex sm:items-center sm:gap-4">
-                  <span className={`shrink-0 font-mono text-sm font-semibold ${isCompleted ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'}`}>
+                  <span className={`shrink-0 font-mono text-sm font-semibold ${isCompleted ? 'text-[var(--foreground-muted)]' : 'text-[var(--foreground)]'}`}>
                     {ticket.display_id}
                   </span>
-                  <p className={`flex-1 min-w-0 truncate text-sm ${!isCompleted && ticket.description ? 'text-gray-400 dark:text-gray-500' : ''}`}>
-                    <span className={isCompleted ? 'line-through text-gray-400 dark:text-gray-500' : 'font-medium text-gray-900 dark:text-gray-100'}>
+                  <p className={`flex-1 min-w-0 truncate text-sm ${!isCompleted && ticket.description ? 'text-[var(--foreground-muted)]' : ''}`}>
+                    <span className={isCompleted ? 'line-through text-[var(--foreground-muted)]' : 'font-medium text-[var(--foreground)]'}>
                       {ticket.title}
                     </span>
                     {ticket.description && !isCompleted && (
@@ -280,7 +280,7 @@ export function PortalTicketListPage() {
                   </p>
                   <span className="shrink-0 inline-flex"><StatusBadge status={ticket.status} /></span>
                   <span className={`shrink-0 inline-flex ${isCompleted ? 'opacity-40' : ''}`}><PriorityBadge priority={ticket.priority} /></span>
-                  <div className={`shrink-0 flex items-center gap-3 text-xs ${isCompleted ? 'text-gray-300 dark:text-gray-600' : 'text-gray-400 dark:text-gray-500'}`}>
+                  <div className={`shrink-0 flex items-center gap-3 text-xs ${isCompleted ? 'text-[var(--foreground-secondary)]' : 'text-[var(--foreground-muted)]'}`}>
                     <span className="inline-flex items-center gap-1" title={new Date(ticket.created_at).toLocaleString()}>
                       <CalendarPlus className="h-3.5 w-3.5" />
                       {new Date(ticket.created_at).toLocaleDateString()}
@@ -296,12 +296,12 @@ export function PortalTicketListPage() {
                 <div className="sm:hidden">
                   {/* Row 1: Display ID + badges */}
                   <ScrollableRow contentClassName="gap-2" gradientFrom="from-white dark:from-gray-800">
-                    <span className={`shrink-0 font-mono text-sm font-semibold ${isCompleted ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'}`}>{ticket.display_id}</span>
+                    <span className={`shrink-0 font-mono text-sm font-semibold ${isCompleted ? 'text-[var(--foreground-muted)]' : 'text-[var(--foreground)]'}`}>{ticket.display_id}</span>
                     <span className="shrink-0 inline-flex"><StatusBadge status={ticket.status} /></span>
                     <span className={`shrink-0 inline-flex ${isCompleted ? 'opacity-40' : ''}`}><PriorityBadge priority={ticket.priority} /></span>
                   </ScrollableRow>
                   {/* Row 2: Dates */}
-                  <ScrollableRow className="mt-1.5" contentClassName={`gap-4 text-xs ${isCompleted ? 'text-gray-300 dark:text-gray-600' : 'text-gray-400 dark:text-gray-500'}`} gradientFrom="from-white dark:from-gray-800">
+                  <ScrollableRow className="mt-1.5" contentClassName={`gap-4 text-xs ${isCompleted ? 'text-[var(--foreground-secondary)]' : 'text-[var(--foreground-muted)]'}`} gradientFrom="from-white dark:from-gray-800">
                     <span className="inline-flex items-center gap-1 shrink-0">
                       <CalendarPlus className="h-3.5 w-3.5" />
                       {new Date(ticket.created_at).toLocaleString()}
@@ -312,12 +312,12 @@ export function PortalTicketListPage() {
                     </span>
                   </ScrollableRow>
                   {/* Row 3: Title */}
-                  <p className={`mt-1.5 text-base font-medium truncate ${isCompleted ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'}`}>
+                  <p className={`mt-1.5 text-base font-medium truncate ${isCompleted ? 'line-through text-[var(--foreground-muted)]' : 'text-[var(--foreground)]'}`}>
                     {ticket.title}
                   </p>
                   {/* Row 4: Description preview */}
                   {ticket.description && (
-                    <p className={`mt-0.5 text-xs truncate ${isCompleted ? 'text-gray-300 dark:text-gray-600' : 'text-gray-500 dark:text-gray-400'}`}>
+                    <p className={`mt-0.5 text-xs truncate ${isCompleted ? 'text-[var(--foreground-secondary)]' : 'text-[var(--foreground-secondary)]'}`}>
                       {ticket.description}
                     </p>
                   )}

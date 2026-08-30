@@ -315,12 +315,12 @@ export function CommandPalette({ open, onClose, projectKey }: CommandPaletteProp
   const rowClass = (index: number) =>
     `w-full text-left flex items-center gap-3 px-3 py-2 rounded-md text-sm ${
       index === selectedIndex
-        ? 'bg-indigo-50 dark:bg-indigo-900/30'
-        : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+        ? 'bg-[var(--primary-muted)]'
+        : 'hover:bg-[var(--surface-hover)]'
     }`
 
   const sectionHeading = (text: string) => (
-    <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+    <span className="text-xs font-semibold uppercase tracking-wider text-[var(--foreground-muted)]">
       {text}
     </span>
   )
@@ -331,7 +331,7 @@ export function CommandPalette({ open, onClose, projectKey }: CommandPaletteProp
       return (
         <div key={`${showScores ? 'semantic' : 'fts'}-${section.entityType}`} className="mb-2 last:mb-0">
           <div className="flex items-center gap-2 px-3 py-1.5">
-            <Icon className="h-3.5 w-3.5 text-gray-400" />
+            <Icon className="h-3.5 w-3.5 text-[var(--foreground-muted)]" />
             {sectionHeading(t(`search.entityType.${section.entityType}`))}
           </div>
           {section.results.map((result) => {
@@ -353,30 +353,30 @@ export function CommandPalette({ open, onClose, projectKey }: CommandPaletteProp
                 {parsed.type && <TypeBadge type={parsed.type} className={isCompleted ? 'opacity-40' : ''} />}
                 {result.entity_type === 'work_item' && result.project_key && result.item_number != null && (
                   <span className={`text-xs shrink-0 ${
-                    isCompleted ? 'text-gray-400 dark:text-gray-500' : 'text-gray-500 dark:text-gray-400'
+                    isCompleted ? 'text-[var(--foreground-muted)]' : 'text-[var(--foreground-secondary)]'
                   }`}>
                     {result.project_key}-{result.item_number}
                   </span>
                 )}
                 {(result.entity_type === 'comment' || result.entity_type === 'attachment') && (
-                  <ItemIcon className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                  <ItemIcon className="h-3.5 w-3.5 text-[var(--foreground-muted)] shrink-0" />
                 )}
                 <span className={`truncate flex-1 ${
                   isCompleted
-                    ? 'line-through text-gray-400 dark:text-gray-500'
-                    : 'text-gray-900 dark:text-gray-100'
+                    ? 'line-through text-[var(--foreground-muted)]'
+                    : 'text-[var(--foreground)]'
                 }`}>
                   {parsed.text}
                 </span>
                 {showScores && result.score > 0 && (
                   <span className="shrink-0 flex items-center gap-1.5">
-                    <div className="w-12 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div className="w-12 h-1.5 bg-[var(--surface-tertiary)] rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-indigo-500 rounded-full"
+                        className="h-full bg-[var(--primary-muted)] rounded-full"
                         style={{ width: `${Math.round(result.score * 100)}%` }}
                       />
                     </div>
-                    <span className="text-xs text-gray-400 w-8 text-right">
+                    <span className="text-xs text-[var(--foreground-muted)] w-8 text-right">
                       {Math.round(result.score * 100)}%
                     </span>
                   </span>
@@ -391,7 +391,7 @@ export function CommandPalette({ open, onClose, projectKey }: CommandPaletteProp
   return (
     <Modal open={open} onClose={onClose} position="top" className="!max-w-2xl">
       <div className="flex items-center gap-2 mb-3">
-        <Search className="h-5 w-5 text-gray-400 shrink-0" />
+        <Search className="h-5 w-5 text-[var(--foreground-muted)] shrink-0" />
         <input
           ref={inputRef}
           type="text"
@@ -399,14 +399,14 @@ export function CommandPalette({ open, onClose, projectKey }: CommandPaletteProp
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
-          className="block w-full text-sm bg-transparent border-none outline-none text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+          className="block w-full text-sm bg-transparent border-none outline-none text-[var(--foreground)] placeholder-gray-400 placeholder-[var(--foreground-muted)]"
         />
         {isLoading && (
-          <Loader2 className="h-4 w-4 text-gray-400 animate-spin shrink-0" />
+          <Loader2 className="h-4 w-4 text-[var(--foreground-muted)] animate-spin shrink-0" />
         )}
       </div>
 
-      <div className="border-t border-gray-200 dark:border-gray-600" />
+      <div className="border-t border-[var(--border)]" />
 
       <div ref={listRef} className="max-h-[60vh] overflow-y-auto py-2">
         {/* Navigation — always first, matched live from the first character. */}
@@ -435,9 +435,9 @@ export function CommandPalette({ open, onClose, projectKey }: CommandPaletteProp
                       className="h-4 w-4 shrink-0"
                     />
                   ) : (
-                    <Icon className="h-4 w-4 text-gray-400 shrink-0" />
+                    <Icon className="h-4 w-4 text-[var(--foreground-muted)] shrink-0" />
                   )}
-                  <span className="truncate flex-1 text-gray-900 dark:text-gray-100">
+                  <span className="truncate flex-1 text-[var(--foreground)]">
                     {entry.label}
                   </span>
                 </button>
@@ -461,9 +461,9 @@ export function CommandPalette({ open, onClose, projectKey }: CommandPaletteProp
         {semanticAvailable && (
           <>
             {showSectionHeaders && hasSemanticResults && (
-              <div className="flex items-center gap-2 px-3 py-1.5 mt-3 mb-1 border-t border-gray-100 dark:border-gray-600/50 pt-3">
+              <div className="flex items-center gap-2 px-3 py-1.5 mt-3 mb-1 border-t border-[var(--border)]/50 pt-3">
                 {sectionHeading(t('search.relatedResults'))}
-                <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium bg-gray-100 text-gray-500 dark:bg-gray-700/50 dark:text-gray-400">
+                <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium bg-[var(--surface-tertiary)] text-[var(--foreground-secondary)] bg-[var(--surface-secondary)]/50 text-[var(--foreground-muted)]">
                   <FlaskConical className="h-3 w-3" />
                   {t('common.experimental')}
                 </span>
@@ -472,18 +472,18 @@ export function CommandPalette({ open, onClose, projectKey }: CommandPaletteProp
             {hasSemanticResults && renderEntitySections(semanticSections, true)}
 
             {semanticStatus === 'pending' && (
-              <div className="flex items-center gap-2 px-3 py-3 mt-2 border-t border-gray-100 dark:border-gray-600/50">
-                <Loader2 className="h-3.5 w-3.5 text-gray-400 animate-spin" />
-                <span className="text-xs text-gray-400 dark:text-gray-500">
+              <div className="flex items-center gap-2 px-3 py-3 mt-2 border-t border-[var(--border)]/50">
+                <Loader2 className="h-3.5 w-3.5 text-[var(--foreground-muted)] animate-spin" />
+                <span className="text-xs text-[var(--foreground-muted)]">
                   {t('search.semanticLoading')}
                 </span>
               </div>
             )}
 
             {semanticError && (
-              <div className="flex items-center gap-2 px-3 py-3 mt-2 border-t border-gray-100 dark:border-gray-600/50">
-                <AlertCircle className="h-3.5 w-3.5 text-gray-400 shrink-0" />
-                <span className="text-xs text-gray-400 dark:text-gray-500">
+              <div className="flex items-center gap-2 px-3 py-3 mt-2 border-t border-[var(--border)]/50">
+                <AlertCircle className="h-3.5 w-3.5 text-[var(--foreground-muted)] shrink-0" />
+                <span className="text-xs text-[var(--foreground-muted)]">
                   {t('search.semanticError')}
                 </span>
               </div>
@@ -495,12 +495,12 @@ export function CommandPalette({ open, onClose, projectKey }: CommandPaletteProp
         {rows.length === 0 && (
           showInitialLoading ? (
             <div className="flex justify-center py-8">
-              <Loader2 className="h-6 w-6 text-gray-400 animate-spin" />
+              <Loader2 className="h-6 w-6 text-[var(--foreground-muted)] animate-spin" />
             </div>
           ) : (
             <div className="flex flex-col items-center py-8 gap-2">
-              <SearchX className="h-8 w-8 text-gray-300 dark:text-gray-600" />
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <SearchX className="h-8 w-8 text-[var(--foreground-secondary)]" />
+              <p className="text-sm text-[var(--foreground-secondary)]">
                 {t('search.noResults')}
               </p>
             </div>
@@ -509,7 +509,7 @@ export function CommandPalette({ open, onClose, projectKey }: CommandPaletteProp
 
         {/* One character in: navigation already answers, entity search doesn't. */}
         {belowEntityFloor && (
-          <p className="px-3 py-2 text-xs text-gray-400 dark:text-gray-500">
+          <p className="px-3 py-2 text-xs text-[var(--foreground-muted)]">
             {t('search.hint')}
           </p>
         )}
@@ -517,24 +517,24 @@ export function CommandPalette({ open, onClose, projectKey }: CommandPaletteProp
         {ftsCount >= limit && (
           <button
             onClick={() => setLimit((prev) => prev + 20)}
-            className="w-full text-center py-2 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+            className="w-full text-center py-2 text-sm text-[var(--primary)] hover:bg-[var(--surface-hover)] rounded-md"
           >
             {t('search.showMore')}
           </button>
         )}
       </div>
 
-      <div className="border-t border-gray-200 dark:border-gray-600 pt-2 mt-1 hidden [@media(hover:hover)_and_(pointer:fine)]:flex items-center justify-between">
-        <div className="flex items-center gap-2 text-xs text-gray-400">
-          <kbd className="inline-flex items-center justify-center min-w-[1.25rem] px-1 py-0.5 font-mono text-[10px] text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded">
+      <div className="border-t border-[var(--border)] pt-2 mt-1 hidden [@media(hover:hover)_and_(pointer:fine)]:flex items-center justify-between">
+        <div className="flex items-center gap-2 text-xs text-[var(--foreground-muted)]">
+          <kbd className="inline-flex items-center justify-center min-w-[1.25rem] px-1 py-0.5 font-mono text-[10px] text-[var(--foreground-secondary)] bg-[var(--surface-secondary)] border border-[var(--border)] rounded">
             ↑↓
           </kbd>
           <span>{t('search.navigate')}</span>
-          <kbd className="inline-flex items-center justify-center min-w-[1.25rem] px-1 py-0.5 font-mono text-[10px] text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded">
+          <kbd className="inline-flex items-center justify-center min-w-[1.25rem] px-1 py-0.5 font-mono text-[10px] text-[var(--foreground-secondary)] bg-[var(--surface-secondary)] border border-[var(--border)] rounded">
             ↵
           </kbd>
           <span>{t('search.open')}</span>
-          <kbd className="inline-flex items-center justify-center min-w-[1.25rem] px-1 py-0.5 font-mono text-[10px] text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded">
+          <kbd className="inline-flex items-center justify-center min-w-[1.25rem] px-1 py-0.5 font-mono text-[10px] text-[var(--foreground-secondary)] bg-[var(--surface-secondary)] border border-[var(--border)] rounded">
             esc
           </kbd>
           <span>{t('search.dismiss')}</span>

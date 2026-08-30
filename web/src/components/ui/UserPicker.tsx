@@ -47,27 +47,27 @@ export function UserPicker({ members, value, onChange, placeholder, disabled }: 
       {/* Display / trigger */}
       <button
         type="button"
-        className={`block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-left shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+        className={`block w-full rounded-md border border-[var(--border)] px-3 py-2 text-sm text-left shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--focus-ring)] bg-[var(--surface)] ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
         onClick={() => { if (disabled) return; setOpen(!open); setTimeout(() => inputRef.current?.focus(), 0) }}
         disabled={disabled}
       >
         {selected ? (
-          <span className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
+          <span className="flex items-center gap-2 text-[var(--foreground)]">
             <Avatar name={selected.display_name} avatarUrl={selected.avatar_url} size="xs" />
             {selected.display_name}
           </span>
         ) : (
-          <span className="text-gray-400 dark:text-gray-500">{value ? t('userPicker.unknownUser') : t('userPicker.unassigned')}</span>
+          <span className="text-[var(--foreground-muted)]">{value ? t('userPicker.unknownUser') : t('userPicker.unassigned')}</span>
         )}
       </button>
 
       {/* Dropdown */}
       {open && (
-        <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg">
+        <div className="absolute z-20 mt-1 w-full bg-[var(--surface)] border border-[var(--border)] rounded-md shadow-[var(--shadow-md)]">
           <div className="p-2">
             <input
               ref={inputRef}
-              className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="block w-full rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)]"
               placeholder={placeholder ?? t('userPicker.searchMembers')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -78,8 +78,8 @@ export function UserPicker({ members, value, onChange, placeholder, disabled }: 
             <li>
               <button
                 type="button"
-                className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 ${
-                  !value ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' : 'text-gray-500 dark:text-gray-400 italic'
+                className={`w-full text-left px-3 py-2 text-sm hover:bg-[var(--surface-hover)] ${
+                  !value ? 'bg-[var(--primary-muted)] text-[var(--primary)]' : 'text-[var(--foreground-secondary)] italic'
                 }`}
                 onClick={() => { onChange(null); setOpen(false); setSearch('') }}
               >
@@ -90,8 +90,8 @@ export function UserPicker({ members, value, onChange, placeholder, disabled }: 
               <li key={m.user_id}>
                 <button
                   type="button"
-                  className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 ${
-                    m.user_id === value ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' : 'text-gray-900 dark:text-gray-100'
+                  className={`w-full text-left px-3 py-2 text-sm hover:bg-[var(--surface-hover)] ${
+                    m.user_id === value ? 'bg-[var(--primary-muted)] text-[var(--primary)]' : 'text-[var(--foreground)]'
                   }`}
                   onClick={() => { onChange(m.user_id); setOpen(false); setSearch('') }}
                 >
@@ -99,14 +99,14 @@ export function UserPicker({ members, value, onChange, placeholder, disabled }: 
                     <Avatar name={m.display_name} avatarUrl={m.avatar_url} size="xs" />
                     <div>
                       <div className="font-medium">{m.display_name}</div>
-                      <div className="text-xs text-gray-400">{m.email}</div>
+                      <div className="text-xs text-[var(--foreground-muted)]">{m.email}</div>
                     </div>
                   </div>
                 </button>
               </li>
             ))}
             {filtered.length === 0 && (
-              <li className="px-3 py-2 text-sm text-gray-400 dark:text-gray-500">{t('userPicker.noMembersFound')}</li>
+              <li className="px-3 py-2 text-sm text-[var(--foreground-muted)]">{t('userPicker.noMembersFound')}</li>
             )}
           </ul>
         </div>
