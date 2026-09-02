@@ -18,7 +18,7 @@
 
   "email.status_change.subject": "[{{projectKey}}] #{{itemNumber}} 상태가 {{newStatus}}(으)로 변경됨: {{title}}",
   "email.status_change.intro": "<strong>{{actorName}}</strong>님이 할당된 작업 항목의 상태를 변경했습니다:",
-  "email.status_change.status": "상태: <strong>{{oldStatus}}</strong> \u2192 <strong>{{newStatus}}</strong>",
+  "email.status_change.status": "상태: <strong>{{oldStatus}}</strong> → <strong>{{newStatus}}</strong>",
   "email.status_change.cta": "작업 항목 보기",
   "email.status_change.footer": "할당된 항목의 상태 변경 알림이 활성화되어 있어 이 이메일을 받았습니다. Taskwondo 설정에서 알림 기본 설정을 변경할 수 있습니다.",
 
@@ -35,5 +35,53 @@
   "email.invite.subject": "프로젝트 {{projectName}}에 초대되었습니다",
   "email.invite.intro": "<strong>{{inviterName}}</strong>님이 프로젝트 <strong>{{projectName}}</strong>에 <strong>{{role}}</strong>(으)로 참여하도록 초대했습니다.",
   "email.invite.cta": "초대 수락",
-  "email.invite.footer": "이 이메일은 누군가가 Taskwondo 프로젝트에 초대하여 발송되었습니다. 이 초대를 인식하지 못하시면 이 이메일을 무시하셔도 됩니다."
+  "email.invite.footer": "이 이메일은 누군가가 Taskwondo 프로젝트에 초대하여 발송되었습니다. 이 초대를 인식하지 못하시면 이 이메일을 무시하셔도 됩니다.",
+
+  "email.namespace_invite.subject": "{{namespaceName}}(으)로 초대되었습니다",
+  "email.namespace_invite.intro": "<strong>{{inviterName}}</strong>님이 워크스페이스 <strong>{{namespaceName}}</strong>에 <strong>{{role}}</strong>(으)로 참가하도록 초대했습니다.",
+  "email.namespace_invite.cta": "초대 수락",
+  "email.namespace_invite.footer": "Taskwondo 워크스페이스 초대가 도착하여 이 메일을 보내드립니다. 인지할 수 없는 초대라면 이 메일을 무시하셔도 안전합니다.",
+
+  "email.sla_breach.subject": "[{{projectKey}}] SLA 경고: #{{itemNumber}} — \"{{title}}\" (레벨 {{level}})",
+  "email.sla_breach.intro": "워크 항목이 SLA 목표에 도달하거나 초과했습니다:",
+  "email.sla_breach.sla_status": "SLA: 목표 시간의 <strong>{{percentage}}%</strong> 사용",
+  "email.sla_breach.elapsed": "경과 시간: <strong>{{target}}</strong> 중 <strong>{{elapsed}}</strong>",
+  "email.sla_breach.level": "에스컬레이션 레벨: <strong>{{level}}</strong>",
+  "email.sla_breach.status": "상태: <strong>{{statusName}}</strong>",
+  "email.sla_breach.cta": "워크 항목 보기",
+  "email.sla_breach.footer": "이 프로젝트의 에스컬레이션 목록에 포함되어 있어 이 메일을 받았습니다. Taskwondo 설정에서 알림 환경을 변경할 수 있습니다.",
+
+  "email.oncall.incoming.subject": "[{{projectKey}}] 이제 {{teamName}} 온콜입니다",
+  "email.oncall.outgoing.subject": "[{{projectKey}}] {{teamName}} 온콜 교대가 종료되었습니다",
+
+  "email.oncall.override.created.subject": "[{{projectKey}}] {{teamName}} 온콜 대리 교대가 배정되었습니다",
+  "email.oncall.override.covered.subject": "[{{projectKey}}] {{teamName}} 온콜 교대가 대리되었습니다",
+  "email.oncall.override.cancelled.subject": "[{{projectKey}}] {{teamName}} 온콜 대리 교대가 취소되었습니다",
+
+  "email.oncall.cta": "온콜 일정 보기",
+  "email.oncall.rotation.footer": "Taskwondo의 자동 온콜 로테이션 알림입니다.",
+  "email.oncall.override.footer": "Taskwondo의 자동 온콜 대리 알림입니다.",
+
+  "email.oncall.incoming.intro": "프로젝트 {{projectBadge}} <strong>{{projectName}}</strong>의 <strong>{{teamName}}</strong> 온콜이 시작되었습니다.",
+  "email.oncall.incoming.note": "교대 중 접수되는 문제에 대응할 수 있는지 확인해 주세요.",
+  "email.oncall.outgoing.intro": "프로젝트 {{projectBadge}} <strong>{{projectName}}</strong>의 <strong>{{teamName}}</strong> 온콜 교대가 종료되었습니다.",
+  "email.oncall.outgoing.note": "교대 중 수고해 주셔서 감사합니다.",
+  "email.oncall.override.created.intro": "프로젝트 {{projectBadge}} <strong>{{projectName}}</strong>의 <strong>{{teamName}}</strong> 온콜 대리 교대가 배정되었습니다.",
+  "email.oncall.override.created.period": "대리 기간: <strong>{{startAt}}</strong> ~ <strong>{{endAt}}</strong>",
+  "email.oncall.override.created.note": "해당 기간에 접수되는 문제에 대응할 수 있는지 확인해 주세요.",
+  "email.oncall.override.covered.intro": "프로젝트 {{projectBadge}} <strong>{{projectName}}</strong>의 <strong>{{teamName}}</strong> 온콜 교대를 <strong>{{coveringUser}}</strong> 님이 대리했습니다.",
+  "email.oncall.override.covered.period": "대리 기간: <strong>{{startAt}}</strong> ~ <strong>{{endAt}}</strong>",
+  "email.oncall.override.cancelled.intro": "프로젝트 {{projectBadge}} <strong>{{projectName}}</strong>의 <strong>{{teamName}}</strong> 온콜 대리 교대가 취소되었습니다.",
+  "email.oncall.override.cancelled.period": "예상됐던 대리 기간: <strong>{{startAt}}</strong> ~ <strong>{{endAt}}</strong>",
+  "email.oncall.override.cancelled.note": "해당 기간에는 일반 온콜 로테이션 일정이 적용됩니다.",
+
+  "email.greeting": "{{name}}님, 안녕하세요.",
+  "email.verify.subject": "이메일 인증",
+  "email.verify.intro": "아래 버튼을 클릭하여 이메일 주소를 인증하고 비밀번호를 설정하세요:",
+  "email.verify.cta": "이메일 인증",
+  "email.verify.note": "이 링크는 24시간 후 만료됩니다. 요청한 적이 없다면 이 메일을 무시하셔도 안전합니다.",
+  "email.reset.subject": "비밀번호 재설정",
+  "email.reset.intro": "비밀번호 재설정 요청을 받았습니다. 아래 버튼을 클릭하여 새 비밀번호를 설정하세요:",
+  "email.reset.cta": "비밀번호 재설정",
+  "email.reset.note": "이 링크는 1시간 후 만료됩니다. 요청한 적이 없다면 이 메일을 무시하셔도 안전합니다."
 }

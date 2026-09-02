@@ -18,7 +18,7 @@
 
   "email.status_change.subject": "[{{projectKey}}] #{{itemNumber}} estado cambiado a {{newStatus}}: {{title}}",
   "email.status_change.intro": "<strong>{{actorName}}</strong> cambió el estado de un elemento de trabajo asignado a ti:",
-  "email.status_change.status": "Estado: <strong>{{oldStatus}}</strong> \u2192 <strong>{{newStatus}}</strong>",
+  "email.status_change.status": "Estado: <strong>{{oldStatus}}</strong> → <strong>{{newStatus}}</strong>",
   "email.status_change.cta": "Ver Elemento de Trabajo",
   "email.status_change.footer": "Recibiste este correo porque tienes las notificaciones de cambio de estado activadas para elementos asignados. Puedes cambiar tus preferencias de notificación en la configuración de Taskwondo.",
 
@@ -35,5 +35,53 @@
   "email.invite.subject": "Has sido invitado al proyecto {{projectName}}",
   "email.invite.intro": "<strong>{{inviterName}}</strong> te invitó a unirte al proyecto <strong>{{projectName}}</strong> como <strong>{{role}}</strong>.",
   "email.invite.cta": "Aceptar invitación",
-  "email.invite.footer": "Recibiste este correo porque alguien te invitó a un proyecto en Taskwondo. Si no reconoces esta invitación, puedes ignorar este correo."
+  "email.invite.footer": "Recibiste este correo porque alguien te invitó a un proyecto en Taskwondo. Si no reconoces esta invitación, puedes ignorar este correo.",
+
+  "email.namespace_invite.subject": "Has sido invitado a {{namespaceName}}",
+  "email.namespace_invite.intro": "<strong>{{inviterName}}</strong> te invitó a unirte al workspace <strong>{{namespaceName}}</strong> como <strong>{{role}}</strong>.",
+  "email.namespace_invite.cta": "Aceptar invitación",
+  "email.namespace_invite.footer": "Recibiste este correo porque alguien te invitó a un workspace de Taskwondo. Si no reconoces esta invitación, puedes ignorar este correo sin problema.",
+
+  "email.sla_breach.subject": "[{{projectKey}}] Aviso de SLA: #{{itemNumber}} — \"{{title}}\" (Nivel {{level}})",
+  "email.sla_breach.intro": "Un elemento de trabajo está por alcanzar o ha superado su objetivo de SLA:",
+  "email.sla_breach.sla_status": "SLA: se usó el <strong>{{percentage}}%</strong> del tiempo objetivo",
+  "email.sla_breach.elapsed": "Tiempo transcurrido: <strong>{{elapsed}}</strong> de <strong>{{target}}</strong>",
+  "email.sla_breach.level": "Nivel de escalamiento: <strong>{{level}}</strong>",
+  "email.sla_breach.status": "Estado: <strong>{{statusName}}</strong>",
+  "email.sla_breach.cta": "Ver elemento de trabajo",
+  "email.sla_breach.footer": "Recibiste este correo porque estás en la lista de escalamiento de este proyecto. Puedes cambiar tus preferencias de notificación en la configuración de Taskwondo.",
+
+  "email.oncall.incoming.subject": "[{{projectKey}}] Ahora estás de guardia en {{teamName}}",
+  "email.oncall.outgoing.subject": "[{{projectKey}}] Tu turno de guardia en {{teamName}} ha terminado",
+
+  "email.oncall.override.created.subject": "[{{projectKey}}] Sustitución de guardia asignada para {{teamName}}",
+  "email.oncall.override.covered.subject": "[{{projectKey}}] Tu turno de guardia en {{teamName}} ha sido cubierto",
+  "email.oncall.override.cancelled.subject": "[{{projectKey}}] Sustitución de guardia cancelada para {{teamName}}",
+
+  "email.oncall.cta": "Ver calendario de guardias",
+  "email.oncall.rotation.footer": "Esta es una notificación automática de rotación de guardias de Taskwondo.",
+  "email.oncall.override.footer": "Esta es una notificación automática de sustitución de guardias de Taskwondo.",
+
+  "email.oncall.incoming.intro": "Ahora estás de guardia por <strong>{{teamName}}</strong> en el proyecto {{projectBadge}} <strong>{{projectName}}</strong>.",
+  "email.oncall.incoming.note": "Asegúrate de estar disponible para responder a cualquier incidencia durante tu turno.",
+  "email.oncall.outgoing.intro": "Tu turno de guardia por <strong>{{teamName}}</strong> en el proyecto {{projectBadge}} <strong>{{projectName}}</strong> ha terminado.",
+  "email.oncall.outgoing.note": "Gracias por tu servicio durante tu turno.",
+  "email.oncall.override.created.intro": "Se te ha asignado una sustitución de guardia por <strong>{{teamName}}</strong> en el proyecto {{projectBadge}} <strong>{{projectName}}</strong>.",
+  "email.oncall.override.created.period": "Tu período de sustitución: del <strong>{{startAt}}</strong> al <strong>{{endAt}}</strong>.",
+  "email.oncall.override.created.note": "Asegúrate de estar disponible para responder a cualquier incidencia durante este período.",
+  "email.oncall.override.covered.intro": "Tu turno de guardia por <strong>{{teamName}}</strong> en el proyecto {{projectBadge}} <strong>{{projectName}}</strong> ha sido cubierto por <strong>{{coveringUser}}</strong>.",
+  "email.oncall.override.covered.period": "Período de sustitución: del <strong>{{startAt}}</strong> al <strong>{{endAt}}</strong>.",
+  "email.oncall.override.cancelled.intro": "Se ha cancelado una sustitución de guardia por <strong>{{teamName}}</strong> en el proyecto {{projectBadge}} <strong>{{projectName}}</strong>.",
+  "email.oncall.override.cancelled.period": "La sustitución estaba programada para: <strong>{{startAt}}</strong> a <strong>{{endAt}}</strong>.",
+  "email.oncall.override.cancelled.note": "La rotación de guardias habitual se aplicará a este período.",
+
+  "email.greeting": "Hola, {{name}}:",
+  "email.verify.subject": "Verifica tu correo electrónico",
+  "email.verify.intro": "Haz clic en el botón de abajo para verificar tu dirección de correo y establecer tu contraseña:",
+  "email.verify.cta": "Verificar correo",
+  "email.verify.note": "Este enlace caduca en 24 horas. Si no solicitaste esto, puedes ignorar este correo sin problema.",
+  "email.reset.subject": "Restablecer tu contraseña",
+  "email.reset.intro": "Recibimos una solicitud para restablecer tu contraseña. Haz clic en el botón de abajo para elegir una nueva:",
+  "email.reset.cta": "Restablecer contraseña",
+  "email.reset.note": "Este enlace caduca en 1 hora. Si no solicitaste esto, puedes ignorar este correo sin problema."
 }

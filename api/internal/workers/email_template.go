@@ -12,6 +12,9 @@ import (
 
 // getUserLanguage returns the user's preferred language, defaulting to "en".
 func getUserLanguage(ctx context.Context, settings userSettingRepository, userID uuid.UUID) string {
+	if settings == nil {
+		return "en"
+	}
 	setting, err := settings.Get(ctx, userID, nil, "language")
 	if err != nil {
 		return "en"

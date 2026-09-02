@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
+	"github.com/marcoshack/taskwondo/internal/i18n"
 	"github.com/marcoshack/taskwondo/internal/model"
 	"github.com/marcoshack/taskwondo/internal/service"
 )
@@ -799,7 +800,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.auth.RequestRegistration(r.Context(), req.Email, req.DisplayName, req.InviteCode); err != nil {
+	if err := h.auth.RequestRegistration(r.Context(), req.Email, req.DisplayName, req.InviteCode, i18n.Negotiate(r.Header.Get("Accept-Language"))); err != nil {
 		if errors.Is(err, model.ErrForbidden) {
 			writeError(w, http.StatusForbidden, CodeForbidden, "email registration is disabled")
 			return
@@ -901,7 +902,7 @@ func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.auth.RequestPasswordReset(r.Context(), req.Email); err != nil {
+	if err := h.auth.RequestPasswordReset(r.Context(), req.Email, i18n.Negotiate(r.Header.Get("Accept-Language"))); err != nil {
 		if errors.Is(err, model.ErrForbidden) {
 			writeError(w, http.StatusForbidden, CodeForbidden, "password reset is not available")
 			return

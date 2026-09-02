@@ -1,6 +1,86 @@
 package i18n
 
-import "testing"
+import (
+	"regexp"
+	"sort"
+	"strings"
+	"testing"
+)
+
+var placeholderRe = regexp.MustCompile(`\{\{(\w+)\}\}`)
+
+func TestTranslations_KeyParity(t *testing.T) {
+	en := translations["en"]
+	if len(en) == 0 {
+		t.Fatal("no English translations loaded")
+	}
+	for lang, m := range translations {
+		if len(m) != len(en) {
+			t.Errorf("%s: has %d keys, en has %d", lang, len(m), len(en))
+		}
+		for key := range en {
+			if _, ok := m[key]; !ok {
+				t.Errorf("%s: missing key %q", lang, key)
+			}
+		}
+		for key := range m {
+			if _, ok := en[key]; !ok {
+				t.Errorf("%s: extra key %q", lang, key)
+			}
+		}
+	}
+}
+
+func TestTranslations_PlaceholderConsistency(t *testing.T) {
+	for key, enVal := range translations["en"] {
+		want := placeholders(enVal)
+		for lang, m := range translations {
+			if lang == "en" {
+				continue
+			}
+			got := placeholders(m[key])
+			if strings.Join(got, ",") != strings.Join(want, ",") {
+				t.Errorf("%s: key %q has placeholders %v, en has %v", lang, key, got, want)
+			}
+		}
+	}
+}
+
+func placeholders(s string) []string {
+	var out []string
+	seen := map[string]bool{}
+	for _, m := range placeholderRe.FindAllStringSubmatch(s, -1) {
+		if !seen[m[1]] {
+			seen[m[1]] = true
+			out = append(out, m[1])
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+func TestNegotiate(t *testing.T) {
+	cases := map[string]string{
+		"zh-CN,zh;q=0.9,en;q=0.8":    "zh",
+		"en-US,en;q=0.9":             "en",
+		"pt-BR":                      "pt",
+		"fr":                         "fr",
+		"de-DE,de;q=0.9":             "de",
+		"nl,es;q=0.8":                "es",
+		"sw":                         "en",
+		"":                           "en",
+		"ZH":                         "zh",
+		"ko-KR,ko;q=0.9":             "ko",
+		"ar,en;q=0.9":                "ar",
+		"ja":                         "ja",
+		"en-GB,en;q=0.9,zh-CN;q=0.8": "en",
+	}
+	for header, want := range cases {
+		if got := Negotiate(header); got != want {
+			t.Errorf("Negotiate(%q) = %q, want %q", header, got, want)
+		}
+	}
+}
 
 func TestT_English(t *testing.T) {
 	got := T("en", "email.assignment.cta")

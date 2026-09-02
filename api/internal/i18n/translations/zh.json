@@ -18,7 +18,7 @@
 
   "email.status_change.subject": "[{{projectKey}}] #{{itemNumber}} 状态已更改为 {{newStatus}}: {{title}}",
   "email.status_change.intro": "<strong>{{actorName}}</strong> 更改了分配给您的工作项的状态:",
-  "email.status_change.status": "状态: <strong>{{oldStatus}}</strong> \u2192 <strong>{{newStatus}}</strong>",
+  "email.status_change.status": "状态: <strong>{{oldStatus}}</strong> → <strong>{{newStatus}}</strong>",
   "email.status_change.cta": "查看工作项",
   "email.status_change.footer": "您收到此邮件是因为您已为分配的项目启用了状态更改通知。您可以在 Taskwondo 设置中更改通知偏好。",
 
@@ -35,5 +35,53 @@
   "email.invite.subject": "您已被邀请加入项目 {{projectName}}",
   "email.invite.intro": "<strong>{{inviterName}}</strong> 邀请您以 <strong>{{role}}</strong> 身份加入项目 <strong>{{projectName}}</strong>。",
   "email.invite.cta": "接受邀请",
-  "email.invite.footer": "您收到此邮件是因为有人邀请您加入 Taskwondo 项目。如果您不认识此邀请，可以安全地忽略此邮件。"
+  "email.invite.footer": "您收到此邮件是因为有人邀请您加入 Taskwondo 项目。如果您不认识此邀请，可以安全地忽略此邮件。",
+
+  "email.namespace_invite.subject": "您已被邀请加入 {{namespaceName}}",
+  "email.namespace_invite.intro": "<strong>{{inviterName}}</strong> 邀请您以 <strong>{{role}}</strong> 身份加入工作区 <strong>{{namespaceName}}</strong>。",
+  "email.namespace_invite.cta": "接受邀请",
+  "email.namespace_invite.footer": "您收到此邮件是因为有人邀请您加入 Taskwondo 工作区。如果您不认识此邀请,可以安全地忽略此邮件。",
+
+  "email.sla_breach.subject": "[{{projectKey}}] SLA 警告: #{{itemNumber}} — \"{{title}}\" (级别 {{level}})",
+  "email.sla_breach.intro": "一个工作项即将达到或已超过其 SLA 目标:",
+  "email.sla_breach.sla_status": "SLA: 已使用目标时间的 <strong>{{percentage}}%</strong>",
+  "email.sla_breach.elapsed": "已用时间: <strong>{{elapsed}}</strong> / <strong>{{target}}</strong>",
+  "email.sla_breach.level": "升级级别: <strong>{{level}}</strong>",
+  "email.sla_breach.status": "状态: <strong>{{statusName}}</strong>",
+  "email.sla_breach.cta": "查看工作项",
+  "email.sla_breach.footer": "您收到此邮件是因为您在此项目的升级名单中。您可以在 Taskwondo 设置中更改通知偏好。",
+
+  "email.oncall.incoming.subject": "[{{projectKey}}] 您现在开始为 {{teamName}} 值班",
+  "email.oncall.outgoing.subject": "[{{projectKey}}] 您为 {{teamName}} 的值班已结束",
+
+  "email.oncall.override.created.subject": "[{{projectKey}}] {{teamName}} 已指派值班替补",
+  "email.oncall.override.covered.subject": "[{{projectKey}}] 您为 {{teamName}} 的值班已被接替",
+  "email.oncall.override.cancelled.subject": "[{{projectKey}}] {{teamName}} 的值班替补已取消",
+
+  "email.oncall.cta": "查看值班排班",
+  "email.oncall.rotation.footer": "这是来自 Taskwondo 的自动值班轮转通知。",
+  "email.oncall.override.footer": "这是来自 Taskwondo 的自动值班替补通知。",
+
+  "email.oncall.incoming.intro": "您现在是项目 {{projectBadge}} <strong>{{projectName}}</strong> 中团队 <strong>{{teamName}}</strong> 的值班人员。",
+  "email.oncall.incoming.note": "请确保您在值班期间能够响应任何紧急问题。",
+  "email.oncall.outgoing.intro": "您在项目 {{projectBadge}} <strong>{{projectName}}</strong> 中团队 <strong>{{teamName}}</strong> 的值班已结束。",
+  "email.oncall.outgoing.note": "感谢您在值班期间的付出。",
+  "email.oncall.override.created.intro": "您被指派了 <strong>{{teamName}}</strong> 的值班替补,项目 {{projectBadge}} <strong>{{projectName}}</strong>。",
+  "email.oncall.override.created.period": "您的替补时段: <strong>{{startAt}}</strong> 至 <strong>{{endAt}}</strong>。",
+  "email.oncall.override.created.note": "请确保您在该时段内能够响应任何紧急问题。",
+  "email.oncall.override.covered.intro": "您在项目 {{projectBadge}} <strong>{{projectName}}</strong> 中团队 <strong>{{teamName}}</strong> 的值班已由 <strong>{{coveringUser}}</strong> 接替。",
+  "email.oncall.override.covered.period": "替补时段: <strong>{{startAt}}</strong> 至 <strong>{{endAt}}</strong>。",
+  "email.oncall.override.cancelled.intro": "项目 {{projectBadge}} <strong>{{projectName}}</strong> 中团队 <strong>{{teamName}}</strong> 的一条值班替补已被取消。",
+  "email.oncall.override.cancelled.period": "原替补时段: <strong>{{startAt}}</strong> 至 <strong>{{endAt}}</strong>。",
+  "email.oncall.override.cancelled.note": "该时段将按正常值班轮转计划执行。",
+
+  "email.greeting": "您好 {{name}}:",
+  "email.verify.subject": "验证您的邮箱",
+  "email.verify.intro": "点击下方按钮验证您的邮箱地址并设置密码:",
+  "email.verify.cta": "验证邮箱",
+  "email.verify.note": "此链接 24 小时内有效。如果您没有提出此请求,可以安全地忽略此邮件。",
+  "email.reset.subject": "重置您的密码",
+  "email.reset.intro": "我们收到了重置您密码的请求。点击下方按钮设置新密码:",
+  "email.reset.cta": "重置密码",
+  "email.reset.note": "此链接 1 小时内有效。如果您没有提出此请求,可以安全地忽略此邮件。"
 }
