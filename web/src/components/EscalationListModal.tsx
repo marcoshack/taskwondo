@@ -223,7 +223,7 @@ export function EscalationListModal({ open, onClose, onSave, projectKey, editing
       className="!max-w-2xl"
     >
       <div className="space-y-5">
-        {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+        {error && <p className="text-sm text-[var(--danger)]">{error}</p>}
 
         {/* Name */}
         <Input
@@ -236,7 +236,7 @@ export function EscalationListModal({ open, onClose, onSave, projectKey, editing
         {/* Levels */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label className="block text-sm font-medium text-[var(--foreground)]">
               {t('escalation.levels')}
             </label>
             {levels.length > 0 && (
@@ -248,8 +248,8 @@ export function EscalationListModal({ open, onClose, onSave, projectKey, editing
           </div>
 
           {levels.length === 0 ? (
-            <div className="border border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center">
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">{t('escalation.noLevels')}</p>
+            <div className="border border-dashed border-[var(--border)] rounded-lg p-6 text-center">
+              <p className="text-sm text-[var(--foreground-secondary)] mb-3">{t('escalation.noLevels')}</p>
               <Button variant="secondary" size="sm" onClick={addLevel}>
                 <Plus className="h-3.5 w-3.5 mr-1" />
                 {t('escalation.addLevel')}
@@ -260,25 +260,25 @@ export function EscalationListModal({ open, onClose, onSave, projectKey, editing
               {levels.map((level, index) => (
                 <div
                   key={index}
-                  className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3"
+                  className="border border-[var(--border)] rounded-lg p-4 space-y-3"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 flex-1">
                       <div>
-                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                        <label className="block text-xs font-medium text-[var(--foreground-secondary)] mb-1">
                           {t('escalation.threshold')}
                         </label>
                         <div className="flex items-center gap-1.5">
                           <input
                             type="number"
                             min="1"
-                            className="block w-24 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            className="block w-24 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--primary)] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             value={level.threshold_pct}
                             onChange={(e) => updateLevelThreshold(index, e.target.value)}
                             onBlur={sortLevelsByThreshold}
                             placeholder={t('escalation.thresholdPlaceholder')}
                           />
-                          <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0">
+                          <span className="text-xs text-[var(--foreground-secondary)] shrink-0">
                             {t('escalation.thresholdHelp')}
                           </span>
                         </div>
@@ -286,7 +286,7 @@ export function EscalationListModal({ open, onClose, onSave, projectKey, editing
                     </div>
                     <button
                       type="button"
-                      className="text-gray-400 hover:text-red-500 p-1"
+                      className="text-[var(--foreground-muted)] hover:text-[var(--danger)] p-1"
                       onClick={() => removeLevel(index)}
                       title={t('escalation.removeLevel')}
                     >
@@ -296,7 +296,7 @@ export function EscalationListModal({ open, onClose, onSave, projectKey, editing
 
                   {/* Users and Teams */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                    <label className="block text-xs font-medium text-[var(--foreground-secondary)] mb-1">
                       {t('escalation.notifyUsersAndTeams')}
                     </label>
 
@@ -313,7 +313,7 @@ export function EscalationListModal({ open, onClose, onSave, projectKey, editing
                             <span>{team.name}</span>
                             <button
                               type="button"
-                              className="ml-0.5 hover:text-red-500"
+                              className="ml-0.5 hover:text-[var(--danger)]"
                               onClick={() => removeTeamFromLevel(index, team.id)}
                             >
                               <X className="h-3 w-3" />
@@ -324,13 +324,13 @@ export function EscalationListModal({ open, onClose, onSave, projectKey, editing
                         {level.users.map((user) => (
                           <span
                             key={`user-${user.id}`}
-                            className="inline-flex items-center gap-1 rounded-full bg-indigo-50 dark:bg-indigo-900/30 px-2.5 py-1 text-xs font-medium text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700"
+                            className="inline-flex items-center gap-1 rounded-full bg-[var(--primary-muted)] px-2.5 py-1 text-xs font-medium text-[var(--primary)] border border-[var(--primary-border)] dark:border-[var(--primary-border)]"
                           >
                             <Avatar name={user.display_name} avatarUrl={user.avatar_url} size="xs" />
                             <span>{user.display_name}</span>
                             <button
                               type="button"
-                              className="ml-0.5 hover:text-red-500"
+                              className="ml-0.5 hover:text-[var(--danger)]"
                               onClick={() => removeUserFromLevel(index, user.id)}
                             >
                               <X className="h-3 w-3" />
@@ -357,7 +357,7 @@ export function EscalationListModal({ open, onClose, onSave, projectKey, editing
         </div>
 
         {/* Actions */}
-        <div className="flex justify-end gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex justify-end gap-2 pt-2 border-t border-[var(--border)]">
           <Button variant="secondary" onClick={onClose}>
             {t('common.cancel')}
           </Button>
@@ -448,7 +448,7 @@ function MemberTeamPicker({
     <div ref={containerRef} className="relative">
       <input
         ref={inputRef}
-        className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+        className="block w-full rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--primary)]"
         placeholder={t('escalation.searchPlaceholder')}
         value={search}
         onChange={(e) => { setSearch(e.target.value); updatePosition(); setOpen(true) }}
@@ -459,11 +459,11 @@ function MemberTeamPicker({
         <div
           ref={dropdownRef}
           style={dropdownStyle}
-          className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg"
+          className="bg-[var(--surface)] border border-[var(--border)] rounded-md shadow-lg"
         >
           <ul className="max-h-48 overflow-auto">
             {!hasResults ? (
-              <li className="px-3 py-2 text-sm text-gray-400 dark:text-gray-500">
+              <li className="px-3 py-2 text-sm text-[var(--foreground-muted)]">
                 {t('projects.settings.noUsersFound')}
               </li>
             ) : (
@@ -471,14 +471,14 @@ function MemberTeamPicker({
                 {/* Teams section */}
                 {availableTeams.length > 0 && (
                   <>
-                    <li className="px-3 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-100 dark:bg-gray-700/50">
+                    <li className="px-3 py-1 text-xs font-semibold text-[var(--foreground-secondary)] uppercase tracking-wider bg-[var(--surface-secondary)]/50">
                       {t('escalation.teamsSection')}
                     </li>
                     {availableTeams.map((team) => (
                       <li key={`team-${team.id}`}>
                         <button
                           type="button"
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 flex items-center gap-2"
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-[var(--surface-hover)] text-[var(--foreground)] flex items-center gap-2"
                           onClick={() => handleSelectTeam(team)}
                         >
                           <span className="shrink-0 h-5 w-5 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
@@ -495,20 +495,20 @@ function MemberTeamPicker({
                 {/* Users section */}
                 {availableMembers.length > 0 && (
                   <>
-                    <li className="px-3 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-100 dark:bg-gray-700/50">
+                    <li className="px-3 py-1 text-xs font-semibold text-[var(--foreground-secondary)] uppercase tracking-wider bg-[var(--surface-secondary)]/50">
                       {t('escalation.usersSection')}
                     </li>
                     {availableMembers.map((member) => (
                       <li key={member.user_id}>
                         <button
                           type="button"
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 flex items-center gap-2"
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-[var(--surface-hover)] text-[var(--foreground)] flex items-center gap-2"
                           onClick={() => handleSelectMember(member)}
                         >
                           <span className="shrink-0"><Avatar name={member.display_name} avatarUrl={member.avatar_url} size="xs" /></span>
                           <div className="min-w-0">
                             <div className="font-medium truncate">{member.display_name}</div>
-                            <div className="text-xs text-gray-400 truncate">{member.email}</div>
+                            <div className="text-xs text-[var(--foreground-muted)] truncate">{member.email}</div>
                           </div>
                         </button>
                       </li>

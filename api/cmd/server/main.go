@@ -205,7 +205,7 @@ func main() {
 
 	// Seed default namespace and backfill existing projects
 	if err := namespaceService.SeedDefaultNamespace(ctx); err != nil {
-		log.Fatal().Err(err).Msg("failed to seed default namespace")
+		log.Warn().Err(err).Msg("failed to seed default namespace (will retry on next startup)")
 	}
 
 	// Seed default limit settings (max projects/namespaces per user)

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { unifiedSearch } from '@/api/search'
 import type { SearchResult } from '@/api/search'
+import { meetsSearchFloor } from '@/utils/searchRequest'
 
 interface UseSearchOptions {
   query: string
@@ -43,7 +44,7 @@ export function useSearch({ query, limit = 20, project }: UseSearchOptions): Use
   useEffect(() => {
     abortRef.current?.abort()
 
-    if (query.length < 2) {
+    if (!meetsSearchFloor(query)) {
       resetState()
       return
     }

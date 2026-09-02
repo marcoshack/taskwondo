@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useSystemSetting, useSetSystemSetting } from '@/hooks/useSystemSettings'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
-import { Spinner } from '@/components/ui/Spinner'
+import { LoadingState } from '@/components/ui/LoadingState'
 
 export function SystemGeneralPage() {
   const { t } = useTranslation()
@@ -37,26 +37,22 @@ export function SystemGeneralPage() {
   const brandDirty = brandName !== (savedBrandName ?? '')
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center py-12">
-        <Spinner />
-      </div>
-    )
+    return <LoadingState />
   }
 
   return (
     <div className="max-w-3xl space-y-6">
       <div className="mb-6">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+        <h2 className="text-xl font-semibold text-[var(--foreground)]">
           {t('admin.general.title')}
         </h2>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        <p className="mt-1 text-sm text-[var(--foreground-secondary)]">
           {t('admin.general.description')}
         </p>
       </div>
 
-      <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
+      <div className="rounded-lg border border-[var(--border)] p-6">
+        <h3 className="text-lg font-medium text-[var(--foreground)] mb-4">
           {t('admin.general.brand.title')}
         </h3>
 
@@ -70,7 +66,7 @@ export function SystemGeneralPage() {
             }}
             placeholder="Taskwondo"
           />
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-sm text-[var(--foreground-secondary)]">
             {t('admin.general.brand.nameHelp')}
           </p>
 

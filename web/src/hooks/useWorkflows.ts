@@ -70,11 +70,11 @@ export function useProjectWorkflow(projectKey: string, workItemType?: string, na
 
   // Build transitions map from workflow detail
   const transitionsMap = useMemo(() => {
-    if (!workflowQuery.data?.transitions) return undefined
+    const transitions = workflowQuery.data?.transitions
+    if (!transitions) return undefined
     const map: Record<string, WorkflowTransition[]> = {}
-    for (const t of workflowQuery.data.transitions) {
-      if (!map[t.from_status]) map[t.from_status] = []
-      map[t.from_status].push(t)
+    for (const t of transitions) {
+      (map[t.from_status] ??= []).push(t)
     }
     return map
   }, [workflowQuery.data?.transitions])

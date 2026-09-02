@@ -105,12 +105,16 @@ func sendMail(ctx context.Context, cfg *model.SMTPConfig, to, subject, htmlBody 
 		auth = smtp.PlainAuth("", cfg.Username, cfg.Password, cfg.SMTPHost)
 	}
 
+	if cfg.SkipCertVerify {
+		l.Warn().Msg("TLS certificate verification is disabled for SMTP (skip_cert_verify)")
+	}
+
 	var err error
 	switch cfg.Encryption {
 	case model.SMTPEncryptionTLS:
-		err = sendWithImplicitTLS(&l, addr, cfg.SMTPHost, auth, cfg.FromAddress, to, msg)
+		err = sendWithImplicitTLS(&l, addr, cfg.SMTPHost, cfg.SkipCertVerify, auth, cfg.FromAddress, to, msg)
 	case model.SMTPEncryptionSTARTTLS:
-		err = sendWithSTARTTLS(&l, addr, cfg.SMTPHost, auth, cfg.FromAddress, to, msg)
+		err = sendWithSTARTTLS(&l, addr, cfg.SMTPHost, cfg.SkipCertVerify, auth, cfg.FromAddress, to, msg)
 	case model.SMTPEncryptionNone:
 		// For plaintext SMTP, skip auth — Go's PlainAuth refuses to send
 		// credentials over unencrypted non-localhost connections.
@@ -182,7 +186,7 @@ func smtpSendEnvelope(l *zerolog.Logger, c *smtp.Client, auth smtp.Auth, from, t
 	return quitErr
 }
 
-func sendWithSTARTTLS(l *zerolog.Logger, addr, host string, auth smtp.Auth, from, to string, msg []byte) error {
+func sendWithSTARTTLS(l *zerolog.Logger, addr, host string, skipCertVerify bool, auth smtp.Auth, from, to string, msg []byte) error {
 	c, err := smtp.Dial(addr)
 	if err != nil {
 		return fmt.Errorf("connecting to SMTP server: %w", err)
@@ -190,7 +194,7 @@ func sendWithSTARTTLS(l *zerolog.Logger, addr, host string, auth smtp.Auth, from
 	defer c.Close()
 	l.Debug().Msg("smtp connected")
 
-	tlsConfig := &tls.Config{ServerName: host}
+	tlsConfig := buildTLSConfig(host, skipCertVerify)
 	if err := c.StartTLS(tlsConfig); err != nil {
 		return fmt.Errorf("STARTTLS: %w", err)
 	}
@@ -199,8 +203,8 @@ func sendWithSTARTTLS(l *zerolog.Logger, addr, host string, auth smtp.Auth, from
 	return smtpSendEnvelope(l, c, auth, from, to, msg)
 }
 
-func sendWithImplicitTLS(l *zerolog.Logger, addr, host string, auth smtp.Auth, from, to string, msg []byte) error {
-	tlsConfig := &tls.Config{ServerName: host}
+func sendWithImplicitTLS(l *zerolog.Logger, addr, host string, skipCertVerify bool, auth smtp.Auth, from, to string, msg []byte) error {
+	tlsConfig := buildTLSConfig(host, skipCertVerify)
 	conn, err := tls.Dial("tcp", addr, tlsConfig)
 	if err != nil {
 		return fmt.Errorf("TLS dial: %w", err)
@@ -215,4 +219,14 @@ func sendWithImplicitTLS(l *zerolog.Logger, addr, host string, auth smtp.Auth, f
 	defer c.Close()
 
 	return smtpSendEnvelope(l, c, auth, from, to, msg)
+}
+
+// buildTLSConfig returns the TLS settings for SMTP connections. When
+// skipCertVerify is set, certificate verification (including expiry checks)
+// is disabled so self-hosted servers with self-signed or expired certs work.
+func buildTLSConfig(host string, skipCertVerify bool) *tls.Config {
+	return &tls.Config{
+		ServerName:         host,
+		InsecureSkipVerify: skipCertVerify, //nolint:gosec // admin opt-in via smtp_config
+	}
 }

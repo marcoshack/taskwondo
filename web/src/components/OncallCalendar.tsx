@@ -264,7 +264,7 @@ export function OncallCalendar({ members, projectKey, teamId }: OncallCalendarPr
       </div>
 
       {/* Grid */}
-      <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+      <div className="border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden">
         {/* Day headers */}
         <div className="grid grid-cols-7 bg-gray-50 dark:bg-gray-800">
           {dayLabels.map((label) => (
@@ -280,7 +280,7 @@ export function OncallCalendar({ members, projectKey, teamId }: OncallCalendarPr
           const weekSlots = calendarSlots.slice(weekStart, weekStart + 7)
 
           return (
-            <div key={wi} className="border-t border-gray-200 dark:border-gray-700">
+            <div key={wi} className="border-t border-gray-200 dark:border-gray-600">
               {/* Day numbers */}
               <div className="grid grid-cols-7">
                 {weekSlots.map((slot, di) => {

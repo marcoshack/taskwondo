@@ -155,7 +155,7 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
           <Tooltip content={t('workitems.filters.save')}>
             <button
               onClick={onSave}
-              className="relative shrink-0 py-2.5 px-2.5 inline-flex items-center justify-center rounded-md border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+              className="relative shrink-0 py-2.5 px-2.5 inline-flex items-center justify-center rounded-md border border-[var(--border)] text-[var(--foreground-secondary)] hover:text-[var(--primary)] dark:hover:text-[var(--primary)] hover:bg-[var(--surface-hover)]"
               aria-label={t('workitems.filters.save')}
             >
               <Save className="h-4 w-4" />
@@ -169,7 +169,7 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
           <Tooltip content={t('workitems.filters.clearAll')}>
             <button
               onClick={onClearFilters}
-              className="shrink-0 py-2.5 px-2.5 inline-flex items-center justify-center rounded-md border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+              className="shrink-0 py-2.5 px-2.5 inline-flex items-center justify-center rounded-md border border-[var(--border)] text-[var(--foreground-secondary)] hover:text-[var(--primary)] dark:hover:text-[var(--primary)] hover:bg-[var(--surface-hover)]"
               aria-label={t('workitems.filters.clearAll')}
             >
               <Eraser className="h-4 w-4" />
@@ -193,7 +193,7 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
           {search && (
             <button
               onClick={() => onSearchChange('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-[var(--foreground-muted)] hover:text-[var(--foreground-secondary)] dark:hover:text-[var(--foreground-muted)]"
               aria-label={t('common.clear')}
             >
               <X className="h-4 w-4" />
@@ -209,12 +209,12 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
         {onSort && (
           <button
             onClick={() => setSortOpen(true)}
-            className="relative shrink-0 p-2.5 rounded-md border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="relative shrink-0 p-2.5 rounded-md border border-[var(--border)] text-[var(--foreground-secondary)] hover:bg-[var(--surface-hover)]"
             aria-label={t('workitems.sort.title')}
           >
             <ArrowUpDown className="h-5 w-5" />
             {!isDefaultSort && (
-              <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-600 text-[10px] font-bold text-white">
+              <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--primary)] text-[10px] font-bold text-white">
                 !
               </span>
             )}
@@ -222,12 +222,12 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
         )}
         <button
           onClick={() => setFiltersOpen(true)}
-          className="relative shrink-0 p-2.5 rounded-md border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+          className="relative shrink-0 p-2.5 rounded-md border border-[var(--border)] text-[var(--foreground-secondary)] hover:bg-[var(--surface-hover)]"
           aria-label={t('workitems.filters.title')}
         >
           <SlidersHorizontal className="h-5 w-5" />
           {activeFilterCount > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-600 text-[10px] font-bold text-white">
+            <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--primary)] text-[10px] font-bold text-white">
               {activeFilterCount}
             </span>
           )}
@@ -235,7 +235,7 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
         {onShowDatesChange && (
           <button
             onClick={() => setSettingsOpen(true)}
-            className="relative shrink-0 p-2.5 rounded-md border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="relative shrink-0 p-2.5 rounded-md border border-[var(--border)] text-[var(--foreground-secondary)] hover:bg-[var(--surface-hover)]"
             aria-label={t('workitems.settings.title')}
           >
             <Settings className="h-5 w-5" />
@@ -258,8 +258,8 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
                     onClick={() => onSort(opt.key)}
                     className={`flex-1 text-left px-3 py-2.5 rounded-md text-sm ${
                       isActive
-                        ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 font-medium'
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                        ? 'bg-[var(--primary-muted)] text-[var(--primary)]  dark:text-[var(--primary)] font-medium'
+                        : 'text-[var(--foreground)] hover:bg-[var(--surface-hover)]'
                     }`}
                   >
                     {opt.label}
@@ -271,8 +271,8 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
                           onClick={() => onOrderChange('asc')}
                           className={`px-3 py-2.5 rounded-l-md text-base font-medium border ${
                             order === 'asc'
-                              ? 'bg-indigo-100 text-indigo-700 border-indigo-300 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-700'
-                              : 'bg-white text-gray-500 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:bg-gray-700'
+                              ? 'bg-[var(--primary-muted)] text-[var(--primary)] border-[var(--primary-border)]  dark:text-[var(--primary)] dark:border-[var(--primary-border)]'
+                              : 'bg-white text-[var(--foreground-secondary)] border-[var(--border)] hover:bg-[var(--surface-secondary)] text-[var(--foreground-muted)] dark:border-[var(--border)] hover:bg-[var(--surface-hover)]'
                           }`}
                         >
                           {'\u2191'}
@@ -283,8 +283,8 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
                           onClick={() => onOrderChange('desc')}
                           className={`px-3 py-2.5 rounded-r-md text-base font-medium border-t border-r border-b ${
                             order === 'desc'
-                              ? 'bg-indigo-100 text-indigo-700 border-indigo-300 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-700'
-                              : 'bg-white text-gray-500 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:bg-gray-700'
+                              ? 'bg-[var(--primary-muted)] text-[var(--primary)] border-[var(--primary-border)]  dark:text-[var(--primary)] dark:border-[var(--primary-border)]'
+                              : 'bg-white text-[var(--foreground-secondary)] border-[var(--border)] hover:bg-[var(--surface-secondary)] text-[var(--foreground-muted)] dark:border-[var(--border)] hover:bg-[var(--surface-hover)]'
                           }`}
                         >
                           {'\u2193'}
@@ -303,14 +303,14 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
       {onShowDatesChange && (
         <Modal open={settingsOpen} onClose={() => setSettingsOpen(false)} title={t('workitems.settings.title')} position="top" containerClassName="!pt-[10.3rem]">
           <label className="flex items-center justify-between cursor-pointer">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('workitems.settings.showDates')}</span>
+            <span className="text-sm font-medium text-[var(--foreground)]">{t('workitems.settings.showDates')}</span>
             <button
               type="button"
               role="switch"
               aria-checked={showDates}
               onClick={() => onShowDatesChange(!showDates)}
               className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors ${
-                showDates ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-600'
+                showDates ? 'bg-[var(--primary)]' : 'bg-[var(--surface-tertiary)] dark:bg-[var(--foreground-secondary)]'
               }`}
             >
               <span className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow ring-0 transition-transform ${
@@ -329,7 +329,7 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
             {onSave && (
               <button
                 onClick={onSave}
-                className="relative p-2.5 rounded-md border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                className="relative p-2.5 rounded-md border border-[var(--border)] text-[var(--foreground-secondary)] hover:text-[var(--primary)] dark:hover:text-[var(--primary)] hover:bg-[var(--surface-hover)]"
                 aria-label={t('workitems.filters.save')}
               >
                 <Save className="h-5 w-5" />
@@ -341,7 +341,7 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
             {onClearFilters && (
               <button
                 onClick={onClearFilters}
-                className="p-2.5 rounded-md border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                className="p-2.5 rounded-md border border-[var(--border)] text-[var(--foreground-secondary)] hover:text-[var(--primary)] dark:hover:text-[var(--primary)] hover:bg-[var(--surface-hover)]"
                 aria-label={t('workitems.filters.clearAll')}
               >
                 <Eraser className="h-5 w-5" />
@@ -353,25 +353,25 @@ export function WorkItemFilters({ filter, onFilterChange, statuses, milestones =
         <div className="space-y-4">
           {!hideTypeFilter && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('workitems.filters.allTypes')}</label>
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-1">{t('workitems.filters.allTypes')}</label>
               <MultiSelect options={typeOptions} selected={filter.type ?? []} onChange={(v) => setArray('type', v)} placeholder={t('workitems.filters.allTypes')} />
             </div>
           )}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('workitems.filters.allPriorities')}</label>
+            <label className="block text-sm font-medium text-[var(--foreground)] mb-1">{t('workitems.filters.allPriorities')}</label>
             <MultiSelect options={priorityOptions} selected={filter.priority ?? []} onChange={(v) => setArray('priority', v)} placeholder={t('workitems.filters.allPriorities')} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('workitems.filters.allStatuses')}</label>
+            <label className="block text-sm font-medium text-[var(--foreground)] mb-1">{t('workitems.filters.allStatuses')}</label>
             <MultiSelect options={statusOptions} selected={filter.status ?? []} onChange={(v) => setArray('status', v)} placeholder={t('workitems.filters.allStatuses')} groupActions={statusGroupActions} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('workitems.filters.allAssignees')}</label>
+            <label className="block text-sm font-medium text-[var(--foreground)] mb-1">{t('workitems.filters.allAssignees')}</label>
             <MultiSelect options={assigneeOptions} selected={filter.assignee ?? []} onChange={(v) => setArray('assignee', v)} placeholder={t('workitems.filters.allAssignees')} searchable />
           </div>
           {milestones.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('workitems.filters.allMilestones')}</label>
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-1">{t('workitems.filters.allMilestones')}</label>
               <MultiSelect options={milestoneOptions} selected={filter.milestone ?? []} onChange={(v) => setArray('milestone', v)} placeholder={t('workitems.filters.allMilestones')} />
             </div>
           )}

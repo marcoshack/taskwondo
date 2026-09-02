@@ -46,11 +46,6 @@ func main() {
 	defer db.Close()
 	log.Info().Int("max_open", cfg.WorkerDBPool).Msg("connected to database")
 
-	// Run migrations (idempotent)
-	if err := database.Migrate(ctx, db); err != nil {
-		log.Fatal().Err(err).Msg("failed to run migrations")
-	}
-
 	// Initialize repositories
 	statsRepo := repository.NewStatsRepository(db)
 	userRepo := repository.NewUserRepository(db)
@@ -183,18 +178,18 @@ func main() {
 
 	// Register on-call rotation notification task
 	notifyOncallRotation := workers.NewNotificationOncallRotationTask(
-		userRepo, emailSender, urlBuilder, log.Logger,
+		userRepo, userSettingRepo, emailSender, urlBuilder, log.Logger,
 	)
 	dispatcher.Register(notifyOncallRotation)
 
 	// Register on-call override notification tasks
 	notifyOncallOverrideCreated := workers.NewNotificationOncallOverrideCreatedTask(
-		userRepo, emailSender, urlBuilder, log.Logger,
+		userRepo, userSettingRepo, emailSender, urlBuilder, log.Logger,
 	)
 	dispatcher.Register(notifyOncallOverrideCreated)
 
 	notifyOncallOverrideCancelled := workers.NewNotificationOncallOverrideCancelledTask(
-		userRepo, emailSender, urlBuilder, log.Logger,
+		userRepo, userSettingRepo, emailSender, urlBuilder, log.Logger,
 	)
 	dispatcher.Register(notifyOncallOverrideCancelled)
 

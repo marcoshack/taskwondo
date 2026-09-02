@@ -337,12 +337,12 @@ export function WorkItemForm({
   const descriptionField = (
     <div className={mode === 'create' ? 'flex min-h-0 flex-1 flex-col' : ''}>
       <div className="flex items-baseline justify-between gap-2 mb-1">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('workitems.form.description')}</label>
-        <span className="text-xs text-gray-400 dark:text-gray-500">{t('workitems.form.descriptionHint')}</span>
+        <label className="block text-sm font-medium text-[var(--foreground)]">{t('workitems.form.description')}</label>
+        <span className="text-xs text-[var(--foreground-muted)]">{t('workitems.form.descriptionHint')}</span>
       </div>
       <textarea
         ref={descRef}
-        className={`block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed ${mode === 'create' ? 'min-h-0 flex-1 resize-none' : ''}`}
+        className={`block w-full rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--primary)] disabled:opacity-50 disabled:cursor-not-allowed ${mode === 'create' ? 'min-h-0 flex-1 resize-none' : ''}`}
         rows={4}
         value={description}
         placeholder={t('workitems.form.descriptionPlaceholder')}
@@ -399,7 +399,7 @@ export function WorkItemForm({
 
   const assigneeField = (
     <div>
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('workitems.form.assignee')}</label>
+      <label className="block text-sm font-medium text-[var(--foreground)] mb-1">{t('workitems.form.assignee')}</label>
       <UserPicker members={members} value={assigneeId} onChange={setAssigneeId} disabled={locked} />
     </div>
   )
@@ -442,7 +442,7 @@ export function WorkItemForm({
 
   const watchersField = mode === 'create' && (
     <div>
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('watchers.watchersField')}</label>
+      <label className="block text-sm font-medium text-[var(--foreground)] mb-1">{t('watchers.watchersField')}</label>
       <MultiUserPicker members={members} selectedIds={watcherIds} onChange={setWatcherIds} disabled={locked} />
     </div>
   )
@@ -497,7 +497,7 @@ export function WorkItemForm({
         {visibilityField}
         {dueDateField}
         {milestoneField}
-        {submitError && <p className="text-sm text-red-600 dark:text-red-400">{submitError}</p>}
+        {submitError && <p className="text-sm text-[var(--danger)]">{submitError}</p>}
         <div className="flex justify-end gap-3 pt-2">{actions}</div>
       </form>
     )
@@ -521,7 +521,7 @@ export function WorkItemForm({
             so they don't add to the row's height: revealing "More fields"
             scrolls this column instead of growing the modal.
           */}
-          <div className="border-t border-gray-200 dark:border-gray-700 md:relative md:border-l md:border-t-0">
+          <div className="border-t border-[var(--border)] md:relative md:border-l md:border-t-0">
             <div className="space-y-4 px-6 py-5 md:absolute md:inset-0 md:overflow-y-auto md:overscroll-contain">
               {projectField}
               {typeField}
@@ -538,8 +538,8 @@ export function WorkItemForm({
           </div>
         </div>
       </div>
-      <div className="shrink-0 border-t border-gray-200 px-6 py-4 dark:border-gray-700">
-        {submitError && <p className="mb-2 text-sm text-red-600 dark:text-red-400">{submitError}</p>}
+      <div className="shrink-0 border-t border-[var(--border)] px-6 py-4 dark:border-[var(--border)]">
+        {submitError && <p className="mb-2 text-sm text-[var(--danger)]">{submitError}</p>}
         <div className="flex items-center gap-4">
           {attachmentsField}
           <div className="flex shrink-0 gap-3">{actions}</div>
@@ -591,15 +591,15 @@ function MultiUserPicker({ members, selectedIds, onChange, disabled }: MultiUser
   return (
     <div ref={ref} className="relative">
       <div
-        className={`flex flex-wrap gap-1.5 min-h-[38px] rounded-md border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-sm bg-white dark:bg-gray-800 ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-text'}`}
+        className={`flex flex-wrap gap-1.5 min-h-[38px] rounded-md border border-[var(--border)] px-2 py-1.5 text-sm bg-[var(--surface)] ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-text'}`}
         onClick={() => { if (disabled) return; setOpen(true); setTimeout(() => inputRef.current?.focus(), 0) }}
       >
         {selectedMembers.map((m) => (
-          <span key={m.user_id} className="inline-flex items-center gap-1 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 text-xs font-medium">
+          <span key={m.user_id} className="inline-flex items-center gap-1 rounded-full bg-[var(--primary-muted)] text-[var(--primary)] px-2 py-0.5 text-xs font-medium">
             {m.display_name}
             <button
               type="button"
-              className="hover:text-indigo-900 dark:hover:text-indigo-100"
+              className="hover:text-[var(--primary)]"
               onClick={(e) => { e.stopPropagation(); onChange(selectedIds.filter((id) => id !== m.user_id)) }}
             >
               ×
@@ -607,16 +607,16 @@ function MultiUserPicker({ members, selectedIds, onChange, disabled }: MultiUser
           </span>
         ))}
         {selectedMembers.length === 0 && !open && (
-          <span className="text-gray-400 dark:text-gray-500 py-0.5">{t('watchers.pickWatchers')}</span>
+          <span className="text-[var(--foreground-muted)] py-0.5">{t('watchers.pickWatchers')}</span>
         )}
       </div>
 
       {open && (
-        <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg">
+        <div className="absolute z-20 mt-1 w-full bg-[var(--surface)] border border-[var(--border)] rounded-md shadow-lg">
           <div className="p-2">
             <input
               ref={inputRef}
-              className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="block w-full rounded-md border border-[var(--border)] bg-[var(--surface-secondary)] text-[var(--foreground)] px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)]"
               placeholder={t('userPicker.searchMembers')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -627,19 +627,19 @@ function MultiUserPicker({ members, selectedIds, onChange, disabled }: MultiUser
               <li key={m.user_id}>
                 <button
                   type="button"
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-[var(--surface-hover)] text-[var(--foreground)]"
                   onClick={() => {
                     onChange([...selectedIds, m.user_id])
                     setSearch('')
                   }}
                 >
                   <div className="font-medium">{m.display_name}</div>
-                  <div className="text-xs text-gray-400">{m.email}</div>
+                  <div className="text-xs text-[var(--foreground-muted)]">{m.email}</div>
                 </button>
               </li>
             ))}
             {filtered.length === 0 && (
-              <li className="px-3 py-2 text-sm text-gray-400 dark:text-gray-500">{t('userPicker.noMembersFound')}</li>
+              <li className="px-3 py-2 text-sm text-[var(--foreground-muted)]">{t('userPicker.noMembersFound')}</li>
             )}
           </ul>
         </div>

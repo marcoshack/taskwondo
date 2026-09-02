@@ -57,7 +57,7 @@ export function TeamDetailPage() {
   if (!team) {
     return (
       <div className="max-w-3xl">
-        <p className="text-red-600 dark:text-red-400">{t('teams.notFound')}</p>
+        <p className="text-[var(--danger)]">{t('teams.notFound')}</p>
       </div>
     )
   }
@@ -73,13 +73,13 @@ export function TeamDetailPage() {
       <div className="max-w-3xl">
         <Link
           to={p(`/projects/${projectKey}/settings?tab=teams`)}
-          className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          className="inline-flex items-center gap-1 text-sm text-[var(--foreground-muted)] hover:text-[var(--foreground)]"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           {t('sidebar.settings')} / {t('teams.title')}
         </Link>
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mt-1">{team.name}</h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400">{t('teams.detail')}</p>
+        <h2 className="text-lg font-semibold text-[var(--foreground)] mt-1">{team.name}</h2>
+        <p className="text-sm text-[var(--foreground-secondary)]">{t('teams.detail')}</p>
       </div>
 
       <Tabs tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
@@ -174,7 +174,7 @@ function MembersTab({
 
   return (
     <div className="space-y-4">
-      <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('teams.members')}</h3>
+      <h3 className="text-sm font-medium text-[var(--foreground)]">{t('teams.members')}</h3>
 
       {canManage && (
         <div className="flex items-center gap-2" ref={dropdownRef}>
@@ -187,26 +187,26 @@ function MembersTab({
               className="h-10"
             />
             {dropdownOpen && search && (
-              <div className="absolute z-10 mt-1 w-full border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 shadow-lg">
+              <div className="absolute z-10 mt-1 w-full border border-[var(--border)] rounded-md bg-[var(--surface)] shadow-lg">
                 <ul className="max-h-48 overflow-auto py-1">
                   {filteredAvailable.map((pm) => (
                     <li key={pm.user_id}>
                       <button
                         type="button"
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-[var(--surface-hover)] flex items-center gap-2"
                         onClick={() => handleAdd(pm.user_id)}
                         disabled={addMutation.isPending}
                       >
                         <Avatar name={pm.display_name} avatarUrl={pm.avatar_url} size="xs" />
                         <div className="min-w-0 flex-1">
-                          <div className="font-medium text-gray-900 dark:text-gray-100">{pm.display_name}</div>
-                          <div className="text-xs text-gray-400">{pm.email}</div>
+                          <div className="font-medium text-[var(--foreground)]">{pm.display_name}</div>
+                          <div className="text-xs text-[var(--foreground-muted)]">{pm.email}</div>
                         </div>
                       </button>
                     </li>
                   ))}
                   {filteredAvailable.length === 0 && (
-                    <li className="px-3 py-2 text-sm text-gray-400 dark:text-gray-500">{t('common.noResults')}</li>
+                    <li className="px-3 py-2 text-sm text-[var(--foreground-muted)]">{t('common.noResults')}</li>
                   )}
                 </ul>
               </div>
@@ -224,15 +224,15 @@ function MembersTab({
       )}
 
       {teamMembers && teamMembers.length > 0 ? (
-        <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
+        <div className="border border-[var(--border)] rounded-lg divide-y divide-[var(--border)]">
           {teamMembers.map((member) => (
             <div key={member.user_id} className="p-3 flex items-center justify-between gap-2">
               <div className="flex items-center gap-3 min-w-0">
                 {savedUserId === member.user_id && <Check className="h-4 w-4 text-green-500 shrink-0" />}
                 <Avatar name={member.display_name} avatarUrl={member.avatar_url ?? undefined} size="sm" />
                 <div className="min-w-0">
-                  <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{member.display_name}</div>
-                  <div className="text-xs text-gray-400 dark:text-gray-500">{member.email}</div>
+                  <div className="text-sm font-medium text-[var(--foreground)]">{member.display_name}</div>
+                  <div className="text-xs text-[var(--foreground-muted)]">{member.email}</div>
                 </div>
               </div>
               {canManage && (
@@ -241,21 +241,21 @@ function MembersTab({
                   size="sm"
                   onClick={() => setRemoveTarget({ userId: member.user_id, displayName: member.display_name })}
                 >
-                  <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                  <Trash2 className="h-3.5 w-3.5 text-[var(--danger)]" />
                 </Button>
               )}
             </div>
           ))}
         </div>
       ) : (
-        <div className="border border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center">
-          <p className="text-sm text-gray-500 dark:text-gray-400">{t('teams.noMembers')}</p>
+        <div className="border border-dashed border-[var(--border)] rounded-lg p-6 text-center">
+          <p className="text-sm text-[var(--foreground-secondary)]">{t('teams.noMembers')}</p>
         </div>
       )}
 
       {/* Remove member confirmation */}
       <Modal open={!!removeTarget} onClose={() => setRemoveTarget(null)} title={t('teams.removeMemberConfirmTitle')}>
-        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+        <p className="text-sm text-[var(--foreground-secondary)] mb-4">
           <Trans i18nKey="teams.removeMemberConfirmBody" values={{ name: removeTarget?.displayName }} components={{ bold: <strong /> }} />
         </p>
         <div className="flex justify-end gap-2">
@@ -330,7 +330,7 @@ function SettingsTab({
 
   return (
     <div className="space-y-6">
-      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {error && <p className="text-sm text-[var(--danger)]">{error}</p>}
 
       <Input
         label={t('teams.name')}
@@ -340,12 +340,12 @@ function SettingsTab({
       />
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
           {t('common.description')}
         </label>
         <textarea
           rows={3}
-          className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-50"
+          className="block w-full rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--primary)] disabled:opacity-50"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           disabled={!canManage}
@@ -364,8 +364,8 @@ function SettingsTab({
       {/* Danger Zone */}
       {canManage && (
         <div className="border border-red-200 dark:border-red-800 rounded-lg p-4 mt-8">
-          <h3 className="text-sm font-semibold text-red-600 dark:text-red-400 mb-2">{t('teams.dangerZone')}</h3>
-          <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">{t('teams.dangerZoneDescription')}</p>
+          <h3 className="text-sm font-semibold text-[var(--danger)] mb-2">{t('teams.dangerZone')}</h3>
+          <p className="text-sm text-[var(--foreground-secondary)] mb-3">{t('teams.dangerZoneDescription')}</p>
           <Button variant="danger" onClick={() => setDeleteOpen(true)}>
             <Trash2 className="h-3.5 w-3.5 mr-1" />
             {t('teams.deleteTeam')}
@@ -375,7 +375,7 @@ function SettingsTab({
 
       {/* Delete confirmation */}
       <Modal open={deleteOpen} onClose={() => setDeleteOpen(false)} title={t('teams.deleteConfirmTitle')}>
-        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+        <p className="text-sm text-[var(--foreground-secondary)] mb-4">
           <Trans i18nKey="teams.deleteConfirmBody" values={{ name: team.name }} components={{ bold: <strong /> }} />
         </p>
         <div className="flex justify-end gap-2">

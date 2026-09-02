@@ -13,24 +13,27 @@ import (
 
 // NotificationOncallOverrideCreatedTask sends emails when an on-call override is created.
 type NotificationOncallOverrideCreatedTask struct {
-	users  userRepository
-	sender emailSender
-	urls   *URLBuilder
-	logger zerolog.Logger
+	users    userRepository
+	settings userSettingRepository
+	sender   emailSender
+	urls     *URLBuilder
+	logger   zerolog.Logger
 }
 
 // NewNotificationOncallOverrideCreatedTask creates the task.
 func NewNotificationOncallOverrideCreatedTask(
 	users userRepository,
+	settings userSettingRepository,
 	sender emailSender,
 	urls *URLBuilder,
 	logger zerolog.Logger,
 ) *NotificationOncallOverrideCreatedTask {
 	return &NotificationOncallOverrideCreatedTask{
-		users:  users,
-		sender: sender,
-		urls:   urls,
-		logger: logger,
+		users:    users,
+		settings: settings,
+		sender:   sender,
+		urls:     urls,
+		logger:   logger,
 	}
 }
 
@@ -47,7 +50,6 @@ func (t *NotificationOncallOverrideCreatedTask) Execute(ctx context.Context, pay
 		return nil
 	}
 
-	lang := "en"
 	oncallURL := t.urls.OncallTab(ctx, evt.ProjectID, evt.ProjectKey, evt.TeamID)
 
 	// Notify override user (the person taking over)
@@ -56,6 +58,7 @@ func (t *NotificationOncallOverrideCreatedTask) Execute(ctx context.Context, pay
 		return fmt.Errorf("loading override user: %w", err)
 	}
 
+	lang := getUserLanguage(ctx, t.settings, evt.OverrideUserID)
 	subject := i18n.T(lang, "email.oncall.override.created.subject", "projectKey", evt.ProjectKey, "teamName", evt.TeamName)
 	body := oncallOverrideCreatedEmailHTML(lang, evt.TeamName, evt.ProjectKey, evt.ProjectName, evt.StartAt.Format("2006-01-02 15:04 MST"), evt.EndAt.Format("2006-01-02 15:04 MST"), oncallURL)
 
@@ -71,8 +74,9 @@ func (t *NotificationOncallOverrideCreatedTask) Execute(ctx context.Context, pay
 			return fmt.Errorf("loading scheduled user: %w", err)
 		}
 
-		coveredSubject := i18n.T(lang, "email.oncall.override.covered.subject", "projectKey", evt.ProjectKey, "teamName", evt.TeamName)
-		coveredBody := oncallOverrideCoveredEmailHTML(lang, evt.TeamName, evt.ProjectKey, evt.ProjectName, overrideUser.DisplayName, evt.StartAt.Format("2006-01-02 15:04 MST"), evt.EndAt.Format("2006-01-02 15:04 MST"), oncallURL)
+		coveredLang := getUserLanguage(ctx, t.settings, evt.ScheduledUser)
+		coveredSubject := i18n.T(coveredLang, "email.oncall.override.covered.subject", "projectKey", evt.ProjectKey, "teamName", evt.TeamName)
+		coveredBody := oncallOverrideCoveredEmailHTML(coveredLang, evt.TeamName, evt.ProjectKey, evt.ProjectName, overrideUser.DisplayName, evt.StartAt.Format("2006-01-02 15:04 MST"), evt.EndAt.Format("2006-01-02 15:04 MST"), oncallURL)
 
 		if err := t.sender.Send(ctx, scheduledUser.Email, coveredSubject, coveredBody); err != nil {
 			return fmt.Errorf("sending override covered email: %w", err)
@@ -85,24 +89,27 @@ func (t *NotificationOncallOverrideCreatedTask) Execute(ctx context.Context, pay
 
 // NotificationOncallOverrideCancelledTask sends emails when an on-call override is cancelled.
 type NotificationOncallOverrideCancelledTask struct {
-	users  userRepository
-	sender emailSender
-	urls   *URLBuilder
-	logger zerolog.Logger
+	users    userRepository
+	settings userSettingRepository
+	sender   emailSender
+	urls     *URLBuilder
+	logger   zerolog.Logger
 }
 
 // NewNotificationOncallOverrideCancelledTask creates the task.
 func NewNotificationOncallOverrideCancelledTask(
 	users userRepository,
+	settings userSettingRepository,
 	sender emailSender,
 	urls *URLBuilder,
 	logger zerolog.Logger,
 ) *NotificationOncallOverrideCancelledTask {
 	return &NotificationOncallOverrideCancelledTask{
-		users:  users,
-		sender: sender,
-		urls:   urls,
-		logger: logger,
+		users:    users,
+		settings: settings,
+		sender:   sender,
+		urls:     urls,
+		logger:   logger,
 	}
 }
 
@@ -119,8 +126,6 @@ func (t *NotificationOncallOverrideCancelledTask) Execute(ctx context.Context, p
 		return nil
 	}
 
-	lang := "en"
-
 	// Notify override user that their override was cancelled
 	overrideUser, err := t.users.GetByID(ctx, evt.OverrideUserID)
 	if err != nil {
@@ -128,6 +133,7 @@ func (t *NotificationOncallOverrideCancelledTask) Execute(ctx context.Context, p
 	}
 
 	oncallURL := t.urls.OncallTab(ctx, evt.ProjectID, evt.ProjectKey, evt.TeamID)
+	lang := getUserLanguage(ctx, t.settings, evt.OverrideUserID)
 	subject := i18n.T(lang, "email.oncall.override.cancelled.subject", "projectKey", evt.ProjectKey, "teamName", evt.TeamName)
 	body := oncallOverrideCancelledEmailHTML(lang, evt.TeamName, evt.ProjectKey, evt.ProjectName, evt.StartAt.Format("2006-01-02 15:04 MST"), evt.EndAt.Format("2006-01-02 15:04 MST"), oncallURL)
 
@@ -140,22 +146,35 @@ func (t *NotificationOncallOverrideCancelledTask) Execute(ctx context.Context, p
 }
 
 func oncallOverrideCreatedEmailHTML(lang, teamName, projectKey, projectName, startAt, endAt, oncallURL string) string {
-	content := fmt.Sprintf(`<p>You have been assigned an on-call override for <strong>%s</strong> in project %s <strong>%s</strong>.</p>
-  <p>Your override period: <strong>%s</strong> to <strong>%s</strong>.</p>
-  <p>Please make sure you are available to respond to any incoming issues during this period.</p>`, teamName, projectKeyBadge(projectKey), projectName, startAt, endAt)
+	intro := i18n.T(lang, "email.oncall.override.created.intro",
+		"teamName", teamName,
+		"projectBadge", projectKeyBadge(projectKey),
+		"projectName", projectName)
+	period := i18n.T(lang, "email.oncall.override.created.period", "startAt", startAt, "endAt", endAt)
+	note := i18n.T(lang, "email.oncall.override.created.note")
+	content := fmt.Sprintf("<p>%s</p>\n  <p>%s</p>\n  <p>%s</p>", intro, period, note)
 	return emailHTML(lang, "email.oncall.cta", oncallURL, "email.oncall.override.footer", content)
 }
 
 func oncallOverrideCoveredEmailHTML(lang, teamName, projectKey, projectName, coveringUser, startAt, endAt, oncallURL string) string {
-	content := fmt.Sprintf(`<p>Your on-call shift for <strong>%s</strong> in project %s <strong>%s</strong> has been covered by <strong>%s</strong>.</p>
-  <p>Override period: <strong>%s</strong> to <strong>%s</strong>.</p>`, teamName, projectKeyBadge(projectKey), projectName, coveringUser, startAt, endAt)
+	intro := i18n.T(lang, "email.oncall.override.covered.intro",
+		"teamName", teamName,
+		"projectBadge", projectKeyBadge(projectKey),
+		"projectName", projectName,
+		"coveringUser", coveringUser)
+	period := i18n.T(lang, "email.oncall.override.covered.period", "startAt", startAt, "endAt", endAt)
+	content := fmt.Sprintf("<p>%s</p>\n  <p>%s</p>", intro, period)
 	return emailHTML(lang, "email.oncall.cta", oncallURL, "email.oncall.override.footer", content)
 }
 
 func oncallOverrideCancelledEmailHTML(lang, teamName, projectKey, projectName, startAt, endAt, oncallURL string) string {
-	content := fmt.Sprintf(`<p>An on-call override for <strong>%s</strong> in project %s <strong>%s</strong> has been cancelled.</p>
-  <p>The override was scheduled for: <strong>%s</strong> to <strong>%s</strong>.</p>
-  <p>The regular on-call rotation schedule will apply for this period.</p>`, teamName, projectKeyBadge(projectKey), projectName, startAt, endAt)
+	intro := i18n.T(lang, "email.oncall.override.cancelled.intro",
+		"teamName", teamName,
+		"projectBadge", projectKeyBadge(projectKey),
+		"projectName", projectName)
+	period := i18n.T(lang, "email.oncall.override.cancelled.period", "startAt", startAt, "endAt", endAt)
+	note := i18n.T(lang, "email.oncall.override.cancelled.note")
+	content := fmt.Sprintf("<p>%s</p>\n  <p>%s</p>\n  <p>%s</p>", intro, period, note)
 	return emailHTML(lang, "email.oncall.cta", oncallURL, "email.oncall.override.footer", content)
 }
 

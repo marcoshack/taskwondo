@@ -15,7 +15,7 @@ interface ShortcutCategory {
 
 function Kbd({ children }: { children: string }) {
   return (
-    <kbd className="inline-flex items-center justify-center min-w-[1.5rem] px-1.5 py-0.5 text-xs font-mono font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-500 rounded shadow-sm">
+    <kbd className="inline-flex items-center justify-center min-w-[1.5rem] px-1.5 py-0.5 text-xs font-mono font-medium text-[var(--foreground)] bg-[var(--surface-secondary)] border border-[var(--border-strong)] rounded shadow-sm">
       {children}
     </kbd>
   )
@@ -24,11 +24,11 @@ function Kbd({ children }: { children: string }) {
 function ShortcutRow({ keys, label, chord, thenLabel }: ShortcutEntry & { thenLabel: string }) {
   return (
     <div className="flex items-center justify-between py-1.5">
-      <span className="text-sm text-gray-600 dark:text-gray-300">{label}</span>
+      <span className="text-sm text-[var(--foreground-secondary)]">{label}</span>
       <span className="flex items-center gap-1 shrink-0 ml-4">
         {keys.map((k, i) => (
           <span key={i} className="flex items-center gap-1">
-            {i > 0 && <span className="text-xs text-gray-400">{chord ? '+' : thenLabel}</span>}
+            {i > 0 && <span className="text-xs text-[var(--foreground-muted)]">{chord ? '+' : thenLabel}</span>}
             <Kbd>{k}</Kbd>
           </span>
         ))}
@@ -102,10 +102,10 @@ export function KeyboardShortcutsModal({ open, onClose }: { open: boolean; onClo
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-8 gap-y-4">
         {categories.map((cat) => (
           <div key={cat.title}>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--foreground-muted)] mb-1">
               {cat.title}
             </h3>
-            <div className="divide-y divide-gray-100 dark:divide-gray-700">
+            <div className="divide-y divide-[var(--border)]">
               {cat.shortcuts.map((s, i) => (
                 <ShortcutRow key={i} keys={s.keys} label={s.label} chord={s.chord} thenLabel={t('shortcuts.then')} />
               ))}

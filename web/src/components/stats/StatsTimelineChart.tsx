@@ -67,7 +67,6 @@ export function StatsTimelineChart({ projectKey }: Props) {
 
   // Feature toggle: hidden when explicitly disabled
   const featureEnabled = publicSettings?.feature_stats_timeline !== false
-  if (!featureEnabled) return null
 
   const handlePreset = (r: StatsRange) => {
     setRange(r)
@@ -124,10 +123,12 @@ export function StatsTimelineChart({ projectKey }: Props) {
 
   const hasData = chartData.length > 0
 
+  if (!featureEnabled) return null
+
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+        <h2 className="text-sm font-medium text-[var(--foreground-secondary)] uppercase tracking-wide">
           {t('projects.overview.activity')}
         </h2>
         <div className="flex items-center gap-1">
@@ -137,17 +138,17 @@ export function StatsTimelineChart({ projectKey }: Props) {
               onClick={() => handlePreset(r)}
               className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
                 range_ === r && !isCustomActive
-                  ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300'
-                  : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
+                  ? 'bg-[var(--primary-muted)] text-[var(--primary)]  dark:text-[var(--primary)]'
+                  : 'text-[var(--foreground-secondary)] hover:bg-[var(--surface-tertiary)] text-[var(--foreground-muted)] dark:hover:bg-[var(--surface)]'
               }`}
             >
               {t(`projects.overview.range_${r}`)}
             </button>
           ))}
-          <span className="mx-1 text-gray-300 dark:text-gray-600">|</span>
+          <span className="mx-1 text-[var(--foreground-secondary)]">|</span>
           <div className={`flex items-center gap-1 rounded-md px-1.5 py-0.5 ${
             isCustomActive
-              ? 'bg-indigo-100 dark:bg-indigo-900/40'
+              ? 'bg-[var(--primary-muted)] '
               : ''
           }`}>
             <input
@@ -156,20 +157,20 @@ export function StatsTimelineChart({ projectKey }: Props) {
               max={customUnit === 'd' ? 365 : 8760}
               value={customValue}
               onChange={(e) => handleCustomValueChange(e.target.value)}
-              className={`w-12 text-xs font-medium text-center border rounded px-1 py-0.5 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 ${
+              className={`w-12 text-xs font-medium text-center border rounded px-1 py-0.5 bg-[var(--surface)] border-[var(--border)] ${
                 isCustomActive
-                  ? 'text-indigo-700 dark:text-indigo-300'
-                  : 'text-gray-500 dark:text-gray-400'
+                  ? 'text-[var(--primary)]'
+                  : 'text-[var(--foreground-secondary)]'
               }`}
               data-testid="custom-range-value"
             />
             <select
               value={customUnit}
               onChange={(e) => handleCustomUnitChange(e.target.value as 'h' | 'd')}
-              className={`text-xs font-medium border rounded px-1 py-0.5 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 ${
+              className={`text-xs font-medium border rounded px-1 py-0.5 bg-[var(--surface)] border-[var(--border)] ${
                 isCustomActive
-                  ? 'text-indigo-700 dark:text-indigo-300'
-                  : 'text-gray-500 dark:text-gray-400'
+                  ? 'text-[var(--primary)]'
+                  : 'text-[var(--foreground-secondary)]'
               }`}
               data-testid="custom-range-unit"
             >
@@ -179,13 +180,13 @@ export function StatsTimelineChart({ projectKey }: Props) {
           </div>
         </div>
       </div>
-      <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+      <div className="rounded-lg border border-[var(--border)] p-4">
         {isLoading ? (
           <div className="flex items-center justify-center" style={{ height: 200 }}>
             <Spinner />
           </div>
         ) : !hasData ? (
-          <div className="flex items-center justify-center text-sm text-gray-400 dark:text-gray-500" style={{ height: 200 }}>
+          <div className="flex items-center justify-center text-sm text-[var(--foreground-muted)]" style={{ height: 200 }}>
             {t('projects.overview.noActivityData')}
           </div>
         ) : (

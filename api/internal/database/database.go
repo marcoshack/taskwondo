@@ -72,11 +72,36 @@ func Migrate(ctx context.Context, db *sql.DB) error {
 		return fmt.Errorf("creating migrator: %w", err)
 	}
 
+	// Check for dirty state and attempt recovery
+	version, dirty, _ := m.Version()
+	if dirty {
+		log.Ctx(ctx).Warn().Uint("version", version).Msg("database is in dirty state, attempting recovery")
+		// Rollback the dirty migration
+		if err := m.Steps(-1); err != nil {
+			// If rollback fails, force to previous clean version
+			if version > 0 {
+				if err := m.Force(int(version) - 1); err != nil {
+					return fmt.Errorf("forcing clean version: %w", err)
+				}
+			} else {
+				// If version is 0, force to 0
+				if err := m.Force(0); err != nil {
+					return fmt.Errorf("forcing version 0: %w", err)
+				}
+			}
+		}
+		// Recreate migrator after force
+		m, err = migrate.NewWithInstance("iofs", source, "postgres", driver)
+		if err != nil {
+			return fmt.Errorf("recreating migrator: %w", err)
+		}
+	}
+
 	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
 		return fmt.Errorf("running migrations: %w", err)
 	}
 
-	version, dirty, _ := m.Version()
+	version, dirty, _ = m.Version()
 	log.Ctx(ctx).Info().Uint("version", version).Bool("dirty", dirty).Msg("database migrations applied")
 
 	return nil

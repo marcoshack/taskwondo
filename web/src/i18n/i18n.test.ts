@@ -34,6 +34,8 @@ const SAME_VALUE_ALLOWED = new Set([
   'admin.integrations.smtp.smtpHostPlaceholder',
   'admin.integrations.smtp.usernamePlaceholder',
   'admin.integrations.smtp.encryptionStarttls',
+  'admin.authentication.sso.issuerPlaceholder',
+  'admin.authentication.sso.scopesPlaceholder',
   'sla.durationPlaceholder',
   'timeTracking.durationPlaceholder',
   'projects.create.keyPlaceholder',

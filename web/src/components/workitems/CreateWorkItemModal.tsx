@@ -153,7 +153,7 @@ export function CreateWorkItemModal({ open, onClose, lockedProjectKey, onCreated
   const headerRight = project && (
     <span className="flex min-w-0 shrink items-center gap-2.5">
       <ProjectKeyBadge size="nav">{project.key}</ProjectKeyBadge>
-      <span className="truncate text-base font-semibold text-gray-900 dark:text-gray-100">{project.name}</span>
+      <span className="truncate text-base font-semibold text-[var(--foreground)]">{project.name}</span>
     </span>
   )
 
@@ -205,7 +205,7 @@ export function CreateWorkItemModal({ open, onClose, lockedProjectKey, onCreated
       />
 
       <Modal open={confirmDiscard} onClose={() => setConfirmDiscard(false)} title={t('workitems.form.discardTitle')}>
-        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">{t('workitems.form.discardBody')}</p>
+        <p className="text-sm text-[var(--foreground-secondary)] mb-4">{t('workitems.form.discardBody')}</p>
         <div className="flex justify-end gap-3">
           <Button variant="secondary" onClick={() => setConfirmDiscard(false)}>{t('workitems.form.discardKeepEditing')}</Button>
           <Button variant="danger" autoFocus onClick={handleClose}>{t('workitems.form.discardConfirm')}</Button>

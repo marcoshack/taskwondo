@@ -13,24 +13,27 @@ import (
 
 // NotificationOncallRotationTask sends emails when an on-call rotation advances.
 type NotificationOncallRotationTask struct {
-	users  userRepository
-	sender emailSender
-	urls   *URLBuilder
-	logger zerolog.Logger
+	users    userRepository
+	settings userSettingRepository
+	sender   emailSender
+	urls     *URLBuilder
+	logger   zerolog.Logger
 }
 
 // NewNotificationOncallRotationTask creates the task.
 func NewNotificationOncallRotationTask(
 	users userRepository,
+	settings userSettingRepository,
 	sender emailSender,
 	urls *URLBuilder,
 	logger zerolog.Logger,
 ) *NotificationOncallRotationTask {
 	return &NotificationOncallRotationTask{
-		users:  users,
-		sender: sender,
-		urls:   urls,
-		logger: logger,
+		users:    users,
+		settings: settings,
+		sender:   sender,
+		urls:     urls,
+		logger:   logger,
 	}
 }
 
@@ -59,9 +62,9 @@ func (t *NotificationOncallRotationTask) Execute(ctx context.Context, payload []
 		return fmt.Errorf("loading new on-call user: %w", err)
 	}
 
-	lang := "en"
 	oncallURL := t.urls.OncallTab(ctx, evt.ProjectID, evt.ProjectKey, evt.TeamID)
 
+	lang := getUserLanguage(ctx, t.settings, evt.NewUserID)
 	incomingSubject := i18n.T(lang, "email.oncall.incoming.subject", "projectKey", evt.ProjectKey, "teamName", evt.TeamName)
 	incomingBody := oncallIncomingEmailHTML(lang, evt.TeamName, evt.ProjectKey, evt.ProjectName, oncallURL)
 
@@ -77,8 +80,9 @@ func (t *NotificationOncallRotationTask) Execute(ctx context.Context, payload []
 			return fmt.Errorf("loading old on-call user: %w", err)
 		}
 
-		outgoingSubject := i18n.T(lang, "email.oncall.outgoing.subject", "projectKey", evt.ProjectKey, "teamName", evt.TeamName)
-		outgoingBody := oncallOutgoingEmailHTML(lang, evt.TeamName, evt.ProjectKey, evt.ProjectName, oncallURL)
+		outLang := getUserLanguage(ctx, t.settings, evt.OldUserID)
+		outgoingSubject := i18n.T(outLang, "email.oncall.outgoing.subject", "projectKey", evt.ProjectKey, "teamName", evt.TeamName)
+		outgoingBody := oncallOutgoingEmailHTML(outLang, evt.TeamName, evt.ProjectKey, evt.ProjectName, oncallURL)
 
 		if err := t.sender.Send(ctx, oldUser.Email, outgoingSubject, outgoingBody); err != nil {
 			return fmt.Errorf("sending outgoing oncall email: %w", err)
@@ -90,13 +94,21 @@ func (t *NotificationOncallRotationTask) Execute(ctx context.Context, payload []
 }
 
 func oncallIncomingEmailHTML(lang, teamName, projectKey, projectName, oncallURL string) string {
-	content := fmt.Sprintf(`<p>You are now on-call for <strong>%s</strong> in project %s <strong>%s</strong>.</p>
-  <p>Please make sure you are available to respond to any incoming issues during your shift.</p>`, teamName, projectKeyBadge(projectKey), projectName)
+	intro := i18n.T(lang, "email.oncall.incoming.intro",
+		"teamName", teamName,
+		"projectBadge", projectKeyBadge(projectKey),
+		"projectName", projectName)
+	note := i18n.T(lang, "email.oncall.incoming.note")
+	content := fmt.Sprintf("<p>%s</p>\n  <p>%s</p>", intro, note)
 	return emailHTML(lang, "email.oncall.cta", oncallURL, "email.oncall.rotation.footer", content)
 }
 
 func oncallOutgoingEmailHTML(lang, teamName, projectKey, projectName, oncallURL string) string {
-	content := fmt.Sprintf(`<p>Your on-call shift for <strong>%s</strong> in project %s <strong>%s</strong> has ended.</p>
-  <p>Thank you for your service during your shift.</p>`, teamName, projectKeyBadge(projectKey), projectName)
+	intro := i18n.T(lang, "email.oncall.outgoing.intro",
+		"teamName", teamName,
+		"projectBadge", projectKeyBadge(projectKey),
+		"projectName", projectName)
+	note := i18n.T(lang, "email.oncall.outgoing.note")
+	content := fmt.Sprintf("<p>%s</p>\n  <p>%s</p>", intro, note)
 	return emailHTML(lang, "email.oncall.cta", oncallURL, "email.oncall.rotation.footer", content)
 }

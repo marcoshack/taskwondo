@@ -4,7 +4,7 @@ import { useSMTPConfig, useSetSMTPConfig, useTestSMTP } from '@/hooks/useSystemS
 import type { SMTPConfig } from '@/api/systemSettings'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
-import { Spinner } from '@/components/ui/Spinner'
+import { LoadingState } from '@/components/ui/LoadingState'
 import { ExpandableConfigCard } from '@/components/ui/ExpandableConfigCard'
 
 const PASSWORD_MASK = '••••••••'
@@ -20,6 +20,7 @@ const defaultConfig: SMTPConfig = {
   encryption: 'starttls',
   from_address: '',
   from_name: '',
+  skip_cert_verify: false,
 }
 
 export function SystemIntegrationsPage() {
@@ -102,11 +103,7 @@ export function SystemIntegrationsPage() {
   const canTest = cfg.enabled && isFormComplete() && !isDirty
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center py-12">
-        <Spinner />
-      </div>
-    )
+    return <LoadingState />
   }
 
   const encryptionOptions: { value: SMTPConfig['encryption']; label: string }[] = [
@@ -118,10 +115,10 @@ export function SystemIntegrationsPage() {
   return (
     <div className="max-w-3xl space-y-6">
       <div className="mb-6">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+        <h2 className="text-xl font-semibold text-[var(--foreground)]">
           {t('admin.integrations.title')}
         </h2>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        <p className="mt-1 text-sm text-[var(--foreground-secondary)]">
           {t('admin.integrations.description')}
         </p>
       </div>
@@ -157,7 +154,7 @@ export function SystemIntegrationsPage() {
               </span>
             )}
             {testError && (
-              <span className="text-sm text-red-600 dark:text-red-400">{testError}</span>
+              <span className="text-sm text-[var(--danger)]">{testError}</span>
             )}
           </>
         }
@@ -203,13 +200,13 @@ export function SystemIntegrationsPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
               {t('admin.integrations.smtp.encryption')}
             </label>
             <select
               value={cfg.encryption}
               onChange={(e) => updateField('encryption', e.target.value as SMTPConfig['encryption'])}
-              className="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+              className="block w-full rounded-md border border-[var(--border)] bg-white px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)] dark:border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)]"
             >
               {encryptionOptions.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -218,6 +215,25 @@ export function SystemIntegrationsPage() {
               ))}
             </select>
           </div>
+
+          {(cfg.encryption === 'tls' || cfg.encryption === 'starttls') && (
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={cfg.skip_cert_verify}
+                onChange={(e) => updateField('skip_cert_verify', e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-[var(--border)] text-[var(--primary)] focus:ring-[var(--focus-ring)] dark:border-[var(--border)] bg-[var(--surface)]"
+              />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-[var(--foreground)]">
+                  {t('admin.integrations.smtp.skipCertVerify')}
+                </div>
+                <p className="text-xs text-[var(--foreground-secondary)]">
+                  {t('admin.integrations.smtp.skipCertVerifyHelp')}
+                </p>
+              </div>
+            </label>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
@@ -236,11 +252,11 @@ export function SystemIntegrationsPage() {
           </div>
 
           {/* IMAP section */}
-          <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
-            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <div className="border-t border-[var(--border)] pt-4 mt-4">
+            <h4 className="text-sm font-medium text-[var(--foreground)] mb-1">
               {t('admin.integrations.smtp.imapSection')}
             </h4>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            <p className="text-xs text-[var(--foreground-secondary)] mb-3">
               {t('admin.integrations.smtp.imapHelp')}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

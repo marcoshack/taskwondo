@@ -16,6 +16,8 @@ var (
 	ErrValidation         = errors.New("validation error")
 	ErrInvalidTransition  = errors.New("invalid transition")
 	ErrOAuthAccountLinked      = errors.New("oauth account already linked to another user")
+	ErrOAuthEmailMissing       = errors.New("identity provider did not return an email address")
+	ErrOAuthEmailUnverified    = errors.New("email address is not verified")
 	ErrStatusIncompatible      = errors.New("status incompatible with target workflow")
 	ErrEmbeddingUnavailable    = errors.New("embedding service unavailable")
 	ErrFeatureDisabled         = errors.New("feature is disabled")

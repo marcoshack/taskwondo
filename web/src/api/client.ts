@@ -1,4 +1,5 @@
 import axios from 'axios'
+import i18n from '@/i18n'
 
 const TOKEN_KEY = 'taskwondo_token'
 
@@ -38,6 +39,8 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
+  // Lets the API localize server-side artifacts (e.g. verification / password reset emails)
+  config.headers['Accept-Language'] = i18n.language
   return config
 })
 

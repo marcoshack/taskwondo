@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 
 interface UseMentionAutocompleteOptions {
   value: string
@@ -45,9 +45,9 @@ export function useMentionAutocomplete({ value, onValueChange, textareaRef }: Us
 
   // Refs to avoid stale closures while dropdown is open
   const valueRef = useRef(value)
-  valueRef.current = value
+  useEffect(() => { valueRef.current = value }, [value])
   const onValueChangeRef = useRef(onValueChange)
-  onValueChangeRef.current = onValueChange
+  useEffect(() => { onValueChangeRef.current = onValueChange }, [onValueChange])
 
   const onMentionKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

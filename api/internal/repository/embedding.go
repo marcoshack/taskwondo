@@ -13,7 +13,8 @@ import (
 
 // EmbeddingRepository handles embedding persistence.
 type EmbeddingRepository struct {
-	db *sql.DB
+	db          *sql.DB
+	tableExists *bool
 }
 
 // NewEmbeddingRepository creates a new EmbeddingRepository.
@@ -21,8 +22,26 @@ func NewEmbeddingRepository(db *sql.DB) *EmbeddingRepository {
 	return &EmbeddingRepository{db: db}
 }
 
+// checkTableExists checks if the embeddings table exists.
+func (r *EmbeddingRepository) checkTableExists(ctx context.Context) bool {
+	if r.tableExists != nil {
+		return *r.tableExists
+	}
+	var exists bool
+	err := r.db.QueryRowContext(ctx,
+		`SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'embeddings')`).Scan(&exists)
+	if err != nil {
+		exists = false
+	}
+	r.tableExists = &exists
+	return exists
+}
+
 // Upsert inserts or updates an embedding for the given entity.
 func (r *EmbeddingRepository) Upsert(ctx context.Context, e *model.Embedding) error {
+	if !r.checkTableExists(ctx) {
+		return model.ErrEmbeddingUnavailable
+	}
 	_, err := r.db.ExecContext(ctx,
 		`INSERT INTO embeddings (id, entity_type, entity_id, project_id, content, embedding, indexed_at)
 		 VALUES ($1, $2, $3, $4, $5, $6::vector, now())
@@ -38,6 +57,9 @@ func (r *EmbeddingRepository) Upsert(ctx context.Context, e *model.Embedding) er
 
 // Delete removes an embedding for the given entity.
 func (r *EmbeddingRepository) Delete(ctx context.Context, entityType string, entityID uuid.UUID) error {
+	if !r.checkTableExists(ctx) {
+		return nil
+	}
 	_, err := r.db.ExecContext(ctx,
 		`DELETE FROM embeddings WHERE entity_type = $1 AND entity_id = $2`,
 		entityType, entityID)
@@ -55,6 +77,9 @@ func (r *EmbeddingRepository) Delete(ctx context.Context, entityType string, ent
 // the parent work item's reporter and visibility are enforced. Customer-only
 // projects cannot surface project/milestone/queue embeddings.
 func (r *EmbeddingRepository) SearchByVector(ctx context.Context, vector []float32, filter *model.SearchFilter, access model.SearchAccess) ([]model.SearchResult, error) {
+	if !r.checkTableExists(ctx) {
+		return nil, model.ErrEmbeddingUnavailable
+	}
 	limit := filter.Limit
 	if limit <= 0 || limit > 100 {
 		limit = 20

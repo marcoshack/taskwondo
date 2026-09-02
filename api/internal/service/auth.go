@@ -11,11 +11,11 @@ import (
 	"errors"
 	"fmt"
 	"html"
-	"net/mail"
 	"image"
 	"image/jpeg"
 	"image/png"
 	"io"
+	"net/mail"
 	"strconv"
 	"strings"
 	"time"
@@ -27,6 +27,7 @@ import (
 	"golang.org/x/image/draw"
 
 	"github.com/marcoshack/taskwondo/internal/crypto"
+	"github.com/marcoshack/taskwondo/internal/i18n"
 	"github.com/marcoshack/taskwondo/internal/model"
 	"github.com/marcoshack/taskwondo/internal/storage"
 )
@@ -116,6 +117,7 @@ type AuthService struct {
 	emailSender        EmailSender
 	encryptor          *crypto.Encryptor
 	storage            storage.Storage
+	ssoCache           *SSODiscoveryCache
 	baseURL            string
 	jwtSecret          []byte
 	jwtExpiry          time.Duration
@@ -142,6 +144,7 @@ func NewAuthService(
 		jwtSecret:     []byte(jwtSecret),
 		jwtExpiry:     jwtExpiry,
 		providers:     pm,
+		ssoCache:      NewSSODiscoveryCache(),
 	}
 }
 
@@ -189,6 +192,7 @@ func (s *AuthService) getProvider(ctx context.Context, name string) OAuthProvide
 					if err != nil {
 						log.Ctx(ctx).Error().Err(err).Str("provider", name).Msg("failed to decrypt oauth client secret, falling back to static provider")
 					} else {
+						cfg.ClientSecret = secret
 						redirectURI := s.baseURL + "/auth/" + name + "/callback"
 						switch name {
 						case model.OAuthProviderDiscord:
@@ -199,6 +203,8 @@ func (s *AuthService) getProvider(ctx context.Context, name string) OAuthProvide
 							return NewGitHubProvider(cfg.ClientID, secret, redirectURI, nil)
 						case model.OAuthProviderMicrosoft:
 							return NewMicrosoftProvider(cfg.ClientID, secret, redirectURI, nil)
+						case model.OAuthProviderSSO:
+							return NewSSOProvider(cfg, redirectURI, s.encryptor, s.ssoCache, nil)
 						}
 					}
 				}
@@ -593,27 +599,17 @@ func (s *AuthService) SeedAdminUser(ctx context.Context, email, password string)
 // When a setting doesn't exist: OAuth defaults to enabled (backward compat),
 // email login defaults to enabled, email registration defaults to disabled.
 func (s *AuthService) EnabledProviders(ctx context.Context) map[string]bool {
-	result := make(map[string]bool, 4)
+	result := make(map[string]bool, len(model.KnownOAuthProviders)+2)
 
 	// Check each known OAuth provider — configured via DB or static env vars
-	for _, name := range []string{model.OAuthProviderDiscord, model.OAuthProviderGoogle, model.OAuthProviderGitHub, model.OAuthProviderMicrosoft} {
-		if s.isOAuthConfigured(ctx, name) {
-			settingKey := ""
-			switch name {
-			case model.OAuthProviderDiscord:
-				settingKey = model.SettingAuthDiscordEnabled
-			case model.OAuthProviderGoogle:
-				settingKey = model.SettingAuthGoogleEnabled
-			case model.OAuthProviderGitHub:
-				settingKey = model.SettingAuthGitHubEnabled
-			case model.OAuthProviderMicrosoft:
-				settingKey = model.SettingAuthMicrosoftEnabled
-			}
-			if settingKey != "" {
-				result[name] = s.getBoolSetting(ctx, settingKey, true)
-			} else {
-				result[name] = true
-			}
+	for _, name := range model.KnownOAuthProviders {
+		if !s.isOAuthConfigured(ctx, name) {
+			continue
+		}
+		if settingKey := model.OAuthEnabledSettingKey(name); settingKey != "" {
+			result[name] = s.getBoolSetting(ctx, settingKey, true)
+		} else {
+			result[name] = true
 		}
 	}
 
@@ -636,6 +632,10 @@ func (s *AuthService) isOAuthConfigured(ctx context.Context, name string) bool {
 			if err == nil {
 				var cfg model.OAuthProviderConfig
 				if err := json.Unmarshal(setting.Value, &cfg); err == nil && cfg.ClientID != "" {
+					// The SSO provider cannot work without an issuer to discover.
+					if name == model.OAuthProviderSSO {
+						return cfg.Issuer != "" && s.encryptor != nil
+					}
 					return true
 				}
 			}
@@ -665,7 +665,8 @@ func (s *AuthService) getBoolSetting(ctx context.Context, key string, defaultVal
 // RequestRegistration creates a verification token and sends a verification email.
 // If inviteCode is non-empty, it is stored with the token so the invite can be
 // auto-accepted when the user verifies their email (even from a different device).
-func (s *AuthService) RequestRegistration(ctx context.Context, email, displayName, inviteCode string) error {
+// lang selects the language of the verification email.
+func (s *AuthService) RequestRegistration(ctx context.Context, email, displayName, inviteCode, lang string) error {
 	if s.emailVerifications == nil || s.emailSender == nil || s.settings == nil {
 		return fmt.Errorf("%w: email registration is not configured", model.ErrForbidden)
 	}
@@ -727,9 +728,9 @@ func (s *AuthService) RequestRegistration(ctx context.Context, email, displayNam
 
 	// Build verification URL and send email
 	verifyURL := strings.TrimRight(s.baseURL, "/") + "/verify-email?token=" + rawToken
-	htmlBody := verificationEmailHTML(displayName, verifyURL)
+	htmlBody := verificationEmailHTML(lang, displayName, verifyURL)
 
-	if err := s.emailSender.Send(ctx, email, "Verify your email", htmlBody); err != nil {
+	if err := s.emailSender.Send(ctx, email, i18n.T(lang, "email.verify.subject"), htmlBody); err != nil {
 		log.Ctx(ctx).Error().Err(err).Str("email", email).Msg("failed to send verification email")
 		return fmt.Errorf("sending verification email: %w", err)
 	}
@@ -822,7 +823,8 @@ func (s *AuthService) VerifyEmailAndCreateUser(ctx context.Context, rawToken, pa
 
 // RequestPasswordReset generates a password reset token and sends an email.
 // It always returns nil to prevent user enumeration — even if the email doesn't exist.
-func (s *AuthService) RequestPasswordReset(ctx context.Context, email string) error {
+// lang selects the language of the reset email.
+func (s *AuthService) RequestPasswordReset(ctx context.Context, email, lang string) error {
 	if s.passwordResets == nil || s.emailSender == nil {
 		return fmt.Errorf("%w: password reset is not configured", model.ErrForbidden)
 	}
@@ -874,9 +876,9 @@ func (s *AuthService) RequestPasswordReset(ctx context.Context, email string) er
 	}
 
 	resetURL := strings.TrimRight(s.baseURL, "/") + "/reset-password?token=" + rawToken
-	htmlBody := passwordResetEmailHTML(user.DisplayName, resetURL)
+	htmlBody := passwordResetEmailHTML(lang, user.DisplayName, resetURL)
 
-	if err := s.emailSender.Send(ctx, email, "Reset your password", htmlBody); err != nil {
+	if err := s.emailSender.Send(ctx, email, i18n.T(lang, "email.reset.subject"), htmlBody); err != nil {
 		log.Ctx(ctx).Error().Err(err).Str("email", email).Msg("failed to send password reset email")
 		return fmt.Errorf("sending password reset email: %w", err)
 	}
@@ -948,38 +950,40 @@ func hashToken(raw string) string {
 	return hex.EncodeToString(h[:])
 }
 
-func verificationEmailHTML(displayName, verifyURL string) string {
-	return fmt.Sprintf(`<!DOCTYPE html>
-<html>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #f9fafb;">
-<div style="max-width: 480px; margin: 0 auto; background: #fff; border-radius: 8px; padding: 32px; border: 1px solid #e5e7eb;">
-<h2 style="margin: 0 0 16px;">Verify your email</h2>
-<p>Hi %s,</p>
-<p>Click the button below to verify your email address and set your password:</p>
-<p style="text-align: center; margin: 24px 0;">
-<a href="%s" style="display: inline-block; padding: 12px 24px; background: #4f46e5; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 600;">Verify email</a>
-</p>
-<p style="color: #6b7280; font-size: 14px;">This link expires in 24 hours. If you didn't request this, you can safely ignore this email.</p>
-</div>
-</body>
-</html>`, html.EscapeString(displayName), verifyURL)
+func verificationEmailHTML(lang, displayName, verifyURL string) string {
+	return authEmailHTML(lang,
+		i18n.T(lang, "email.verify.subject"),
+		i18n.T(lang, "email.verify.intro"),
+		i18n.T(lang, "email.verify.cta"),
+		i18n.T(lang, "email.verify.note"),
+		displayName, verifyURL)
 }
 
-func passwordResetEmailHTML(displayName, resetURL string) string {
+func passwordResetEmailHTML(lang, displayName, resetURL string) string {
+	return authEmailHTML(lang,
+		i18n.T(lang, "email.reset.subject"),
+		i18n.T(lang, "email.reset.intro"),
+		i18n.T(lang, "email.reset.cta"),
+		i18n.T(lang, "email.reset.note"),
+		displayName, resetURL)
+}
+
+func authEmailHTML(lang, title, intro, cta, note, displayName, actionURL string) string {
+	greeting := i18n.T(lang, "email.greeting", "name", html.EscapeString(displayName))
 	return fmt.Sprintf(`<!DOCTYPE html>
 <html>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #f9fafb;">
 <div style="max-width: 480px; margin: 0 auto; background: #fff; border-radius: 8px; padding: 32px; border: 1px solid #e5e7eb;">
-<h2 style="margin: 0 0 16px;">Reset your password</h2>
-<p>Hi %s,</p>
-<p>We received a request to reset your password. Click the button below to choose a new password:</p>
+<h2 style="margin: 0 0 16px;">%s</h2>
+<p>%s</p>
+<p>%s</p>
 <p style="text-align: center; margin: 24px 0;">
-<a href="%s" style="display: inline-block; padding: 12px 24px; background: #4f46e5; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 600;">Reset password</a>
+<a href="%s" style="display: inline-block; padding: 12px 24px; background: #4f46e5; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 600;">%s</a>
 </p>
-<p style="color: #6b7280; font-size: 14px;">This link expires in 1 hour. If you didn't request this, you can safely ignore this email.</p>
+<p style="color: #6b7280; font-size: 14px;">%s</p>
 </div>
 </body>
-</html>`, html.EscapeString(displayName), resetURL)
+</html>`, title, greeting, intro, actionURL, cta, note)
 }
 
 // OAuthURL generates the authorization URL for the given provider.
@@ -989,12 +993,34 @@ func (s *AuthService) OAuthURL(ctx context.Context, providerName string) (string
 		return "", fmt.Errorf("oauth provider %q is not configured", providerName)
 	}
 
+	state, err := s.oauthState(ctx, provider)
+	if err != nil {
+		return "", err
+	}
+
+	// OIDC providers must reach the network for discovery to build the URL, and
+	// they need the per-login secrets that live inside the sealed state.
+	if contextual, ok := provider.(ContextualAuthURL); ok {
+		return contextual.AuthURLContext(ctx, state)
+	}
+	return provider.AuthURL(state), nil
+}
+
+// oauthState produces the anti-CSRF state parameter, delegating to the provider
+// when it carries its own per-login secrets.
+func (s *AuthService) oauthState(ctx context.Context, provider OAuthProvider) (string, error) {
+	if binder, ok := provider.(StateBinder); ok {
+		state, err := binder.NewState(ctx)
+		if err != nil {
+			return "", fmt.Errorf("generating %s state: %w", provider.Name(), err)
+		}
+		return state, nil
+	}
 	state, err := s.generateOAuthState()
 	if err != nil {
 		return "", fmt.Errorf("generating state: %w", err)
 	}
-
-	return provider.AuthURL(state), nil
+	return state, nil
 }
 
 // OAuthCallback validates state, exchanges the code via the provider, and finds or creates a user.
@@ -1004,12 +1030,17 @@ func (s *AuthService) OAuthCallback(ctx context.Context, providerName, code, sta
 		return "", nil, fmt.Errorf("oauth provider %q is not configured", providerName)
 	}
 
-	if err := s.validateOAuthState(state); err != nil {
+	ctx, err := s.validateProviderState(ctx, provider, state)
+	if err != nil {
 		return "", nil, fmt.Errorf("invalid state: %w", err)
 	}
 
 	userInfo, err := provider.ExchangeCode(ctx, code)
 	if err != nil {
+		var ssoErr *SSOError
+		if errors.As(err, &ssoErr) {
+			return "", nil, model.NewKeyedError(ssoErr.Sentinel, ssoErr.Key, ssoErr.Message, nil)
+		}
 		return "", nil, fmt.Errorf("exchanging code: %w", err)
 	}
 
@@ -1028,6 +1059,15 @@ func (s *AuthService) OAuthCallback(ctx context.Context, providerName, code, sta
 	}
 
 	return token, user, nil
+}
+
+// validateProviderState checks the state parameter and returns the context
+// carrying any per-login secrets the provider unsealed from it.
+func (s *AuthService) validateProviderState(ctx context.Context, provider OAuthProvider, state string) (context.Context, error) {
+	if binder, ok := provider.(StateBinder); ok {
+		return binder.ValidateState(ctx, state)
+	}
+	return ctx, s.validateOAuthState(state)
 }
 
 func (s *AuthService) findOrCreateOAuthUser(ctx context.Context, provider string, info model.OAuthUserInfo) (*model.User, error) {
@@ -1065,6 +1105,15 @@ func (s *AuthService) findOrCreateOAuthUser(ctx context.Context, provider string
 
 	// Case 3: Create new user.
 	if user == nil {
+		// Automatic provisioning is off by default for the generic SSO
+		// provider: an administrator's identity provider must not be able to
+		// mint accounts here just by adding someone to a directory.
+		if provider == model.OAuthProviderSSO &&
+			!s.getBoolSetting(ctx, model.SettingSSOAutoProvision, false) {
+			return nil, model.NewKeyedError(model.ErrForbidden, "sso_account_not_provisioned",
+				"no account exists for this single sign-on identity; an administrator must create it or enable automatic provisioning", nil)
+		}
+
 		email := info.Email
 		if email == "" {
 			email = provider + "_" + info.ProviderUserID + "@oauth.taskwondo.local"

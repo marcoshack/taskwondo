@@ -45,7 +45,7 @@ export function BoardView({ projectKey, items, statuses, transitionsMap, onItemC
   }
 
   const categoryDot: Record<string, string> = {
-    todo: 'bg-gray-400',
+    todo: 'bg-[var(--foreground-muted)]',
     in_progress: 'bg-blue-400',
     done: 'bg-green-400',
     cancelled: 'bg-red-400',
@@ -139,7 +139,7 @@ export function BoardView({ projectKey, items, statuses, transitionsMap, onItemC
           <button
             type="button"
             aria-label={t('workitems.board.scrollLeft')}
-            className="pointer-events-auto sticky top-1/2 -translate-y-1/2 ml-1 flex items-center justify-center w-8 h-8 rounded-full bg-white/90 dark:bg-gray-800/90 border border-gray-200 dark:border-gray-600 shadow-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors"
+            className="pointer-events-auto sticky top-1/2 -translate-y-1/2 ml-1 flex items-center justify-center w-8 h-8 rounded-full bg-white/90 bg-[var(--surface)]/90 border border-[var(--border)] shadow-md hover:bg-[var(--surface-hover)] text-[var(--foreground-secondary)] transition-colors"
             onClick={() => scrollBy('left')}
           >
             <ChevronLeft size={20} />
@@ -151,7 +151,7 @@ export function BoardView({ projectKey, items, statuses, transitionsMap, onItemC
           <button
             type="button"
             aria-label={t('workitems.board.scrollRight')}
-            className="pointer-events-auto sticky top-1/2 -translate-y-1/2 -ml-9 flex items-center justify-center w-8 h-8 rounded-full bg-white/90 dark:bg-gray-800/90 border border-gray-200 dark:border-gray-600 shadow-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors"
+            className="pointer-events-auto sticky top-1/2 -translate-y-1/2 -ml-9 flex items-center justify-center w-8 h-8 rounded-full bg-white/90 bg-[var(--surface)]/90 border border-[var(--border)] shadow-md hover:bg-[var(--surface-hover)] text-[var(--foreground-secondary)] transition-colors"
             onClick={() => scrollBy('right')}
           >
             <ChevronRight size={20} />
@@ -163,9 +163,9 @@ export function BoardView({ projectKey, items, statuses, transitionsMap, onItemC
           const isValidTarget = draggedItem !== null && canDropOnStatus(status.name)
           const isHovered = hoveredColumn === status.name
           const columnClasses = isHovered
-            ? 'border-2 border-dashed border-indigo-400 dark:border-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/20 rounded-lg'
+            ? 'border-2 border-dashed border-[var(--primary-border)] dark:border-[var(--primary)] bg-[var(--primary-muted)]/50  rounded-lg'
             : isValidTarget
-              ? 'border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg'
+              ? 'border-2 border-dashed border-[var(--border)] rounded-lg'
               : draggedItem !== null
                 ? 'border-2 border-transparent rounded-lg opacity-60'
                 : ''
@@ -180,9 +180,9 @@ export function BoardView({ projectKey, items, statuses, transitionsMap, onItemC
               onDrop={(e) => handleColumnDrop(e, status.name)}
             >
               <div className="flex items-center gap-2 mb-3 px-1">
-                <span className={`w-2.5 h-2.5 rounded-full ${categoryDot[status.category] ?? 'bg-gray-400'}`} />
-                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">{t(`workitems.statuses.${status.name}`, { defaultValue: status.display_name })}</h3>
-                <span className="text-xs text-gray-400 dark:text-gray-500">{itemsByStatus.get(status.name)?.length ?? 0}</span>
+                <span className={`w-2.5 h-2.5 rounded-full ${categoryDot[status.category] ?? 'bg-[var(--foreground-muted)]'}`} />
+                <h3 className="text-sm font-medium text-[var(--foreground)]">{t(`workitems.statuses.${status.name}`, { defaultValue: status.display_name })}</h3>
+                <span className="text-xs text-[var(--foreground-muted)]">{itemsByStatus.get(status.name)?.length ?? 0}</span>
               </div>
               <div className="space-y-2">
                 {(itemsByStatus.get(status.name) ?? []).map((item) => (
@@ -244,7 +244,7 @@ function BoardCard({
 
   return (
     <div
-      className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 shadow-sm hover:shadow-md cursor-pointer relative ${isDragging ? 'opacity-50' : ''}`}
+      className={`bg-[var(--surface)] rounded-lg border border-[var(--border)] p-3 shadow-sm hover:shadow-md cursor-pointer relative ${isDragging ? 'opacity-50' : ''}`}
       draggable={!readOnly}
       onClick={onClick}
       onDragStart={(e) => {
@@ -255,27 +255,27 @@ function BoardCard({
       onDragEnd={onDragEnd}
     >
       <div className="flex items-center gap-1.5 mb-1">
-        <span className={`text-xs font-bold font-mono ${isCompleted ? 'text-gray-400 dark:text-gray-500' : 'text-gray-600 dark:text-gray-400'}`}>{item.display_id}</span>
+        <span className={`text-xs font-bold font-mono ${isCompleted ? 'text-[var(--foreground-muted)]' : 'text-[var(--foreground-secondary)]'}`}>{item.display_id}</span>
         <span className={isCompleted ? 'opacity-40' : ''}><TypeBadge type={item.type} /></span>
         <span className={isCompleted ? 'opacity-40' : ''}><PriorityBadge priority={item.priority} /></span>
         {allowed.length > 0 && !readOnly && (
           <div className="relative ml-auto">
             <Tooltip content={t('workitems.view.moveTo')}>
               <button
-                className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-xs px-1"
+                className="text-[var(--foreground-muted)] hover:text-[var(--foreground-secondary)] text-xs px-1"
                 onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu) }}
               >
               &hellip;
               </button>
             </Tooltip>
             {showMenu && (
-              <div className="absolute right-0 top-5 z-10 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg py-1 min-w-[140px]">
+              <div className="absolute right-0 top-5 z-10 bg-[var(--surface)] border border-[var(--border)] rounded-md shadow-lg py-1 min-w-[140px]">
                 {allowed.map((toStatus) => {
                   const ws = statuses.find((s) => s.name === toStatus)
                   return (
                     <button
                       key={toStatus}
-                      className="block w-full text-left px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                      className="block w-full text-left px-3 py-1.5 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)]"
                       onClick={(e) => {
                         e.stopPropagation()
                         onStatusChange(toStatus)
@@ -291,9 +291,9 @@ function BoardCard({
           </div>
         )}
       </div>
-      <p className={`text-sm font-medium line-clamp-2 ${isCompleted ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'}`}>{item.title}</p>
+      <p className={`text-sm font-medium line-clamp-2 ${isCompleted ? 'line-through text-[var(--foreground-muted)]' : 'text-[var(--foreground)]'}`}>{item.title}</p>
       {item.description && (
-        <p className={`text-xs line-clamp-1 mt-0.5 ${isCompleted ? 'text-gray-300 dark:text-gray-600' : 'text-gray-500 dark:text-gray-400'}`}>{item.description}</p>
+        <p className={`text-xs line-clamp-1 mt-0.5 ${isCompleted ? 'text-[var(--foreground-secondary)]' : 'text-[var(--foreground-secondary)]'}`}>{item.description}</p>
       )}
       {!isCompleted && item.sla && (
         <div className="mt-1.5">

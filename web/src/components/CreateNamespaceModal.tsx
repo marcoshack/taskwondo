@@ -66,7 +66,7 @@ export function CreateNamespaceModal({ open, onClose, onCreated }: Props) {
         <span className="flex items-center gap-3">
           {t('namespaces.createTitle')}
           {!isAdmin && limit > 0 && (
-            <span className={`text-sm font-normal ${atLimit ? 'text-amber-500 dark:text-amber-400' : 'text-gray-500 dark:text-gray-400'}`}>
+            <span className={`text-sm font-normal ${atLimit ? 'text-amber-500 dark:text-amber-400' : 'text-[var(--foreground-secondary)]'}`}>
               {t('namespaces.limitCounter', { count, limit })}
             </span>
           )}
@@ -77,7 +77,7 @@ export function CreateNamespaceModal({ open, onClose, onCreated }: Props) {
         {atLimit && (
           <p className="text-sm text-amber-600 dark:text-amber-400">{t('namespaces.limitReached')}</p>
         )}
-        <p className="text-sm text-gray-500 dark:text-gray-400">{t('namespaces.createDescription')}</p>
+        <p className="text-sm text-[var(--foreground-secondary)]">{t('namespaces.createDescription')}</p>
         <Input
           label={t('namespaces.displayName')}
           value={displayName}
@@ -95,8 +95,8 @@ export function CreateNamespaceModal({ open, onClose, onCreated }: Props) {
           required
           disabled={atLimit}
         />
-        <p className="text-xs text-gray-400 dark:text-gray-500 -mt-3">{t('namespaces.slugHint')}</p>
-        {formError && <p className="text-sm text-red-600 dark:text-red-400">{formError}</p>}
+        <p className="text-xs text-[var(--foreground-muted)] -mt-3">{t('namespaces.slugHint')}</p>
+        {formError && <p className="text-sm text-[var(--danger)]">{formError}</p>}
         <div className="flex justify-end gap-3 pt-2">
           <Button type="button" variant="secondary" onClick={handleClose}>
             {t('common.cancel')}
