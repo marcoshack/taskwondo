@@ -206,7 +206,7 @@ export function SystemIntegrationsPage() {
             <select
               value={cfg.encryption}
               onChange={(e) => updateField('encryption', e.target.value as SMTPConfig['encryption'])}
-              className="block w-full rounded-md border border-[var(--border)] bg-white px-3 py-2 text-sm shadow-sm focus:border-[var(--primary)] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)] dark:border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)]"
+              className="block w-full rounded-md border border-[var(--border)] bg-white px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)] dark:border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)]"
             >
               {encryptionOptions.map((opt) => (
                 <option key={opt.value} value={opt.value}>

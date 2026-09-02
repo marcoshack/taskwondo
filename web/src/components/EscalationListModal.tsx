@@ -272,7 +272,7 @@ export function EscalationListModal({ open, onClose, onSave, projectKey, editing
                           <input
                             type="number"
                             min="1"
-                            className="block w-24 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--primary)] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            className="block w-24 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--primary)] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             value={level.threshold_pct}
                             onChange={(e) => updateLevelThreshold(index, e.target.value)}
                             onBlur={sortLevelsByThreshold}
@@ -448,7 +448,7 @@ function MemberTeamPicker({
     <div ref={containerRef} className="relative">
       <input
         ref={inputRef}
-        className="block w-full rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--primary)]"
+        className="block w-full rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--primary)]"
         placeholder={t('escalation.searchPlaceholder')}
         value={search}
         onChange={(e) => { setSearch(e.target.value); updatePosition(); setOpen(true) }}

@@ -382,7 +382,7 @@ export function NamespaceSettingsPage() {
                   />
                 </div>
                 <select
-                  className="shrink-0 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
+                  className="shrink-0 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
                   value={newMemberRole}
                   onChange={(e) => setNewMemberRole(e.target.value)}
                 >
@@ -428,7 +428,7 @@ export function NamespaceSettingsPage() {
                           {saved[`role:${member.user_id}`] && <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />}
                           <Tooltip content={isLastOwner ? t('namespaces.lastOwnerTooltip') : undefined}>
                             <select
-                              className="rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-2 py-1 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] disabled:opacity-50 disabled:cursor-not-allowed"
                               value={member.role}
                               onChange={(e) => handleRoleChange(member.user_id, e.target.value)}
                               disabled={updateRoleMutation.isPending || isLastOwner}

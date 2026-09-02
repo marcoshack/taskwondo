@@ -477,7 +477,7 @@ export function DirectoryUsersTab() {
                           <input
                             type="number"
                             min={0}
-                            className="w-14 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-1 py-1 text-xs text-center shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
+                            className="w-14 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-1 py-1 text-xs text-center focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
                             placeholder={t('admin.users.maxProjectsDefault')}
                             value={getUserLimitDisplay(u)}
                             onChange={(e) => handleUserLimitChange(u.id, e.target.value)}
@@ -505,7 +505,7 @@ export function DirectoryUsersTab() {
                             <input
                               type="number"
                               min={0}
-                              className="w-14 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-1 py-1 text-xs text-center shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
+                              className="w-14 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-1 py-1 text-xs text-center focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
                               placeholder={t('admin.users.maxNamespacesDefault')}
                               value={getUserNsLimitDisplay(u)}
                               onChange={(e) => handleUserNsLimitChange(u.id, e.target.value)}
@@ -529,7 +529,7 @@ export function DirectoryUsersTab() {
                   <div className="flex items-center justify-center gap-1 min-w-0" onClick={(e) => e.stopPropagation()}>
                     {!isSelf ? (
                       <select
-                        className="rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-2 py-1 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
+                        className="rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
                         value={u.global_role}
                         onChange={(e) => handleRoleChange(u.id, e.target.value)}
                         disabled={updateUserMutation.isPending}
@@ -608,7 +608,7 @@ export function DirectoryUsersTab() {
                     )}
                     {!isSelf ? (
                       <select
-                        className="rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-2 py-1 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
+                        className="rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
                         value={u.global_role}
                         onChange={(e) => handleRoleChange(u.id, e.target.value)}
                         disabled={updateUserMutation.isPending}
@@ -878,7 +878,7 @@ function UserProjectsPanel({
             <input
               type="number"
               min={0}
-              className="w-14 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-1 py-1 text-xs text-center shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
+              className="w-14 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-1 py-1 text-xs text-center focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
               placeholder={t('admin.users.maxProjectsDefault')}
               value={mobileProjectLimit.value}
               onChange={(e) => mobileProjectLimit.onChange(e.target.value)}
@@ -906,7 +906,7 @@ function UserProjectsPanel({
             <input
               type="number"
               min={0}
-              className="w-14 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-1 py-1 text-xs text-center shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
+              className="w-14 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-1 py-1 text-xs text-center focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
               placeholder={t('admin.users.maxNamespacesDefault')}
               value={mobileNamespaceLimit.value}
               onChange={(e) => mobileNamespaceLimit.onChange(e.target.value)}
@@ -952,7 +952,7 @@ function UserProjectsPanel({
                     )}
                     <Tooltip content={isLastOwner ? t('projects.settings.lastOwnerTooltip') : undefined}>
                       <select
-                        className="rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-2 py-1 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] disabled:opacity-50 disabled:cursor-not-allowed"
                         value={p.role}
                         onChange={(e) => {
                           setError(null)
@@ -993,7 +993,7 @@ function UserProjectsPanel({
         {availableProjects.length > 0 && (
           <div className="flex gap-2 items-center pt-2 border-t border-[var(--border)]">
             <select
-              className="min-w-0 flex-1 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-2 py-1.5 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
+              className="min-w-0 flex-1 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
               value={selectedProjectId}
               onChange={(e) => setSelectedProjectId(e.target.value)}
             >
@@ -1003,7 +1003,7 @@ function UserProjectsPanel({
               ))}
             </select>
             <select
-              className="rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-2 py-1.5 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
+              className="rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
               value={selectedRole}
               onChange={(e) => setSelectedRole(e.target.value)}
             >

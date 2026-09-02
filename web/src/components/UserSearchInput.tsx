@@ -105,7 +105,7 @@ export function UserSearchInput({
     <div ref={ref} className="relative flex-1">
       <input
         ref={inputRef}
-        className="block w-full rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--primary)]"
+        className="block w-full rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--primary)]"
         placeholder={placeholder ?? t('projects.settings.addMemberPlaceholder')}
         value={search}
         onChange={(e) => setSearch(e.target.value)}

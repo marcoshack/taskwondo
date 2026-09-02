@@ -133,7 +133,7 @@ function RoleSelect({
         type="button"
         onClick={() => !disabled && setOpen(!open)}
         disabled={disabled}
-        className={`flex items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap ${sizeClasses}`}
+        className={`flex items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap ${sizeClasses}`}
         ref={buttonRef}
       >
         <span>{t(`projects.settings.roles.${value}`)}</span>
@@ -519,7 +519,7 @@ export function ProjectSettingsPage() {
                 ref={descRef}
                 id="description"
                 rows={12}
-                className="block w-full rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--primary)] disabled:opacity-60 disabled:cursor-not-allowed"
+                className="block w-full rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--primary)] disabled:opacity-60 disabled:cursor-not-allowed"
                 value={currentDescription}
                 onChange={(e) => setDescription(e.target.value)}
                 onKeyDown={descMention.onMentionKeyDown}
@@ -760,7 +760,7 @@ export function ProjectSettingsPage() {
               <div>
                 <label className="block text-xs font-medium text-[var(--foreground-secondary)] mb-1">{t('projects.settings.inviteRole')}</label>
                 <select
-                  className="rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
+                  className="rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
                   value={inviteRole}
                   onChange={(e) => {
                     const role = e.target.value
@@ -779,7 +779,7 @@ export function ProjectSettingsPage() {
               <div>
                 <label className="block text-xs font-medium text-[var(--foreground-secondary)] mb-1">{t('projects.settings.inviteExpiration')}</label>
                 <select
-                  className="rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
+                  className="rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
                   value={inviteExpiration}
                   onChange={(e) => setInviteExpiration(e.target.value)}
                 >
@@ -795,7 +795,7 @@ export function ProjectSettingsPage() {
                 <input
                   type="number"
                   min="0"
-                  className="w-24 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
+                  className="w-24 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
                   value={inviteMaxUses}
                   onChange={(e) => setInviteMaxUses(e.target.value)}
                   placeholder={t('projects.settings.inviteMaxUsesPlaceholder')}
@@ -1116,7 +1116,7 @@ export function ProjectSettingsPage() {
           type="text"
           value={transferConfirm}
           onChange={(e) => setTransferConfirm(e.target.value.toUpperCase())}
-          className="block w-full rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] mb-4"
+          className="block w-full rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] mb-4"
           placeholder={project.key}
         />
         <label className="block text-sm font-medium text-[var(--foreground)] mb-1">{t('projects.settings.transferTargetNamespace')}</label>
@@ -1132,7 +1132,7 @@ export function ProjectSettingsPage() {
                 setTransferMenuPos({ top: rect.bottom + 4, left: rect.left, width: rect.width })
               }
             }}
-            className="flex items-center gap-2 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
+            className="flex items-center gap-2 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
           >
             {(() => {
               const selected = namespaces.find((ns) => ns.slug === transferTarget)

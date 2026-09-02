@@ -52,7 +52,7 @@ function RedirectUriField({ provider }: { provider: string }) {
         <input
           value={redirectUri}
           readOnly
-          className="block w-full min-w-0 rounded-md border px-3 py-2 pr-10 text-sm shadow-sm border-[var(--border)] text-[var(--foreground-secondary)] bg-[var(--surface-secondary)] dark:border-[var(--border)] bg-[var(--surface)]/50 text-[var(--foreground-muted)] cursor-default"
+          className="block w-full min-w-0 rounded-md border px-3 py-2 pr-10 text-sm border-[var(--border)] text-[var(--foreground-secondary)] bg-[var(--surface-secondary)] dark:border-[var(--border)] bg-[var(--surface)]/50 text-[var(--foreground-muted)] cursor-default"
         />
         <button
           type="button"

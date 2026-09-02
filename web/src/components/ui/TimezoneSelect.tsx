@@ -61,7 +61,7 @@ export function TimezoneSelect({ value, onChange, disabled = false }: Props) {
       <button
         type="button"
         disabled={disabled}
-        className="w-full text-left rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] truncate disabled:opacity-60 disabled:cursor-not-allowed"
+        className="w-full text-left rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] truncate disabled:opacity-60 disabled:cursor-not-allowed"
         onClick={() => {
           setOpen(!open)
           if (!open) {

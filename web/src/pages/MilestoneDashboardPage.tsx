@@ -866,7 +866,7 @@ function MilestoneEditForm({
         <label className="block text-sm font-medium text-[var(--foreground)] mb-1">{t('milestones.name')}</label>
         <input
           type="text"
-          className="block w-full rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--primary)]"
+          className="block w-full rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--primary)]"
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
@@ -877,7 +877,7 @@ function MilestoneEditForm({
         <label className="block text-sm font-medium text-[var(--foreground)] mb-1">{t('common.description')}</label>
         <textarea
           rows={3}
-          className="block w-full rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--primary)]"
+          className="block w-full rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--primary)]"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
@@ -887,7 +887,7 @@ function MilestoneEditForm({
           <label className="block text-sm font-medium text-[var(--foreground)] mb-1">{t('milestones.dueDate')}</label>
           <input
             type="date"
-            className="block w-full rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--primary)]"
+            className="block w-full rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--primary)]"
             value={dueDate}
             onChange={(e) => setDueDate(e.target.value)}
           />
@@ -895,7 +895,7 @@ function MilestoneEditForm({
         <div className="w-48">
           <label className="block text-sm font-medium text-[var(--foreground)] mb-1">{t('workitems.form.status')}</label>
           <select
-            className="block w-full rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--primary)]"
+            className="block w-full rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--primary)]"
             value={status}
             onChange={(e) => setStatus(e.target.value as 'open' | 'closed')}
           >

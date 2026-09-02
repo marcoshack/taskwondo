@@ -50,7 +50,7 @@ export function ProjectPicker({ projects, value, onChange, disabled, error }: Pr
       </label>
       <button
         type="button"
-        className={`block w-full rounded-md border px-3 py-2 text-sm text-left shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--focus-ring)] bg-[var(--surface)] ${
+        className={`block w-full rounded-md border px-3 py-2 text-sm text-left focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--focus-ring)] bg-[var(--surface)] ${
           error ? 'border-[var(--danger)]' : 'border-[var(--border)]'
         } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
         onClick={() => { if (disabled) return; setOpen(!open); setTimeout(() => inputRef.current?.focus(), 0) }}

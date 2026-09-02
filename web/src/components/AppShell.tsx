@@ -490,7 +490,7 @@ function ProjectSwitcherModal({
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         onKeyDown={handleKeyDown}
-        className="block w-full rounded-md border border-[var(--border)] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--primary)] bg-[var(--surface)] text-[var(--foreground)] placeholder-[var(--foreground-muted)] mb-3"
+        className="block w-full rounded-md border border-[var(--border)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--primary)] bg-[var(--surface)] text-[var(--foreground)] placeholder-[var(--foreground-muted)] mb-3"
       />
       {isLoading ? (
         <div className="flex justify-center py-6"><Spinner /></div>

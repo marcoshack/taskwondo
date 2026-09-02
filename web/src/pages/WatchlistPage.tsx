@@ -515,7 +515,7 @@ export default function WatchlistPage() {
       ) : (
         <>
           {/* Desktop: table view */}
-          <div className="hidden lg:block border dark:border-[var(--border)] rounded-lg overflow-hidden">
+          <div className="hidden lg:block border border-[var(--border)] rounded-lg overflow-hidden">
             <DataTable
               columns={columns}
               data={allItems}

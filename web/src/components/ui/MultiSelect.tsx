@@ -93,7 +93,7 @@ export function MultiSelect({ options, selected, onChange, placeholder = 'All', 
     <div ref={ref} className={`relative ${className}`}>
       <button
         type="button"
-        className={`flex items-center justify-between w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm shadow-sm hover:bg-[var(--surface-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--focus-ring)] ${
+        className={`flex items-center justify-between w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm hover:bg-[var(--surface-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--focus-ring)] ${
           hasSelection ? 'text-[var(--foreground)]' : 'text-[var(--foreground-muted)]'
         }`}
         onClick={() => setOpen(!open)}

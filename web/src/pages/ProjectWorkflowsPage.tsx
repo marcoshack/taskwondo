@@ -293,7 +293,7 @@ export function ProjectWorkflowsPage() {
                   <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
                 )}
                 <select
-                  className="rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] disabled:opacity-60 disabled:cursor-not-allowed"
                   value={mapping?.workflow_id ?? ''}
                   onChange={(e) => {
                     setWorkflowError('')
@@ -454,7 +454,7 @@ export function ProjectWorkflowsPage() {
                     <Check className="h-5 w-5 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
                   )}
                   <select
-                    className="rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] disabled:opacity-60 disabled:cursor-not-allowed"
                     value={escMapping?.escalation_list_id ?? ''}
                     onChange={(e) => {
                       setEscalationMappingError('')
@@ -579,7 +579,7 @@ export function ProjectWorkflowsPage() {
                         {t('businessHours.startHour')}
                       </label>
                       <select
-                        className="w-full rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="w-full rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] disabled:opacity-60 disabled:cursor-not-allowed"
                         value={currentStart}
                         onChange={(e) => setBhStart(Number(e.target.value))}
                         disabled={!canManage}
@@ -594,7 +594,7 @@ export function ProjectWorkflowsPage() {
                         {t('businessHours.endHour')}
                       </label>
                       <select
-                        className="w-full rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="w-full rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] disabled:opacity-60 disabled:cursor-not-allowed"
                         value={currentEnd}
                         onChange={(e) => setBhEnd(Number(e.target.value))}
                         disabled={!canManage}
@@ -1161,7 +1161,7 @@ function WorkflowEditorModal({
           </label>
           <textarea
             rows={2}
-            className="block w-full rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--primary)]"
+            className="block w-full rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--primary)]"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder={t('workflows.descriptionPlaceholder')}
@@ -1234,7 +1234,7 @@ function WorkflowEditorModal({
               {transitions.map((tr, idx) => (
                 <div key={idx} className="flex items-center gap-2">
                   <select
-                    className="min-w-0 flex-1 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-2 py-1.5 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
+                    className="min-w-0 flex-1 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
                     value={tr.from_status}
                     onChange={(e) => updateTransition(idx, 'from_status', e.target.value)}
                   >
@@ -1244,7 +1244,7 @@ function WorkflowEditorModal({
                   </select>
                   <ArrowRight className="h-3.5 w-3.5 text-[var(--foreground-muted)] shrink-0" />
                   <select
-                    className="min-w-0 flex-1 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-2 py-1.5 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
+                    className="min-w-0 flex-1 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
                     value={tr.to_status}
                     onChange={(e) => updateTransition(idx, 'to_status', e.target.value)}
                   >
@@ -1254,7 +1254,7 @@ function WorkflowEditorModal({
                   </select>
                   <input
                     type="text"
-                    className="min-w-0 w-16 sm:w-28 shrink rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-2 py-1.5 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
+                    className="min-w-0 w-16 sm:w-28 shrink rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
                     placeholder={t('workflows.transitionName')}
                     value={tr.name}
                     onChange={(e) => updateTransition(idx, 'name', e.target.value)}

@@ -440,7 +440,7 @@ function VisibilityPicker({ value, onChange, disabled }: { value: string; onChan
         type="button"
         disabled={disabled}
         onClick={() => !disabled && setOpen(!open)}
-        className={`flex items-center gap-1.5 w-full rounded-md border border-[var(--border)] px-3 py-2 text-sm shadow-sm bg-[var(--surface)] ${disabled ? 'opacity-50 cursor-not-allowed' : 'focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--primary)]'}`}
+        className={`flex items-center gap-1.5 w-full rounded-md border border-[var(--border)] px-3 py-2 text-sm bg-[var(--surface)] ${disabled ? 'opacity-50 cursor-not-allowed' : 'focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--primary)]'}`}
       >
         <Icon className={`h-3.5 w-3.5 ${cfg.color}`} />
         <span className={cfg.color}>{t(`workitems.visibilities.${value}`)}</span>

@@ -875,9 +875,9 @@ export function WorkItemListPage() {
       ) : viewMode === 'list' ? (
         <>
           {/* Desktop: table view */}
-          <div className="hidden lg:block border dark:border-[var(--border)] rounded-lg overflow-hidden">
+          <div className="hidden lg:block border border-[var(--border)] rounded-lg overflow-hidden">
             {!readOnly && (
-              <div className="bg-[var(--surface-secondary)] px-6 py-2 border-b dark:border-[var(--border)]">
+              <div className="bg-[var(--surface-secondary)] px-6 py-2 border-b border-[var(--border)]">
                 <label className="flex items-center gap-2 text-xs text-[var(--foreground-secondary)]">
                   <input
                     type="checkbox"

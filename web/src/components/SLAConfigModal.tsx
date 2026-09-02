@@ -240,10 +240,10 @@ export function SLAConfigModal({ open, onClose, onSave, projectKey, workItemType
                   onChange={(e) => onUpdate(index, 'duration', e.target.value)}
                   placeholder={t('sla.durationPlaceholder')}
                   disabled={terminal || readOnly}
-                  className="w-[4.5rem] sm:w-auto min-w-0 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-2 py-1.5 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-[4.5rem] sm:w-auto min-w-0 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <select
-                  className="w-[4.5rem] sm:w-auto truncate rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-2 py-1.5 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-[4.5rem] sm:w-auto truncate rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] disabled:opacity-50 disabled:cursor-not-allowed"
                   value={row.calendarMode}
                   onChange={(e) => onUpdate(index, 'calendarMode', e.target.value)}
                   disabled={terminal || readOnly}

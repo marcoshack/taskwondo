@@ -128,7 +128,7 @@ export function PortalTicketListPage() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
-              className="block w-full rounded-md border border-[var(--border)] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--primary)] bg-[var(--surface)] text-[var(--foreground)] placeholder-[var(--foreground-muted)]"
+              className="block w-full rounded-md border border-[var(--border)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--primary)] bg-[var(--surface)] text-[var(--foreground)] placeholder-[var(--foreground-muted)]"
               placeholder={t('portal.ticketDescription')}
             />
           </div>
