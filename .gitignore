@@ -41,3 +41,6 @@ test/e2e/.auth/
 
 # Docker
 docker/data/
+
+# Codegraph local index
+.codegraph/
