@@ -31,6 +31,7 @@ import { CopyButton } from '@/components/ui/CopyButton'
 import { SLAIndicator } from '@/components/SLAIndicator'
 import { ScrollableRow } from '@/components/ui/ScrollableRow'
 import { useAuth } from '@/contexts/AuthContext'
+import { useBrand } from '@/contexts/BrandContext'
 import { Settings2, User, Calendar, CalendarPlus, History, Lock, Unlock, Globe, Target } from 'lucide-react'
 import { InboxButton } from '@/components/workitems/InboxButton'
 import { WatchButton } from '@/components/workitems/WatchButton'
@@ -59,6 +60,7 @@ export function WorkItemDetailPage() {
   const { data: allWorkflows } = useProjectWorkflows(projectKey ?? '')
   const { data: milestones } = useMilestones(projectKey ?? '')
   const { user } = useAuth()
+  const { brandName } = useBrand()
   const updateMutation = useUpdateWorkItem(projectKey ?? '')
   const deleteMutation = useDeleteWorkItem(projectKey ?? '')
 
@@ -137,10 +139,10 @@ export function WorkItemDetailPage() {
   // Update browser tab title with work item display ID
   useEffect(() => {
     if (item) {
-      document.title = `${currentDisplayId} ${item.title} - Taskwondo`
+      document.title = `${currentDisplayId} ${item.title} - ${brandName}`
     }
-    return () => { document.title = 'Taskwondo' }
-  }, [item, currentDisplayId])
+    return () => { document.title = brandName }
+  }, [item, currentDisplayId, brandName])
 
   // Clean up deep-link search params after reading them
   useEffect(() => {
