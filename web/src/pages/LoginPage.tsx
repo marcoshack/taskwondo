@@ -237,7 +237,7 @@ export function LoginPage() {
                       to="/register"
                       className="text-xs text-[var(--foreground-secondary)] hover:text-[var(--primary)] transition-colors"
                     >
-                      {t('login.register')}
+                      {t('login.createAccount')}
                     </Link>
                   )}
                 </div>

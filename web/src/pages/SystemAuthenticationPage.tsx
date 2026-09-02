@@ -102,6 +102,12 @@ const OAUTH_PROVIDERS: OAuthProviderDef[] = [
     enabledSettingKey: 'auth_github_enabled',
   },
   {
+    provider: 'microsoft',
+    titleKey: 'admin.authentication.microsoft.title',
+    descriptionKey: 'admin.authentication.microsoft.description',
+    enabledSettingKey: 'auth_microsoft_enabled',
+  },
+  {
     provider: 'sso',
     titleKey: 'admin.authentication.sso.title',
     descriptionKey: 'admin.authentication.sso.description',
