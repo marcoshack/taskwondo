@@ -1,4 +1,4 @@
-.PHONY: build push help setup setup-shell dev dev-stop dev-db dev-api dev-web dev-worker up down logs logs-api migrate migrate-new test test-api test-web test-e2e test-e2e-dev test-e2e-report check-env check-tools check-tools-api check-tools-web check-toolchain check-air release build-mcp build-mcp-linux build-mcp-darwin build-mcp-windows build-mcpb build-worker lint-ci
+.PHONY: build push help setup setup-shell dev dev-stop dev-db dev-api dev-web dev-worker up down logs logs-api migrate migrate-new test test-api test-mcp test-web test-e2e test-e2e-dev test-e2e-report check-env check-tools check-tools-api check-tools-web check-toolchain check-air release build-mcp build-mcp-linux build-mcp-darwin build-mcp-windows build-mcpb build-worker lint-ci
 
 # Required environment variables (checked by sourcing .env)
 REQUIRED_VARS := POSTGRES_USER POSTGRES_PASSWORD MINIO_ROOT_USER MINIO_ROOT_PASSWORD JWT_SECRET DATABASE_URL STORAGE_ACCESS_KEY STORAGE_SECRET_KEY
@@ -365,7 +365,7 @@ lint-ci: check-tools ## Lint GitHub Actions workflows and check for deprecated N
 
 LIGHT_BLUE := \033[94m
 
-test: test-api test-web lint-ci ## Run all tests (API + frontend + CI lint)
+test: test-api test-mcp test-web lint-ci ## Run all tests (API + MCP + frontend + CI lint)
 
 test-api: check-tools-api ## Run Go API tests
 	@echo ""
@@ -377,6 +377,12 @@ test-api: check-tools-api ## Run Go API tests
 	@total=$$(sed -n 's/.*coverage: \([0-9.]*\)%.*/\1/p' /tmp/taskwondo-test-output.txt | awk '{s+=$$1; n++} END {if(n>0) printf "%.1f", s/n; else print "0"}'); \
 	printf "$(LIGHT_BLUE)   %-40s %s%%$(RESET)\n" "TOTAL (avg)" "$$total"
 	@printf "$(GREEN)## Go tests passed$(RESET)\n"
+
+test-mcp: check-tools-api ## Run Go MCP server tests
+	@echo ""
+	@printf "$(CYAN)## Running MCP server tests...$(RESET)\n"
+	cd mcp && go test ./... -race -cover
+	@printf "$(GREEN)## MCP server tests passed$(RESET)\n"
 
 test-web: check-tools-web ## Run frontend tests and build (install, Vitest, tsc + vite build)
 	@echo ""

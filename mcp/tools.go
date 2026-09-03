@@ -815,9 +815,9 @@ func handleListRelations(_ context.Context, request mcp.CallToolRequest) (*mcp.C
 	var sb strings.Builder
 	fmt.Fprintf(&sb, "Relations on %s (%d):\n\n", displayID, len(relations))
 	for _, r := range relations {
-		fmt.Fprintf(&sb, "- %s **%s** %s (%s → %s)\n",
+		fmt.Fprintf(&sb, "- %s **%s** %s (%s → %s) [id: %s]\n",
 			r.SourceDisplayID, r.RelationType, r.TargetDisplayID,
-			r.SourceTitle, r.TargetTitle)
+			r.SourceTitle, r.TargetTitle, r.ID)
 	}
 	return mcp.NewToolResultText(sb.String()), nil
 }
@@ -1030,9 +1030,11 @@ func deleteCommentTool() mcp.Tool {
 
 func deleteRelationTool() mcp.Tool {
 	return mcp.NewTool("delete_relation",
-		mcp.WithDescription("Delete a relation between work items"),
-		mcp.WithString("display_id", mcp.Required(), mcp.Description("Work item display ID, e.g. TF-141")),
-		mcp.WithString("relation_id", mcp.Required(), mcp.Description("Relation UUID to delete (from list_relations)")),
+		mcp.WithDescription("Delete a relation between work items. Identify the relation either by relation_id (from list_relations) or by the same target_display_id + relation_type triple create_relation was called with."),
+		mcp.WithString("display_id", mcp.Required(), mcp.Description("Source work item display ID, e.g. TF-141")),
+		mcp.WithString("relation_id", mcp.Description("Relation UUID to delete (from list_relations). Omit when passing target_display_id and relation_type instead.")),
+		mcp.WithString("target_display_id", mcp.Description("Target work item display ID, e.g. TF-143. Use with relation_type instead of relation_id.")),
+		mcp.WithString("relation_type", mcp.Description("Relation type: blocks, blocked_by, relates_to, duplicates, caused_by, parent_of, child_of. Use with target_display_id instead of relation_id.")),
 	)
 }
 
@@ -1293,9 +1295,12 @@ func handleDeleteRelation(_ context.Context, request mcp.CallToolRequest) (*mcp.
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
-	relationID, err := request.RequireString("relation_id")
-	if err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
+	relationID := request.GetString("relation_id", "")
+	targetDisplayID := request.GetString("target_display_id", "")
+	relationType := request.GetString("relation_type", "")
+
+	if relationID == "" && (targetDisplayID == "" || relationType == "") {
+		return mcp.NewToolResultError("pass either relation_id, or both target_display_id and relation_type"), nil
 	}
 
 	client, projectKey, itemNumber, prompt, err := getClientForDisplayID(displayID)
@@ -1306,11 +1311,51 @@ func handleDeleteRelation(_ context.Context, request mcp.CallToolRequest) (*mcp.
 		return mcp.NewToolResultText(prompt), nil
 	}
 
+	if relationID == "" {
+		relations, err := client.ListRelations(projectKey, itemNumber)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to list relations: %v", err)), nil
+		}
+		relationID, err = findRelationID(relations, displayID, targetDisplayID, relationType)
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+	}
+
 	if err := client.DeleteRelation(projectKey, itemNumber, relationID); err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Failed to delete relation: %v", err)), nil
 	}
 
 	return mcp.NewToolResultText(fmt.Sprintf("Deleted relation %s from %s", relationID, displayID)), nil
+}
+
+// findRelationID resolves the ID of the relation matching the triple create_relation
+// was given: source displayID, the target, and the type. Only that exact direction
+// matches — "JAR-423 parent_of JAR-136" is not the same relation as its mirror — so a
+// near miss reports what does exist between the two items rather than guessing.
+func findRelationID(relations []Relation, displayID, targetDisplayID, relationType string) (string, error) {
+	var between []Relation
+	for _, r := range relations {
+		forward := strings.EqualFold(r.SourceDisplayID, displayID) && strings.EqualFold(r.TargetDisplayID, targetDisplayID)
+		reverse := strings.EqualFold(r.SourceDisplayID, targetDisplayID) && strings.EqualFold(r.TargetDisplayID, displayID)
+		if !forward && !reverse {
+			continue
+		}
+		between = append(between, r)
+		if forward && strings.EqualFold(r.RelationType, relationType) {
+			return r.ID, nil
+		}
+	}
+
+	if len(between) == 0 {
+		return "", fmt.Errorf("no relation between %s and %s", displayID, targetDisplayID)
+	}
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "no %s relation from %s to %s. Relations between them:\n", relationType, displayID, targetDisplayID)
+	for _, r := range between {
+		fmt.Fprintf(&sb, "- %s **%s** %s [id: %s]\n", r.SourceDisplayID, r.RelationType, r.TargetDisplayID, r.ID)
+	}
+	return "", fmt.Errorf("%s", sb.String())
 }
 
 func handleDownloadAttachment(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
