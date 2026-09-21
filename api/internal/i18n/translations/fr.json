@@ -18,7 +18,7 @@
 
   "email.status_change.subject": "[{{projectKey}}] #{{itemNumber}} statut changé en {{newStatus}} : {{title}}",
   "email.status_change.intro": "<strong>{{actorName}}</strong> a changé le statut d'un élément de travail qui vous est assigné :",
-  "email.status_change.status": "Statut : <strong>{{oldStatus}}</strong> \u2192 <strong>{{newStatus}}</strong>",
+  "email.status_change.status": "Statut : <strong>{{oldStatus}}</strong> → <strong>{{newStatus}}</strong>",
   "email.status_change.cta": "Voir l'élément de travail",
   "email.status_change.footer": "Vous avez reçu cet e-mail car vous avez activé les notifications de changement de statut pour les éléments assignés. Vous pouvez modifier vos préférences de notification dans les paramètres de Taskwondo.",
 
@@ -35,5 +35,53 @@
   "email.invite.subject": "Vous avez été invité au projet {{projectName}}",
   "email.invite.intro": "<strong>{{inviterName}}</strong> vous a invité à rejoindre le projet <strong>{{projectName}}</strong> en tant que <strong>{{role}}</strong>.",
   "email.invite.cta": "Accepter l'invitation",
-  "email.invite.footer": "Vous avez reçu cet e-mail parce que quelqu'un vous a invité à un projet Taskwondo. Si vous ne reconnaissez pas cette invitation, vous pouvez ignorer cet e-mail."
+  "email.invite.footer": "Vous avez reçu cet e-mail parce que quelqu'un vous a invité à un projet Taskwondo. Si vous ne reconnaissez pas cette invitation, vous pouvez ignorer cet e-mail.",
+
+  "email.namespace_invite.subject": "Vous avez été invité à rejoindre {{namespaceName}}",
+  "email.namespace_invite.intro": "<strong>{{inviterName}}</strong> vous a invité à rejoindre l'espace de travail <strong>{{namespaceName}}</strong> en tant que <strong>{{role}}</strong>.",
+  "email.namespace_invite.cta": "Accepter l'invitation",
+  "email.namespace_invite.footer": "Vous recevez cet e-mail car quelqu'un vous a invité à rejoindre un espace de travail Taskwondo. Si vous ne reconnaissez pas cette invitation, vous pouvez ignorer cet e-mail.",
+
+  "email.sla_breach.subject": "[{{projectKey}}] Alerte SLA : #{{itemNumber}} — « {{title}} » (Niveau {{level}})",
+  "email.sla_breach.intro": "Un élément de travail approche ou a dépassé son objectif SLA :",
+  "email.sla_breach.sla_status": "SLA : <strong>{{percentage}} %</strong> du temps cible utilisé",
+  "email.sla_breach.elapsed": "Temps écoulé : <strong>{{elapsed}}</strong> sur <strong>{{target}}</strong>",
+  "email.sla_breach.level": "Niveau d'escalade : <strong>{{level}}</strong>",
+  "email.sla_breach.status": "Statut : <strong>{{statusName}}</strong>",
+  "email.sla_breach.cta": "Voir l'élément de travail",
+  "email.sla_breach.footer": "Vous recevez cet e-mail car vous figurez dans la liste d'escalade de ce projet. Vous pouvez modifier vos préférences de notification dans les paramètres Taskwondo.",
+
+  "email.oncall.incoming.subject": "[{{projectKey}}] Vous êtes maintenant d'astreinte pour {{teamName}}",
+  "email.oncall.outgoing.subject": "[{{projectKey}}] Votre astreinte pour {{teamName}} est terminée",
+
+  "email.oncall.override.created.subject": "[{{projectKey}}] Remplacement d'astreinte attribué pour {{teamName}}",
+  "email.oncall.override.covered.subject": "[{{projectKey}}] Votre astreinte pour {{teamName}} a été couverte",
+  "email.oncall.override.cancelled.subject": "[{{projectKey}}] Remplacement d'astreinte annulé pour {{teamName}}",
+
+  "email.oncall.cta": "Voir le planning d'astreinte",
+  "email.oncall.rotation.footer": "Ceci est une notification automatique de rotation d'astreinte de Taskwondo.",
+  "email.oncall.override.footer": "Ceci est une notification automatique de remplacement d'astreinte de Taskwondo.",
+
+  "email.oncall.incoming.intro": "Vous êtes maintenant d'astreinte pour <strong>{{teamName}}</strong> dans le projet {{projectBadge}} <strong>{{projectName}}</strong>.",
+  "email.oncall.incoming.note": "Assurez-vous d'être disponible pour répondre aux incidents pendant votre astreinte.",
+  "email.oncall.outgoing.intro": "Votre astreinte pour <strong>{{teamName}}</strong> dans le projet {{projectBadge}} <strong>{{projectName}}</strong> est terminée.",
+  "email.oncall.outgoing.note": "Merci pour votre service pendant votre astreinte.",
+  "email.oncall.override.created.intro": "Un remplacement d'astreinte pour <strong>{{teamName}}</strong> vous a été attribué dans le projet {{projectBadge}} <strong>{{projectName}}</strong>.",
+  "email.oncall.override.created.period": "Votre période de remplacement : du <strong>{{startAt}}</strong> au <strong>{{endAt}}</strong>.",
+  "email.oncall.override.created.note": "Assurez-vous d'être disponible pour répondre aux incidents pendant cette période.",
+  "email.oncall.override.covered.intro": "Votre astreinte pour <strong>{{teamName}}</strong> dans le projet {{projectBadge}} <strong>{{projectName}}</strong> a été couverte par <strong>{{coveringUser}}</strong>.",
+  "email.oncall.override.covered.period": "Période de remplacement : du <strong>{{startAt}}</strong> au <strong>{{endAt}}</strong>.",
+  "email.oncall.override.cancelled.intro": "Un remplacement d'astreinte pour <strong>{{teamName}}</strong> dans le projet {{projectBadge}} <strong>{{projectName}}</strong> a été annulé.",
+  "email.oncall.override.cancelled.period": "Le remplacement était prévu pour : <strong>{{startAt}}</strong> à <strong>{{endAt}}</strong>.",
+  "email.oncall.override.cancelled.note": "La rotation d'astreinte habituelle s'appliquera à cette période.",
+
+  "email.greeting": "Bonjour {{name}},",
+  "email.verify.subject": "Vérifiez votre adresse e-mail",
+  "email.verify.intro": "Cliquez sur le bouton ci-dessous pour vérifier votre adresse e-mail et définir votre mot de passe :",
+  "email.verify.cta": "Vérifier l'e-mail",
+  "email.verify.note": "Ce lien expire dans 24 heures. Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet e-mail.",
+  "email.reset.subject": "Réinitialisez votre mot de passe",
+  "email.reset.intro": "Nous avons reçu une demande de réinitialisation de votre mot de passe. Cliquez sur le bouton ci-dessous pour en choisir un nouveau :",
+  "email.reset.cta": "Réinitialiser le mot de passe",
+  "email.reset.note": "Ce lien expire dans 1 heure. Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet e-mail."
 }

@@ -1,0 +1,21 @@
+FROM docker.1ms.run/node:22-alpine AS builder
+
+WORKDIR /src
+
+ARG NPM_VERSION=11.15.0
+RUN npm install -g npm@${NPM_VERSION}
+
+COPY web/package.json web/package-lock.json ./
+RUN npm ci
+
+COPY web/ .
+RUN npm run build
+
+FROM docker.1ms.run/nginx:alpine
+
+COPY --from=builder /src/dist /usr/share/nginx/html
+COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]

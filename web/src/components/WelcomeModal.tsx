@@ -51,18 +51,18 @@ export function WelcomeModal({ open, onClose, onDismiss, alreadyDismissed }: Wel
     <Modal open={open} onClose={handleClose} title={t('welcome.title')} className="!max-w-xl !overflow-hidden">
       <div className="flex flex-col items-center text-center px-2 h-[420px]">
         {/* Icon — fixed */}
-        <div className="w-16 h-16 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center mb-4 shrink-0">
-          <Icon className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+        <div className="w-16 h-16 rounded-full bg-[var(--primary-muted)]  flex items-center justify-center mb-4 shrink-0">
+          <Icon className="w-8 h-8 text-[var(--primary)]" />
         </div>
 
         {/* Title — fixed */}
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2 shrink-0">
+        <h3 className="text-lg font-semibold text-[var(--foreground)] mb-2 shrink-0">
           {t(`welcome.${slideKey}.title`)}
         </h3>
 
         {/* Description — scrollable */}
         <div className="flex-1 min-h-0 w-full mb-4 overflow-y-auto overscroll-contain">
-          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed px-2">
+          <p className="text-sm text-[var(--foreground-secondary)] leading-relaxed px-2">
             {t(`welcome.${slideKey}.description`)}
           </p>
         </div>
@@ -75,8 +75,8 @@ export function WelcomeModal({ open, onClose, onDismiss, alreadyDismissed }: Wel
               onClick={() => setCurrent(i)}
               className={`w-2 h-2 rounded-full transition-colors ${
                 i === current
-                  ? 'bg-indigo-600 dark:bg-indigo-400'
-                  : 'bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500'
+                  ? 'bg-[var(--primary)] '
+                  : 'bg-[var(--border)] hover:bg-[var(--surface-hover)] dark:hover:bg-[var(--surface-secondary)]'
               }`}
               aria-label={`${i + 1} / ${SLIDE_KEYS.length}`}
             />
@@ -95,7 +95,7 @@ export function WelcomeModal({ open, onClose, onDismiss, alreadyDismissed }: Wel
             <ChevronLeft className="w-4 h-4 mr-1" />
             {t('welcome.previous')}
           </Button>
-          <span className="text-xs text-gray-500 dark:text-gray-400">
+          <span className="text-xs text-[var(--foreground-secondary)]">
             {current + 1} / {SLIDE_KEYS.length}
           </span>
           <Button
@@ -110,12 +110,12 @@ export function WelcomeModal({ open, onClose, onDismiss, alreadyDismissed }: Wel
 
         {/* Don't show again — hidden when already dismissed */}
         {!alreadyDismissed && (
-          <label className="flex items-center gap-2 mt-4 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none shrink-0">
+          <label className="flex items-center gap-2 mt-4 text-xs text-[var(--foreground-secondary)] cursor-pointer select-none shrink-0">
             <input
               type="checkbox"
               checked={dontShow}
               onChange={(e) => setDontShow(e.target.checked)}
-              className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+              className="rounded border-[var(--border)] text-[var(--primary)] focus:ring-[var(--focus-ring)]"
             />
             {t('welcome.dontShowAgain')}
           </label>

@@ -32,8 +32,18 @@ func (r *TeamRepository) SearchFTS(ctx context.Context, query string, fullProjec
 		return nil, nil
 	}
 
+	// CJK queries additionally get an ILIKE fallback over name/description,
+	// because Postgres' whitespace tokenizer cannot split CJK runs into lexemes.
+	matchCond := `t.search_vector @@ plainto_tsquery('english', $1)
+		     OR t.search_vector @@ plainto_tsquery('simple', $1)`
+	args := []interface{}{query, pq.Array(fullProjectIDs), limit}
+	if containsCJK(query) {
+		matchCond += "\n\t\t     OR t.name ILIKE $4 OR coalesce(t.description, '') ILIKE $4"
+		args = append(args, likePattern(query))
+	}
+
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT t.id, t.project_id, t.name,
+		fmt.Sprintf(`SELECT t.id, t.project_id, t.name,
 		        p.key AS project_key,
 		        COALESCE(n.slug, 'default') AS namespace_slug,
 		        ts_rank(t.search_vector, plainto_tsquery('english', $1)) +
@@ -41,12 +51,11 @@ func (r *TeamRepository) SearchFTS(ctx context.Context, query string, fullProjec
 		 FROM teams t
 		 JOIN projects p ON p.id = t.project_id
 		 LEFT JOIN namespaces n ON n.id = p.namespace_id
-		 WHERE (t.search_vector @@ plainto_tsquery('english', $1)
-		     OR t.search_vector @@ plainto_tsquery('simple', $1))
+		 WHERE (%s)
 		   AND t.project_id = ANY($2)
 		 ORDER BY rank DESC, t.updated_at DESC
-		 LIMIT $3`,
-		query, pq.Array(fullProjectIDs), limit)
+		 LIMIT $3`, matchCond),
+		args...)
 	if err != nil {
 		return nil, fmt.Errorf("fts search teams: %w", err)
 	}

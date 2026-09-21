@@ -30,10 +30,11 @@ func TestNotificationOncallRotation_Execute(t *testing.T) {
 	sender := &mockEmailSender{}
 
 	task := &NotificationOncallRotationTask{
-		users:  users,
-		sender: sender,
-		urls:   newTestURLBuilder(),
-		logger: zerolog.Nop(),
+		users:    users,
+		settings: &mockUserSettingRepo{settings: map[string]*model.UserSetting{}},
+		sender:   sender,
+		urls:     newTestURLBuilder(),
+		logger:   zerolog.Nop(),
 	}
 
 	teamID := uuid.New()
@@ -105,10 +106,11 @@ func TestNotificationOncallRotation_SameUser(t *testing.T) {
 	sender := &mockEmailSender{}
 
 	task := &NotificationOncallRotationTask{
-		users:  users,
-		sender: sender,
-		urls:   newTestURLBuilder(),
-		logger: zerolog.Nop(),
+		users:    users,
+		settings: &mockUserSettingRepo{settings: map[string]*model.UserSetting{}},
+		sender:   sender,
+		urls:     newTestURLBuilder(),
+		logger:   zerolog.Nop(),
 	}
 
 	evt := model.OncallRotationAdvancedEvent{
@@ -133,6 +135,57 @@ func TestNotificationOncallRotation_SameUser(t *testing.T) {
 	}
 	if sender.sent[0].to != "solo@example.com" {
 		t.Errorf("expected email to solo@example.com, got %s", sender.sent[0].to)
+	}
+}
+
+func TestNotificationOncallRotation_LanguagePreference(t *testing.T) {
+	oldUserID := uuid.New()
+	newUserID := uuid.New()
+
+	users := &mockUserRepo{users: map[uuid.UUID]*model.User{
+		oldUserID: {ID: oldUserID, Email: "[EMAIL_REDACTED]", DisplayName: "Alice"},
+		newUserID: {ID: newUserID, Email: "[EMAIL_REDACTED]", DisplayName: "Bob"},
+	}}
+	sender := &mockEmailSender{}
+
+	// Incoming user prefers Chinese; outgoing user has no preference (defaults to en).
+	langJSON, _ := json.Marshal("zh")
+	settings := &mockUserSettingRepo{settings: map[string]*model.UserSetting{
+		languageKey(newUserID): {UserID: newUserID, Key: "language", Value: langJSON},
+	}}
+
+	task := &NotificationOncallRotationTask{
+		users:    users,
+		settings: settings,
+		sender:   sender,
+		urls:     newTestURLBuilder(),
+		logger:   zerolog.Nop(),
+	}
+
+	evt := model.OncallRotationAdvancedEvent{
+		RotationID:  uuid.New(),
+		TeamID:      uuid.New(),
+		ProjectID:   uuid.New(),
+		ProjectKey:  "ENG",
+		ProjectName: "Engineering Platform",
+		TeamName:    "Engineering",
+		OldUserID:   oldUserID,
+		NewUserID:   newUserID,
+	}
+	payload, _ := json.Marshal(evt)
+
+	if err := task.Execute(context.Background(), payload); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(sender.sent) != 2 {
+		t.Fatalf("expected 2 emails, got %d", len(sender.sent))
+	}
+
+	if !strings.Contains(sender.sent[0].subject, "值班") || !strings.Contains(sender.sent[0].body, "查看值班排班") {
+		t.Errorf("expected Chinese incoming email, got subject=%q", sender.sent[0].subject)
+	}
+	if !strings.Contains(sender.sent[1].subject, "Your on-call shift") || !strings.Contains(sender.sent[1].body, "View on-call schedule") {
+		t.Errorf("expected English outgoing email, got subject=%q", sender.sent[1].subject)
 	}
 }
 

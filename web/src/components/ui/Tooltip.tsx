@@ -57,10 +57,10 @@ const arrowStyle: Record<string, React.CSSProperties> = {
 }
 
 const arrowClasses = {
-  top: 'border-t-gray-600 dark:border-t-gray-600 border-x-transparent border-b-transparent',
-  bottom: 'border-b-gray-600 dark:border-b-gray-600 border-x-transparent border-t-transparent',
-  left: 'border-l-gray-600 dark:border-l-gray-600 border-y-transparent border-r-transparent',
-  right: 'border-r-gray-600 dark:border-r-gray-600 border-y-transparent border-l-transparent',
+  top: 'border-t-[var(--tooltip-bg)] border-x-transparent border-b-transparent',
+  bottom: 'border-b-[var(--tooltip-bg)] border-x-transparent border-t-transparent',
+  left: 'border-l-[var(--tooltip-bg)] border-y-transparent border-r-transparent',
+  right: 'border-r-[var(--tooltip-bg)] border-y-transparent border-l-transparent',
 }
 
 export function Tooltip({ content, children, position = 'top', className, style: wrapperStyle, maxWidth }: TooltipProps) {
@@ -115,7 +115,7 @@ export function Tooltip({ content, children, position = 'top', className, style:
       {visible && createPortal(
         <span
           ref={tooltipRef}
-          className={`z-50 pointer-events-none rounded bg-gray-600 dark:bg-gray-600 px-2 py-1 text-xs text-white shadow-lg animate-in fade-in duration-100 ${maxWidth ? 'whitespace-pre-line' : 'whitespace-nowrap'}`}
+          className={`z-50 pointer-events-none rounded bg-[var(--tooltip-bg)] px-2 py-1 text-xs text-[var(--tooltip-text)] shadow-[var(--shadow)] animate-in fade-in duration-100 ${maxWidth ? 'whitespace-pre-line' : 'whitespace-nowrap'}`}
           role="tooltip"
           style={{ ...style, ...(maxWidth ? { maxWidth } : {}) }}
         >

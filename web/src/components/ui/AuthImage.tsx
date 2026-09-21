@@ -51,11 +51,11 @@ export function AuthImage({ src, alt, ...props }: AuthImageProps) {
   }
 
   if (error) {
-    return <span className="text-xs text-red-500">[Image failed to load]</span>
+    return <span className="text-xs text-[var(--danger)]">[Image failed to load]</span>
   }
 
   if (!blobUrl) {
-    return <span className="text-xs text-gray-400">Loading image...</span>
+    return <span className="text-xs text-[var(--foreground-muted)]">Loading image...</span>
   }
 
   return <img src={blobUrl} alt={alt} {...props} />

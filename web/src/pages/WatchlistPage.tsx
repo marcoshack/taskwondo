@@ -60,7 +60,7 @@ function WatchlistSearchBar({ search, onSearchChange }: { search: string; onSear
       {search && (
         <button
           onClick={() => { onSearchChange(''); searchRef.current?.focus() }}
-          className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-[var(--foreground-muted)] hover:text-[var(--foreground-secondary)] dark:hover:text-[var(--foreground-muted)]"
           aria-label={t('common.clear')}
         >
           <X className="h-4 w-4" />
@@ -279,7 +279,7 @@ export default function WatchlistPage() {
       sortKey: 'item_number',
       render: (row) => {
         const done = strikethroughEnabled && isItemCompleted(row.status, allStatuses ?? statuses)
-        return <span className={`font-mono ${done ? 'text-gray-400 dark:text-gray-500' : 'text-gray-500 dark:text-gray-400'}`}>{row.display_id}</span>
+        return <span className={`font-mono ${done ? 'text-[var(--foreground-muted)]' : 'text-[var(--foreground-secondary)]'}`}>{row.display_id}</span>
       },
     },
     {
@@ -303,8 +303,8 @@ export default function WatchlistPage() {
         return (
           <div className="flex items-center gap-1 min-w-0">
             <Tooltip content={row.title} className="relative block min-w-0 flex-1">
-              <span className={`truncate block ${!done && row.description ? 'text-gray-400 dark:text-gray-500' : ''}`}>
-                <span className={done ? 'line-through text-gray-400 dark:text-gray-500' : 'font-medium text-gray-900 dark:text-gray-100'}>{row.title}</span>
+              <span className={`truncate block ${!done && row.description ? 'text-[var(--foreground-muted)]' : ''}`}>
+                <span className={done ? 'line-through text-[var(--foreground-muted)]' : 'font-medium text-[var(--foreground)]'}>{row.title}</span>
                 {row.description && !done && (
                   <span className="font-normal text-xs"> – {getDescriptionPreview(row.description)}</span>
                 )}
@@ -356,7 +356,7 @@ export default function WatchlistPage() {
       sortKey: 'updated_at',
       render: (row) => {
         const done = strikethroughEnabled && isItemCompleted(row.status, allStatuses ?? statuses)
-        return <span className={done ? 'text-gray-300 dark:text-gray-600' : 'text-gray-500 dark:text-gray-400'}>{new Date(row.updated_at).toLocaleDateString()}</span>
+        return <span className={done ? 'text-[var(--foreground-secondary)]' : 'text-[var(--foreground-secondary)]'}>{new Date(row.updated_at).toLocaleDateString()}</span>
       },
     },
   ]
@@ -365,12 +365,12 @@ export default function WatchlistPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0 shrink lg:shrink-0">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
+          <h2 className="text-lg font-semibold text-[var(--foreground)] truncate">
             <span className="lg:hidden">{t('watchlist.titleShort')}</span>
             <span className="hidden lg:inline">{t('watchlist.title')}</span>
           </h2>
           {result && (
-            <span className="text-sm text-gray-500 dark:text-gray-400">
+            <span className="text-sm text-[var(--foreground-secondary)]">
               ({result.meta.total})
             </span>
           )}
@@ -436,12 +436,12 @@ export default function WatchlistPage() {
           <>
             <button
               onClick={() => setProjectModalOpen(true)}
-              className="relative shrink-0 p-2.5 rounded-md border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+              className="relative shrink-0 p-2.5 rounded-md border border-[var(--border)] text-[var(--foreground-secondary)] hover:bg-[var(--surface-hover)]"
               aria-label={t('watchlist.allProjects')}
             >
               <FolderKanban className="h-5 w-5" />
               {selectedProjects.length > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-600 text-[10px] font-bold text-white">
+                <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--primary)] text-[10px] font-bold text-white">
                   {selectedProjects.length}
                 </span>
               )}
@@ -452,7 +452,7 @@ export default function WatchlistPage() {
                 <span className="flex items-center ml-auto shrink-0">
                   <button
                     onClick={() => handleProjectsChange([])}
-                    className="p-2.5 rounded-md border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    className="p-2.5 rounded-md border border-[var(--border)] text-[var(--foreground-secondary)] hover:text-[var(--primary)] dark:hover:text-[var(--primary)] hover:bg-[var(--surface-hover)]"
                     aria-label={t('workitems.filters.clearAll')}
                   >
                     <Eraser className="h-5 w-5" />
@@ -463,13 +463,13 @@ export default function WatchlistPage() {
               <div className="flex flex-col flex-1 min-h-0">
                 <div className="pb-2">
                   <div className="relative">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--foreground-muted)]" />
                     <input
                       type="text"
                       value={projectSearch}
                       onChange={(e) => setProjectSearch(e.target.value)}
                       placeholder={t('common.search')}
-                      className="w-full pl-8 pr-3 py-1.5 text-sm rounded border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      className="w-full pl-8 pr-3 py-1.5 text-sm rounded border border-[var(--border)] bg-[var(--surface-secondary)] text-[var(--foreground)] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)]"
                     />
                   </div>
                 </div>
@@ -479,7 +479,7 @@ export default function WatchlistPage() {
                     .map((opt) => {
                       const checked = selectedProjects.includes(opt.value)
                       return (
-                        <label key={opt.value} className="flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
+                        <label key={opt.value} className="flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-[var(--surface-hover)] cursor-pointer text-sm text-[var(--foreground)]">
                           <input
                             type="checkbox"
                             checked={checked}
@@ -487,7 +487,7 @@ export default function WatchlistPage() {
                               const next = checked ? selectedProjects.filter((k) => k !== opt.value) : [...selectedProjects, opt.value]
                               handleProjectsChange(next)
                             }}
-                            className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                            className="rounded border-[var(--border)] text-[var(--primary)] focus:ring-[var(--focus-ring)]"
                           />
                           {opt.label}
                         </label>
@@ -507,7 +507,7 @@ export default function WatchlistPage() {
       ) : allItems.length === 0 && !debouncedSearch && !filter.type?.length && !filter.priority?.length &&
           !filter.status?.length && !filter.assignee?.length && !filter.milestone?.length &&
           selectedProjects.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-64 text-gray-500 dark:text-gray-400">
+        <div className="flex flex-col items-center justify-center h-64 text-[var(--foreground-secondary)]">
           <Bookmark className="h-12 w-12 mb-4 opacity-30" />
           <p className="text-lg font-medium">{t('watchlist.empty')}</p>
           <p className="text-sm mt-1">{t('watchlist.emptyHint')}</p>
@@ -515,7 +515,7 @@ export default function WatchlistPage() {
       ) : (
         <>
           {/* Desktop: table view */}
-          <div className="hidden lg:block border dark:border-gray-700 rounded-lg overflow-hidden">
+          <div className="hidden lg:block border border-[var(--border)] rounded-lg overflow-hidden">
             <DataTable
               columns={columns}
               data={allItems}

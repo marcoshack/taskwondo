@@ -35,7 +35,7 @@ const MIN_COL_WIDTH = 40
 function SortIndicator({ active, direction }: { active: boolean; direction?: 'asc' | 'desc' }) {
   if (!active) {
     return (
-      <svg className="w-3 h-3 text-gray-300 dark:text-gray-600" viewBox="0 0 10 14" fill="currentColor">
+      <svg className="w-3 h-3 text-[var(--foreground-muted)]" viewBox="0 0 10 14" fill="currentColor">
         <path d="M5 0L9 5H1L5 0Z" />
         <path d="M5 14L1 9H9L5 14Z" />
       </svg>
@@ -43,13 +43,13 @@ function SortIndicator({ active, direction }: { active: boolean; direction?: 'as
   }
   if (direction === 'asc') {
     return (
-      <svg className="w-3 h-3 text-indigo-600 dark:text-indigo-400" viewBox="0 0 10 7" fill="currentColor">
+      <svg className="w-3 h-3 text-[var(--primary)]" viewBox="0 0 10 7" fill="currentColor">
         <path d="M5 0L10 7H0L5 0Z" />
       </svg>
     )
   }
   return (
-    <svg className="w-3 h-3 text-indigo-600 dark:text-indigo-400" viewBox="0 0 10 7" fill="currentColor">
+    <svg className="w-3 h-3 text-[var(--primary)]" viewBox="0 0 10 7" fill="currentColor">
       <path d="M5 7L0 0H10L5 7Z" />
     </svg>
   )
@@ -66,45 +66,13 @@ export function DataTable<T>({
   const activeRowRef = useRef<HTMLTableRowElement>(null)
   const resizingRef = useRef<{ key: string; startX: number; startWidth: number } | null>(null)
   const onResizeRef = useRef(onColumnResize)
-  onResizeRef.current = onColumnResize
+  useEffect(() => { onResizeRef.current = onColumnResize }, [onColumnResize])
 
   useEffect(() => {
     if (activeRowIndex != null && activeRowIndex >= 0) {
       activeRowRef.current?.scrollIntoView({ block: 'nearest' })
     }
   }, [activeRowIndex])
-
-  const handleResizeMove = useRef((e: MouseEvent) => {
-    if (!resizingRef.current) return
-    const { key, startX, startWidth } = resizingRef.current
-    const diff = e.clientX - startX
-    const newWidth = Math.max(MIN_COL_WIDTH, startWidth + diff)
-    onResizeRef.current?.(key, newWidth)
-  }).current
-
-  const handleResizeEnd = useRef(() => {
-    resizingRef.current = null
-    document.removeEventListener('mousemove', handleResizeMove)
-    document.removeEventListener('mouseup', handleResizeEnd)
-    document.body.style.cursor = ''
-    document.body.style.userSelect = ''
-    // Swallow the click event that follows mouseup to prevent sort from firing
-    document.addEventListener('click', suppressClick, true)
-  }).current
-
-  const suppressClick = useRef((e: MouseEvent) => {
-    e.stopPropagation()
-    e.preventDefault()
-    document.removeEventListener('click', suppressClick, true)
-  }).current
-
-  useEffect(() => {
-    return () => {
-      document.removeEventListener('mousemove', handleResizeMove)
-      document.removeEventListener('mouseup', handleResizeEnd)
-      document.removeEventListener('click', suppressClick, true)
-    }
-  }, [handleResizeMove, handleResizeEnd, suppressClick])
 
   const handleResizeStart = useCallback((e: React.MouseEvent, colKey: string) => {
     e.preventDefault()
@@ -113,11 +81,35 @@ export function DataTable<T>({
     if (!th) return
     const startWidth = th.getBoundingClientRect().width
     resizingRef.current = { key: colKey, startX: e.clientX, startWidth }
-    document.addEventListener('mousemove', handleResizeMove)
-    document.addEventListener('mouseup', handleResizeEnd)
+    const handleMove = (e: MouseEvent) => {
+      if (!resizingRef.current) return
+      const { key, startX, startWidth } = resizingRef.current
+      const diff = e.clientX - startX
+      const newWidth = Math.max(MIN_COL_WIDTH, startWidth + diff)
+      onResizeRef.current?.(key, newWidth)
+    }
+    const handleEnd = () => {
+      resizingRef.current = null
+      document.removeEventListener('mousemove', handleMove)
+      document.removeEventListener('mouseup', handleEnd)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+      const suppress = (e: MouseEvent) => {
+        e.stopPropagation()
+        e.preventDefault()
+        document.removeEventListener('click', suppress, true)
+      }
+      document.addEventListener('click', suppress, true)
+    }
+    document.addEventListener('mousemove', handleMove)
+    document.addEventListener('mouseup', handleEnd)
     document.body.style.cursor = 'col-resize'
     document.body.style.userSelect = 'none'
-  }, [handleResizeMove, handleResizeEnd])
+    return () => {
+      document.removeEventListener('mousemove', handleMove)
+      document.removeEventListener('mouseup', handleEnd)
+    }
+  }, [onColumnResize])
 
   function mobileHideClass(col: Column<T>): string {
     return col.hiddenOnMobile ? 'hidden sm:table-cell' : ''
@@ -135,7 +127,7 @@ export function DataTable<T>({
 
   return (
     <div className="overflow-hidden">
-      <table className="w-full table-fixed sm:divide-y sm:divide-gray-200 sm:dark:divide-gray-700 sm:border-b sm:border-gray-200 sm:dark:border-gray-700">
+      <table className="w-full table-fixed sm:divide-y sm:divide-[var(--border)] sm:border-b sm:border-[var(--border)]">
         <colgroup>
           {columns.map((col) => (
             <col
@@ -145,7 +137,7 @@ export function DataTable<T>({
             />
           ))}
         </colgroup>
-        <thead className={`${alwaysShowHeader ? '' : 'hidden sm:table-header-group'} bg-gray-50 dark:bg-gray-800 group/thead`}>
+        <thead className={`${alwaysShowHeader ? '' : 'hidden sm:table-header-group'} bg-[var(--background-secondary)] group/thead`}>
           <tr>
             {columns.map((col) => {
               const isSortable = !!col.sortKey && !!onSort
@@ -155,7 +147,7 @@ export function DataTable<T>({
                 <th
                   key={col.key}
                   style={getColStyle(col)}
-                  className={`px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap ${columnWidths?.[col.key] ? '' : (col.className ?? '')} ${isSortable ? 'cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200' : ''} ${colResizable ? 'relative' : ''} ${mobileHideClass(col)}`}
+                  className={`px-3 sm:px-6 py-2.5 text-left text-xs font-medium text-[var(--foreground-secondary)] uppercase tracking-wider whitespace-nowrap ${columnWidths?.[col.key] ? '' : (col.className ?? '')} ${isSortable ? 'cursor-pointer select-none hover:text-[var(--foreground)]' : ''} ${colResizable ? 'relative' : ''} ${mobileHideClass(col)}`}
                   onClick={isSortable ? () => onSort!(col.sortKey!) : undefined}
                 >
                   <span className="inline-flex items-center gap-1">
@@ -164,7 +156,7 @@ export function DataTable<T>({
                   </span>
                   {colResizable && (
                     <div
-                      className="absolute right-0.5 top-0 bottom-0 w-1.5 cursor-col-resize opacity-0 group-hover/thead:opacity-100 bg-indigo-300/40 hover:!bg-indigo-400/60 active:!bg-indigo-500/60 dark:bg-indigo-500/30 dark:hover:!bg-indigo-400/50 dark:active:!bg-indigo-500/50 transition-opacity z-10"
+                      className="absolute right-0.5 top-0 bottom-0 w-1.5 cursor-col-resize opacity-0 group-hover/thead:opacity-100 bg-[var(--primary)]/40 hover:!bg-[var(--primary)]/60 active:!bg-[var(--primary)]/80 transition-opacity z-10"
                       onMouseDown={(e) => handleResizeStart(e, col.key)}
                       onDoubleClick={(e) => {
                         e.stopPropagation()
@@ -177,10 +169,10 @@ export function DataTable<T>({
             })}
           </tr>
         </thead>
-        <tbody className="bg-white dark:bg-gray-900 sm:divide-y sm:divide-gray-200 sm:dark:divide-gray-700">
+        <tbody className="bg-[var(--surface)] sm:divide-y sm:divide-[var(--border)]">
           {data.length === 0 ? (
             <tr>
-              <td colSpan={columns.length} className="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
+              <td colSpan={columns.length} className="px-6 py-10 text-center text-sm text-[var(--foreground-secondary)]">
                 {resolvedEmptyMessage}
               </td>
             </tr>
@@ -192,10 +184,10 @@ export function DataTable<T>({
                 key={i}
                 ref={isActive ? activeRowRef : undefined}
                 onClick={() => onRowClick?.(row)}
-                className={`group ${onRowClick ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800' : ''} ${isActive ? 'ring-2 ring-inset ring-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/20' : ''}`}
+                className={`group ${onRowClick ? 'cursor-pointer hover:bg-[var(--hover)]' : ''} ${isActive ? 'ring-2 ring-inset ring-[var(--primary)] bg-[var(--primary-muted)]' : ''}`}
               >
                 {columns.map((col) => (
-                  <td key={col.key} className={`px-3 sm:px-6 py-4 whitespace-nowrap text-sm overflow-hidden ${columnWidths?.[col.key] ? '' : (col.className ?? '')} ${mobileHideClass(col)}`}>
+                  <td key={col.key} className={`px-3 sm:px-6 py-3 whitespace-nowrap text-sm overflow-hidden ${columnWidths?.[col.key] ? '' : (col.className ?? '')} ${mobileHideClass(col)}`}>
                     {col.render(row)}
                   </td>
                 ))}

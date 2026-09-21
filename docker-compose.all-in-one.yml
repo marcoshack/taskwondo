@@ -1,0 +1,47 @@
+services:
+  taskwondo:
+    image: ghcr.io/marcoshack/taskwondo/all-in-one:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.all-in-one
+      args:
+        - GOPROXY
+    ports:
+      - "${WEB_PORT:-3000}:80"
+    depends_on:
+      nats:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      - DATABASE_URL=${DATABASE_URL:?required}
+      - JWT_SECRET=${JWT_SECRET:?required — generate a random string of at least 32 chars}
+      - STORAGE_ENDPOINT=${STORAGE_ENDPOINT:?required}
+      - STORAGE_ACCESS_KEY=${STORAGE_ACCESS_KEY:?required}
+      - STORAGE_SECRET_KEY=${STORAGE_SECRET_KEY:?required}
+      - STORAGE_BUCKET=${STORAGE_BUCKET:-taskwondo-attachments}
+      - NATS_URL=nats://nats:4222
+      - OLLAMA_URL=${OLLAMA_URL:-}
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  nats:
+    image: nats:2-alpine
+    command: ["--jetstream", "--store_dir=/data", "--http_port=8222"]
+    volumes:
+      - natsdata:/data
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8222/healthz"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+volumes:
+  natsdata:

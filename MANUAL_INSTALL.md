@@ -9,6 +9,95 @@ This guide covers installing Taskwondo without Docker Compose. You'll need to pr
 - S3-compatible object storage (MinIO, AWS S3, DigitalOcean Spaces, etc.)
 - Nginx (or any web server that can serve static files and reverse-proxy)
 
+## Option A: All-in-One Docker Image
+
+The simplest way to deploy Taskwondo. A single container bundles the API, worker, and web frontend behind an Nginx reverse proxy — only **one port** needs to be exposed.
+
+### Prerequisites
+
+- Docker
+- PostgreSQL 15+
+- NATS with JetStream enabled
+- S3-compatible object storage
+
+### Run
+
+```bash
+docker run -d \
+  --name taskwondo \
+  -p 80:80 \
+  -e DATABASE_URL="postgres://user:pass@host:5432/taskwondo?sslmode=disable" \
+  -e JWT_SECRET="your-jwt-secret" \
+  -e STORAGE_ENDPOINT="s3.amazonaws.com" \
+  -e STORAGE_ACCESS_KEY="your-access-key" \
+  -e STORAGE_SECRET_KEY="your-secret-key" \
+  -e STORAGE_BUCKET="taskwondo-attachments" \
+  -e NATS_URL="nats://host:4222" \
+  ghcr.io/marcoshack/taskwondo/all-in-one:latest
+```
+
+Then open [http://localhost](http://localhost). On first start the API runs migrations and seeds the admin user — check the container logs for credentials:
+
+```bash
+docker logs taskwondo
+```
+
+### Environment Variables
+
+All variables from the standard `.env.template` are supported. Key ones:
+
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `JWT_SECRET` | Secret for signing JWT tokens (min 32 chars) |
+| `STORAGE_ENDPOINT` | S3-compatible storage endpoint |
+| `STORAGE_ACCESS_KEY` | Storage access key |
+| `STORAGE_SECRET_KEY` | Storage secret key |
+| `STORAGE_BUCKET` | Storage bucket name |
+| `NATS_URL` | NATS server URL |
+| `API_PORT` | Internal API port (default `8080`, no need to change) |
+| `ADMIN_EMAIL` | Admin user email (optional) |
+| `ADMIN_PASSWORD` | Admin user password (optional, auto-generated if omitted) |
+
+### Build from Source
+
+```bash
+git clone https://github.com/marcoshack/taskwondo.git
+cd taskwondo
+docker build -f docker/Dockerfile.all-in-one -t taskwondo:local .
+docker run -d --name taskwondo -p 80:80 \
+  -e DATABASE_URL="postgres://user:pass@host:5432/taskwondo?sslmode=disable" \
+  -e JWT_SECRET="your-jwt-secret" \
+  -e STORAGE_ENDPOINT="s3.amazonaws.com" \
+  -e STORAGE_ACCESS_KEY="your-access-key" \
+  -e STORAGE_SECRET_KEY="your-secret-key" \
+  -e STORAGE_BUCKET="taskwondo-attachments" \
+  -e NATS_URL="nats://host:4222" \
+  taskwondo:local
+```
+
+### Architecture
+
+The all-in-one image uses **supervisord** to manage three processes inside a single container:
+
+```
+┌─────────────────────────────────┐
+│  Nginx (:80) — single entry     │
+│  ├── static files (frontend)    │
+│  ├── /api/* → API (:8080)       │
+│  └── /healthz, /readyz, /metrics│
+├─────────────────────────────────┤
+│  API server (:8080, internal)   │
+│  Worker (background jobs)       │
+└─────────────────────────────────┘
+```
+
+---
+
+## Option B: Manual Installation (Binaries)
+
+If you prefer to run Taskwondo without Docker, follow the steps below.
+
 ## Download
 
 Download the server bundle (`taskwondo-server-*.tar.gz`) from the [Releases](https://github.com/marcoshack/taskwondo/releases) page. The [Dev Build](https://github.com/marcoshack/taskwondo/releases/tag/dev) release always has the latest build from `main`.

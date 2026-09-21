@@ -44,7 +44,7 @@ export function Avatar({ name, avatarUrl, size = 'md' }: AvatarProps) {
   return (
     <Tooltip content={name}>
       <span
-        className={`inline-flex items-center justify-center rounded-full bg-indigo-600 text-white font-medium ${sizeClasses[size]}`}
+        className={`inline-flex items-center justify-center rounded-full bg-[var(--primary)] text-[var(--primary-foreground)] font-medium ${sizeClasses[size]}`}
       >
         {getInitials(name)}
       </span>

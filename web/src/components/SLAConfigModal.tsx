@@ -216,7 +216,7 @@ export function SLAConfigModal({ open, onClose, onSave, projectKey, workItemType
     return (
       <div className="space-y-2">
         {/* Header */}
-        <div className="grid grid-cols-[1fr_4.5rem_4.5rem] sm:grid-cols-[1fr_150px_150px] gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+        <div className="grid grid-cols-[1fr_4.5rem_4.5rem] sm:grid-cols-[1fr_150px_150px] gap-2 text-xs font-medium text-[var(--foreground-secondary)] uppercase tracking-wide">
           <span>{t('sla.status')}</span>
           <span>{t('sla.duration')}</span>
           <span>{t('sla.calendarMode')}</span>
@@ -231,19 +231,19 @@ export function SLAConfigModal({ open, onClose, onSave, projectKey, workItemType
                 className={`grid grid-cols-[1fr_4.5rem_4.5rem] sm:grid-cols-[1fr_150px_150px] gap-2 items-center ${terminal ? 'opacity-50' : ''}`}
               >
                 <ScrollableRow className="min-w-0 sm:hidden" gradientFrom="from-white dark:from-gray-800">
-                  <span className="text-xs text-gray-900 dark:text-gray-100 whitespace-nowrap">{row.displayName}</span>
+                  <span className="text-xs text-[var(--foreground)] whitespace-nowrap">{row.displayName}</span>
                 </ScrollableRow>
-                <span className="hidden sm:block text-xs text-gray-900 dark:text-gray-100">{row.displayName}</span>
+                <span className="hidden sm:block text-xs text-[var(--foreground)]">{row.displayName}</span>
                 <input
                   type="text"
                   value={row.duration}
                   onChange={(e) => onUpdate(index, 'duration', e.target.value)}
                   placeholder={t('sla.durationPlaceholder')}
                   disabled={terminal || readOnly}
-                  className="w-[4.5rem] sm:w-auto min-w-0 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1.5 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-[4.5rem] sm:w-auto min-w-0 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <select
-                  className="w-[4.5rem] sm:w-auto truncate rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1.5 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-[4.5rem] sm:w-auto truncate rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] disabled:opacity-50 disabled:cursor-not-allowed"
                   value={row.calendarMode}
                   onChange={(e) => onUpdate(index, 'calendarMode', e.target.value)}
                   disabled={terminal || readOnly}
@@ -263,7 +263,7 @@ export function SLAConfigModal({ open, onClose, onSave, projectKey, workItemType
 
   return (
     <Modal open={open} onClose={onClose} title={t('sla.titleForType', { type: t(`workitems.types.${workItemType}`) })} className="!max-w-2xl">
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+      <p className="text-sm text-[var(--foreground-secondary)] mb-4">
         {t('sla.description')} {t('sla.blankHint')}
       </p>
 
@@ -274,14 +274,14 @@ export function SLAConfigModal({ open, onClose, onSave, projectKey, workItemType
             type="checkbox"
             checked={perPriority}
             onChange={(e) => handleTogglePerPriority(e.target.checked)}
-            className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+            className="rounded border-[var(--border)] text-[var(--primary)] focus:ring-[var(--focus-ring)]"
           />
-          <span className="text-sm text-gray-700 dark:text-gray-300">{t('sla.setPerPriority')}</span>
+          <span className="text-sm text-[var(--foreground)]">{t('sla.setPerPriority')}</span>
         </label>
       )}
 
       {perPriority && !readOnly && (
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">{t('sla.perPriorityHint')}</p>
+        <p className="text-xs text-[var(--foreground-secondary)] mb-3">{t('sla.perPriorityHint')}</p>
       )}
 
       {overwriteWarning && (
@@ -293,10 +293,10 @@ export function SLAConfigModal({ open, onClose, onSave, projectKey, workItemType
           {PRIORITIES.map((priority) => {
             const isExpanded = expandedPriorities.has(priority)
             return (
-              <div key={priority} className="border border-gray-200 dark:border-gray-700 rounded-lg">
+              <div key={priority} className="border border-[var(--border)] rounded-lg">
                 <button
                   type="button"
-                  className="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-t-lg"
+                  className="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-[var(--foreground)] hover:bg-[var(--surface-hover)] rounded-t-lg"
                   onClick={() => togglePriorityExpanded(priority)}
                 >
                   {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
@@ -318,7 +318,7 @@ export function SLAConfigModal({ open, onClose, onSave, projectKey, workItemType
         renderStatusGrid(rows, updateRow)
       )}
 
-      {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {error && <p className="mt-3 text-sm text-[var(--danger)]">{error}</p>}
 
       <div className="flex justify-end gap-2 mt-4">
         <Button variant="secondary" onClick={onClose}>

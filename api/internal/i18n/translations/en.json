@@ -60,5 +60,28 @@
 
   "email.oncall.cta": "View on-call schedule",
   "email.oncall.rotation.footer": "This is an automated on-call rotation notification from Taskwondo.",
-  "email.oncall.override.footer": "This is an automated on-call override notification from Taskwondo."
+  "email.oncall.override.footer": "This is an automated on-call override notification from Taskwondo.",
+
+  "email.oncall.incoming.intro": "You are now on-call for <strong>{{teamName}}</strong> in project {{projectBadge}} <strong>{{projectName}}</strong>.",
+  "email.oncall.incoming.note": "Please make sure you are available to respond to any incoming issues during your shift.",
+  "email.oncall.outgoing.intro": "Your on-call shift for <strong>{{teamName}}</strong> in project {{projectBadge}} <strong>{{projectName}}</strong> has ended.",
+  "email.oncall.outgoing.note": "Thank you for your service during your shift.",
+  "email.oncall.override.created.intro": "You have been assigned an on-call override for <strong>{{teamName}}</strong> in project {{projectBadge}} <strong>{{projectName}}</strong>.",
+  "email.oncall.override.created.period": "Your override period: <strong>{{startAt}}</strong> to <strong>{{endAt}}</strong>.",
+  "email.oncall.override.created.note": "Please make sure you are available to respond to any incoming issues during this period.",
+  "email.oncall.override.covered.intro": "Your on-call shift for <strong>{{teamName}}</strong> in project {{projectBadge}} <strong>{{projectName}}</strong> has been covered by <strong>{{coveringUser}}</strong>.",
+  "email.oncall.override.covered.period": "Override period: <strong>{{startAt}}</strong> to <strong>{{endAt}}</strong>.",
+  "email.oncall.override.cancelled.intro": "An on-call override for <strong>{{teamName}}</strong> in project {{projectBadge}} <strong>{{projectName}}</strong> has been cancelled.",
+  "email.oncall.override.cancelled.period": "The override was scheduled for: <strong>{{startAt}}</strong> to <strong>{{endAt}}</strong>.",
+  "email.oncall.override.cancelled.note": "The regular on-call rotation schedule will apply for this period.",
+
+  "email.greeting": "Hi {{name}},",
+  "email.verify.subject": "Verify your email",
+  "email.verify.intro": "Click the button below to verify your email address and set your password:",
+  "email.verify.cta": "Verify email",
+  "email.verify.note": "This link expires in 24 hours. If you didn't request this, you can safely ignore this email.",
+  "email.reset.subject": "Reset your password",
+  "email.reset.intro": "We received a request to reset your password. Click the button below to choose a new password:",
+  "email.reset.cta": "Reset password",
+  "email.reset.note": "This link expires in 1 hour. If you didn't request this, you can safely ignore this email."
 }

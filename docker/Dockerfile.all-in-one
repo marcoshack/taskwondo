@@ -1,0 +1,47 @@
+# ---- Build Go binaries ----
+FROM docker.1ms.run/golang:1.25-alpine AS go-builder
+
+RUN apk add --no-cache git
+WORKDIR /src
+
+ARG GOPROXY
+ENV GOPROXY=${GOPROXY}
+
+COPY api/go.mod api/go.sum ./
+RUN go mod download
+
+COPY api/ .
+
+ARG COMMIT_SHA=dev
+RUN CGO_ENABLED=0 go build -ldflags "-X main.commitSHA=${COMMIT_SHA}" -o /bin/taskwondo ./cmd/server
+RUN CGO_ENABLED=0 go build -o /bin/taskwondo-worker ./cmd/worker
+
+# ---- Build frontend ----
+FROM docker.1ms.run/node:22-alpine AS web-builder
+
+WORKDIR /src
+
+ARG NPM_VERSION=11.15.0
+RUN npm install -g npm@${NPM_VERSION}
+
+COPY web/package.json web/package-lock.json ./
+RUN npm ci
+
+COPY web/ .
+RUN npm run build
+
+# ---- Final image ----
+FROM docker.1ms.run/alpine:3.20
+
+RUN apk add --no-cache ca-certificates tzdata nginx supervisor
+
+COPY --from=go-builder /bin/taskwondo /bin/taskwondo
+COPY --from=go-builder /bin/taskwondo-worker /bin/taskwondo-worker
+COPY --from=web-builder /src/dist /usr/share/nginx/html
+
+COPY docker/nginx-all-in-one.conf /etc/nginx/http.d/default.conf
+COPY docker/supervisord.conf /etc/supervisord.conf
+
+EXPOSE 80
+
+ENTRYPOINT ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]

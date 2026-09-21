@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildSearchParams } from './searchRequest'
+import { buildSearchParams, meetsSearchFloor } from './searchRequest'
 
 const params = (...args: Parameters<typeof buildSearchParams>) =>
   Object.fromEntries(buildSearchParams(...args))
@@ -37,5 +37,33 @@ describe('buildSearchParams', () => {
   it('url-encodes the query and the project key', () => {
     expect(buildSearchParams({ query: 'a b&c', project: 'T F' }).toString())
       .toBe('q=a+b%26c&project=T+F')
+  })
+})
+
+describe('meetsSearchFloor', () => {
+  it('rejects empty or whitespace-only queries', () => {
+    expect(meetsSearchFloor('')).toBe(false)
+    expect(meetsSearchFloor('   ')).toBe(false)
+  })
+
+  it('requires two characters for latin scripts', () => {
+    expect(meetsSearchFloor('a')).toBe(false)
+    expect(meetsSearchFloor('ab')).toBe(true)
+    expect(meetsSearchFloor('login')).toBe(true)
+  })
+
+  it('accepts a single CJK character — one hanzi is already a word', () => {
+    expect(meetsSearchFloor('猫')).toBe(true)
+    expect(meetsSearchFloor('猫 崩溃')).toBe(true)
+  })
+
+  it('accepts single Hiragana/Katakana/Hangul characters', () => {
+    expect(meetsSearchFloor('ね')).toBe(true)
+    expect(meetsSearchFloor('ガ')).toBe(true)
+    expect(meetsSearchFloor('한')).toBe(true)
+  })
+
+  it('ignores a single latin character padded with CJK punctuation only', () => {
+    expect(meetsSearchFloor('！a！')).toBe(true) // 3 characters: over the length floor anyway
   })
 })

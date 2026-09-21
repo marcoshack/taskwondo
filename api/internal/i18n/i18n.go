@@ -43,6 +43,26 @@ func T(lang, key string, args ...string) string {
 	return val
 }
 
+// Negotiate resolves a language from an HTTP Accept-Language header value.
+// Candidates are checked in header order; the first supported primary subtag
+// wins. Falls back to "en" when nothing matches.
+func Negotiate(acceptLanguage string) string {
+	for _, part := range strings.Split(acceptLanguage, ",") {
+		if i := strings.IndexByte(part, ';'); i >= 0 {
+			part = part[:i]
+		}
+		primary := strings.TrimSpace(part)
+		if i := strings.IndexByte(primary, '-'); i >= 0 {
+			primary = primary[:i]
+		}
+		primary = strings.ToLower(primary)
+		if _, ok := translations[primary]; ok {
+			return primary
+		}
+	}
+	return "en"
+}
+
 func get(lang, key string) string {
 	if m, ok := translations[lang]; ok {
 		if v, ok := m[key]; ok {

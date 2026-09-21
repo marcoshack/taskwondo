@@ -18,7 +18,7 @@
 
   "email.status_change.subject": "[{{projectKey}}] #{{itemNumber}} status alterado para {{newStatus}}: {{title}}",
   "email.status_change.intro": "<strong>{{actorName}}</strong> alterou o status de um item de trabalho atribuído a você:",
-  "email.status_change.status": "Status: <strong>{{oldStatus}}</strong> \u2192 <strong>{{newStatus}}</strong>",
+  "email.status_change.status": "Status: <strong>{{oldStatus}}</strong> → <strong>{{newStatus}}</strong>",
   "email.status_change.cta": "Ver Item de Trabalho",
   "email.status_change.footer": "Você recebeu este e-mail porque tem as notificações de alteração de status ativadas para itens atribuídos. Você pode alterar suas preferências de notificação nas configurações do Taskwondo.",
 
@@ -35,5 +35,53 @@
   "email.invite.subject": "Você foi convidado para o projeto {{projectName}}",
   "email.invite.intro": "<strong>{{inviterName}}</strong> convidou você para participar do projeto <strong>{{projectName}}</strong> como <strong>{{role}}</strong>.",
   "email.invite.cta": "Aceitar convite",
-  "email.invite.footer": "Você recebeu este e-mail porque alguém convidou você para um projeto no Taskwondo. Se você não reconhece este convite, pode ignorar este e-mail."
+  "email.invite.footer": "Você recebeu este e-mail porque alguém convidou você para um projeto no Taskwondo. Se você não reconhece este convite, pode ignorar este e-mail.",
+
+  "email.namespace_invite.subject": "Você foi convidado para {{namespaceName}}",
+  "email.namespace_invite.intro": "<strong>{{inviterName}}</strong> convidou você para entrar no workspace <strong>{{namespaceName}}</strong> como <strong>{{role}}</strong>.",
+  "email.namespace_invite.cta": "Aceitar Convite",
+  "email.namespace_invite.footer": "Você recebeu este e-mail porque alguém o convidou para um workspace do Taskwondo. Se você não reconhece este convite, pode ignorar este e-mail com segurança.",
+
+  "email.sla_breach.subject": "[{{projectKey}}] Aviso de SLA: #{{itemNumber}} — \"{{title}}\" (Nível {{level}})",
+  "email.sla_breach.intro": "Um item de trabalho está prestes a atingir ou excedeu sua meta de SLA:",
+  "email.sla_breach.sla_status": "SLA: <strong>{{percentage}}%</strong> do tempo alvo utilizado",
+  "email.sla_breach.elapsed": "Tempo decorrido: <strong>{{elapsed}}</strong> de <strong>{{target}}</strong>",
+  "email.sla_breach.level": "Nível de Escalonamento: <strong>{{level}}</strong>",
+  "email.sla_breach.status": "Status: <strong>{{statusName}}</strong>",
+  "email.sla_breach.cta": "Ver Item de Trabalho",
+  "email.sla_breach.footer": "Você recebeu este e-mail porque está na lista de escalonamento deste projeto. Você pode alterar suas preferências de notificação nas configurações do Taskwondo.",
+
+  "email.oncall.incoming.subject": "[{{projectKey}}] Você agora está de plantão em {{teamName}}",
+  "email.oncall.outgoing.subject": "[{{projectKey}}] Seu plantão em {{teamName}} terminou",
+
+  "email.oncall.override.created.subject": "[{{projectKey}}] Substituição de plantão atribuída para {{teamName}}",
+  "email.oncall.override.covered.subject": "[{{projectKey}}] Seu plantão em {{teamName}} foi coberto por um substituto",
+  "email.oncall.override.cancelled.subject": "[{{projectKey}}] Substituição de plantão cancelada para {{teamName}}",
+
+  "email.oncall.cta": "Ver agenda de plantão",
+  "email.oncall.rotation.footer": "Esta é uma notificação automática de rodízio de plantão do Taskwondo.",
+  "email.oncall.override.footer": "Esta é uma notificação automática de substituição de plantão do Taskwondo.",
+
+  "email.oncall.incoming.intro": "Você agora está de plantão por <strong>{{teamName}}</strong> no projeto {{projectBadge}} <strong>{{projectName}}</strong>.",
+  "email.oncall.incoming.note": "Certifique-se de estar disponível para responder a quaisquer chamados durante seu plantão.",
+  "email.oncall.outgoing.intro": "Seu plantão por <strong>{{teamName}}</strong> no projeto {{projectBadge}} <strong>{{projectName}}</strong> terminou.",
+  "email.oncall.outgoing.note": "Obrigado pelo seu serviço durante o plantão.",
+  "email.oncall.override.created.intro": "Foi atribuída a você uma substituição de plantão por <strong>{{teamName}}</strong> no projeto {{projectBadge}} <strong>{{projectName}}</strong>.",
+  "email.oncall.override.created.period": "Seu período de substituição: de <strong>{{startAt}}</strong> até <strong>{{endAt}}</strong>.",
+  "email.oncall.override.created.note": "Certifique-se de estar disponível para responder a quaisquer chamados durante este período.",
+  "email.oncall.override.covered.intro": "Seu plantão por <strong>{{teamName}}</strong> no projeto {{projectBadge}} <strong>{{projectName}}</strong> foi coberto por <strong>{{coveringUser}}</strong>.",
+  "email.oncall.override.covered.period": "Período de substituição: de <strong>{{startAt}}</strong> até <strong>{{endAt}}</strong>.",
+  "email.oncall.override.cancelled.intro": "Uma substituição de plantão por <strong>{{teamName}}</strong> no projeto {{projectBadge}} <strong>{{projectName}}</strong> foi cancelada.",
+  "email.oncall.override.cancelled.period": "A substituição estava agendada para: <strong>{{startAt}}</strong> a <strong>{{endAt}}</strong>.",
+  "email.oncall.override.cancelled.note": "O rodízio normal de plantão se aplicará a este período.",
+
+  "email.greeting": "Olá, {{name}},",
+  "email.verify.subject": "Verifique seu e-mail",
+  "email.verify.intro": "Clique no botão abaixo para verificar seu endereço de e-mail e definir sua senha:",
+  "email.verify.cta": "Verificar e-mail",
+  "email.verify.note": "Este link expira em 24 horas. Se você não fez esta solicitação, pode ignorar este e-mail com segurança.",
+  "email.reset.subject": "Redefinir sua senha",
+  "email.reset.intro": "Recebemos uma solicitação para redefinir sua senha. Clique no botão abaixo para escolher uma nova senha:",
+  "email.reset.cta": "Redefinir senha",
+  "email.reset.note": "Este link expira em 1 hora. Se você não fez esta solicitação, pode ignorar este e-mail com segurança."
 }

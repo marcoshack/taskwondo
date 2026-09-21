@@ -61,18 +61,18 @@ export function Modal({ open, onClose, title, position = 'center', size = 'defau
   return createPortal(
     <div className={`fixed inset-0 z-50 flex justify-center ${position === 'top' ? 'items-start pt-4' : 'items-center'} ${containerClassName ?? ''}`}>
       <div className="fixed inset-0 bg-black/50" onClick={dismissable ? onClose : undefined} />
-      <div role="dialog" aria-modal="true" className={`relative bg-white dark:bg-gray-800/40 dark:backdrop-blur-sm rounded-lg shadow-xl ${sizeClasses[size]} ${className ?? ''}`}>
+      <div role="dialog" aria-modal="true" className={`relative bg-[var(--surface)] rounded-[var(--radius-lg)] shadow-lg ${sizeClasses[size]} ${className ?? ''}`}>
         {title && (
           // 'wide' owns its own padding and separates the header with a rule so
           // the body can scroll under a pinned header and footer.
-          <div className={`flex items-center gap-3 ${size === 'wide' ? 'shrink-0 border-b border-gray-200 dark:border-gray-700 px-6 py-4' : 'mb-4'}`}>
-            <h2 className="flex-1 min-w-0 truncate text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
+          <div className={`flex items-center gap-3 ${size === 'wide' ? 'shrink-0 border-b border-[var(--border)] px-6 py-4' : 'mb-4'}`}>
+            <h2 className="flex-1 min-w-0 truncate text-lg font-semibold text-[var(--foreground)]">{title}</h2>
             {headerRight}
             {/* Matching flex-1 on both sides centres headerRight in the row. */}
             <div className={headerRight ? 'flex flex-1 justify-end' : ''}>
               <button
                 onClick={onClose}
-                className="p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-gray-700"
+                className="p-1 rounded-[var(--radius)] text-[var(--foreground-muted)] hover:text-[var(--foreground)] hover:bg-[var(--hover)] transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>

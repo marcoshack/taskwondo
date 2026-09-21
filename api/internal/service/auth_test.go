@@ -1562,7 +1562,7 @@ func TestRequestRegistration_Success(t *testing.T) {
 	svc, _, _, settings, sender := newTestAuthServiceWithEmail()
 	settings.setBool(model.SettingAuthEmailRegistrationEnabled, true)
 
-	err := svc.RequestRegistration(context.Background(), "new@example.com", "New User", "")
+	err := svc.RequestRegistration(context.Background(), "new@example.com", "New User", "", "en")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -1582,7 +1582,7 @@ func TestRequestRegistration_Disabled(t *testing.T) {
 	svc, _, _, _, _ := newTestAuthServiceWithEmail()
 	// Registration is disabled by default
 
-	err := svc.RequestRegistration(context.Background(), "new@example.com", "New User", "")
+	err := svc.RequestRegistration(context.Background(), "new@example.com", "New User", "", "en")
 	if err == nil {
 		t.Fatal("expected error when registration is disabled")
 	}
@@ -1608,7 +1608,7 @@ func TestRequestRegistration_DuplicateEmail(t *testing.T) {
 	userRepo.users[existing.Email] = existing
 	userRepo.byID[existing.ID] = existing
 
-	err := svc.RequestRegistration(context.Background(), "existing@example.com", "New User", "")
+	err := svc.RequestRegistration(context.Background(), "existing@example.com", "New User", "", "en")
 	if err == nil {
 		t.Fatal("expected error for duplicate email")
 	}
@@ -1637,7 +1637,7 @@ func TestRequestRegistration_InvalidEmail(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := svc.RequestRegistration(context.Background(), tc.email, "New User", "")
+			err := svc.RequestRegistration(context.Background(), tc.email, "New User", "", "en")
 			if err == nil {
 				t.Fatalf("expected validation error for email %q", tc.email)
 			}
@@ -1651,7 +1651,7 @@ func TestVerifyEmailAndCreateUser_Success(t *testing.T) {
 
 	// First request registration to create a token
 	sender := svc.emailSender.(*mockEmailSender)
-	err := svc.RequestRegistration(context.Background(), "verify@example.com", "Verify User", "")
+	err := svc.RequestRegistration(context.Background(), "verify@example.com", "Verify User", "", "en")
 	if err != nil {
 		t.Fatalf("request registration failed: %v", err)
 	}
@@ -1692,7 +1692,7 @@ func TestRequestRegistration_WithInviteCode(t *testing.T) {
 	svc, _, emailVerifRepo, settings, _ := newTestAuthServiceWithEmail()
 	settings.setBool(model.SettingAuthEmailRegistrationEnabled, true)
 
-	err := svc.RequestRegistration(context.Background(), "invite@example.com", "Invite User", "abc123")
+	err := svc.RequestRegistration(context.Background(), "invite@example.com", "Invite User", "abc123", "en")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -1714,7 +1714,7 @@ func TestVerifyEmailAndCreateUser_WithInviteCode(t *testing.T) {
 	settings.setBool(model.SettingAuthEmailRegistrationEnabled, true)
 
 	sender := svc.emailSender.(*mockEmailSender)
-	err := svc.RequestRegistration(context.Background(), "inviteverify@example.com", "Invite Verify", "invcode42")
+	err := svc.RequestRegistration(context.Background(), "inviteverify@example.com", "Invite Verify", "invcode42", "en")
 	if err != nil {
 		t.Fatalf("request registration failed: %v", err)
 	}
@@ -2460,7 +2460,7 @@ func TestRequestPasswordReset_Success(t *testing.T) {
 		IsActive:     true,
 	})
 
-	err := svc.RequestPasswordReset(context.Background(), "reset@example.com")
+	err := svc.RequestPasswordReset(context.Background(), "reset@example.com", "en")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -2480,7 +2480,7 @@ func TestRequestPasswordReset_UnknownEmail(t *testing.T) {
 	svc, _, _, sender := newTestAuthServiceWithPasswordReset()
 
 	// Should not error (prevents enumeration)
-	err := svc.RequestPasswordReset(context.Background(), "unknown@example.com")
+	err := svc.RequestPasswordReset(context.Background(), "unknown@example.com", "en")
 	if err != nil {
 		t.Fatalf("expected no error for unknown email, got %v", err)
 	}
@@ -2504,7 +2504,7 @@ func TestRequestPasswordReset_OAuthOnlyUser(t *testing.T) {
 		IsActive:     true,
 	})
 
-	err := svc.RequestPasswordReset(context.Background(), "oauth@example.com")
+	err := svc.RequestPasswordReset(context.Background(), "oauth@example.com", "en")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -2518,7 +2518,7 @@ func TestRequestPasswordReset_OAuthOnlyUser(t *testing.T) {
 func TestRequestPasswordReset_InvalidEmail(t *testing.T) {
 	svc, _, _, _ := newTestAuthServiceWithPasswordReset()
 
-	err := svc.RequestPasswordReset(context.Background(), "not-an-email")
+	err := svc.RequestPasswordReset(context.Background(), "not-an-email", "en")
 	if err == nil {
 		t.Fatal("expected error for invalid email")
 	}
@@ -2542,7 +2542,7 @@ func TestResetPasswordWithToken_Success(t *testing.T) {
 	})
 
 	// Request reset
-	err := svc.RequestPasswordReset(context.Background(), "reset@example.com")
+	err := svc.RequestPasswordReset(context.Background(), "reset@example.com", "en")
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
 	}

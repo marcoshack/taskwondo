@@ -37,10 +37,10 @@ export function ProjectOverviewPage() {
 
   const panels = [
     { key: 'task', label: t('projects.overview.tasks'), color: 'text-blue-700 dark:text-blue-400', iconBg: 'bg-blue-100 dark:bg-blue-900/30' },
-    { key: 'ticket', label: t('projects.overview.tickets'), color: 'text-indigo-700 dark:text-indigo-300', iconBg: 'bg-indigo-100 dark:bg-indigo-900/30' },
-    { key: 'bug', label: t('projects.overview.bugs'), color: 'text-red-700 dark:text-red-400', iconBg: 'bg-red-100 dark:bg-red-900/30' },
+    { key: 'ticket', label: t('projects.overview.tickets'), color: 'text-[var(--primary)]', iconBg: 'bg-[var(--primary-muted)] ' },
+    { key: 'bug', label: t('projects.overview.bugs'), color: 'text-red-700 text-[var(--danger)]', iconBg: 'bg-red-100 dark:bg-red-900/30' },
     { key: 'other', label: t('projects.overview.other'), color: 'text-yellow-700 dark:text-yellow-400', iconBg: 'bg-yellow-100 dark:bg-yellow-900/30' },
-    { key: 'total', label: t('projects.overview.total'), color: 'text-gray-900 dark:text-gray-100', iconBg: 'bg-gray-200 dark:bg-gray-600' },
+    { key: 'total', label: t('projects.overview.total'), color: 'text-[var(--foreground)]', iconBg: 'bg-[var(--surface-tertiary)] dark:bg-[var(--foreground-secondary)]' },
   ]
 
   const openStatusNames = useMemo(
@@ -116,8 +116,8 @@ export function ProjectOverviewPage() {
             className={({ isActive }) =>
               `flex flex-1 flex-col items-center gap-1 py-3 text-xs font-medium transition-colors shrink-0 min-w-[3.5rem] ${
                 isActive
-                  ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
-                  : 'text-gray-500 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-800'
+                  ? 'bg-[var(--primary-muted)] text-[var(--primary)]  dark:text-[var(--primary)]'
+                  : 'text-[var(--foreground-secondary)] hover:bg-[var(--surface-secondary)] text-[var(--foreground-muted)] dark:hover:bg-[var(--surface)]'
               }`
             }
           >
@@ -128,7 +128,7 @@ export function ProjectOverviewPage() {
       </nav>
 
       <div>
-        <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
+        <h2 className="text-sm font-medium text-[var(--foreground-secondary)] uppercase tracking-wide mb-3">
           {t('projects.overview.openWorkItems')}
         </h2>
         {loading ? (
@@ -141,11 +141,11 @@ export function ProjectOverviewPage() {
               <button
                 key={panel.key}
                 onClick={() => navigateToItems(panel.key)}
-                className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 text-left hover:border-indigo-300 dark:hover:border-indigo-600 hover:shadow-md transition-all cursor-pointer"
+                className="rounded-lg border border-[var(--border)] p-3 text-left hover:border-[var(--primary-border)] dark:hover:border-[var(--primary-border)] hover:bg-[var(--surface-hover)]/50 transition-colors cursor-pointer"
               >
                 <div className="flex items-center gap-1.5 mb-1">
                   <span className={`inline-block h-2 w-2 rounded-full ${panel.iconBg}`} />
-                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                  <span className="text-xs font-medium text-[var(--foreground-secondary)]">
                     {panel.label}
                   </span>
                 </div>
@@ -159,45 +159,45 @@ export function ProjectOverviewPage() {
       <StatsTimelineChart projectKey={projectKey ?? ''} />
 
       <div>
-        <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
+        <h2 className="text-sm font-medium text-[var(--foreground-secondary)] uppercase tracking-wide mb-3">
           {t('projects.overview.about')}
         </h2>
-        <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-5">
+        <div className="rounded-lg border border-[var(--border)] p-5">
           {project?.description ? (
-            <div className="prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 break-words">
+            <div className="prose prose-sm dark:prose-invert max-w-none text-[var(--foreground)] break-words">
               <Markdown remarkPlugins={[remarkGfm]}>{project.description}</Markdown>
             </div>
           ) : (
-            <p className="text-sm text-gray-400 dark:text-gray-500 italic">{t('projects.overview.noDescription')}</p>
+            <p className="text-sm text-[var(--foreground-muted)] italic">{t('projects.overview.noDescription')}</p>
           )}
         </div>
       </div>
 
       <div>
-        <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
+        <h2 className="text-sm font-medium text-[var(--foreground-secondary)] uppercase tracking-wide mb-3">
           {t('projects.overview.members')}
         </h2>
-        <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+        <div className="rounded-lg border border-[var(--border)] p-4">
           {membersLoading ? (
             <Spinner />
           ) : !members || members.length === 0 ? (
-            <p className="text-sm text-gray-400 dark:text-gray-500">{t('projects.overview.noMembers')}</p>
+            <p className="text-sm text-[var(--foreground-muted)]">{t('projects.overview.noMembers')}</p>
           ) : (
             <div className="flex flex-wrap gap-3 items-center">
               {members.map((member) => (
                 <div key={member.user_id} className="flex items-center gap-2">
                   <Avatar name={member.display_name} avatarUrl={member.avatar_url} size="sm" />
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                    <p className="text-sm font-medium text-[var(--foreground)] truncate">
                       {member.display_name}
-                      {member.user_id === user?.id && <span className="ml-1 text-xs text-gray-400">({t('common.you')})</span>}
+                      {member.user_id === user?.id && <span className="ml-1 text-xs text-[var(--foreground-muted)]">({t('common.you')})</span>}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{member.role}</p>
+                    <p className="text-xs text-[var(--foreground-secondary)] capitalize">{member.role}</p>
                   </div>
                 </div>
               ))}
               {membersTotalCount != null && membersTotalCount > members.length && (
-                <span className="text-sm text-gray-500 dark:text-gray-400">
+                <span className="text-sm text-[var(--foreground-secondary)]">
                   {t('projects.settings.hiddenMembers', { count: membersTotalCount - members.length })}
                 </span>
               )}

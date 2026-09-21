@@ -247,6 +247,35 @@ test.describe('SMTP Configuration', () => {
     await attach(page, testInfo, '01-encryption-persisted');
   });
 
+  test('persists skip certificate verification option', async ({ page }, testInfo) => {
+    await gotoIntegrations(page);
+
+    // Enable SMTP and fill required fields
+    await page.getByRole('switch').click();
+    await page.getByLabel('SMTP Host').fill('smtp.example.com');
+    await page.getByLabel('SMTP Port').fill('465');
+    await page.getByLabel('Username').fill('[EMAIL_REDACTED]');
+    await page.getByLabel('Password').fill('pass');
+    await page.getByLabel('From Address').fill('[EMAIL_REDACTED]');
+    await page.locator('select').selectOption('tls');
+
+    // The cert-verify checkbox should be visible for TLS
+    const skipCheckbox = page.getByLabel('Skip certificate verification');
+    await expect(skipCheckbox).toBeVisible();
+    await expect(skipCheckbox).not.toBeChecked();
+    await skipCheckbox.check();
+
+    await page.getByRole('button', { name: 'Save' }).click();
+    await expect(page.getByText('SMTP settings saved.')).toBeVisible();
+
+    // Reload and verify the option persisted
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    await page.getByRole('heading', { name: 'SMTP' }).click();
+    await expect(page.getByLabel('Skip certificate verification')).toBeChecked();
+    await attach(page, testInfo, '01-skip-cert-verify-persisted');
+  });
+
   test('non-admin user cannot access integrations page', async ({ page, testUser }, testInfo) => {
     await page.goto('/');
     await dismissWelcomeModal(page);

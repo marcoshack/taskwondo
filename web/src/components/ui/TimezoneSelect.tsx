@@ -61,7 +61,7 @@ export function TimezoneSelect({ value, onChange, disabled = false }: Props) {
       <button
         type="button"
         disabled={disabled}
-        className="w-full text-left rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 truncate disabled:opacity-60 disabled:cursor-not-allowed"
+        className="w-full text-left rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] truncate disabled:opacity-60 disabled:cursor-not-allowed"
         onClick={() => {
           setOpen(!open)
           if (!open) {
@@ -73,12 +73,12 @@ export function TimezoneSelect({ value, onChange, disabled = false }: Props) {
       </button>
 
       {open && (
-        <div className="absolute z-50 mt-1 w-full max-h-64 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg flex flex-col">
-          <div className="p-2 border-b border-gray-200 dark:border-gray-700">
+        <div className="absolute z-50 mt-1 w-full max-h-64 bg-[var(--surface)] border border-[var(--border)] rounded-md shadow-[var(--shadow)] flex flex-col">
+          <div className="p-2 border-b border-[var(--border)]">
             <input
               ref={inputRef}
               type="text"
-              className="w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
               placeholder={t('businessHours.searchTimezone')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -94,14 +94,14 @@ export function TimezoneSelect({ value, onChange, disabled = false }: Props) {
           </div>
           <ul ref={listRef} className="overflow-y-auto flex-1">
             {filtered.length === 0 ? (
-              <li className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">{t('common.noResults')}</li>
+              <li className="px-3 py-2 text-sm text-[var(--foreground-muted)]">{t('common.noResults')}</li>
             ) : (
               filtered.map((tz) => (
                 <li key={tz}>
                   <button
                     type="button"
-                    className={`w-full text-left px-3 py-1.5 text-sm hover:bg-indigo-50 dark:hover:bg-indigo-900/30 ${
-                      tz === value ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium' : 'text-gray-900 dark:text-gray-100'
+                    className={`w-full text-left px-3 py-1.5 text-sm hover:bg-[var(--surface-hover)] ${
+                      tz === value ? 'bg-[var(--primary-muted)] text-[var(--primary)] font-medium' : 'text-[var(--foreground)]'
                     }`}
                     onClick={() => handleSelect(tz)}
                   >

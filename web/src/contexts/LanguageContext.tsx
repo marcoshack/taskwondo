@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -67,6 +68,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   }, [language, i18n])
 
   useEffect(() => {
+    document.documentElement.lang = language
     document.documentElement.dir = RTL_LANGUAGES.has(language) ? 'rtl' : 'ltr'
   }, [language])
 

@@ -415,6 +415,61 @@ func TestSetSMTP_SaveAndMaskPassword(t *testing.T) {
 	}
 }
 
+func TestSetSMTP_PersistsSkipCertVerify(t *testing.T) {
+	h, repo := systemSettingTestSetup(t)
+
+	cfg := model.SMTPConfig{
+		Enabled:        true,
+		SMTPHost:       "smtp.example.com",
+		SMTPPort:       465,
+		Username:       "[EMAIL_REDACTED]",
+		Password:       "secret123",
+		Encryption:     "tls",
+		FromAddress:    "[EMAIL_REDACTED]",
+		SkipCertVerify: true,
+	}
+	body, _ := json.Marshal(cfg)
+
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/admin/settings/smtp_config", bytes.NewBuffer(body))
+	req = req.WithContext(sysAdminCtx())
+	w := httptest.NewRecorder()
+
+	h.SetSMTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp struct {
+		Data model.SMTPConfig `json:"data"`
+	}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	if !resp.Data.SkipCertVerify {
+		t.Error("expected skip_cert_verify=true in response")
+	}
+
+	stored := repo.settings[model.SettingSMTPConfig]
+	var storedCfg model.SMTPConfig
+	json.Unmarshal(stored.Value, &storedCfg)
+	if !storedCfg.SkipCertVerify {
+		t.Error("expected skip_cert_verify=true in stored config")
+	}
+
+	// GET must return the flag too
+	getReq := httptest.NewRequest(http.MethodGet, "/api/v1/admin/settings/smtp_config", nil)
+	getReq = getReq.WithContext(sysAdminCtx())
+	gw := httptest.NewRecorder()
+	h.GetSMTP(gw, getReq)
+
+	var getResp struct {
+		Data model.SMTPConfig `json:"data"`
+	}
+	json.Unmarshal(gw.Body.Bytes(), &getResp)
+	if !getResp.Data.SkipCertVerify {
+		t.Error("expected skip_cert_verify=true from GetSMTP")
+	}
+}
+
 func TestSetSMTP_PreservesExistingPassword(t *testing.T) {
 	h, repo := systemSettingTestSetup(t)
 

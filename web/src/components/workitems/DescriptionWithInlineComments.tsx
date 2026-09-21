@@ -285,7 +285,7 @@ export function DescriptionWithInlineComments({
             type="button"
             data-testid="inline-comment-gutter-icon"
             title={t('inlineComments.gutterTooltip', { count: m.count })}
-            className="absolute left-0 inline-flex items-center justify-center w-6 h-6 rounded-md text-indigo-500 hover:text-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors"
+            className="absolute left-0 inline-flex items-center justify-center w-6 h-6 rounded-md text-[var(--primary)] hover:text-[var(--primary)] hover:bg-[var(--primary-muted)]  transition-colors"
             style={{ top: m.top }}
             onClick={() => onOpenThread?.(openThreadRootId === m.rootId ? null : m.rootId)}
           >
@@ -295,7 +295,7 @@ export function DescriptionWithInlineComments({
             {m.count > 1 && (
               <span
                 data-testid="inline-comment-gutter-count"
-                className="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[14px] h-[14px] px-0.5 rounded-full bg-indigo-600 text-white text-[9px] font-semibold leading-none"
+                className="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[14px] h-[14px] px-0.5 rounded-full bg-[var(--primary)] text-white text-[9px] font-semibold leading-none"
               >
                 {m.count}
               </span>
@@ -307,7 +307,7 @@ export function DescriptionWithInlineComments({
       <div
         ref={proseRef}
         data-testid="description-body"
-        className={`prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 break-words ${hasInlineComments ? 'pl-9' : ''}`}
+        className={`prose prose-sm dark:prose-invert max-w-none text-[var(--foreground)] break-words ${hasInlineComments ? 'pl-9' : ''}`}
       >
         <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSourcePos]} components={baseComponents}>
           {description}
@@ -325,7 +325,7 @@ export function DescriptionWithInlineComments({
             setComposer(pending)
             setPending(null)
           }}
-          className="absolute z-20 inline-flex items-center gap-1 px-2 py-1 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-xs shadow-lg"
+          className="absolute z-20 inline-flex items-center gap-1 px-2 py-1 rounded-md bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white text-xs shadow-lg"
           style={{ top: pending.pos.top, left: pending.pos.left }}
         >
           <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">

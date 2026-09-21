@@ -105,15 +105,15 @@ export function SavedSearchSelector({
 
   // Shared search filter + search input
   const searchInput = (
-    <div className={variant === 'mobile' ? 'px-0 pb-2' : 'p-2 border-b border-gray-200 dark:border-gray-700'}>
+    <div className={variant === 'mobile' ? 'px-0 pb-2' : 'p-2 border-b border-[var(--border)]'}>
       <div className="relative">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--foreground-muted)]" />
         <input
           type="text"
           value={filterText}
           onChange={(e) => setFilterText(e.target.value)}
           placeholder={t('savedSearches.searchPlaceholder')}
-          className="w-full pl-8 pr-3 py-1.5 text-sm rounded border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          className="w-full pl-8 pr-3 py-1.5 text-sm rounded border border-[var(--border)] bg-[var(--surface-secondary)] text-[var(--foreground)] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)]"
           autoFocus={variant === 'desktop'}
         />
       </div>
@@ -124,14 +124,14 @@ export function SavedSearchSelector({
     return (
       <div className={scrollable ? 'max-h-64 overflow-y-auto py-1' : 'py-1'}>
         {filteredUser.length === 0 && filteredShared.length === 0 && (
-          <p className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400 text-center">
+          <p className="px-3 py-4 text-sm text-[var(--foreground-secondary)] text-center">
             {t('savedSearches.empty')}
           </p>
         )}
 
         {filteredUser.length > 0 && (
           <>
-            <p className="px-3 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <p className="px-3 py-1 text-xs font-semibold text-[var(--foreground-secondary)] uppercase tracking-wider">
               {t('savedSearches.mySearches')}
             </p>
             {filteredUser.map((s) => (
@@ -156,8 +156,8 @@ export function SavedSearchSelector({
 
         {filteredShared.length > 0 && (
           <>
-            {filteredUser.length > 0 && <div className="my-1 border-t border-gray-200 dark:border-gray-700" />}
-            <p className="px-3 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            {filteredUser.length > 0 && <div className="my-1 border-t border-[var(--border)]" />}
+            <p className="px-3 py-1 text-xs font-semibold text-[var(--foreground-secondary)] uppercase tracking-wider">
               {t('savedSearches.shared')}
             </p>
             {filteredShared.map((s) => (
@@ -201,8 +201,8 @@ export function SavedSearchSelector({
           onClick={() => setMobileMode(mobileMode === 'edit' ? 'browse' : 'edit')}
           className={`p-2.5 rounded-md border transition-colors ${
             mobileMode === 'edit'
-              ? 'bg-indigo-50 text-indigo-700 border-indigo-300 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-700'
-              : 'border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+              ? 'bg-[var(--primary-muted)] text-[var(--primary)] border-[var(--primary-border)]  dark:text-[var(--primary)] dark:border-[var(--primary-border)]'
+              : 'border-[var(--border)] text-[var(--foreground-secondary)] hover:bg-[var(--surface-hover)]'
           }`}
           aria-label={t('savedSearches.editMode')}
         >
@@ -212,8 +212,8 @@ export function SavedSearchSelector({
           onClick={() => setMobileMode(mobileMode === 'order' ? 'browse' : 'order')}
           className={`p-2.5 rounded-md border transition-colors ${
             mobileMode === 'order'
-              ? 'bg-indigo-50 text-indigo-700 border-indigo-300 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-700'
-              : 'border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+              ? 'bg-[var(--primary-muted)] text-[var(--primary)] border-[var(--primary-border)]  dark:text-[var(--primary)] dark:border-[var(--primary-border)]'
+              : 'border-[var(--border)] text-[var(--foreground-secondary)] hover:bg-[var(--surface-hover)]'
           }`}
           aria-label={t('savedSearches.orderMode')}
         >
@@ -229,12 +229,12 @@ export function SavedSearchSelector({
         <>
           <button
             onClick={() => setOpen(true)}
-            className="relative shrink-0 p-2.5 rounded-md border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="relative shrink-0 p-2.5 rounded-md border border-[var(--border)] text-[var(--foreground-secondary)] hover:bg-[var(--surface-hover)]"
             aria-label={t('savedSearches.placeholder')}
           >
             <FolderSearch className="h-5 w-5" />
             {activeSearch && (
-              <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-600 text-[10px] font-bold text-white">
+              <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--primary)] text-[10px] font-bold text-white">
                 1
               </span>
             )}
@@ -255,8 +255,8 @@ export function SavedSearchSelector({
             onClick={() => setOpen(!open)}
             className={`flex items-center gap-1.5 px-3 py-2 w-full text-sm font-medium rounded-md border transition-colors ${
               activeSearch
-                ? 'bg-indigo-50 text-indigo-700 border-indigo-300 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-700'
-                : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:bg-gray-700'
+                ? 'bg-[var(--primary-muted)] text-[var(--primary)] border-[var(--primary-border)]  dark:text-[var(--primary)] dark:border-[var(--primary-border)]'
+                : 'bg-white text-[var(--foreground-secondary)] border-[var(--border)] hover:bg-[var(--surface-secondary)] text-[var(--foreground-muted)] dark:border-[var(--border)] hover:bg-[var(--surface-hover)]'
             }`}
           >
             <span className="truncate">{buttonLabel}</span>
@@ -267,7 +267,7 @@ export function SavedSearchSelector({
           </button>
 
           {open && (
-            <div className="absolute left-0 top-full mt-1 w-[22rem] z-50 rounded-md border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
+            <div className="absolute left-0 top-full mt-1 w-[22rem] z-50 rounded-md border border-[var(--border)] bg-white shadow-lg dark:border-[var(--border)] bg-[var(--surface)]">
               {desktopContent}
             </div>
           )}
@@ -294,7 +294,7 @@ export function SavedSearchSelector({
       {/* Delete confirmation modal */}
       <Modal open={!!deleting} onClose={() => setDeleting(null)} title={t('savedSearches.deleteConfirmTitle')}>
         <div className="space-y-4">
-          <p className="text-sm text-gray-700 dark:text-gray-300">
+          <p className="text-sm text-[var(--foreground)]">
             <Trans i18nKey="savedSearches.deleteConfirmBody" values={{ name: deleting?.name }} components={{ strong: <strong /> }} />
           </p>
           <div className="flex justify-end gap-2">
@@ -338,14 +338,14 @@ function SearchEntry({
     <div
       className={`group flex items-center gap-1 px-3 py-1.5 cursor-pointer overflow-hidden ${
         isActive
-          ? 'bg-indigo-50 dark:bg-indigo-900/20'
-          : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+          ? 'bg-[var(--primary-muted)]'
+          : 'hover:bg-[var(--surface-hover)]'
       }`}
     >
       <button
         onClick={onSelect}
         className={`flex-1 min-w-0 text-left text-sm truncate ${
-          isActive ? 'text-indigo-700 dark:text-indigo-300 font-medium' : 'text-gray-700 dark:text-gray-300'
+          isActive ? 'text-[var(--primary)] font-medium' : 'text-[var(--foreground)]'
         }`}
       >
         {search.name}
@@ -357,14 +357,14 @@ function SearchEntry({
               <button
                 onClick={(e) => { e.stopPropagation(); onMoveUp() }}
                 disabled={isFirst}
-                className="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:cursor-default"
+                className="p-1 rounded text-[var(--foreground-muted)] hover:text-[var(--foreground-secondary)] dark:hover:text-[var(--foreground-muted)] disabled:opacity-30 disabled:cursor-default"
               >
                 <ChevronUp className="h-[18px] w-[18px]" />
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); onMoveDown() }}
                 disabled={isLast}
-                className="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:cursor-default"
+                className="p-1 rounded text-[var(--foreground-muted)] hover:text-[var(--foreground-secondary)] dark:hover:text-[var(--foreground-muted)] disabled:opacity-30 disabled:cursor-default"
               >
                 <ChevronDown className="h-[18px] w-[18px]" />
               </button>
@@ -374,13 +374,13 @@ function SearchEntry({
             <>
               <button
                 onClick={(e) => { e.stopPropagation(); onRename() }}
-                className="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                className="p-1 rounded text-[var(--foreground-muted)] hover:text-[var(--foreground-secondary)] dark:hover:text-[var(--foreground-muted)]"
               >
                 <Pencil className="h-3 w-3" />
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); onDelete() }}
-                className="p-1 rounded text-gray-400 hover:text-red-500 dark:hover:text-red-400"
+                className="p-1 rounded text-[var(--foreground-muted)] hover:text-[var(--danger)] dark:hover:text-red-400"
               >
                 <Trash2 className="h-3 w-3" />
               </button>

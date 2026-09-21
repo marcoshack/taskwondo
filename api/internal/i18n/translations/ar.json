@@ -18,7 +18,7 @@
 
   "email.status_change.subject": "[{{projectKey}}] #{{itemNumber}} تم تغيير الحالة إلى {{newStatus}}: {{title}}",
   "email.status_change.intro": "قام <strong>{{actorName}}</strong> بتغيير حالة عنصر عمل معيّن لك:",
-  "email.status_change.status": "الحالة: <strong>{{oldStatus}}</strong> \u2192 <strong>{{newStatus}}</strong>",
+  "email.status_change.status": "الحالة: <strong>{{oldStatus}}</strong> → <strong>{{newStatus}}</strong>",
   "email.status_change.cta": "عرض عنصر العمل",
   "email.status_change.footer": "لقد تلقيت هذا البريد الإلكتروني لأن إشعارات تغيير الحالة مفعّلة للعناصر المعيّنة. يمكنك تغيير تفضيلات الإشعارات في إعدادات Taskwondo.",
 
@@ -35,5 +35,53 @@
   "email.invite.subject": "تمت دعوتك إلى مشروع {{projectName}}",
   "email.invite.intro": "قام <strong>{{inviterName}}</strong> بدعوتك للانضمام إلى مشروع <strong>{{projectName}}</strong> بصفة <strong>{{role}}</strong>.",
   "email.invite.cta": "قبول الدعوة",
-  "email.invite.footer": "لقد تلقيت هذا البريد الإلكتروني لأن شخصًا ما دعاك إلى مشروع في Taskwondo. إذا لم تتعرف على هذه الدعوة، يمكنك تجاهل هذا البريد الإلكتروني."
+  "email.invite.footer": "لقد تلقيت هذا البريد الإلكتروني لأن شخصًا ما دعاك إلى مشروع في Taskwondo. إذا لم تتعرف على هذه الدعوة، يمكنك تجاهل هذا البريد الإلكتروني.",
+
+  "email.namespace_invite.subject": "تمت دعوتك إلى {{namespaceName}}",
+  "email.namespace_invite.intro": "دعاك <strong>{{inviterName}}</strong> للانضمام إلى مساحة العمل <strong>{{namespaceName}}</strong> بدور <strong>{{role}}</strong>.",
+  "email.namespace_invite.cta": "قبول الدعوة",
+  "email.namespace_invite.footer": "وصلك هذا البريد الإلكتروني لأن أحدًا دعاك للانضمام إلى مساحة عمل في Taskwondo. إذا لم تتعرف على هذه الدعوة، يمكنك تجاهل هذا البريد بأمان.",
+
+  "email.sla_breach.subject": "[{{projectKey}}] تحذير SLA: #{{itemNumber}} — \"{{title}}\" (المستوى {{level}})",
+  "email.sla_breach.intro": "أوشكت إحدى عناصر العمل على تجاوز هدف SLA أو تجاوزته:",
+  "email.sla_breach.sla_status": "SLA: تم استخدام <strong>{{percentage}}%</strong> من الوقت المستهدف",
+  "email.sla_breach.elapsed": "الوقت المنقضي: <strong>{{elapsed}}</strong> من <strong>{{target}}</strong>",
+  "email.sla_breach.level": "مستوى التصعيد: <strong>{{level}}</strong>",
+  "email.sla_breach.status": "الحالة: <strong>{{statusName}}</strong>",
+  "email.sla_breach.cta": "عرض عنصر العمل",
+  "email.sla_breach.footer": "وصلك هذا البريد الإلكتروني لأنك في قائمة التصعيد لهذا المشروع. يمكنك تغيير تفضيلات الإشعارات في إعدادات Taskwondo.",
+
+  "email.oncall.incoming.subject": "[{{projectKey}}] أنت الآن في نوبة المناوبة لفريق {{teamName}}",
+  "email.oncall.outgoing.subject": "[{{projectKey}}] انتهت نوبة المناوبة لفريق {{teamName}}",
+
+  "email.oncall.override.created.subject": "[{{projectKey}}] تم إسناد بديل مناوبة لفريق {{teamName}}",
+  "email.oncall.override.covered.subject": "[{{projectKey}}] تمت تغطية نوبة المناوبة لفريق {{teamName}}",
+  "email.oncall.override.cancelled.subject": "[{{projectKey}}] تم إلغاء بديل المناوبة لفريق {{teamName}}",
+
+  "email.oncall.cta": "عرض جدول المناوبات",
+  "email.oncall.rotation.footer": "هذا إشعار آلي بتناوب المناوبات من Taskwondo.",
+  "email.oncall.override.footer": "هذا إشعار آلي باستبدال المناوبات من Taskwondo.",
+
+  "email.oncall.incoming.intro": "أنت الآن في نوبة المناوبة لفريق <strong>{{teamName}}</strong> في المشروع {{projectBadge}} <strong>{{projectName}}</strong>.",
+  "email.oncall.incoming.note": "يرجى التأكد من أنك متفرغ للرد على أي مشكلات واردة خلال نوبتك.",
+  "email.oncall.outgoing.intro": "انتهت نوبة المناوبة لفريق <strong>{{teamName}}</strong> في المشروع {{projectBadge}} <strong>{{projectName}}</strong>.",
+  "email.oncall.outgoing.note": "شكرًا على خدمتك خلال نوبتك.",
+  "email.oncall.override.created.intro": "تم تكليفك باستبدال المناوبة لفريق <strong>{{teamName}}</strong> في المشروع {{projectBadge}} <strong>{{projectName}}</strong>.",
+  "email.oncall.override.created.period": "فترة الاستبدال: من <strong>{{startAt}}</strong> إلى <strong>{{endAt}}</strong>.",
+  "email.oncall.override.created.note": "يرجى التأكد من أنك متفرغ للرد على أي مشكلات واردة خلال هذه الفترة.",
+  "email.oncall.override.covered.intro": "تمت تغطية نوبة المناوبة لفريق <strong>{{teamName}}</strong> في المشروع {{projectBadge}} <strong>{{projectName}}</strong> بواسطة <strong>{{coveringUser}}</strong>.",
+  "email.oncall.override.covered.period": "فترة الاستبدال: من <strong>{{startAt}}</strong> إلى <strong>{{endAt}}</strong>.",
+  "email.oncall.override.cancelled.intro": "تم إلغاء استبدال المناوبة لفريق <strong>{{teamName}}</strong> في المشروع {{projectBadge}} <strong>{{projectName}}</strong>.",
+  "email.oncall.override.cancelled.period": "كان الاستبدال مجدولًا للفترة: من <strong>{{startAt}}</strong> إلى <strong>{{endAt}}</strong>.",
+  "email.oncall.override.cancelled.note": "سينطبق جدول تناوب المناوبات المعتاد على هذه الفترة.",
+
+  "email.greeting": "مرحبًا {{name}}،",
+  "email.verify.subject": "تحقق من بريدك الإلكتروني",
+  "email.verify.intro": "انقر على الزر أدناه للتحقق من عنوان بريدك الإلكتروني وتعيين كلمة المرور:",
+  "email.verify.cta": "التحقق من البريد",
+  "email.verify.note": "ينتهي هذا الرابط خلال 24 ساعة. إذا لم تطلب ذلك، يمكنك تجاهل هذا البريد بأمان.",
+  "email.reset.subject": "إعادة تعيين كلمة المرور",
+  "email.reset.intro": "وصلنا طلب لإعادة تعيين كلمة المرور. انقر على الزر أدناه لاختيار كلمة مرور جديدة:",
+  "email.reset.cta": "إعادة تعيين كلمة المرور",
+  "email.reset.note": "ينتهي هذا الرابط خلال ساعة واحدة. إذا لم تطلب ذلك، يمكنك تجاهل هذا البريد بأمان."
 }

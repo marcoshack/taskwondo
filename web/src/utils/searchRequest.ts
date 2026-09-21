@@ -19,6 +19,26 @@ export interface UnifiedSearchRequest {
   project?: string | null
 }
 
+/**
+ * Scripts whose characters carry meaning on their own (Chinese, Japanese,
+ * Korean). Postgres tokenizes CJK runs as a single lexeme, so the backend
+ * adds an ILIKE substring fallback for these queries.
+ */
+const CJK_SCRIPT = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u
+
+/**
+ * Whether a query is worth sending to the entity search endpoint.
+ *
+ * The historical floor is two characters, which suppresses noisy single-letter
+ * latin queries — but a single CJK character is already a meaningful word, so
+ * the floor drops to one character for scripts that contain one.
+ */
+export function meetsSearchFloor(query: string): boolean {
+  const trimmed = query.trim()
+  if (trimmed.length === 0) return false
+  return trimmed.length >= 2 || CJK_SCRIPT.test(trimmed)
+}
+
 /** Build the query string for a unified search request. */
 export function buildSearchParams(req: UnifiedSearchRequest): URLSearchParams {
   const params = new URLSearchParams()

@@ -1,4 +1,5 @@
-import { createContext, useContext } from 'react'
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useContext, useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 import { usePublicSettings } from '@/hooks/useSystemSettings'
 
@@ -17,6 +18,16 @@ export function BrandProvider({ children }: { children: ReactNode }) {
     typeof publicSettings?.brand_name === 'string' && publicSettings.brand_name
       ? publicSettings.brand_name
       : DEFAULT_BRAND_NAME
+
+  // Keep the browser tab title in sync with the configured brand, without
+  // clobbering page-specific titles (e.g. the work item detail page).
+  const lastBaseTitle = useRef(DEFAULT_BRAND_NAME)
+  useEffect(() => {
+    if (document.title === lastBaseTitle.current) {
+      document.title = brandName
+    }
+    lastBaseTitle.current = brandName
+  }, [brandName])
 
   return (
     <BrandContext.Provider value={{ brandName }}>

@@ -50,7 +50,7 @@ function compareValues(a: string | number, b: string | number, order: 'asc' | 'd
 function SortIndicator({ active, direction }: { active: boolean; direction?: 'asc' | 'desc' }) {
   if (!active) {
     return (
-      <svg className="w-3 h-3 text-gray-300 dark:text-gray-600" viewBox="0 0 10 14" fill="currentColor">
+      <svg className="w-3 h-3 text-[var(--foreground-secondary)]" viewBox="0 0 10 14" fill="currentColor">
         <path d="M5 0L9 5H1L5 0Z" />
         <path d="M5 14L1 9H9L5 14Z" />
       </svg>
@@ -58,13 +58,13 @@ function SortIndicator({ active, direction }: { active: boolean; direction?: 'as
   }
   if (direction === 'asc') {
     return (
-      <svg className="w-3 h-3 text-indigo-600 dark:text-indigo-400" viewBox="0 0 10 7" fill="currentColor">
+      <svg className="w-3 h-3 text-[var(--primary)]" viewBox="0 0 10 7" fill="currentColor">
         <path d="M5 0L10 7H0L5 0Z" />
       </svg>
     )
   }
   return (
-    <svg className="w-3 h-3 text-indigo-600 dark:text-indigo-400" viewBox="0 0 10 7" fill="currentColor">
+    <svg className="w-3 h-3 text-[var(--primary)]" viewBox="0 0 10 7" fill="currentColor">
       <path d="M5 7L0 0H10L5 7Z" />
     </svg>
   )
@@ -92,7 +92,7 @@ function SortableHeader({
     <button
       type="button"
       onClick={() => onSort(sortKey)}
-      className={`flex items-center gap-1 ${justify} text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 cursor-pointer select-none ${className ?? ''}`}
+      className={`flex items-center gap-1 ${justify} text-xs font-medium uppercase tracking-wider text-[var(--foreground-muted)] hover:text-[var(--foreground)] cursor-pointer select-none ${className ?? ''}`}
     >
       <span>{children}</span>
       <SortIndicator active={active} direction={active ? order : undefined} />
@@ -401,11 +401,11 @@ export function DirectoryUsersTab() {
       </div>
 
       {error && (
-        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+        <p className="text-sm text-[var(--danger)]">{error}</p>
       )}
 
       {filteredUsers.length === 0 ? (
-        <p className="text-sm text-gray-500 dark:text-gray-400">{t('admin.users.noUsers')}</p>
+        <p className="text-sm text-[var(--foreground-secondary)]">{t('admin.users.noUsers')}</p>
       ) : (
         (() => {
           const dataCols = namespacesEnabled ? 6 : 5
@@ -413,10 +413,10 @@ export function DirectoryUsersTab() {
             gridTemplateColumns: `25% repeat(${dataCols}, minmax(0, 1fr)) 2rem`,
           }
           return (
-        <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+        <div className="border border-[var(--border)] rounded-lg overflow-hidden">
           {/* Desktop column headers */}
           <div
-            className="hidden sm:grid items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700"
+            className="hidden sm:grid items-center gap-3 px-3 py-2 bg-[var(--surface-secondary)] border-b border-[var(--border)]"
             style={gridStyle}
           >
             <SortableHeader sortKey="name" active={sortBy === 'name'} order={sortOrder} onSort={handleSort}>
@@ -444,7 +444,7 @@ export function DirectoryUsersTab() {
             </SortableHeader>
             <span aria-hidden="true" />
           </div>
-          <div className="divide-y divide-gray-200 dark:divide-gray-700">
+          <div className="divide-y divide-[var(--border)]">
           {filteredUsers.map((u) => {
             const isSelf = u.id === currentUser?.id
             const isExpanded = expandedUserId === u.id
@@ -453,21 +453,21 @@ export function DirectoryUsersTab() {
               <div key={u.id}>
                 {/* Desktop row */}
                 <div
-                  className="hidden sm:grid items-center gap-3 px-3 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  className="hidden sm:grid items-center gap-3 px-3 py-3 cursor-pointer hover:bg-[var(--surface-hover)]/50"
                   style={gridStyle}
                   onClick={() => setExpandedUserId(isExpanded ? null : u.id)}
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <button className="text-gray-400 shrink-0" type="button">
+                    <button className="text-[var(--foreground-muted)] shrink-0" type="button">
                       {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                     </button>
                     <Avatar name={u.display_name} avatarUrl={u.avatar_url} size="sm" />
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                      <p className="text-sm font-medium text-[var(--foreground)] truncate">
                         {u.display_name}
-                        {isSelf && <span className="ml-1 text-xs text-gray-400">({t('common.you')})</span>}
+                        {isSelf && <span className="ml-1 text-xs text-[var(--foreground-muted)]">({t('common.you')})</span>}
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{u.email}</p>
+                      <p className="text-xs text-[var(--foreground-secondary)] truncate">{u.email}</p>
                     </div>
                   </div>
                   <div className="flex items-center justify-center gap-1 min-w-0" onClick={(e) => e.stopPropagation()}>
@@ -477,14 +477,14 @@ export function DirectoryUsersTab() {
                           <input
                             type="number"
                             min={0}
-                            className="w-14 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-1 py-1 text-xs text-center shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            className="w-14 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-1 py-1 text-xs text-center focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
                             placeholder={t('admin.users.maxProjectsDefault')}
                             value={getUserLimitDisplay(u)}
                             onChange={(e) => handleUserLimitChange(u.id, e.target.value)}
                             onKeyDown={(e) => { if (e.key === 'Enter') handleUserLimitSave(u.id, u.max_projects) }}
                           />
                           <button
-                            className={`px-1 py-1 rounded-md border ${isUserLimitDirty(u) ? 'border-indigo-400 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-500 dark:text-indigo-400 dark:hover:bg-indigo-900/30' : 'border-gray-300 text-gray-300 cursor-default dark:border-gray-600 dark:text-gray-600'}`}
+                            className={`px-1 py-1 rounded-md border ${isUserLimitDirty(u) ? 'border-[var(--primary-border)] text-[var(--primary)] hover:bg-[var(--primary-muted)] dark:border-[var(--primary)] dark:text-[var(--primary)] ' : 'border-[var(--border)] text-[var(--foreground-muted)] cursor-default dark:border-[var(--border)] text-[var(--foreground-muted)]'}`}
                             onClick={() => isUserLimitDirty(u) && handleUserLimitSave(u.id, u.max_projects)}
                             disabled={!isUserLimitDirty(u)}
                           >
@@ -505,14 +505,14 @@ export function DirectoryUsersTab() {
                             <input
                               type="number"
                               min={0}
-                              className="w-14 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-1 py-1 text-xs text-center shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              className="w-14 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-1 py-1 text-xs text-center focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
                               placeholder={t('admin.users.maxNamespacesDefault')}
                               value={getUserNsLimitDisplay(u)}
                               onChange={(e) => handleUserNsLimitChange(u.id, e.target.value)}
                               onKeyDown={(e) => { if (e.key === 'Enter') handleUserNsLimitSave(u.id, u.max_namespaces) }}
                             />
                             <button
-                              className={`px-1 py-1 rounded-md border ${isUserNsLimitDirty(u) ? 'border-indigo-400 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-500 dark:text-indigo-400 dark:hover:bg-indigo-900/30' : 'border-gray-300 text-gray-300 cursor-default dark:border-gray-600 dark:text-gray-600'}`}
+                              className={`px-1 py-1 rounded-md border ${isUserNsLimitDirty(u) ? 'border-[var(--primary-border)] text-[var(--primary)] hover:bg-[var(--primary-muted)] dark:border-[var(--primary)] dark:text-[var(--primary)] ' : 'border-[var(--border)] text-[var(--foreground-muted)] cursor-default dark:border-[var(--border)] text-[var(--foreground-muted)]'}`}
                               onClick={() => isUserNsLimitDirty(u) && handleUserNsLimitSave(u.id, u.max_namespaces)}
                               disabled={!isUserNsLimitDirty(u)}
                             >
@@ -529,7 +529,7 @@ export function DirectoryUsersTab() {
                   <div className="flex items-center justify-center gap-1 min-w-0" onClick={(e) => e.stopPropagation()}>
                     {!isSelf ? (
                       <select
-                        className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
                         value={u.global_role}
                         onChange={(e) => handleRoleChange(u.id, e.target.value)}
                         disabled={updateUserMutation.isPending}
@@ -557,24 +557,24 @@ export function DirectoryUsersTab() {
                       )
                     ) : (
                       <Button variant="ghost" size="sm" onClick={() => handleEnable(u.id)}>
-                        <span className="text-red-600 dark:text-red-400">{t('admin.users.disabled')}</span>
+                        <span className="text-[var(--danger)]">{t('admin.users.disabled')}</span>
                       </Button>
                     )}
                     {saved[`status:${u.id}`] && (
                       <Check className="h-4 w-4 text-green-500 animate-[pulse_0.6s_ease-in-out_2]" />
                     )}
                   </div>
-                  <div className="text-right text-xs text-gray-400 truncate min-w-0">
+                  <div className="text-right text-xs text-[var(--foreground-muted)] truncate min-w-0">
                     {formatLastLogin(u.last_login_at)}
                   </div>
-                  <div className="text-right text-xs text-gray-400 truncate min-w-0">
+                  <div className="text-right text-xs text-[var(--foreground-muted)] truncate min-w-0">
                     {formatCreated(u.created_at)}
                   </div>
                   <div className="flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
                     {!isSelf && (
                       <Tooltip content={t('admin.users.resetPasswordButton')}>
                         <button
-                          className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                          className="p-1 text-[var(--foreground-muted)] hover:text-[var(--foreground-secondary)] dark:hover:text-[var(--foreground-muted)]"
                           onClick={() => setResetTarget(u)}
                         >
                           <KeyRound className="h-4 w-4" />
@@ -586,19 +586,19 @@ export function DirectoryUsersTab() {
 
                 {/* Mobile row */}
                 <div
-                  className="sm:hidden p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  className="sm:hidden p-3 cursor-pointer hover:bg-[var(--surface-hover)]/50"
                   onClick={() => setExpandedUserId(isExpanded ? null : u.id)}
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <button className="text-gray-400 shrink-0" type="button">
+                    <button className="text-[var(--foreground-muted)] shrink-0" type="button">
                       {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                     </button>
                     <Avatar name={u.display_name} avatarUrl={u.avatar_url} size="sm" />
                     <div className="min-w-0 flex-1 overflow-x-auto scrollbar-none">
                       <p className="text-sm whitespace-nowrap">
-                        <span className="font-medium text-gray-900 dark:text-gray-100">{u.display_name}</span>
-                        {isSelf && <span className="ml-1 text-xs text-gray-400">({t('common.you')})</span>}
-                        <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">{u.email}</span>
+                        <span className="font-medium text-[var(--foreground)]">{u.display_name}</span>
+                        {isSelf && <span className="ml-1 text-xs text-[var(--foreground-muted)]">({t('common.you')})</span>}
+                        <span className="ml-2 text-xs text-[var(--foreground-secondary)]">{u.email}</span>
                       </p>
                     </div>
                   </div>
@@ -608,7 +608,7 @@ export function DirectoryUsersTab() {
                     )}
                     {!isSelf ? (
                       <select
-                        className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
                         value={u.global_role}
                         onChange={(e) => handleRoleChange(u.id, e.target.value)}
                         disabled={updateUserMutation.isPending}
@@ -631,12 +631,12 @@ export function DirectoryUsersTab() {
                       )
                     ) : (
                       <Button variant="ghost" size="sm" onClick={() => handleEnable(u.id)}>
-                        <span className="text-red-600 dark:text-red-400">{t('admin.users.disabled')}</span>
+                        <span className="text-[var(--danger)]">{t('admin.users.disabled')}</span>
                       </Button>
                     )}
                     {!isSelf && (
                       <button
-                        className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                        className="p-1 text-[var(--foreground-muted)] hover:text-[var(--foreground-secondary)] dark:hover:text-[var(--foreground-muted)]"
                         onClick={() => setResetTarget(u)}
                       >
                         <KeyRound className="h-4 w-4" />
@@ -676,7 +676,7 @@ export function DirectoryUsersTab() {
 
       {/* Disable user confirmation modal */}
       <Modal open={!!disableTarget} onClose={() => setDisableTarget(null)} title={t('admin.users.disableConfirmTitle')}>
-        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+        <p className="text-sm text-[var(--foreground-secondary)] mb-4">
           <Trans
             i18nKey="admin.users.disableConfirmBody"
             values={{ name: disableTarget?.display_name }}
@@ -703,7 +703,7 @@ export function DirectoryUsersTab() {
         onClose={() => { setCreateModalOpen(false); setCreateEmail(''); setCreateDisplayName(''); setCreateError(null) }}
         title={t('admin.users.createUserTitle')}
       >
-        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+        <p className="text-sm text-[var(--foreground-secondary)] mb-4">
           {t('admin.users.createUserDescription')}
         </p>
         <div className="space-y-3">
@@ -720,7 +720,7 @@ export function DirectoryUsersTab() {
             onChange={(e) => setCreateEmail(e.target.value)}
           />
           {createError && (
-            <p className="text-sm text-red-600 dark:text-red-400">{createError}</p>
+            <p className="text-sm text-[var(--danger)]">{createError}</p>
           )}
         </div>
         <div className="flex justify-end gap-2 mt-4">
@@ -742,13 +742,13 @@ export function DirectoryUsersTab() {
         onClose={() => { setRevealedPassword(null); setCopied(false) }}
         title={t('admin.users.temporaryPasswordTitle')}
       >
-        <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+        <p className="text-sm text-[var(--foreground-secondary)] mb-3">
           {t('admin.users.temporaryPasswordDescription', { name: revealedUserName })}
         </p>
-        <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-3 font-mono text-sm">
-          <span className="flex-1 select-all text-gray-900 dark:text-gray-100">{revealedPassword}</span>
+        <div className="flex items-center gap-2 bg-[var(--surface-secondary)] rounded-lg p-3 font-mono text-sm">
+          <span className="flex-1 select-all text-[var(--foreground)]">{revealedPassword}</span>
           <button
-            className="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            className="p-1 text-[var(--foreground-muted)] hover:text-[var(--foreground)]"
             onClick={handleCopyPassword}
           >
             {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
@@ -766,7 +766,7 @@ export function DirectoryUsersTab() {
 
       {/* Reset password confirmation modal */}
       <Modal open={!!resetTarget} onClose={() => setResetTarget(null)} title={t('admin.users.resetPasswordTitle')}>
-        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+        <p className="text-sm text-[var(--foreground-secondary)] mb-4">
           <Trans
             i18nKey="admin.users.resetPasswordBody"
             values={{ name: resetTarget?.display_name }}
@@ -870,22 +870,22 @@ function UserProjectsPanel({
   return (
     <div className="px-3 pb-3 pl-12 space-y-3">
       {mobileProjectLimit && (
-        <div className="sm:hidden border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+        <div className="sm:hidden border border-[var(--border)] rounded-lg p-3">
+          <label className="text-xs font-semibold text-[var(--foreground-secondary)] uppercase tracking-wider">
             {t('admin.general.projectLimit.label')}
           </label>
           <div className="flex items-center gap-2 mt-2">
             <input
               type="number"
               min={0}
-              className="w-14 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-1 py-1 text-xs text-center shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-14 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-1 py-1 text-xs text-center focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
               placeholder={t('admin.users.maxProjectsDefault')}
               value={mobileProjectLimit.value}
               onChange={(e) => mobileProjectLimit.onChange(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') mobileProjectLimit.onSave() }}
             />
             <button
-              className={`px-1 py-1 rounded-md border ${mobileProjectLimit.dirty ? 'border-indigo-400 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-500 dark:text-indigo-400 dark:hover:bg-indigo-900/30' : 'border-gray-300 text-gray-300 cursor-default dark:border-gray-600 dark:text-gray-600'}`}
+              className={`px-1 py-1 rounded-md border ${mobileProjectLimit.dirty ? 'border-[var(--primary-border)] text-[var(--primary)] hover:bg-[var(--primary-muted)] dark:border-[var(--primary)] dark:text-[var(--primary)] ' : 'border-[var(--border)] text-[var(--foreground-muted)] cursor-default dark:border-[var(--border)] text-[var(--foreground-muted)]'}`}
               onClick={() => mobileProjectLimit.dirty && mobileProjectLimit.onSave()}
               disabled={!mobileProjectLimit.dirty}
             >
@@ -898,22 +898,22 @@ function UserProjectsPanel({
         </div>
       )}
       {mobileNamespaceLimit && (
-        <div className="sm:hidden border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+        <div className="sm:hidden border border-[var(--border)] rounded-lg p-3">
+          <label className="text-xs font-semibold text-[var(--foreground-secondary)] uppercase tracking-wider">
             {t('admin.general.namespaceLimit.label')}
           </label>
           <div className="flex items-center gap-2 mt-2">
             <input
               type="number"
               min={0}
-              className="w-14 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-1 py-1 text-xs text-center shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-14 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-1 py-1 text-xs text-center focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
               placeholder={t('admin.users.maxNamespacesDefault')}
               value={mobileNamespaceLimit.value}
               onChange={(e) => mobileNamespaceLimit.onChange(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') mobileNamespaceLimit.onSave() }}
             />
             <button
-              className={`px-1 py-1 rounded-md border ${mobileNamespaceLimit.dirty ? 'border-indigo-400 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-500 dark:text-indigo-400 dark:hover:bg-indigo-900/30' : 'border-gray-300 text-gray-300 cursor-default dark:border-gray-600 dark:text-gray-600'}`}
+              className={`px-1 py-1 rounded-md border ${mobileNamespaceLimit.dirty ? 'border-[var(--primary-border)] text-[var(--primary)] hover:bg-[var(--primary-muted)] dark:border-[var(--primary)] dark:text-[var(--primary)] ' : 'border-[var(--border)] text-[var(--foreground-muted)] cursor-default dark:border-[var(--border)] text-[var(--foreground-muted)]'}`}
               onClick={() => mobileNamespaceLimit.dirty && mobileNamespaceLimit.onSave()}
               disabled={!mobileNamespaceLimit.dirty}
             >
@@ -925,17 +925,17 @@ function UserProjectsPanel({
           </div>
         </div>
       )}
-      <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-3">
-        <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+      <div className="border border-[var(--border)] rounded-lg p-3 space-y-3">
+        <h4 className="text-xs font-semibold text-[var(--foreground-secondary)] uppercase tracking-wider">
           {t('admin.users.projects')}
         </h4>
 
-        {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
+        {error && <p className="text-xs text-[var(--danger)]">{error}</p>}
 
         {isLoading ? (
           <div className="flex justify-center py-2"><Spinner /></div>
         ) : !userProjects || userProjects.length === 0 ? (
-          <p className="text-xs text-gray-400">{t('admin.users.noProjects')}</p>
+          <p className="text-xs text-[var(--foreground-muted)]">{t('admin.users.noProjects')}</p>
         ) : (
           <div className="space-y-1">
             {userProjects.map((p) => {
@@ -944,7 +944,7 @@ function UserProjectsPanel({
                 <div key={p.project_id} className="flex items-center justify-between py-1.5">
                   <div className="flex items-center gap-2 min-w-0">
                     <ProjectKeyBadge>{p.project_key}</ProjectKeyBadge>
-                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{p.project_name}</span>
+                    <span className="text-sm font-medium text-[var(--foreground)] truncate">{p.project_name}</span>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {saved[`role:${p.project_id}`] && (
@@ -952,7 +952,7 @@ function UserProjectsPanel({
                     )}
                     <Tooltip content={isLastOwner ? t('projects.settings.lastOwnerTooltip') : undefined}>
                       <select
-                        className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] disabled:opacity-50 disabled:cursor-not-allowed"
                         value={p.role}
                         onChange={(e) => {
                           setError(null)
@@ -975,7 +975,7 @@ function UserProjectsPanel({
                     </Tooltip>
                     <Tooltip content={isLastOwner ? t('projects.settings.lastOwnerTooltip') : undefined}>
                       <button
-                        className={`p-1 ${isLastOwner ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' : 'text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300'}`}
+                        className={`p-1 ${isLastOwner ? 'text-[var(--foreground-secondary)] cursor-not-allowed' : 'text-[var(--danger)] hover:text-red-700 text-[var(--danger)] dark:hover:text-red-300'}`}
                         onClick={() => !isLastOwner && setRemoveTarget({ projectId: p.project_id, projectName: p.project_name })}
                         disabled={isLastOwner}
                       >
@@ -991,9 +991,9 @@ function UserProjectsPanel({
 
         {/* Add to project form */}
         {availableProjects.length > 0 && (
-          <div className="flex gap-2 items-center pt-2 border-t border-gray-100 dark:border-gray-700">
+          <div className="flex gap-2 items-center pt-2 border-t border-[var(--border)]">
             <select
-              className="min-w-0 flex-1 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1.5 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="min-w-0 flex-1 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
               value={selectedProjectId}
               onChange={(e) => setSelectedProjectId(e.target.value)}
             >
@@ -1003,7 +1003,7 @@ function UserProjectsPanel({
               ))}
             </select>
             <select
-              className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1.5 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
               value={selectedRole}
               onChange={(e) => setSelectedRole(e.target.value)}
             >
@@ -1023,7 +1023,7 @@ function UserProjectsPanel({
 
       {/* Remove from project confirmation modal */}
       <Modal open={!!removeTarget} onClose={() => setRemoveTarget(null)} title={t('admin.users.removeFromProjectTitle')}>
-        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+        <p className="text-sm text-[var(--foreground-secondary)] mb-4">
           <Trans
             i18nKey="admin.users.removeFromProjectBody"
             values={{ name: userName, project: removeTarget?.projectName }}

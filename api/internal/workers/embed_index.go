@@ -3,6 +3,7 @@ package workers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
@@ -63,6 +64,10 @@ func (t *EmbedIndexTask) Execute(ctx context.Context, payload []byte) error {
 	}
 
 	if err := t.indexer.IndexEntity(ctx, evt.EntityType, evt.EntityID, evt.ProjectID); err != nil {
+		if errors.Is(err, model.ErrEmbeddingUnavailable) {
+			t.logger.Debug().Msg("semantic search unavailable, skipping index")
+			return nil
+		}
 		return err // Retryable error
 	}
 

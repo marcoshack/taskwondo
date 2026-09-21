@@ -63,13 +63,13 @@ export function StagedAttachmentsField({ staged, onAdd, onRemove, maxUploadSize,
         onDragLeave={() => setDraggingOver(false)}
         className={`flex min-h-[2.75rem] items-center rounded-md border border-dashed px-2 py-1.5 transition-colors ${
           draggingOver
-            ? 'border-indigo-400 bg-indigo-50 dark:border-indigo-500 dark:bg-indigo-900/20'
-            : 'border-gray-300 dark:border-gray-600'
+            ? 'border-[var(--primary-border)] bg-[var(--primary-muted)] dark:border-[var(--primary)] '
+            : 'border-[var(--border)]'
         } ${disabled && !progress ? 'opacity-50' : ''}`}
       >
         {progress ? (
           <div className="w-full">
-            <div className="mb-1 flex items-baseline justify-between gap-2 text-xs text-gray-500 dark:text-gray-400">
+            <div className="mb-1 flex items-baseline justify-between gap-2 text-xs text-[var(--foreground-secondary)]">
               <span className="truncate">{t('workitems.form.attachmentsUploading', { filename: progress.filename })}</span>
               <span className="shrink-0 tabular-nums">{Math.round(progress.ratio * 100)}%</span>
             </div>
@@ -78,16 +78,16 @@ export function StagedAttachmentsField({ staged, onAdd, onRemove, maxUploadSize,
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={Math.round(progress.ratio * 100)}
-              className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700"
+              className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-tertiary)]"
             >
               <div
-                className="h-full rounded-full bg-indigo-600 transition-[width] duration-150 ease-out dark:bg-indigo-500"
+                className="h-full rounded-full bg-[var(--primary)] transition-[width] duration-150 ease-out dark:bg-[var(--primary-muted)]"
                 style={{ width: `${Math.round(progress.ratio * 100)}%` }}
               />
             </div>
           </div>
         ) : staged.length === 0 ? (
-          <p className="w-full text-center text-sm text-gray-400 dark:text-gray-500">
+          <p className="w-full text-center text-sm text-[var(--foreground-muted)]">
             <Trans
               i18nKey="workitems.form.attachmentsDropHint"
               components={{
@@ -96,7 +96,7 @@ export function StagedAttachmentsField({ staged, onAdd, onRemove, maxUploadSize,
                     type="button"
                     onClick={openPicker}
                     disabled={disabled}
-                    className="font-medium text-indigo-600 hover:underline disabled:no-underline dark:text-indigo-400"
+                    className="font-medium text-[var(--primary)] hover:underline disabled:no-underline dark:text-[var(--primary)]"
                   />
                 ),
               }}
@@ -110,19 +110,19 @@ export function StagedAttachmentsField({ staged, onAdd, onRemove, maxUploadSize,
             {staged.map((s) => (
               <span
                 key={s.id}
-                className="inline-flex shrink-0 items-center gap-2 rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 px-2 py-1"
+                className="inline-flex shrink-0 items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface-secondary)] px-2 py-1"
               >
-                <span className="rounded bg-gray-200 dark:bg-gray-700 px-1 text-[0.625rem] font-semibold tracking-wide text-gray-600 dark:text-gray-300">
+                <span className="rounded bg-[var(--surface-tertiary)] px-1 text-[0.625rem] font-semibold tracking-wide text-[var(--foreground-secondary)]">
                   {fileKind(s.file.name)}
                 </span>
-                <span className="max-w-[14rem] truncate text-sm text-gray-900 dark:text-gray-100">{s.file.name}</span>
-                <span className="text-xs text-gray-400 dark:text-gray-500">{formatFileSize(s.file.size)}</span>
+                <span className="max-w-[14rem] truncate text-sm text-[var(--foreground)]">{s.file.name}</span>
+                <span className="text-xs text-[var(--foreground-muted)]">{formatFileSize(s.file.size)}</span>
                 <button
                   type="button"
                   onClick={() => onRemove(s.id)}
                   disabled={disabled}
                   aria-label={t('workitems.form.attachmentsRemove', { filename: s.file.name })}
-                  className="text-gray-400 hover:text-gray-600 disabled:opacity-50 dark:hover:text-gray-300"
+                  className="text-[var(--foreground-muted)] hover:text-[var(--foreground-secondary)] disabled:opacity-50 dark:hover:text-[var(--foreground-muted)]"
                 >
                   &times;
                 </button>
@@ -132,7 +132,7 @@ export function StagedAttachmentsField({ staged, onAdd, onRemove, maxUploadSize,
         )}
       </div>
 
-      {error && <p className="mt-1 truncate text-xs text-red-600 dark:text-red-400">{error}</p>}
+      {error && <p className="mt-1 truncate text-xs text-[var(--danger)]">{error}</p>}
 
       <input
         ref={inputRef}

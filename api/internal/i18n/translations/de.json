@@ -18,7 +18,7 @@
 
   "email.status_change.subject": "[{{projectKey}}] #{{itemNumber}} Status geändert zu {{newStatus}}: {{title}}",
   "email.status_change.intro": "<strong>{{actorName}}</strong> hat den Status eines Ihnen zugewiesenen Arbeitselements geändert:",
-  "email.status_change.status": "Status: <strong>{{oldStatus}}</strong> \u2192 <strong>{{newStatus}}</strong>",
+  "email.status_change.status": "Status: <strong>{{oldStatus}}</strong> → <strong>{{newStatus}}</strong>",
   "email.status_change.cta": "Arbeitselement ansehen",
   "email.status_change.footer": "Sie haben diese E-Mail erhalten, weil Sie Statusänderungsbenachrichtigungen für zugewiesene Elemente aktiviert haben. Sie können Ihre Benachrichtigungseinstellungen in den Taskwondo-Einstellungen ändern.",
 
@@ -35,5 +35,53 @@
   "email.invite.subject": "Sie wurden zum Projekt {{projectName}} eingeladen",
   "email.invite.intro": "<strong>{{inviterName}}</strong> hat Sie eingeladen, dem Projekt <strong>{{projectName}}</strong> als <strong>{{role}}</strong> beizutreten.",
   "email.invite.cta": "Einladung annehmen",
-  "email.invite.footer": "Sie haben diese E-Mail erhalten, weil jemand Sie zu einem Taskwondo-Projekt eingeladen hat. Wenn Sie diese Einladung nicht kennen, können Sie diese E-Mail ignorieren."
+  "email.invite.footer": "Sie haben diese E-Mail erhalten, weil jemand Sie zu einem Taskwondo-Projekt eingeladen hat. Wenn Sie diese Einladung nicht kennen, können Sie diese E-Mail ignorieren.",
+
+  "email.namespace_invite.subject": "Sie wurden in {{namespaceName}} eingeladen",
+  "email.namespace_invite.intro": "<strong>{{inviterName}}</strong> hat Sie eingeladen, dem Workspace <strong>{{namespaceName}}</strong> als <strong>{{role}}</strong> beizutreten.",
+  "email.namespace_invite.cta": "Einladung annehmen",
+  "email.namespace_invite.footer": "Sie erhalten diese E-Mail, weil Sie jemand in einen Taskwondo-Workspace eingeladen hat. Wenn Sie diese Einladung nicht kennen, können Sie diese E-Mail einfach ignorieren.",
+
+  "email.sla_breach.subject": "[{{projectKey}}] SLA-Warnung: #{{itemNumber}} — \"{{title}}\" (Stufe {{level}})",
+  "email.sla_breach.intro": "Ein Workitem erreicht oder hat sein SLA-Ziel überschritten:",
+  "email.sla_breach.sla_status": "SLA: <strong>{{percentage}}%</strong> der Zielzeit verbraucht",
+  "email.sla_breach.elapsed": "Vergangene Zeit: <strong>{{elapsed}}</strong> von <strong>{{target}}</strong>",
+  "email.sla_breach.level": "Eskalationsstufe: <strong>{{level}}</strong>",
+  "email.sla_breach.status": "Status: <strong>{{statusName}}</strong>",
+  "email.sla_breach.cta": "Workitem anzeigen",
+  "email.sla_breach.footer": "Sie erhalten diese E-Mail, weil Sie auf der Eskalationsliste für dieses Projekt stehen. Sie können Ihre Benachrichtigungseinstellungen in den Taskwondo-Einstellungen ändern.",
+
+  "email.oncall.incoming.subject": "[{{projectKey}}] Sie haben jetzt Bereitschaft für {{teamName}}",
+  "email.oncall.outgoing.subject": "[{{projectKey}}] Ihre Bereitschaft für {{teamName}} ist beendet",
+
+  "email.oncall.override.created.subject": "[{{projectKey}}] Bereitschaftsvertretung für {{teamName}} zugewiesen",
+  "email.oncall.override.covered.subject": "[{{projectKey}}] Ihre Bereitschaft für {{teamName}} wurde übernommen",
+  "email.oncall.override.cancelled.subject": "[{{projectKey}}] Bereitschaftsvertretung für {{teamName}} storniert",
+
+  "email.oncall.cta": "Bereitschaftsplan anzeigen",
+  "email.oncall.rotation.footer": "Dies ist eine automatische Benachrichtigung zur Bereitschaftsrotation von Taskwondo.",
+  "email.oncall.override.footer": "Dies ist eine automatische Benachrichtigung zur Bereitschaftsvertretung von Taskwondo.",
+
+  "email.oncall.incoming.intro": "Sie haben jetzt Bereitschaft für <strong>{{teamName}}</strong> im Projekt {{projectBadge}} <strong>{{projectName}}</strong>.",
+  "email.oncall.incoming.note": "Stellen Sie bitte sicher, dass Sie während Ihrer Bereitschaft für eingehende Probleme erreichbar sind.",
+  "email.oncall.outgoing.intro": "Ihre Bereitschaft für <strong>{{teamName}}</strong> im Projekt {{projectBadge}} <strong>{{projectName}}</strong> ist beendet.",
+  "email.oncall.outgoing.note": "Vielen Dank für Ihren Einsatz während Ihrer Bereitschaft.",
+  "email.oncall.override.created.intro": "Ihnen wurde eine Bereitschaftsvertretung für <strong>{{teamName}}</strong> im Projekt {{projectBadge}} <strong>{{projectName}}</strong> zugewiesen.",
+  "email.oncall.override.created.period": "Ihr Vertretungszeitraum: <strong>{{startAt}}</strong> bis <strong>{{endAt}}</strong>.",
+  "email.oncall.override.created.note": "Stellen Sie bitte sicher, dass Sie in diesem Zeitraum für eingehende Probleme erreichbar sind.",
+  "email.oncall.override.covered.intro": "Ihre Bereitschaft für <strong>{{teamName}}</strong> im Projekt {{projectBadge}} <strong>{{projectName}}</strong> wurde von <strong>{{coveringUser}}</strong> übernommen.",
+  "email.oncall.override.covered.period": "Vertretungszeitraum: <strong>{{startAt}}</strong> bis <strong>{{endAt}}</strong>.",
+  "email.oncall.override.cancelled.intro": "Eine Bereitschaftsvertretung für <strong>{{teamName}}</strong> im Projekt {{projectBadge}} <strong>{{projectName}}</strong> wurde storniert.",
+  "email.oncall.override.cancelled.period": "Die Vertretung war vorgesehen für: <strong>{{startAt}}</strong> bis <strong>{{endAt}}</strong>.",
+  "email.oncall.override.cancelled.note": "Für diesen Zeitraum gilt wieder der reguläre Bereitschaftsplan.",
+
+  "email.greeting": "Hallo {{name}},",
+  "email.verify.subject": "Bestätigen Sie Ihre E-Mail-Adresse",
+  "email.verify.intro": "Klicken Sie auf die Schaltfläche unten, um Ihre E-Mail-Adresse zu bestätigen und Ihr Passwort festzulegen:",
+  "email.verify.cta": "E-Mail bestätigen",
+  "email.verify.note": "Dieser Link ist 24 Stunden gültig. Wenn Sie dies nicht angefordert haben, können Sie diese E-Mail einfach ignorieren.",
+  "email.reset.subject": "Passwort zurücksetzen",
+  "email.reset.intro": "Wir haben eine Anfrage zum Zurücksetzen Ihres Passworts erhalten. Klicken Sie auf die Schaltfläche unten, um ein neues Passwort zu wählen:",
+  "email.reset.cta": "Passwort zurücksetzen",
+  "email.reset.note": "Dieser Link ist 1 Stunde gültig. Wenn Sie dies nicht angefordert haben, können Sie diese E-Mail einfach ignorieren."
 }

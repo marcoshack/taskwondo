@@ -61,10 +61,10 @@ export function SaveSearchModal({
             </Tooltip>
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200 dark:border-gray-700" />
+                <div className="w-full border-t border-[var(--border)]" />
               </div>
               <div className="relative flex justify-center text-xs">
-                <span className="bg-white dark:bg-gray-800 px-2 text-gray-500 dark:text-gray-400 uppercase">
+                <span className="bg-[var(--surface)] px-2 text-[var(--foreground-secondary)] uppercase">
                   {t('common.or')}
                 </span>
               </div>
@@ -74,12 +74,12 @@ export function SaveSearchModal({
 
         <div className="space-y-3">
           {showUpdateOption && (
-            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <p className="text-sm font-medium text-[var(--foreground)]">
               {t('savedSearches.saveAsNew')}
             </p>
           )}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
               {t('savedSearches.nameLabel')}
             </label>
             <Input
@@ -97,9 +97,9 @@ export function SaveSearchModal({
                 type="checkbox"
                 checked={shared}
                 onChange={(e) => setShared(e.target.checked)}
-                className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700"
+                className="rounded border-[var(--border)] text-[var(--primary)] focus:ring-[var(--focus-ring)] dark:border-[var(--border)] bg-[var(--surface-secondary)]"
               />
-              <span className="text-sm text-gray-700 dark:text-gray-300">
+              <span className="text-sm text-[var(--foreground)]">
                 {t('savedSearches.sharedToggle')}
               </span>
             </label>

@@ -23,15 +23,15 @@ export function PreferencesSidebar() {
                   !showLabels ? 'justify-center px-0 py-2' : 'px-3 py-2'
                 } ${
                   isActive
-                    ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
-                    : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
+                    ? 'bg-[var(--primary-muted)] text-[var(--primary)]  dark:text-[var(--primary)]'
+                    : 'text-[var(--foreground)] hover:bg-[var(--surface-tertiary)] text-[var(--foreground)] dark:hover:bg-[var(--surface)]'
                 }`
               }
             >
               <item.icon className="h-5 w-5 shrink-0" />
               {showLabels && <span>{item.label}</span>}
               {!showLabels && (
-                <span className="pointer-events-none absolute left-full ml-2 rounded bg-gray-900 px-2 py-1 text-xs whitespace-nowrap text-white opacity-0 transition-opacity group-hover/nav:opacity-100 dark:bg-gray-700 z-50">
+                <span className="pointer-events-none absolute left-full ml-2 rounded bg-[var(--background)] px-2 py-1 text-xs whitespace-nowrap text-white opacity-0 transition-opacity group-hover/nav:opacity-100 bg-[var(--surface-secondary)] z-50">
                   {item.label}
                 </span>
               )}
@@ -53,13 +53,13 @@ export function PreferencesSidebar() {
         {renderNavItems(!collapsed)}
 
         <div
-          className={`mt-4 border-t border-gray-200 pt-4 dark:border-gray-700 ${
+          className={`mt-4 border-t border-[var(--border)] pt-4 dark:border-[var(--border)] ${
             collapsed ? 'flex justify-center' : ''
           }`}
         >
           <button
             onClick={toggleCollapsed}
-            className={`group/toggle relative flex items-center gap-3 rounded-md text-sm font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-300 ${
+            className={`group/toggle relative flex items-center gap-3 rounded-md text-sm font-medium text-[var(--foreground-secondary)] transition-colors hover:bg-[var(--surface-tertiary)] hover:text-[var(--foreground)] text-[var(--foreground-muted)] dark:hover:bg-[var(--surface)] dark:hover:text-[var(--foreground-muted)] ${
               collapsed ? 'justify-center px-0 py-2 w-full' : 'px-3 py-2 w-full'
             }`}
             aria-label={collapsed ? t('sidebar.expand') : t('sidebar.collapse')}
@@ -73,7 +73,7 @@ export function PreferencesSidebar() {
               </>
             )}
             {collapsed && (
-              <span className="pointer-events-none absolute left-full ml-2 rounded bg-gray-900 px-2 py-1 text-xs whitespace-nowrap text-white opacity-0 transition-opacity group-hover/toggle:opacity-100 dark:bg-gray-700 z-50">
+              <span className="pointer-events-none absolute left-full ml-2 rounded bg-[var(--background)] px-2 py-1 text-xs whitespace-nowrap text-white opacity-0 transition-opacity group-hover/toggle:opacity-100 bg-[var(--surface-secondary)] z-50">
                 {t('sidebar.expand')}
               </span>
             )}

@@ -65,8 +65,8 @@ export function QueuesPage() {
     <div className="max-w-3xl space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('queues.title')}</h2>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('queues.description')}</p>
+          <h2 className="text-lg font-semibold text-[var(--foreground)]">{t('queues.title')}</h2>
+          <p className="mt-1 text-sm text-[var(--foreground-secondary)]">{t('queues.description')}</p>
         </div>
         {canManage && (
           <Button onClick={() => setCreateOpen(true)} className="border border-transparent">
@@ -76,11 +76,11 @@ export function QueuesPage() {
         )}
       </div>
 
-      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {error && <p className="text-sm text-[var(--danger)]">{error}</p>}
 
       {(!queues || queues.length === 0) ? (
-        <div className="border border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center">
-          <p className="text-sm text-gray-500 dark:text-gray-400">{t('queues.noQueues')}</p>
+        <div className="border border-dashed border-[var(--border)] rounded-lg p-6 text-center">
+          <p className="text-sm text-[var(--foreground-secondary)]">{t('queues.noQueues')}</p>
           {canManage && (
             <Button size="sm" variant="secondary" className="mt-3" onClick={() => setCreateOpen(true)}>
               <Plus className="h-4 w-4 mr-1" />
@@ -89,17 +89,17 @@ export function QueuesPage() {
           )}
         </div>
       ) : (
-        <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
+        <div className="border border-[var(--border)] rounded-lg divide-y divide-[var(--border)]">
           {queues.map((queue) => (
             <Link
               key={queue.id}
               to={p(`/projects/${projectKey}/queues/${queue.id}/items`)}
-              className="block p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors first:rounded-t-lg last:rounded-b-lg"
+              className="block p-4 hover:bg-[var(--surface-hover)] transition-colors first:rounded-t-lg last:rounded-b-lg"
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                    <span className="text-base font-semibold text-[var(--foreground)]">
                       {queue.name}
                     </span>
                     <Badge color="gray">{t(`queues.types.${queue.queue_type}`)}</Badge>
@@ -108,7 +108,7 @@ export function QueuesPage() {
                     )}
                   </div>
                   {queue.description && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{queue.description}</p>
+                    <p className="text-xs text-[var(--foreground-secondary)] mt-1">{queue.description}</p>
                   )}
                 </div>
                 <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.preventDefault()}>
@@ -182,7 +182,7 @@ function QueueCreateForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {validationError && (
-        <p className="text-sm text-red-600 dark:text-red-400">{validationError}</p>
+        <p className="text-sm text-[var(--danger)]">{validationError}</p>
       )}
       <Input
         label={t('queues.name')}
@@ -193,12 +193,12 @@ function QueueCreateForm({
         autoFocus
       />
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
           {t('common.description')}
         </label>
         <textarea
           rows={3}
-          className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          className="block w-full rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--primary)]"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />

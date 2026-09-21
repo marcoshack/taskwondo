@@ -256,9 +256,6 @@ func (s *WorkflowService) DeleteProjectWorkflow(ctx context.Context, id uuid.UUI
 		return err
 	}
 
-	if wf.IsDefault {
-		return fmt.Errorf("cannot delete a system workflow: %w", model.ErrForbidden)
-	}
 	if wf.ProjectID == nil {
 		return fmt.Errorf("cannot delete a system workflow: %w", model.ErrForbidden)
 	}
@@ -275,10 +272,6 @@ func (s *WorkflowService) DeleteSystemWorkflow(ctx context.Context, id uuid.UUID
 
 	if wf.ProjectID != nil {
 		return fmt.Errorf("use project endpoint to delete project workflows: %w", model.ErrValidation)
-	}
-
-	if wf.IsDefault {
-		return fmt.Errorf("cannot delete a default workflow: %w", model.ErrForbidden)
 	}
 
 	inUse, err := s.workflows.IsInUse(ctx, id)

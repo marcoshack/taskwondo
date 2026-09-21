@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useWorkItems } from '@/hooks/useWorkItems'
 import { useDebounce } from '@/hooks/useDebounce'
 import { Spinner } from '@/components/ui/Spinner'
+import { meetsSearchFloor } from '@/utils/searchRequest'
 
 interface WorkItemPickerProps {
   projectKey: string
@@ -29,7 +30,7 @@ export function WorkItemPicker({
   const listRef = useRef<HTMLUListElement>(null)
 
   const debouncedSearch = useDebounce(value, 300)
-  const shouldSearch = open && debouncedSearch.length >= 2
+  const shouldSearch = open && meetsSearchFloor(debouncedSearch)
 
   const { data, isFetching } = useWorkItems(
     projectKey,
@@ -93,7 +94,7 @@ export function WorkItemPicker({
     <div ref={ref} className="relative">
       <input
         ref={inputRef}
-        className="block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+        className="block w-full rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--focus-ring)]"
         placeholder={placeholder ?? t('workItemPicker.searchPlaceholder')}
         value={value}
         onChange={(e) => {
@@ -104,8 +105,8 @@ export function WorkItemPicker({
         onKeyDown={handleKeyDown}
       />
 
-      {open && value.length >= 2 && (
-        <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg">
+      {open && meetsSearchFloor(value) && (
+        <div className="absolute z-20 mt-1 w-full bg-[var(--surface)] border border-[var(--border)] rounded-md shadow-[var(--shadow-md)]">
           {isFetching ? (
             <div className="flex items-center justify-center py-3">
               <Spinner size="sm" />
@@ -116,17 +117,17 @@ export function WorkItemPicker({
                 <li key={item.id} role="option" aria-selected={idx === highlightIndex}>
                   <button
                     type="button"
-                    className={`w-full text-left px-3 py-2 text-sm ${idx === highlightIndex ? 'bg-gray-100 dark:bg-gray-700' : 'hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+                    className={`w-full text-left px-3 py-2 text-sm ${idx === highlightIndex ? 'bg-[var(--surface-hover)]' : 'hover:bg-[var(--surface-hover)]'}`}
                     onClick={() => {
                       onSelect(item.display_id)
                       setOpen(false)
                     }}
                     onMouseEnter={() => setHighlightIndex(idx)}
                   >
-                    <span className="font-mono font-medium text-indigo-600 dark:text-indigo-400">
+                    <span className="font-mono font-medium text-[var(--primary)]">
                       {item.display_id}
                     </span>
-                    <span className="ml-2 text-gray-700 dark:text-gray-300 truncate">
+                    <span className="ml-2 text-[var(--foreground)] truncate">
                       {item.title}
                     </span>
                   </button>
@@ -134,7 +135,7 @@ export function WorkItemPicker({
               ))}
             </ul>
           ) : (
-            <div className="px-3 py-3 text-sm text-gray-400 dark:text-gray-500">
+            <div className="px-3 py-3 text-sm text-[var(--foreground-muted)]">
               {t('workItemPicker.noItems')}
             </div>
           )}

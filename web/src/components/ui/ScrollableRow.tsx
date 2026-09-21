@@ -36,7 +36,7 @@ export const ScrollableRow = forwardRef<HTMLDivElement, ScrollableRowProps>(func
       {canScrollLeft && (
         <>
           <span className={`absolute left-0 top-0 bottom-0 w-5 bg-gradient-to-r ${gradientFrom} to-transparent z-10 pointer-events-none`} />
-          <ChevronLeft className="absolute left-0 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 dark:text-gray-500 z-20 pointer-events-none" />
+          <ChevronLeft className="absolute left-0 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--foreground-muted)] z-20 pointer-events-none" />
         </>
       )}
       <div
@@ -49,7 +49,7 @@ export const ScrollableRow = forwardRef<HTMLDivElement, ScrollableRowProps>(func
       {canScrollRight && (
         <>
           <span className={`absolute right-0 top-0 bottom-0 w-5 bg-gradient-to-l ${gradientFrom} to-transparent z-10 pointer-events-none`} />
-          <ChevronRight className="absolute right-0 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 dark:text-gray-500 z-20 pointer-events-none" />
+          <ChevronRight className="absolute right-0 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--foreground-muted)] z-20 pointer-events-none" />
         </>
       )}
     </div>

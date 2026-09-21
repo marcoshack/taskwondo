@@ -103,6 +103,24 @@ func TestSendReturnsErrorWhenDisabled(t *testing.T) {
 	}
 }
 
+func TestBuildTLSConfig(t *testing.T) {
+	verified := buildTLSConfig("smtp.example.com", false)
+	if verified.InsecureSkipVerify {
+		t.Error("expected InsecureSkipVerify=false by default")
+	}
+	if verified.ServerName != "smtp.example.com" {
+		t.Errorf("expected ServerName smtp.example.com, got %s", verified.ServerName)
+	}
+
+	skipped := buildTLSConfig("smtp.example.com", true)
+	if !skipped.InsecureSkipVerify {
+		t.Error("expected InsecureSkipVerify=true when skipCertVerify is set")
+	}
+	if skipped.ServerName != "smtp.example.com" {
+		t.Errorf("expected ServerName smtp.example.com, got %s", skipped.ServerName)
+	}
+}
+
 func TestBuildMessage(t *testing.T) {
 	msg := buildMessage("Taskwondo", "noreply@example.com", "user@test.com", "Test Subject", "<p>Hello</p>", "<test-id@example.com>")
 	s := string(msg)

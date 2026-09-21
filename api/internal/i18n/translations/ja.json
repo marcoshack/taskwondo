@@ -18,7 +18,7 @@
 
   "email.status_change.subject": "[{{projectKey}}] #{{itemNumber}} のステータスが {{newStatus}} に変更されました: {{title}}",
   "email.status_change.intro": "<strong>{{actorName}}</strong> があなたに割り当てられた作業項目のステータスを変更しました:",
-  "email.status_change.status": "ステータス: <strong>{{oldStatus}}</strong> \u2192 <strong>{{newStatus}}</strong>",
+  "email.status_change.status": "ステータス: <strong>{{oldStatus}}</strong> → <strong>{{newStatus}}</strong>",
   "email.status_change.cta": "作業項目を表示",
   "email.status_change.footer": "このメールは、割り当てられた項目のステータス変更通知が有効になっているために送信されました。通知設定はTaskwondoの設定で変更できます。",
 
@@ -35,5 +35,53 @@
   "email.invite.subject": "プロジェクト{{projectName}}に招待されました",
   "email.invite.intro": "<strong>{{inviterName}}</strong>があなたをプロジェクト<strong>{{projectName}}</strong>に<strong>{{role}}</strong>として参加するよう招待しました。",
   "email.invite.cta": "招待を承諾",
-  "email.invite.footer": "このメールは、Taskwondoプロジェクトに招待されたために送信されました。この招待に心当たりがない場合は、このメールを無視してください。"
+  "email.invite.footer": "このメールは、Taskwondoプロジェクトに招待されたために送信されました。この招待に心当たりがない場合は、このメールを無視してください。",
+
+  "email.namespace_invite.subject": "{{namespaceName}} に招待されました",
+  "email.namespace_invite.intro": "<strong>{{inviterName}}</strong> さんがワークスペース <strong>{{namespaceName}}</strong> への参加(<strong>{{role}}</strong> として)を招待しています。",
+  "email.namespace_invite.cta": "招待を受ける",
+  "email.namespace_invite.footer": "Taskwondo ワークスペースへの招待が届いたため、このメールをお送りしています。心当たりがない場合は、このメールを無視してください。",
+
+  "email.sla_breach.subject": "[{{projectKey}}] SLA警告: #{{itemNumber}} — \"{{title}}\"（レベル {{level}}）",
+  "email.sla_breach.intro": "ワークアイテムがSLA目標に達するか、超過しました:",
+  "email.sla_breach.sla_status": "SLA: 目標時間の <strong>{{percentage}}%</strong> を使用",
+  "email.sla_breach.elapsed": "経過時間: <strong>{{target}}</strong> のうち <strong>{{elapsed}}</strong>",
+  "email.sla_breach.level": "エスカレーションレベル: <strong>{{level}}</strong>",
+  "email.sla_breach.status": "ステータス: <strong>{{statusName}}</strong>",
+  "email.sla_breach.cta": "ワークアイテムを表示",
+  "email.sla_breach.footer": "このプロジェクトのエスカレーションリストに登録されているため、このメールをお送りしています。通知設定は Taskwondo の設定で変更できます。",
+
+  "email.oncall.incoming.subject": "[{{projectKey}}] {{teamName}} のオンコールが開始されました",
+  "email.oncall.outgoing.subject": "[{{projectKey}}] {{teamName}} のオンコールシフトが終了しました",
+
+  "email.oncall.override.created.subject": "[{{projectKey}}] {{teamName}} のオンコール代理が割り当てられました",
+  "email.oncall.override.covered.subject": "[{{projectKey}}] {{teamName}} のオンコールシフトが代理されました",
+  "email.oncall.override.cancelled.subject": "[{{projectKey}}] {{teamName}} のオンコール代理がキャンセルされました",
+
+  "email.oncall.cta": "オンコールスケジュールを表示",
+  "email.oncall.rotation.footer": "これは Taskwondo からのオンコールローテーションの自動通知です。",
+  "email.oncall.override.footer": "これは Taskwondo からのオンコール代理の自動通知です。",
+
+  "email.oncall.incoming.intro": "プロジェクト {{projectBadge}} <strong>{{projectName}}</strong> のチーム <strong>{{teamName}}</strong> のオンコールが始まりました。",
+  "email.oncall.incoming.note": "シフト中は障害や問い合わせに対応できるようご確認ください。",
+  "email.oncall.outgoing.intro": "プロジェクト {{projectBadge}} <strong>{{projectName}}</strong> のチーム <strong>{{teamName}}</strong> のオンコールシフトが終了しました。",
+  "email.oncall.outgoing.note": "シフト中のご対応、ありがとうございました。",
+  "email.oncall.override.created.intro": "プロジェクト {{projectBadge}} <strong>{{projectName}}</strong> のチーム <strong>{{teamName}}</strong> のオンコール代理が割り当てられました。",
+  "email.oncall.override.created.period": "代理期間: <strong>{{startAt}}</strong> 〜 <strong>{{endAt}}</strong>",
+  "email.oncall.override.created.note": "期間中は障害や問い合わせに対応できるようご確認ください。",
+  "email.oncall.override.covered.intro": "プロジェクト {{projectBadge}} <strong>{{projectName}}</strong> のチーム <strong>{{teamName}}</strong> のオンコールシフトは <strong>{{coveringUser}}</strong> が代理しました。",
+  "email.oncall.override.covered.period": "代理期間: <strong>{{startAt}}</strong> 〜 <strong>{{endAt}}</strong>",
+  "email.oncall.override.cancelled.intro": "プロジェクト {{projectBadge}} <strong>{{projectName}}</strong> のチーム <strong>{{teamName}}</strong> のオンコール代理はキャンセルされました。",
+  "email.oncall.override.cancelled.period": "代理予定だった期間: <strong>{{startAt}}</strong> 〜 <strong>{{endAt}}</strong>",
+  "email.oncall.override.cancelled.note": "この期間は通常のオンコールローテーションが適用されます。",
+
+  "email.greeting": "{{name}} さん、こんにちは。",
+  "email.verify.subject": "メールアドレスの確認",
+  "email.verify.intro": "下記のボタンをクリックしてメールアドレスを確認し、パスワードを設定してください:",
+  "email.verify.cta": "メールを確認",
+  "email.verify.note": "このリンクは24時間で有効期限切れになります。心当たりがない場合は、このメールを無視してください。",
+  "email.reset.subject": "パスワードのリセット",
+  "email.reset.intro": "パスワードのリセット依頼を受け付けました。下記のボタンをクリックして新しいパスワードを設定してください:",
+  "email.reset.cta": "パスワードをリセット",
+  "email.reset.note": "このリンクは1時間で有効期限切れになります。心当たりがない場合は、このメールを無視してください。"
 }

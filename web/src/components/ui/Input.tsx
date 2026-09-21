@@ -17,19 +17,19 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="overflow-hidden">
         {label && (
-          <label htmlFor={inputId} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            {label}{requiredMarker && <span className="text-red-500" aria-hidden="true"> *</span>}
+          <label htmlFor={inputId} className="block text-sm font-medium text-[var(--foreground)] mb-1">
+            {label}{requiredMarker && <span className="text-[var(--danger)]" aria-hidden="true"> *</span>}
           </label>
         )}
         <input
           ref={ref}
           id={inputId}
-          className={`block w-full min-w-0 rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400 disabled:opacity-50 disabled:cursor-not-allowed ${
-            error ? 'border-red-300 text-red-900' : 'border-gray-300 text-gray-900 dark:border-gray-600 dark:text-gray-100'
+          className={`block w-full min-w-0 rounded-[var(--radius)] border px-3 py-2 text-sm bg-[var(--surface)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--primary)] placeholder:text-[var(--foreground-muted)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${
+            error ? 'border-[var(--danger)] text-[var(--danger)]' : 'border-[var(--border)] text-[var(--foreground)]'
           } ${className}`}
           {...props}
         />
-        {error && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{error}</p>}
+        {error && <p className="mt-1 text-sm text-[var(--danger)]">{error}</p>}
       </div>
     )
   },

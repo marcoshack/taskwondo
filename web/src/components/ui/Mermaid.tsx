@@ -48,7 +48,7 @@ export function Mermaid({ chart }: MermaidProps) {
 
   if (error) {
     return (
-      <pre className="bg-gray-100 dark:bg-gray-800 p-3 rounded text-sm overflow-x-auto">
+      <pre className="bg-[var(--surface-secondary)] p-3 rounded text-sm overflow-x-auto">
         <code>{error}</code>
       </pre>
     )

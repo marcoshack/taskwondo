@@ -46,8 +46,8 @@ export function SystemSettingsPage() {
             className={({ isActive }) =>
               `flex shrink-0 flex-col items-center gap-1 py-3 px-4 text-xs font-medium transition-colors ${
                 isActive
-                  ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
-                  : 'text-gray-500 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-800'
+                  ? 'bg-[var(--primary-muted)] text-[var(--primary)]  dark:text-[var(--primary)]'
+                  : 'text-[var(--foreground-secondary)] hover:bg-[var(--surface-secondary)] text-[var(--foreground-muted)] dark:hover:bg-[var(--surface)]'
               }`
             }
           >

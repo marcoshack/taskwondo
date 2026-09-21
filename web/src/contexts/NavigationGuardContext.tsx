@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useCallback, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { ReactNode, MutableRefObject } from 'react'

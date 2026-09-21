@@ -270,6 +270,7 @@ var validOAuthProviders = map[string]bool{
 	model.OAuthProviderGoogle:    true,
 	model.OAuthProviderGitHub:    true,
 	model.OAuthProviderMicrosoft: true,
+	model.OAuthProviderSSO:       true,
 }
 
 // GetOAuthConfig handles GET /api/v1/admin/settings/oauth_config/{provider}
@@ -332,7 +333,7 @@ func (h *SystemSettingHandler) SetOAuthConfig(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	if err := cfg.Validate(); err != nil {
+	if err := cfg.ValidateAs(provider); err != nil {
 		handleSystemSettingError(w, r, err, "oauth config validation failed")
 		return
 	}
