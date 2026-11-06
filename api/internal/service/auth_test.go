@@ -616,7 +616,7 @@ func TestOAuthState_InvalidFormat(t *testing.T) {
 func TestOAuthURL_Discord(t *testing.T) {
 	svc, _, _ := newTestAuthServiceWithOAuth()
 
-	authURL, err := svc.OAuthURL(context.Background(), "discord")
+	authURL, _, err := svc.OAuthURL(context.Background(), "discord")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -633,7 +633,7 @@ func TestOAuthURL_Discord(t *testing.T) {
 
 func TestOAuthURL_NotConfigured(t *testing.T) {
 	svc, _, _ := newTestAuthService()
-	_, err := svc.OAuthURL(context.Background(), "discord")
+	_, _, err := svc.OAuthURL(context.Background(), "discord")
 	if err == nil {
 		t.Fatal("expected error when discord is not configured")
 	}
@@ -902,7 +902,7 @@ func TestRefresh_UserNotFound(t *testing.T) {
 
 func TestOAuthCallback_NotConfigured(t *testing.T) {
 	svc, _, _ := newTestAuthService() // no providers
-	_, _, err := svc.OAuthCallback(context.Background(), "discord", "code", "state")
+	_, _, err := svc.OAuthCallback(context.Background(), "discord", "code", "state", "state")
 	if err == nil {
 		t.Fatal("expected error when discord is not configured")
 	}
@@ -910,7 +910,7 @@ func TestOAuthCallback_NotConfigured(t *testing.T) {
 
 func TestOAuthCallback_InvalidState(t *testing.T) {
 	svc, _, _ := newTestAuthServiceWithOAuth()
-	_, _, err := svc.OAuthCallback(context.Background(), "discord", "code", "invalid-state")
+	_, _, err := svc.OAuthCallback(context.Background(), "discord", "code", "invalid-state", "invalid-state")
 	if err == nil {
 		t.Fatal("expected error for invalid state")
 	}
@@ -949,7 +949,7 @@ func TestOAuthCallback_DiscordFullSuccess(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	token, user, err := svc.OAuthCallback(context.Background(), "discord", "valid-code", state)
+	token, user, err := svc.OAuthCallback(context.Background(), "discord", "valid-code", state, state)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -979,7 +979,7 @@ func TestOAuthCallback_TokenExchangeFails(t *testing.T) {
 	dp.baseURL = discordServer.URL
 
 	state, _ := svc.generateOAuthState()
-	_, _, err := svc.OAuthCallback(context.Background(), "discord", "bad-code", state)
+	_, _, err := svc.OAuthCallback(context.Background(), "discord", "bad-code", state, state)
 	if err == nil {
 		t.Fatal("expected error for failed token exchange")
 	}
@@ -1006,7 +1006,7 @@ func TestOAuthCallback_UserFetchFails(t *testing.T) {
 	dp.baseURL = discordServer.URL
 
 	state, _ := svc.generateOAuthState()
-	_, _, err := svc.OAuthCallback(context.Background(), "discord", "valid-code", state)
+	_, _, err := svc.OAuthCallback(context.Background(), "discord", "valid-code", state, state)
 	if err == nil {
 		t.Fatal("expected error for failed user fetch")
 	}
@@ -1302,7 +1302,7 @@ func TestOAuthURL_Google(t *testing.T) {
 	svc := NewAuthService(userRepo, apiKeyRepo, oauthRepo, "test-secret-at-least-32-chars!!", 24*time.Hour,
 		[]OAuthProvider{google})
 
-	authURL, err := svc.OAuthURL(context.Background(), "google")
+	authURL, _, err := svc.OAuthURL(context.Background(), "google")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -1355,7 +1355,7 @@ func TestOAuthCallback_GoogleFullSuccess(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	token, user, err := svc.OAuthCallback(context.Background(), "google", "valid-code", state)
+	token, user, err := svc.OAuthCallback(context.Background(), "google", "valid-code", state, state)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1803,7 +1803,7 @@ func TestOAuthURL_GitHub(t *testing.T) {
 	svc := NewAuthService(userRepo, apiKeyRepo, oauthRepo, "test-secret-at-least-32-chars!!", 24*time.Hour,
 		[]OAuthProvider{github})
 
-	authURL, err := svc.OAuthURL(context.Background(), "github")
+	authURL, _, err := svc.OAuthURL(context.Background(), "github")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -1856,7 +1856,7 @@ func TestOAuthCallback_GitHubFullSuccess(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	token, user, err := svc.OAuthCallback(context.Background(), "github", "valid-code", state)
+	token, user, err := svc.OAuthCallback(context.Background(), "github", "valid-code", state, state)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1922,7 +1922,7 @@ func TestOAuthCallback_GitHubEmailFromEmailsEndpoint(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, user, err := svc.OAuthCallback(context.Background(), "github", "valid-code", state)
+	_, user, err := svc.OAuthCallback(context.Background(), "github", "valid-code", state, state)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

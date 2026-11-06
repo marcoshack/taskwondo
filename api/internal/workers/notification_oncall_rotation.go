@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"html"
 
 	"github.com/rs/zerolog"
 
@@ -91,12 +92,12 @@ func (t *NotificationOncallRotationTask) Execute(ctx context.Context, payload []
 
 func oncallIncomingEmailHTML(lang, teamName, projectKey, projectName, oncallURL string) string {
 	content := fmt.Sprintf(`<p>You are now on-call for <strong>%s</strong> in project %s <strong>%s</strong>.</p>
-  <p>Please make sure you are available to respond to any incoming issues during your shift.</p>`, teamName, projectKeyBadge(projectKey), projectName)
+  <p>Please make sure you are available to respond to any incoming issues during your shift.</p>`, html.EscapeString(teamName), projectKeyBadge(projectKey), html.EscapeString(projectName))
 	return emailHTML(lang, "email.oncall.cta", oncallURL, "email.oncall.rotation.footer", content)
 }
 
 func oncallOutgoingEmailHTML(lang, teamName, projectKey, projectName, oncallURL string) string {
 	content := fmt.Sprintf(`<p>Your on-call shift for <strong>%s</strong> in project %s <strong>%s</strong> has ended.</p>
-  <p>Thank you for your service during your shift.</p>`, teamName, projectKeyBadge(projectKey), projectName)
+  <p>Thank you for your service during your shift.</p>`, html.EscapeString(teamName), projectKeyBadge(projectKey), html.EscapeString(projectName))
 	return emailHTML(lang, "email.oncall.cta", oncallURL, "email.oncall.rotation.footer", content)
 }

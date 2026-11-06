@@ -6,6 +6,8 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -37,11 +39,33 @@ type AuthHandler struct {
 	invites      InviteAcceptor
 	memberRepo   PortalProjectResolver
 	nsMemberRepo NamespaceMemberResolver
+	// secureCookies marks cookies Secure. It follows the scheme of the public
+	// base URL rather than the request, because the API sits behind nginx and
+	// possibly an outer TLS terminator, so the request scheme it sees is not
+	// the one the browser used.
+	secureCookies bool
+	// stateCookieName is the OAuth state binding cookie's name: prefixed with
+	// __Secure- when secureCookies is set (see oauthStateCookieName).
+	stateCookieName string
 }
 
-// NewAuthHandler creates a new AuthHandler.
-func NewAuthHandler(auth *service.AuthService, invites InviteAcceptor, memberRepo PortalProjectResolver, nsMemberRepo NamespaceMemberResolver) *AuthHandler {
-	return &AuthHandler{auth: auth, invites: invites, memberRepo: memberRepo, nsMemberRepo: nsMemberRepo}
+// NewAuthHandler creates a new AuthHandler. baseURL is the canonical public URL
+// of the deployment (config.BaseURL); cookies are marked Secure when it is https.
+func NewAuthHandler(auth *service.AuthService, invites InviteAcceptor, memberRepo PortalProjectResolver, nsMemberRepo NamespaceMemberResolver, baseURL string) *AuthHandler {
+	secure := isHTTPSURL(baseURL)
+	return &AuthHandler{
+		auth:            auth,
+		invites:         invites,
+		memberRepo:      memberRepo,
+		nsMemberRepo:    nsMemberRepo,
+		secureCookies:   secure,
+		stateCookieName: oauthStateCookieName(secure),
+	}
+}
+
+func isHTTPSURL(raw string) bool {
+	u, err := url.Parse(strings.TrimSpace(raw))
+	return err == nil && strings.EqualFold(u.Scheme, "https")
 }
 
 type loginRequest struct {
@@ -232,24 +256,118 @@ type oauthCallbackRequest struct {
 	State string `json:"state"`
 }
 
-// OAuthAuth returns the OAuth authorization URL for the given provider.
+const (
+	// oauthStateCookie binds an OAuth state to the browser that started the login.
+	oauthStateCookie = "taskwondo_oauth_state"
+	// secureCookiePrefix makes browsers accept the cookie only when it is set
+	// with Secure from an https origin, so a network attacker on a plain-http
+	// response for the host cannot plant ("toss") a state cookie of their own.
+	// __Host- would also stop sibling-subdomain tossing, but it requires Path=/,
+	// and the cookie is deliberately scoped to the auth routes.
+	secureCookiePrefix = "__Secure-"
+	// oauthStateCookiePath scopes the cookie to the auth routes, so it travels
+	// only with the callback (and the auth requests next to it).
+	oauthStateCookiePath = "/api/v1/auth"
+)
+
+// oauthStateCookieName returns the binding cookie's name for a deployment.
+func oauthStateCookieName(secure bool) string {
+	if secure {
+		return secureCookiePrefix + oauthStateCookie
+	}
+	return oauthStateCookie
+}
+
+// boundOAuthState returns the state bound to this browser, or "" when there is
+// none. More than one cookie of that name means someone else planted one next
+// to ours (e.g. with a more specific Path); since we cannot tell which is ours,
+// none of them is trusted.
+func (h *AuthHandler) boundOAuthState(r *http.Request) (state string, duplicate bool) {
+	var values []string
+	for _, c := range r.Cookies() {
+		if c.Name == h.stateCookieName {
+			values = append(values, c.Value)
+		}
+	}
+	switch len(values) {
+	case 0:
+		return "", false
+	case 1:
+		return values[0], false
+	default:
+		return "", true
+	}
+}
+
+// crossSiteFetch reports whether the browser says the request came from another
+// site. The SPA calls the auth URL endpoint with a same-origin XHR; a cross-site
+// page could otherwise navigate the victim to it and overwrite the state cookie
+// of a login in flight. Requests without Sec-Fetch-Site (older browsers,
+// non-browser clients) are let through.
+func crossSiteFetch(r *http.Request) bool {
+	switch r.Header.Get("Sec-Fetch-Site") {
+	case "cross-site", "same-site":
+		return true
+	}
+	return false
+}
+
+func (h *AuthHandler) setOAuthStateCookie(w http.ResponseWriter, state string) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     h.stateCookieName,
+		Value:    state,
+		Path:     oauthStateCookiePath,
+		MaxAge:   int(service.OAuthStateExpiry / time.Second),
+		HttpOnly: true,
+		Secure:   h.secureCookies,
+		SameSite: http.SameSiteLaxMode,
+	})
+}
+
+func (h *AuthHandler) clearOAuthStateCookie(w http.ResponseWriter) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     h.stateCookieName,
+		Value:    "",
+		Path:     oauthStateCookiePath,
+		MaxAge:   -1,
+		HttpOnly: true,
+		Secure:   h.secureCookies,
+		SameSite: http.SameSiteLaxMode,
+	})
+}
+
+// OAuthAuth returns the OAuth authorization URL for the given provider and binds
+// its state to this browser with a short-lived HttpOnly cookie.
 func (h *AuthHandler) OAuthAuth(w http.ResponseWriter, r *http.Request) {
 	provider := chi.URLParam(r, "provider")
 
-	authURL, err := h.auth.OAuthURL(r.Context(), provider)
+	if crossSiteFetch(r) {
+		writeError(w, http.StatusForbidden, CodeForbidden, "oauth login must be started from this site")
+		return
+	}
+
+	authURL, state, err := h.auth.OAuthURL(r.Context(), provider)
 	if err != nil {
 		writeError(w, http.StatusNotFound, CodeNotConfigured, provider+" oauth is not configured")
 		return
 	}
 
+	h.setOAuthStateCookie(w, state)
+	w.Header().Set("Cache-Control", "no-store")
 	writeData(w, http.StatusOK, map[string]string{
 		"url": authURL,
 	})
 }
 
 // OAuthCallback exchanges the authorization code and logs in or registers the user.
+// The submitted state must match the one bound to this browser by OAuthAuth; the
+// binding cookie is cleared on every outcome, so each state is usable once.
 func (h *AuthHandler) OAuthCallback(w http.ResponseWriter, r *http.Request) {
 	provider := chi.URLParam(r, "provider")
+
+	boundState, duplicateState := h.boundOAuthState(r)
+	h.clearOAuthStateCookie(w)
+	w.Header().Set("Cache-Control", "no-store")
 
 	var req oauthCallbackRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -262,13 +380,17 @@ func (h *AuthHandler) OAuthCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, user, err := h.auth.OAuthCallback(r.Context(), provider, req.Code, req.State)
+	token, user, err := h.auth.OAuthCallback(r.Context(), provider, req.Code, req.State, boundState)
 	if err != nil {
 		if errors.Is(err, model.ErrAccountDisabled) {
 			writeError(w, http.StatusForbidden, CodeForbidden, "account is disabled")
 			return
 		}
-		log.Ctx(r.Context()).Error().Err(err).Msg(provider + " oauth callback failed")
+		log.Ctx(r.Context()).Error().Err(err).
+			Str("provider", provider).
+			Bool("state_cookie_present", boundState != "").
+			Bool("state_cookie_duplicated", duplicateState).
+			Msg("oauth callback failed")
 		writeError(w, http.StatusUnauthorized, CodeOAuthError, provider+" authentication failed")
 		return
 	}

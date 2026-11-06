@@ -305,7 +305,7 @@ func main() {
 
 	// Initialize handlers
 	health := handler.NewHealthHandler(db, commitSHA)
-	auth := handler.NewAuthHandler(authService, projectService, projectMemberRepo, namespaceMemberRepo)
+	auth := handler.NewAuthHandler(authService, projectService, projectMemberRepo, namespaceMemberRepo, cfg.BaseURL)
 	projects := handler.NewProjectHandler(projectService, cfg.BaseURL)
 	workflows := handler.NewWorkflowHandler(workflowService, projectService)
 	queues := handler.NewQueueHandler(queueService)

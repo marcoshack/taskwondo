@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"html"
 
 	"github.com/rs/zerolog"
 
@@ -142,28 +143,29 @@ func (t *NotificationOncallOverrideCancelledTask) Execute(ctx context.Context, p
 func oncallOverrideCreatedEmailHTML(lang, teamName, projectKey, projectName, startAt, endAt, oncallURL string) string {
 	content := fmt.Sprintf(`<p>You have been assigned an on-call override for <strong>%s</strong> in project %s <strong>%s</strong>.</p>
   <p>Your override period: <strong>%s</strong> to <strong>%s</strong>.</p>
-  <p>Please make sure you are available to respond to any incoming issues during this period.</p>`, teamName, projectKeyBadge(projectKey), projectName, startAt, endAt)
+  <p>Please make sure you are available to respond to any incoming issues during this period.</p>`, html.EscapeString(teamName), projectKeyBadge(projectKey), html.EscapeString(projectName), startAt, endAt)
 	return emailHTML(lang, "email.oncall.cta", oncallURL, "email.oncall.override.footer", content)
 }
 
 func oncallOverrideCoveredEmailHTML(lang, teamName, projectKey, projectName, coveringUser, startAt, endAt, oncallURL string) string {
 	content := fmt.Sprintf(`<p>Your on-call shift for <strong>%s</strong> in project %s <strong>%s</strong> has been covered by <strong>%s</strong>.</p>
-  <p>Override period: <strong>%s</strong> to <strong>%s</strong>.</p>`, teamName, projectKeyBadge(projectKey), projectName, coveringUser, startAt, endAt)
+  <p>Override period: <strong>%s</strong> to <strong>%s</strong>.</p>`, html.EscapeString(teamName), projectKeyBadge(projectKey), html.EscapeString(projectName), html.EscapeString(coveringUser), startAt, endAt)
 	return emailHTML(lang, "email.oncall.cta", oncallURL, "email.oncall.override.footer", content)
 }
 
 func oncallOverrideCancelledEmailHTML(lang, teamName, projectKey, projectName, startAt, endAt, oncallURL string) string {
 	content := fmt.Sprintf(`<p>An on-call override for <strong>%s</strong> in project %s <strong>%s</strong> has been cancelled.</p>
   <p>The override was scheduled for: <strong>%s</strong> to <strong>%s</strong>.</p>
-  <p>The regular on-call rotation schedule will apply for this period.</p>`, teamName, projectKeyBadge(projectKey), projectName, startAt, endAt)
+  <p>The regular on-call rotation schedule will apply for this period.</p>`, html.EscapeString(teamName), projectKeyBadge(projectKey), html.EscapeString(projectName), startAt, endAt)
 	return emailHTML(lang, "email.oncall.cta", oncallURL, "email.oncall.override.footer", content)
 }
 
 // projectKeyBadge renders a small inline HTML badge showing the project key,
-// matching the visual style used for project keys in the frontend.
+// matching the visual style used for project keys in the frontend. The result
+// is trusted HTML; the key itself is escaped here, so callers pass it raw.
 func projectKeyBadge(projectKey string) string {
 	if projectKey == "" {
 		return ""
 	}
-	return fmt.Sprintf(`<span style="display: inline-block; padding: 2px 8px; background-color: #e0e7ff; color: #3730a3; border-radius: 4px; font-size: 12px; font-weight: 600; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.02em;">%s</span>`, projectKey)
+	return fmt.Sprintf(`<span style="display: inline-block; padding: 2px 8px; background-color: #e0e7ff; color: #3730a3; border-radius: 4px; font-size: 12px; font-weight: 600; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.02em;">%s</span>`, html.EscapeString(projectKey))
 }

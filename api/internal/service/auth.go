@@ -5,6 +5,7 @@ import (
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -100,7 +101,24 @@ type Claims struct {
 	ForcePasswordChange bool   `json:"force_password_change,omitempty"`
 }
 
-const oauthStateExpiry = 10 * time.Minute
+// OAuthStateExpiry is how long a signed OAuth state stays valid. The handler
+// uses it as the Max-Age of the cookie that binds the state to the browser.
+const OAuthStateExpiry = 10 * time.Minute
+
+const (
+	// oauthStateNonceBytes is the amount of crypto/rand entropy in each state.
+	oauthStateNonceBytes = 16
+	// oauthStateMaxLen bounds the submitted state before it is decoded.
+	oauthStateMaxLen = 256
+	// oauthStateClockSkew tolerates a state timestamp slightly in the future.
+	oauthStateClockSkew = time.Minute
+	// oauthStateMACPrefix separates the state HMAC from other uses of jwtSecret.
+	oauthStateMACPrefix = "taskwondo-oauth-state:v2:"
+)
+
+// ErrOAuthStateNotBound is returned when the state submitted to the OAuth
+// callback does not match the state bound to the browser that started the login.
+var ErrOAuthStateNotBound = errors.New("oauth state is not bound to this browser")
 
 const emailVerificationTokenExpiry = 24 * time.Hour
 const passwordResetTokenExpiry = 1 * time.Hour
@@ -982,26 +1000,38 @@ func passwordResetEmailHTML(displayName, resetURL string) string {
 </html>`, html.EscapeString(displayName), resetURL)
 }
 
-// OAuthURL generates the authorization URL for the given provider.
-func (s *AuthService) OAuthURL(ctx context.Context, providerName string) (string, error) {
+// OAuthURL generates the authorization URL for the given provider. It also
+// returns the signed state embedded in that URL: the caller must bind it to the
+// browser that started the login (the handler stores it in a cookie) and pass it
+// back to OAuthCallback as boundState.
+func (s *AuthService) OAuthURL(ctx context.Context, providerName string) (authURL, state string, err error) {
 	provider := s.getProvider(ctx, providerName)
 	if provider == nil {
-		return "", fmt.Errorf("oauth provider %q is not configured", providerName)
+		return "", "", fmt.Errorf("oauth provider %q is not configured", providerName)
 	}
 
-	state, err := s.generateOAuthState()
+	state, err = s.generateOAuthState()
 	if err != nil {
-		return "", fmt.Errorf("generating state: %w", err)
+		return "", "", fmt.Errorf("generating state: %w", err)
 	}
 
-	return provider.AuthURL(state), nil
+	return provider.AuthURL(state), state, nil
 }
 
 // OAuthCallback validates state, exchanges the code via the provider, and finds or creates a user.
-func (s *AuthService) OAuthCallback(ctx context.Context, providerName, code, state string) (string, *model.User, error) {
+//
+// boundState is the state the browser that started the login holds (from the
+// cookie set alongside OAuthURL). It must equal state; otherwise the code could
+// belong to a login someone else started, and completing it would sign this
+// browser in to their account (login CSRF).
+func (s *AuthService) OAuthCallback(ctx context.Context, providerName, code, state, boundState string) (string, *model.User, error) {
 	provider := s.getProvider(ctx, providerName)
 	if provider == nil {
 		return "", nil, fmt.Errorf("oauth provider %q is not configured", providerName)
+	}
+
+	if boundState == "" || subtle.ConstantTimeCompare([]byte(state), []byte(boundState)) != 1 {
+		return "", nil, fmt.Errorf("invalid state: %w", ErrOAuthStateNotBound)
 	}
 
 	if err := s.validateOAuthState(state); err != nil {
@@ -1118,36 +1148,52 @@ func (s *AuthService) findOrCreateOAuthUser(ctx context.Context, provider string
 	return user, nil
 }
 
+// generateOAuthState returns base64url("<unix>.<nonce hex>.<hmac hex>"), where
+// the nonce is oauthStateNonceBytes from crypto/rand and the HMAC (keyed with
+// jwtSecret) covers the timestamp and the nonce. The nonce makes every state
+// unique and unguessable; the timestamp bounds its lifetime to OAuthStateExpiry.
 func (s *AuthService) generateOAuthState() (string, error) {
-	ts := fmt.Sprintf("%d", time.Now().Unix())
+	nonce := make([]byte, oauthStateNonceBytes)
+	if _, err := rand.Read(nonce); err != nil {
+		return "", fmt.Errorf("reading random nonce: %w", err)
+	}
+	payload := strconv.FormatInt(time.Now().Unix(), 10) + "." + hex.EncodeToString(nonce)
+	raw := payload + "." + hex.EncodeToString(s.oauthStateMAC(payload))
+	return base64.RawURLEncoding.EncodeToString([]byte(raw)), nil
+}
+
+func (s *AuthService) oauthStateMAC(payload string) []byte {
 	mac := hmac.New(sha256.New, s.jwtSecret)
-	mac.Write([]byte(ts))
-	sig := mac.Sum(nil)
-	raw := ts + "." + hex.EncodeToString(sig)
-	return base64.URLEncoding.EncodeToString([]byte(raw)), nil
+	mac.Write([]byte(oauthStateMACPrefix))
+	mac.Write([]byte(payload))
+	return mac.Sum(nil)
 }
 
 func (s *AuthService) validateOAuthState(state string) error {
-	raw, err := base64.URLEncoding.DecodeString(state)
+	if len(state) > oauthStateMaxLen {
+		return fmt.Errorf("state too long")
+	}
+	raw, err := base64.RawURLEncoding.DecodeString(state)
 	if err != nil {
 		return fmt.Errorf("decoding state: %w", err)
 	}
 
-	parts := strings.SplitN(string(raw), ".", 2)
-	if len(parts) != 2 {
+	parts := strings.Split(string(raw), ".")
+	if len(parts) != 3 {
 		return fmt.Errorf("malformed state")
 	}
+	ts, nonceHex, sigHex := parts[0], parts[1], parts[2]
 
-	ts, sigHex := parts[0], parts[1]
+	nonce, err := hex.DecodeString(nonceHex)
+	if err != nil || len(nonce) != oauthStateNonceBytes {
+		return fmt.Errorf("malformed state nonce")
+	}
 	sig, err := hex.DecodeString(sigHex)
 	if err != nil {
 		return fmt.Errorf("decoding signature: %w", err)
 	}
 
-	mac := hmac.New(sha256.New, s.jwtSecret)
-	mac.Write([]byte(ts))
-	expected := mac.Sum(nil)
-	if !hmac.Equal(sig, expected) {
+	if !hmac.Equal(sig, s.oauthStateMAC(ts+"."+nonceHex)) {
 		return fmt.Errorf("invalid signature")
 	}
 
@@ -1155,8 +1201,12 @@ func (s *AuthService) validateOAuthState(state string) error {
 	if err != nil {
 		return fmt.Errorf("parsing timestamp: %w", err)
 	}
-	if time.Since(time.Unix(unix, 0)) > oauthStateExpiry {
+	issued := time.Unix(unix, 0)
+	if time.Since(issued) > OAuthStateExpiry {
 		return fmt.Errorf("state expired")
+	}
+	if time.Until(issued) > oauthStateClockSkew {
+		return fmt.Errorf("state issued in the future")
 	}
 
 	return nil

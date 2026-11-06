@@ -260,7 +260,7 @@ func testSetup(t *testing.T) (*AuthHandler, *service.AuthService, string) {
 		t.Fatal(err)
 	}
 
-	h := NewAuthHandler(authSvc, nil, nil, nil)
+	h := NewAuthHandler(authSvc, nil, nil, nil, "http://localhost:5173")
 	return h, authSvc, token
 }
 
@@ -384,7 +384,7 @@ func TestSearchUsersHandler_OmitsHasPassword(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	h := NewAuthHandler(authSvc, nil, nil, nil)
+	h := NewAuthHandler(authSvc, nil, nil, nil, "http://localhost:5173")
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/users?q=alice", nil)
 	req = req.WithContext(model.ContextWithAuthInfo(req.Context(), info))
 	w := httptest.NewRecorder()
@@ -807,7 +807,7 @@ func TestChangePassword_Handler_200_OAuthUserSetsInitial(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	h := NewAuthHandler(authSvc, nil, nil, nil)
+	h := NewAuthHandler(authSvc, nil, nil, nil, "http://localhost:5173")
 	info := &model.AuthInfo{
 		UserID:     oauthUser.ID,
 		Email:      oauthUser.Email,
@@ -1085,7 +1085,7 @@ func testSetupWithEmail(t *testing.T) (*AuthHandler, *service.AuthService, *hand
 	sender := &handlerMockEmailSender{}
 	authSvc.SetEmailVerification(verifRepo, settings, sender, "http://localhost:5173")
 
-	h := NewAuthHandler(authSvc, nil, nil, nil)
+	h := NewAuthHandler(authSvc, nil, nil, nil, "http://localhost:5173")
 	return h, authSvc, settings
 }
 
@@ -1584,7 +1584,7 @@ func testSetupWithPasswordReset(t *testing.T) (*AuthHandler, *service.AuthServic
 	resetRepo := newHandlerMockPasswordResetRepo()
 	authSvc.SetPasswordReset(resetRepo)
 
-	h := NewAuthHandler(authSvc, nil, nil, nil)
+	h := NewAuthHandler(authSvc, nil, nil, nil, "http://localhost:5173")
 	return h, authSvc, userRepo
 }
 
