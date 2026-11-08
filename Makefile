@@ -1,4 +1,4 @@
-.PHONY: build push help setup setup-shell dev dev-stop dev-db dev-api dev-web dev-worker up down logs logs-api migrate migrate-new test test-api test-mcp test-web test-e2e test-e2e-dev test-e2e-report check-env check-tools check-tools-api check-tools-web check-toolchain check-air release build-mcp build-mcp-linux build-mcp-darwin build-mcp-windows build-mcpb build-worker lint-ci
+.PHONY: build push help setup setup-shell dev dev-stop dev-db dev-api dev-web dev-worker up down logs logs-api migrate migrate-new test test-api test-mcp test-web test-e2e test-e2e-dev test-e2e-report test-storage-migration check-env check-tools check-tools-api check-tools-web check-toolchain check-air release build-mcp build-mcp-linux build-mcp-darwin build-mcp-windows build-mcpb build-worker lint-ci
 
 # Required environment variables (checked by sourcing .env)
 REQUIRED_VARS := POSTGRES_USER POSTGRES_PASSWORD MINIO_ROOT_USER MINIO_ROOT_PASSWORD JWT_SECRET DATABASE_URL STORAGE_ACCESS_KEY STORAGE_SECRET_KEY
@@ -405,6 +405,12 @@ test-e2e-dev: check-tools-web ## Run E2E tests against local dev server (localho
 	@printf "$(CYAN)## Running E2E tests (dev)...$(RESET)\n"
 	cd test/e2e && npx playwright test
 	@printf "$(GREEN)## E2E tests passed$(RESET)\n"
+
+test-storage-migration: check-toolchain ## Upgrade/rollback test: MinIO data volume -> Silo -> MinIO, via the API
+	@echo ""
+	@printf "$(CYAN)## Running storage migration test (Docker)...$(RESET)\n"
+	bash scripts/storage-migration-test.sh
+	@printf "$(GREEN)## Storage migration test passed$(RESET)\n"
 
 test-e2e-report: ## Serve the last E2E HTML report at http://localhost:9323
 	@echo "Serving report at http://localhost:9323"

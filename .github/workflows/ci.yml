@@ -57,21 +57,10 @@ jobs:
   test-e2e:
     name: E2E tests
     runs-on: ubuntu-latest
-    # packages: read: the e2e stack pulls the MinIO images from this
-    # repository's own private ghcr mirrors (upstream images are no longer
-    # public on Docker Hub or quay.io).
     permissions:
       contents: read
-      packages: read
     steps:
       - uses: actions/checkout@v5
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run E2E tests
         run: make test-e2e

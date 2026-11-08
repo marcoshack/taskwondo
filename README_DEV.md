@@ -71,7 +71,24 @@ It ends by offering to activate mise in your shell — see [Toolchain pins](#too
 ```bash
 make test                      # Go tests + frontend build
 make test-e2e                  # Playwright E2E tests (fully containerized)
+make test-storage-migration    # MinIO -> Silo -> MinIO upgrade/rollback test on real data
 ```
+
+### Object storage (Silo)
+
+The `minio` service runs [Silo](https://github.com/pgsty/silo), a community-maintained
+fork of MinIO, because MinIO no longer publishes its server or `mc` images. Silo keeps
+the `MINIO_*` environment variables, the S3 API and the on-disk format, so existing
+`miniodata` volumes carry over unchanged. The service names stay `minio` / `minio-init`.
+
+`pgsty/silo` and `pgsty/mc` are pinned by tag **and** digest in both
+`docker-compose.yml` and `docker-compose.e2e.yml`; bump all four together. Before a bump
+ships, run `make test-storage-migration`: it seeds attachments and an avatar through
+the API on MinIO `RELEASE.2025-09-07` (the last release production ran), swaps in the
+pinned Silo on the same volume, verifies every download byte-for-byte, writes and
+deletes, then rolls back to MinIO and verifies again. The old MinIO images come from
+this repository's private ghcr mirrors, so log in once with
+`gh auth token | docker login ghcr.io -u <user> --password-stdin`.
 
 ## Toolchain pins
 
