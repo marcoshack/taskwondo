@@ -90,6 +90,10 @@ deletes, then rolls back to MinIO and verifies again. The old MinIO images come 
 this repository's private ghcr mirrors, so log in once with
 `gh auth token | docker login ghcr.io -u <user> --password-stdin`.
 
+Existing installs move from MinIO to Silo with the operator runbook in
+[docs/minio-to-silo-migration.md](docs/minio-to-silo-migration.md), which uses
+`scripts/storage-snapshot.sh` to verify every object before and after the switch.
+
 ## Toolchain pins
 
 **`mise.toml` at the repository root is the pin.** It names every runtime and CLI tool

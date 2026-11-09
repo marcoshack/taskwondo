@@ -100,7 +100,7 @@ See [more screenshots](docs/overview.md) for a full walkthrough of features.
 | API | Go (chi router) |
 | Database | PostgreSQL 16 |
 | Frontend | React + TypeScript + Vite + Tailwind CSS |
-| Storage | S3-compatible (MinIO included) |
+| Storage | S3-compatible ([Silo](https://github.com/pgsty/silo), a MinIO fork, included) |
 | Events | NATS JetStream |
 | Auth | JWT + API keys, optional OAuth (Discord, Google, GitHub, Microsoft) |
 | Deployment | Docker Compose (5 containers) |
@@ -125,6 +125,11 @@ sudo systemctl enable --now taskwondo
 ```
 
 For manual installation without Docker, see [MANUAL_INSTALL.md](MANUAL_INSTALL.md).
+
+**Upgrading an install that still runs `minio/minio`?** MinIO no longer publishes its
+images, and the stack now uses Silo. Follow
+[docs/minio-to-silo-migration.md](docs/minio-to-silo-migration.md) to switch in place
+without losing attachments.
 
 ## MCP Server
 
